@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 2.8.12)
 
 enable_language(ASM)
 
-include(../utils/cmake/util.cmake)
+include("${CODAL_UTILS_LOCATION}")
 RECURSIVE_FIND_DIR(INCLUDE_DIRS "./inc" "*.h")
 
 set(CODAL_CPP_FILES
@@ -54,22 +54,22 @@ set(CODAL_VERSION_FLAGS "-DCODAL_VERSION=\\\"${CODAL_VERSION_STRING}\\\"")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CODAL_VERSION_FLAGS}")
 
 if(CMAKE_COMPILER_IS_GNUCC)
-  file(REMOVE "asm/CortexContextSwitch.s")
-  configure_file("asm/CortexContextSwitch.s.gcc" "asm/CortexContextSwitch.s" COPYONLY)
+  file(REMOVE "./source/asm/CortexContextSwitch.s")
+  configure_file("./source/asm/CortexContextSwitch.s.gcc" "./source/asm/CortexContextSwitch.s" COPYONLY)
 else()
-  file(REMOVE "asm/CortexContextSwitch.s")
-  configure_file("asm/CortexContextSwitch.s.armcc" "asm/CortexContextSwitch.s" COPYONLY)
+  file(REMOVE "./source/asm/CortexContextSwitch.s")
+  configure_file("./source/asm/CortexContextSwitch.s.armcc" "./source/asm/CortexContextSwitch.s" COPYONLY)
 endif()
 
 set(CODAL_S_FILES
-    "asm/CortexContextSwitch.s"
+    "./source/asm/CortexContextSwitch.s"
 )
 
-add_library(codal
+add_library(codal-core
     ${CODAL_CPP_FILES}
     ${CODAL_S_FILES}
 )
 
-target_include_directories(codal PUBLIC ${INCLUDE_DIRS})
+target_include_directories(codal-core PUBLIC ${INCLUDE_DIRS})
 
-target_link_libraries(codal ${CODAL_DEPS})
+target_link_libraries(codal-core codal-target)
