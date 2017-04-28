@@ -72,4 +72,4 @@ add_library(codal-core
 
 target_include_directories(codal-core PUBLIC ${INCLUDE_DIRS})
 
-target_link_libraries(codal-core codal-target)
+target_link_libraries(codal-core ${CODAL_TARGET_NAME})
