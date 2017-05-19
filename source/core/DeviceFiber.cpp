@@ -37,7 +37,6 @@ DEALINGS IN THE SOFTWARE.
 
 #define INITIAL_STACK_DEPTH (fiber_initial_stack_base() - 0x04)
 
-//Serial serial(USBTX, USBRX);
 
 /*
  * Statically allocated values used to create and destroy Fibers.
@@ -438,12 +437,7 @@ int codal::fiber_wake_on_event(uint16_t id, uint16_t value)
         // If we're out of memory, there's nothing we can do.
         // keep running in the context of the current thread as a best effort.
         if (forkedFiber != NULL)
-        {
             f = forkedFiber;
-            dequeue_fiber(f);
-            queue_fiber(f, &runQueue);
-            schedule();
-        }
     }
 
     // Encode the event data in the context field. It's handy having a 32 bit core. :-)
