@@ -106,19 +106,19 @@ int LIS3DH::configure()
   * Constructor.
   * Create a software abstraction of an accelerometer.
   *
-  * @param _i2c an instance of DeviceI2C used to communicate with the onboard accelerometer.
+  * @param _i2c an instance of I2C used to communicate with the onboard accelerometer.
   *
   * @param address the default I2C address of the accelerometer. Defaults to: LIS3DH_DEFAULT_ADDR.
   *
   * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
   *
   * @code
-  * DeviceI2C i2c = DeviceI2C(I2C_SDA0, I2C_SCL0);
+  * I2C i2c = I2C(I2C_SDA0, I2C_SCL0);
   *
   * LIS3DH accelerometer = LIS3DH(i2c);
   * @endcode
  */
-LIS3DH::LIS3DH(I2C& _i2c, Pin &_int1, uint16_t address,  uint16_t id) : i2c(_i2c), int1(_int1), sample()
+LIS3DH::LIS3DH(I2C& _i2c, Pin &_int1, uint16_t address,  uint16_t id, CoordinateSystem coordinateSystem) : i2c(_i2c), int1(_int1), sample()
 {
     // Store our identifiers.
     this->id = id;
@@ -142,6 +142,7 @@ LIS3DH::LIS3DH(I2C& _i2c, Pin &_int1, uint16_t address,  uint16_t id) : i2c(_i2c
     this->shake.impulse_3 = 1;
     this->shake.impulse_6 = 1;
     this->shake.impulse_8 = 1;
+    this->coordinateSystem = coordinateSystem;
 
     // Configure and enable the accelerometer.
     configure();
@@ -162,7 +163,7 @@ int LIS3DH::whoAmI()
     uint8_t data;
     int result;
 
-    result = i2c.read(address,LIS3DH_WHOAMI, &data, 1);
+    result = i2c.read(address, LIS3DH_WHOAMI, &data, 1);
     if (result !=0)
         return DEVICE_I2C_ERROR;
 
@@ -196,13 +197,13 @@ int LIS3DH::updateSample()
 
         // read the XYZ data (16 bit)
         // n.b. we need to set the MSB bit to enable multibyte transfers from this device (WHY? Who Knows!)
-        result = i2c.read(address,0x80 | LIS3DH_OUT_X_L, (uint8_t *)data, 6);
+        result = i2c.read(address, 0x80 | LIS3DH_OUT_X_L, (uint8_t *)data, 6);
 
         if (result !=0)
             return DEVICE_I2C_ERROR;
 
         // Acknowledge the interrupt.
-        i2c.read(address,LIS3DH_INT1_SRC, &src, 1);
+        i2c.read(address, LIS3DH_INT1_SRC, &src, 1);
 
         // read MSB values...
         sample.x = data[1];
@@ -496,16 +497,17 @@ int LIS3DH::getRange()
   * accelerometer.getX();
   * @endcode
   */
-int LIS3DH::getX(CoordinateSystem system)
+int LIS3DH::getX()
 {
     updateSample();
 
-    switch (system)
+    switch (coordinateSystem)
     {
         case SIMPLE_CARTESIAN:
             return sample.y;
 
         case NORTH_EAST_DOWN:
+        case NORTH_EAST_UP:
             return -sample.x;
 
         case RAW:
@@ -523,16 +525,17 @@ int LIS3DH::getX(CoordinateSystem system)
   * accelerometer.getY();
   * @endcode
   */
-int LIS3DH::getY(CoordinateSystem system)
+int LIS3DH::getY()
 {
     updateSample();
 
-    switch (system)
+    switch (coordinateSystem)
     {
         case SIMPLE_CARTESIAN:
             return sample.x;
 
         case NORTH_EAST_DOWN:
+        case NORTH_EAST_UP:
             return sample.y;
 
         case RAW:
@@ -550,14 +553,15 @@ int LIS3DH::getY(CoordinateSystem system)
   * accelerometer.getZ();
   * @endcode
   */
-int LIS3DH::getZ(CoordinateSystem system)
+int LIS3DH::getZ()
 {
     updateSample();
 
-    switch (system)
+    switch (coordinateSystem)
     {
 
         case SIMPLE_CARTESIAN:
+        case NORTH_EAST_UP:
             return -sample.z;
 
         case NORTH_EAST_DOWN:
@@ -637,9 +641,9 @@ float LIS3DH::getRollRadians()
   */
 void LIS3DH::recalculatePitchRoll()
 {
-    double x = (double) getX(NORTH_EAST_DOWN);
-    double y = (double) getY(NORTH_EAST_DOWN);
-    double z = (double) getZ(NORTH_EAST_DOWN);
+    double x = (double) getX();
+    double y = (double) getY();
+    double z = (double) getZ();
 
     roll = atan2(y, z);
     pitch = atan(-x / (y*sin(roll) + z*cos(roll)));

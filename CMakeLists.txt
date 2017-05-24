@@ -29,7 +29,7 @@ set(CODAL_CPP_FILES
     "source/types/RefCountedInit.cpp"
 
     "source/drivers/AbstractButton.cpp"
-    "source/drivers/DeviceButton.cpp"
+    "source/drivers/Button.cpp"
     "source/drivers/MultiButton.cpp"
     "source/drivers/TouchButton.cpp"
     "source/drivers/TouchSensor.cpp"

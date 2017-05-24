@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #define TOUCH_BUTTON_H
 
 #include "DeviceConfig.h"
-#include "DeviceButton.h"
+#include "Button.h"
 #include "DeviceComponent.h"
 #include "DeviceEvent.h"
 #include "Pin.h"
@@ -50,7 +50,7 @@ namespace codal
       *
       * Represents a single, software controlled capacitative touch button on the device.
       */
-    class TouchButton : public DeviceButton
+    class TouchButton : public Button
     {
         public:
 
@@ -103,7 +103,7 @@ namespace codal
         int buttonActive();
 
         /**
-          * Destructor for DeviceButton, where we deregister this instance from the array of fiber components.
+          * Destructor for Button, where we deregister this instance from the array of fiber components.
           */
         ~TouchButton();
 

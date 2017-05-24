@@ -51,13 +51,13 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_BUTTON_SIGMA_THRESH_LO         2
 #define DEVICE_BUTTON_DOUBLE_CLICK_THRESH     50
 
-enum DeviceButtonEventConfiguration
+enum ButtonEventConfiguration
 {
     DEVICE_BUTTON_SIMPLE_EVENTS,
     DEVICE_BUTTON_ALL_EVENTS
 };
 
-enum DeviceButtonPolarity
+enum ButtonPolarity
 {
     ACTIVE_LOW = 0,
     ACTIVE_HIGH = 1

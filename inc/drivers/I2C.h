@@ -31,9 +31,11 @@ namespace codal
         }
 
         /**
-          * Issues a standard, 2 byte I2C command write to the accelerometer.
+          * Issues a standard, 2 byte I2C command write to the specified address.
           *
           * Blocks the calling thread until complete.
+          *
+          * @param address The address of the device to write to.
           *
           * @param reg The address of the register to write to.
           *
@@ -42,6 +44,24 @@ namespace codal
           * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the the write request failed.
           */
         virtual int write(uint32_t address, uint8_t reg, uint8_t value)
+        {
+            return DEVICE_NOT_IMPLEMENTED;
+        }
+
+        /**
+          * Issues a standard, I2C command write to the specified address.
+          *
+          * Blocks the calling thread until complete.
+          *
+          * @param address The address of the device to write to.
+          *
+          * @param data The buffer to write.
+          *
+          * @param len The length of the buffer.
+          *
+          * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the the write request failed.
+          */
+        virtual int write(uint32_t address, uint8_t* data, uint32_t len, bool repeated = false)
         {
             return DEVICE_NOT_IMPLEMENTED;
         }
