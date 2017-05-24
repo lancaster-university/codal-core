@@ -60,17 +60,39 @@ class CodalDevice
     /**
       * Disable global interrupts.
       */
-    virtual void disableInterrupts() { }
+    virtual inline void disableInterrupts() { }
 
     /**
       * Enable global interrupts.
       */
-    virtual void enableInterrupts() { }
+    virtual inline void enableInterrupts() { }
 
     /**
       * Enable global interrupts.
       */
-    virtual void waitForEvent() { }
+    virtual inline void waitForEvent() { }
+
+    /**
+     * Delay execution for the given amount of time.
+     *
+     * If the scheduler is running, this will deschedule the current fiber and perform
+     * a power efficient, concurrent sleep operation.
+     *
+     * If the scheduler is disabled or we're running in an interrupt context, this
+     * will revert to a busy wait.
+     *
+     * Alternatively: wait, wait_ms, wait_us can be used which will perform a blocking sleep
+     * operation.
+     *
+     * @param milliseconds the amount of time, in ms, to wait for. This number cannot be negative.
+     */
+    virtual void sleep(uint32_t milliseconds) { }
+
+    /**
+      * A blocking pause without using the fiber scheduler
+      * @param milliseconds the time to wait in milliseconds
+      */
+    virtual void wait(uint32_t milliseconds) { }
 
     /**
       * returns the current stack pointer

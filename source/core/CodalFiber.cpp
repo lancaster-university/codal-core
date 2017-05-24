@@ -32,7 +32,7 @@ DEALINGS IN THE SOFTWARE.
   * 2) To provide ISR decoupling for EventModel events generated in an ISR context.
   */
 #include "DeviceConfig.h"
-#include "DeviceFiber.h"
+#include "CodalFiber.h"
 #include "Timer.h"
 
 #define INITIAL_STACK_DEPTH (fiber_initial_stack_base() - 0x04)
@@ -340,8 +340,7 @@ void codal::fiber_sleep(unsigned long t)
     // If the scheduler is not running, then simply perform a spin wait and exit.
     if (!fiber_scheduler_running())
     {
-        #warning "wait_ms needs to be implemented, commented out here"
-        //wait_ms(t);
+        device.wait(t);
         return;
     }
 

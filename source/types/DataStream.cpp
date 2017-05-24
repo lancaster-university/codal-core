@@ -1,6 +1,6 @@
 #include "DataStream.h"
 #include "CodalComponent.h"
-#include "DeviceFiber.h"
+#include "CodalFiber.h"
 #include "ErrorNo.h"
 
 using namespace codal;

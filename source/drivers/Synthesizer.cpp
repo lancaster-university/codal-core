@@ -1,5 +1,5 @@
 #include "Synthesizer.h"
-#include "DeviceFiber.h"
+#include "CodalFiber.h"
 #include "ErrorNo.h"
 
 using namespace codal;

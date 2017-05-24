@@ -34,8 +34,8 @@ DEALINGS IN THE SOFTWARE.
   * TODO: Consider a split mode scheduler, that monitors used stack size, and maintains a dedicated, persistent
   * stack for any long lived fibers with large stack
   */
-#ifndef DEVICE_FIBER_H
-#define DEVICE_FIBER_H
+#ifndef CODAL_FIBER_H
+#define CODAL_FIBER_H
 
 #include "DeviceConfig.h"
 #include "Event.h"

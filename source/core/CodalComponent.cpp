@@ -1,5 +1,5 @@
 #include "CodalComponent.h"
-#include "DeviceFiber.h"
+#include "CodalFiber.h"
 #include "EventModel.h"
 #include "Timer.h"
 

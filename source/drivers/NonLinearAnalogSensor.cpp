@@ -34,7 +34,7 @@ DEALINGS IN THE SOFTWARE.
 #include "DeviceConfig.h"
 #include "Event.h"
 #include "CodalCompat.h"
-#include "DeviceFiber.h"
+#include "CodalFiber.h"
 #include "Timer.h"
 
 using namespace codal;

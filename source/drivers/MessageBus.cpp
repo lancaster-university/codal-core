@@ -49,7 +49,7 @@ DEALINGS IN THE SOFTWARE.
   */
 #include "DeviceConfig.h"
 #include "MessageBus.h"
-#include "DeviceFiber.h"
+#include "CodalFiber.h"
 #include "ErrorNo.h"
 #include "NotifyEvents.h"
 
