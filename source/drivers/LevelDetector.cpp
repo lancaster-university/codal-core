@@ -23,12 +23,13 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "DeviceConfig.h"
-#include "DeviceTimer.h"
 #include "DeviceEvent.h"
 #include "CodalCompat.h"
-#include "DeviceSystemTimer.h"
+#include "Timer.h"
 #include "LevelDetector.h"
 #include "ErrorNo.h"
+
+using namespace codal;
 
 LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id) : upstream(source)
 {
@@ -111,7 +112,7 @@ int LevelDetector::setLowThreshold(uint16_t value)
     if (lowThreshold == value)
         return DEVICE_OK;
 
-    // We need to update our threshold 
+    // We need to update our threshold
     lowThreshold = value;
 
     // Reset any exisiting threshold state, and enable threshold detection.
@@ -137,7 +138,7 @@ int LevelDetector::setHighThreshold(uint16_t value)
     if (highThreshold == value)
         return DEVICE_OK;
 
-    // We need to update our threshold 
+    // We need to update our threshold
     highThreshold = value;
 
     // Reset any exisiting threshold state, and enable threshold detection.
@@ -194,4 +195,3 @@ int LevelDetector::setWindowSize(int size)
 LevelDetector::~LevelDetector()
 {
 }
-

@@ -2,8 +2,13 @@
 #include <limits.h>
 #include "CodalCompat.h"
 
-static const char empty[] __attribute__ ((aligned (4))) = "\xff\xff\0\0\0";
+#define REF_TAG REF_TAG_BUFFER
+#define EMPTY_DATA ((BufferData*)(void*)emptyData)
 
+REF_COUNTED_DEF_EMPTY(0, 0)
+
+
+using namespace std;
 using namespace codal;
 
 /**
@@ -12,7 +17,7 @@ using namespace codal;
   */
 void ManagedBuffer::initEmpty()
 {
-    ptr = (BufferData*)(void*)empty;
+    ptr = EMPTY_DATA;
 }
 
 /**
@@ -109,7 +114,7 @@ void ManagedBuffer::init(uint8_t *data, int length)
     }
 
     ptr = (BufferData *) malloc(sizeof(BufferData) + length);
-    ptr->init();
+    REF_COUNTED_INIT(ptr);
 
     ptr->length = length;
 
@@ -370,6 +375,16 @@ int ManagedBuffer::readBytes(uint8_t *dst, int offset, int length, bool swapByte
     } else {
         memcpy(dst, ptr->payload + offset, length);
     }
+
+    return DEVICE_OK;
+}
+
+int ManagedBuffer::truncate(int length)
+{
+    if (length < 0 || length > ptr->length)
+        return DEVICE_INVALID_PARAMETER;
+
+    ptr->length = length;
 
     return DEVICE_OK;
 }

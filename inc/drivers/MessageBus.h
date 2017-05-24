@@ -32,35 +32,37 @@ DEALINGS IN THE SOFTWARE.
 #include "DeviceListener.h"
 #include "EventModel.h"
 
-/**
-  * Class definition for the DeviceMessageBus.
-  *
-  * The DeviceMessageBus is the common mechanism to deliver asynchronous events on the
-  * Device platform. It serves a number of purposes:
-  *
-  * 1) It provides an eventing abstraction that is independent of the underlying substrate.
-  *
-  * 2) It provides a mechanism to decouple user code from trusted system code
-  *    i.e. the basis of a message passing nano kernel.
-  *
-  * 3) It allows a common high level eventing abstraction across a range of hardware types.e.g. buttons, BLE...
-  *
-  * 4) It provides a mechanim for extensibility - new devices added via I/O pins can have OO based
-  *    drivers and communicate via the message bus with minima impact on user level languages.
-  *
-  * 5) It allows for the possiblility of event / data aggregation, which in turn can save energy.
-  *
-  * It has the following design principles:
-  *
-  * 1) Maintain a low RAM footprint where possible
-  *
-  * 2) Make few assumptions about the underlying platform, but allow optimizations where possible.
-  */
 
 namespace codal
 {
-    class DeviceMessageBus : public EventModel, public DeviceComponent
+    /**
+      * Class definition for the MessageBus.
+      *
+      * The MessageBus is the common mechanism to deliver asynchronous events on the
+      * Device platform. It serves a number of purposes:
+      *
+      * 1) It provides an eventing abstraction that is independent of the underlying substrate.
+      *
+      * 2) It provides a mechanism to decouple user code from trusted system code
+      *    i.e. the basis of a message passing nano kernel.
+      *
+      * 3) It allows a common high level eventing abstraction across a range of hardware types.e.g. buttons, BLE...
+      *
+      * 4) It provides a mechanim for extensibility - new devices added via I/O pins can have OO based
+      *    drivers and communicate via the message bus with minima impact on user level languages.
+      *
+      * 5) It allows for the possiblility of event / data aggregation, which in turn can save energy.
+      *
+      * It has the following design principles:
+      *
+      * 1) Maintain a low RAM footprint where possible
+      *
+      * 2) Make few assumptions about the underlying platform, but allow optimizations where possible.
+      */
+    class MessageBus : public EventModel, public DeviceComponent
     {
+        uint16_t        userNotifyId;
+
         public:
 
         /**
@@ -69,7 +71,7 @@ namespace codal
           * Adds itself as a fiber component, and also configures itself to be the
           * default EventModel if defaultEventBus is NULL.
           */
-        DeviceMessageBus();
+        MessageBus();
 
         /**
           * Queues the given event to be sent to all registered recipients.
@@ -77,7 +79,7 @@ namespace codal
           * @param evt The event to send.
           *
           * @code
-          * DeviceMessageBus bus;
+          * MessageBus bus;
           *
           * // Creates and sends the DeviceEvent using bus.
           * DeviceEvent evt(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK);
@@ -119,9 +121,9 @@ namespace codal
         virtual DeviceListener *elementAt(int n);
 
         /**
-          * Destructor for DeviceMessageBus, where we deregister this instance from the array of fiber components.
+          * Destructor for MessageBus, where we deregister this instance from the array of fiber components.
           */
-        ~DeviceMessageBus();
+        ~MessageBus();
 
         /**
           * Add the given DeviceListener to the list of event handlers, unconditionally.
@@ -140,6 +142,7 @@ namespace codal
           * @return DEVICE_OK if the listener is valid, DEVICE_INVALID_PARAMETER otherwise.
           */
         virtual int remove(DeviceListener *newListener);
+
 
 
         private:
@@ -180,6 +183,11 @@ namespace codal
           */
         void idle(DeviceEvent);
     };
+
+    /**
+     * Allocate a NOTIFY event code dynamicaly, for generally purpose condition synchronisation.
+     */
+    uint16_t allocateNotifyEvent();
 }
 
 #endif

@@ -33,7 +33,7 @@ set(CODAL_CPP_FILES
     "source/drivers/MultiButton.cpp"
     "source/drivers/TouchButton.cpp"
     "source/drivers/TouchSensor.cpp"
-    "source/drivers/DeviceMessageBus.cpp"
+    "source/drivers/MessageBus.cpp"
     "source/drivers/HID.cpp"
     "source/drivers/LIS3DH.cpp"
     "source/drivers/AnalogSensor.cpp"

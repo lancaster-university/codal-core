@@ -47,7 +47,7 @@ using namespace codal;
  * @param pin The pin on which to sense
  * @param id The ID of this compoenent e.g. DEVICE_ID_THERMOMETER
  */
-AnalogSensor::AnalogSensor(DevicePin &pin, uint16_t id) : _pin(pin)
+AnalogSensor::AnalogSensor(Pin &pin, uint16_t id) : _pin(pin)
 {
     this->id = id;
     this->sensitivity = 868;

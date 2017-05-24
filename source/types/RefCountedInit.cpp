@@ -23,11 +23,11 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#include "mbed.h"
 #include "DeviceConfig.h"
 #include "CodalDevice.h"
 #include "RefCounted.h"
 
+using namespace codal;
 // These two are placed in a separate file, so that they can be overriden by user code.
 
 /**

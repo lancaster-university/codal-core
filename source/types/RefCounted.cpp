@@ -31,6 +31,8 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalDevice.h"
 #include "RefCounted.h"
 
+using namespace codal;
+
 /**
   * Initializes for one outstanding reference.
   */

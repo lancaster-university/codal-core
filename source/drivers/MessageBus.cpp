@@ -24,9 +24,9 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
-  * Class definition for the DeviceMessageBus.
+  * Class definition for the MessageBus.
   *
-  * The DeviceMessageBus is the common mechanism to deliver asynchronous events on the
+  * The MessageBus is the common mechanism to deliver asynchronous events on the
   * Device platform. It serves a number of purposes:
   *
   * 1) It provides an eventing abstraction that is independent of the underlying substrate.
@@ -48,11 +48,14 @@ DEALINGS IN THE SOFTWARE.
   * 2) Make few assumptions about the underlying platform, but allow optimizations where possible.
   */
 #include "DeviceConfig.h"
-#include "DeviceMessageBus.h"
+#include "MessageBus.h"
 #include "DeviceFiber.h"
 #include "ErrorNo.h"
+#include "NotifyEvents.h"
 
 using namespace codal;
+
+static uint16_t userNotifyId = DEVICE_NOTIFY_USER_EVENT_BASE;
 
 /**
   * Default constructor.
@@ -60,7 +63,7 @@ using namespace codal;
   * Adds itself as a fiber component, and also configures itself to be the
   * default EventModel if defaultEventBus is NULL.
   */
-DeviceMessageBus::DeviceMessageBus()
+MessageBus::MessageBus()
 {
     this->listeners = NULL;
     this->evt_queue_head = NULL;
@@ -68,7 +71,7 @@ DeviceMessageBus::DeviceMessageBus()
     this->queueLength = 0;
 
     // ANY listeners for scheduler events MUST be immediate, or else they will not be registered.
-    listen(DEVICE_ID_SCHEDULER, DEVICE_SCHEDULER_EVT_IDLE, this, &DeviceMessageBus::idle, MESSAGE_BUS_LISTENER_IMMEDIATE);
+    listen(DEVICE_ID_SCHEDULER, DEVICE_SCHEDULER_EVT_IDLE, this, &MessageBus::idle, MESSAGE_BUS_LISTENER_IMMEDIATE);
 
     if(EventModel::defaultEventBus == NULL)
         EventModel::defaultEventBus = this;
@@ -150,7 +153,7 @@ void async_callback(void *param)
   *
   * @param The event to queue.
   */
-void DeviceMessageBus::queueEvent(DeviceEvent &evt)
+void MessageBus::queueEvent(DeviceEvent &evt)
 {
     int processingComplete;
 
@@ -176,7 +179,7 @@ void DeviceMessageBus::queueEvent(DeviceEvent &evt)
     DeviceEventQueueItem *item = new DeviceEventQueueItem(evt);
 
     // The queue was empty when we entered this function, so queue our event at the start of the queue.
-    device.disableInterrupts();
+    __disable_irq();
 
     if (prev == NULL)
     {
@@ -194,7 +197,7 @@ void DeviceMessageBus::queueEvent(DeviceEvent &evt)
 
     queueLength++;
 
-    device.enableInterrupts();
+    __enable_irq();
 }
 
 /**
@@ -202,11 +205,11 @@ void DeviceMessageBus::queueEvent(DeviceEvent &evt)
   *
   * @return a pointer to the DeviceEventQueueItem that is at the head of the list.
   */
-DeviceEventQueueItem* DeviceMessageBus::dequeueEvent()
+DeviceEventQueueItem* MessageBus::dequeueEvent()
 {
     DeviceEventQueueItem *item = NULL;
 
-    device.disableInterrupts();
+    __disable_irq();
 
     if (evt_queue_head != NULL)
     {
@@ -219,7 +222,8 @@ DeviceEventQueueItem* DeviceMessageBus::dequeueEvent()
         queueLength--;
     }
 
-    device.enableInterrupts();
+    __enable_irq();
+
 
     return item;
 }
@@ -229,7 +233,7 @@ DeviceEventQueueItem* DeviceMessageBus::dequeueEvent()
   *
   * @return The number of listeners removed from the list.
   */
-int DeviceMessageBus::deleteMarkedListeners()
+int MessageBus::deleteMarkedListeners()
 {
     DeviceListener *l, *p;
     int removed = 0;
@@ -270,7 +274,7 @@ int DeviceMessageBus::deleteMarkedListeners()
   * Process at least one event from the event queue, if it is not empty.
   * We then continue processing events until something appears on the runqueue.
   */
-void DeviceMessageBus::idle(DeviceEvent)
+void MessageBus::idle(DeviceEvent)
 {
     // Clear out any listeners marked for deletion
     this->deleteMarkedListeners();
@@ -303,7 +307,7 @@ void DeviceMessageBus::idle(DeviceEvent)
   * @param evt The event to send.
   *
   * @code
-  * DeviceMessageBus bus;
+  * MessageBus bus;
   *
   * // Creates and sends the DeviceEvent using bus.
   * DeviceEvent evt(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK);
@@ -317,7 +321,7 @@ void DeviceMessageBus::idle(DeviceEvent)
   * evt1.fire()
   * @endcode
   */
-int DeviceMessageBus::send(DeviceEvent evt)
+int MessageBus::send(DeviceEvent evt)
 {
     // We simply queue processing of the event until we're scheduled in normal thread context.
     // We do this to avoid the possibility of executing event handler code in IRQ context, which may bring
@@ -340,7 +344,7 @@ int DeviceMessageBus::send(DeviceEvent evt)
   * @note It is recommended that all external code uses the send() function instead of this function,
   *       or the constructors provided by DeviceEvent.
   */
-int DeviceMessageBus::process(DeviceEvent &evt, bool urgent)
+int MessageBus::process(DeviceEvent &evt, bool urgent)
 {
     DeviceListener *l;
     int complete = 1;
@@ -394,7 +398,7 @@ int DeviceMessageBus::process(DeviceEvent &evt, bool urgent)
   *
   * @return DEVICE_OK if the listener is valid, DEVICE_INVALID_PARAMETER otherwise.
   */
-int DeviceMessageBus::add(DeviceListener *newListener)
+int MessageBus::add(DeviceListener *newListener)
 {
     DeviceListener *l, *p;
     int methodCallback;
@@ -485,7 +489,7 @@ int DeviceMessageBus::add(DeviceListener *newListener)
   *
   * @return DEVICE_OK if the listener is valid, DEVICE_INVALID_PARAMETER otherwise.
   */
-int DeviceMessageBus::remove(DeviceListener *listener)
+int MessageBus::remove(DeviceListener *listener)
 {
     DeviceListener *l;
     int removed = 0;
@@ -529,7 +533,7 @@ int DeviceMessageBus::remove(DeviceListener *listener)
   *
   * @return the DeviceListener at postion n in the list, or NULL if the position is invalid.
   */
-DeviceListener* DeviceMessageBus::elementAt(int n)
+DeviceListener* MessageBus::elementAt(int n)
 {
     DeviceListener *l = listeners;
 
@@ -546,9 +550,17 @@ DeviceListener* DeviceMessageBus::elementAt(int n)
 }
 
 /**
-  * Destructor for DeviceMessageBus, where we deregister this instance from the array of fiber components.
-  */
-DeviceMessageBus::~DeviceMessageBus()
+ * Allocate a NOTIFY event code dynamicaly, for generally purpose condition synchronisation.
+ */
+uint16_t allocateNotifyEvent()
 {
-    ignore(DEVICE_ID_SCHEDULER, DEVICE_EVT_ANY, this, &DeviceMessageBus::idle);
+    return userNotifyId++;
+}
+
+/**
+  * Destructor for MessageBus, where we deregister this instance from the array of fiber components.
+  */
+MessageBus::~MessageBus()
+{
+    ignore(DEVICE_ID_SCHEDULER, DEVICE_EVT_ANY, this, &MessageBus::idle);
 }

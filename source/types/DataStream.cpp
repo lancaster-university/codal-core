@@ -3,11 +3,13 @@
 #include "DeviceFiber.h"
 #include "ErrorNo.h"
 
+using namespace codal;
+
 /**
 * Default implementation of DataSource and DataSink classes.
 */
-ManagedBuffer DataSource::pull() 
-{ 
+ManagedBuffer DataSource::pull()
+{
 	return ManagedBuffer();
 }
 
@@ -15,7 +17,7 @@ void DataSource::connect(DataSink& )
 {
 }
 
-int DataSink::pullRequest() 
+int DataSink::pullRequest()
 {
 	return DEVICE_NOT_SUPPORTED;
 }
@@ -41,7 +43,7 @@ DataStream::DataStream(DataSource &upstream)
 }
 
 /**
- * Destructor. 
+ * Destructor.
  * Removes all resources held by the instance.
  */
 DataStream::~DataStream()
@@ -91,7 +93,7 @@ int DataStream::set(int position, uint8_t value)
 }
 
 /**
- * Gets number of bytes that are ready to be consumed in this data stream. 
+ * Gets number of bytes that are ready to be consumed in this data stream.
  * @return The size in bytes.
  */
 int DataStream::length()
@@ -103,8 +105,8 @@ int DataStream::length()
  * Determines if any of the data currently flowing through this stream is held in non-volatile (FLASH) memory.
  * @return true if one or more of the ManagedBuffers in this stream reside in FLASH memory, false otherwise.
  */
-bool DataStream::isReadOnly()  
-{ 
+bool DataStream::isReadOnly()
+{
     bool r = true;
 
     for (int i=0; i<bufferCount;i++)
@@ -155,7 +157,7 @@ void DataStream::setPreferredBufferSize(int size)
 /**
  * Determines if this stream acts in a synchronous, blocking mode or asynchronous mode. In blocking mode, writes to a full buffer
  * will result in the calling fiber being blocked until space is available. Downstream DataSinks will also attempt to process data
- * immediately as it becomes available. In non-blocking asynchronous mode, writes to a full buffer are dropped and processing of 
+ * immediately as it becomes available. In non-blocking asynchronous mode, writes to a full buffer are dropped and processing of
  * downstream Datasinks will be deferred.
  */
 void DataStream::setBlocking(bool isBlocking)
@@ -166,7 +168,7 @@ void DataStream::setBlocking(bool isBlocking)
     if (!isBlocking && this->pullRequestEventCode == 0)
     {
         this->pullRequestEventCode = allocateNotifyEvent();
-    
+
         if(EventModel::defaultEventBus)
             EventModel::defaultEventBus->listen(DEVICE_ID_NOTIFY, pullRequestEventCode, this, &DataStream::onDeferredPullRequest);
     }
@@ -272,4 +274,3 @@ int DataStream::pullRequest()
 
 	return DEVICE_OK;
 }
-
