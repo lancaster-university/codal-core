@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef TOUCH_SENSOR_H
 #define TOUCH_SENSOR_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "CodalComponent.h"
 #include "Event.h"
 #include "Pin.h"

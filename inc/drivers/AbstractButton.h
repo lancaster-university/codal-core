@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef ABSTRACT_BUTTON_H
 #define ABSTRACT_BUTTON_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "CodalComponent.h"
 #include "Event.h"
 

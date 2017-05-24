@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef EVENT_MODEL_H
 #define EVENT_MODEL_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "CodalComponent.h"
 #include "Event.h"
 #include "DeviceListener.h"

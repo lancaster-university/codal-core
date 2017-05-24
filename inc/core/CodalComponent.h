@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef CODAL_COMPONENT_H
 #define CODAL_COMPONENT_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "ErrorNo.h"
 
 // Enumeration of core components.

@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef NONLINEAR_ANALOG_SENSOR_H
 #define NONLINEAR_ANALOG_SENSOR_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "CodalComponent.h"
 #include "Pin.h"
 #include "Event.h"

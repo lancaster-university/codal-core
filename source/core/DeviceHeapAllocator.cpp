@@ -48,7 +48,7 @@ DEALINGS IN THE SOFTWARE.
   * TODO: Consider caching recently freed blocks to improve allocation time.
   */
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "DeviceHeapAllocator.h"
 #include "CodalDevice.h"
 #include "CodalCompat.h"

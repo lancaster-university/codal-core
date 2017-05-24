@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_BUTTON_H
 
 #include "AbstractButton.h"
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "CodalComponent.h"
 #include "Event.h"
 #include "Pin.h"

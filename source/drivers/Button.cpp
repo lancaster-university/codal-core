@@ -23,7 +23,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "Button.h"
 #include "Timer.h"
 #include "EventModel.h"

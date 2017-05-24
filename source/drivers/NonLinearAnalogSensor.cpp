@@ -28,10 +28,9 @@ DEALINGS IN THE SOFTWARE.
  * Implements a base class for such a sensor, using the Steinhart-Hart equation to delineate a result.
  */
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "NonLinearAnalogSensor.h"
 #include "ErrorNo.h"
-#include "DeviceConfig.h"
 #include "Event.h"
 #include "CodalCompat.h"
 #include "CodalFiber.h"

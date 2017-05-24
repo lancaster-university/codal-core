@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef MULTI_BUTTON_H
 #define MULTI_BUTTON_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "Button.h"
 #include "EventModel.h"
 

@@ -47,7 +47,7 @@ DEALINGS IN THE SOFTWARE.
   *
   * 2) Make few assumptions about the underlying platform, but allow optimizations where possible.
   */
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "MessageBus.h"
 #include "CodalFiber.h"
 #include "ErrorNo.h"

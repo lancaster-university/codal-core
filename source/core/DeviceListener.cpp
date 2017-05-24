@@ -28,7 +28,7 @@ DEALINGS IN THE SOFTWARE.
   * functions if an instance of EventModel receives an event whose id and value
   * match this DeviceListener's id and value.
   */
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "DeviceListener.h"
 
 using namespace codal;

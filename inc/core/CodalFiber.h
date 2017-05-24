@@ -37,7 +37,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef CODAL_FIBER_H
 #define CODAL_FIBER_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "Event.h"
 #include "EventModel.h"
 #include "device_fiber.h"

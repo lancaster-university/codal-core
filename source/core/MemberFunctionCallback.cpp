@@ -34,7 +34,7 @@ DEALINGS IN THE SOFTWARE.
   * events to C++ methods.
   */
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "MemberFunctionCallback.h"
 
 using namespace codal;

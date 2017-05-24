@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 
 #ifndef COORDINATE_SYSTEM_H
 #define COORDINATE_SYSTEM_H
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 
 /**
   * Co-ordinate systems that can be used.

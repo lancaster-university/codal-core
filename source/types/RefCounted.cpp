@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
   * Base class for payload for ref-counted objects. Used by ManagedString and DeviceImage.
   * There is no constructor, as this struct is typically malloc()ed.
   */
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "CodalDevice.h"
 #include "RefCounted.h"
 

@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef DEVICE_MANAGED_TYPE_H
 #define DEVICE_MANAGED_TYPE_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 
 /**
   * Class definition for a Generic Managed Type.

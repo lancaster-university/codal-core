@@ -51,7 +51,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef DEVICE_HEAP_ALLOCTOR_H
 #define DEVICE_HEAP_ALLOCTOR_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 
 // The maximum number of heap segments that can be created.
 #define DEVICE_MAXIMUM_HEAPS          2

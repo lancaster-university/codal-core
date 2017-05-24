@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef MANAGED_STRING_H
 #define MANAGED_STRING_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "RefCounted.h"
 #include "ManagedBuffer.h"
 

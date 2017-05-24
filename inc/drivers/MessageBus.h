@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef DEVICE_MESSAGE_BUS_H
 #define DEVICE_MESSAGE_BUS_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "CodalComponent.h"
 #include "Event.h"
 #include "DeviceListener.h"

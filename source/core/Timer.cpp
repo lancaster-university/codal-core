@@ -34,7 +34,7 @@ DEALINGS IN THE SOFTWARE.
   * The latter is useful to avoid costs associated with multiple mbed Ticker instances
   * in codal components, as each incurs a significant additional RAM overhead (circa 80 bytes).
   */
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "Timer.h"
 #include "ErrorNo.h"
 

@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_PIN_H
 
 #include <Pin.h>
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "device_types.h"
 #include "CodalComponent.h"
                                                         // Status Field flags...

@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef CODAL_EVENT_H
 #define CODAL_EVENT_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 
 // Wildcard event codes
 #define DEVICE_ID_ANY         0

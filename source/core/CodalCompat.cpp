@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
   * This file contains functions used to maintain compatability and portability.
   * It also contains constants that are used elsewhere in the DAL.
   */
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "CodalCompat.h"
 #include "ErrorNo.h"
 

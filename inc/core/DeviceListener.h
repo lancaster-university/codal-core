@@ -26,10 +26,9 @@ DEALINGS IN THE SOFTWARE.
 #ifndef DEVICE_LISTENER_H
 #define DEVICE_LISTENER_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "Event.h"
 #include "MemberFunctionCallback.h"
-#include "DeviceConfig.h"
 
 // DeviceListener flags...
 #define MESSAGE_BUS_LISTENER_PARAMETERISED          0x0001

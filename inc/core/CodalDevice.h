@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef CODAL_DEVICE_H
 #define CODAL_DEVICE_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "device_types.h"
 #include "ErrorNo.h"
 

@@ -1,7 +1,7 @@
 #ifndef CODAL_USB_H
 #define CODAL_USB_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 
 #if CONFIG_ENABLED(DEVICE_USB)
 

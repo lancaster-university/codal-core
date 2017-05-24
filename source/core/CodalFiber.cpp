@@ -31,7 +31,7 @@ DEALINGS IN THE SOFTWARE.
   * 1) To provide a clean abstraction for application languages to use when building async behaviour (callbacks).
   * 2) To provide ISR decoupling for EventModel events generated in an ISR context.
   */
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "CodalFiber.h"
 #include "Timer.h"
 

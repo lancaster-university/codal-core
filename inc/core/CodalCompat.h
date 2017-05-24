@@ -31,7 +31,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef DEVICE_COMPAT_H
 #define DEVICE_COMPAT_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 
 #ifndef PI
 #define PI 3.14159265359

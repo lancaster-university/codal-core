@@ -30,7 +30,7 @@ DEALINGS IN THE SOFTWARE.
   * n.b. This is a mutable, managed type.
   */
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "Image.h"
 #include "DeviceFont.h"
 #include "DeviceCompat.h"

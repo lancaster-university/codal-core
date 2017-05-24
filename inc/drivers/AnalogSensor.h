@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef ANALOG_SENSOR_H
 #define ANALOG_SENSOR_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "CodalComponent.h"
 #include "Pin.h"
 #include "Event.h"

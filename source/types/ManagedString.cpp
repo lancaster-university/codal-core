@@ -45,7 +45,7 @@ DEALINGS IN THE SOFTWARE.
 #include <string.h>
 #include <stdlib.h>
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "ManagedString.h"
 #include "CodalCompat.h"
 

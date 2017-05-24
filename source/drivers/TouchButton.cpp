@@ -29,7 +29,7 @@ DEALINGS IN THE SOFTWARE.
  * Represents a single, software controlled capacitative touch button on the device.
  */
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "TouchButton.h"
 #include "Timer.h"
 #include "EventModel.h"

@@ -1,7 +1,7 @@
 #ifndef CODAL_DMESG_H
 #define CODAL_DMESG_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include <cstdarg>
 
 #if DEVICE_DMESG_BUFFER_SIZE > 0

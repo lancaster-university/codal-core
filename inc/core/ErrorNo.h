@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef ERROR_NO_H
 #define ERROR_NO_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 
 /**
   * Error codes used in the codal device runtime.

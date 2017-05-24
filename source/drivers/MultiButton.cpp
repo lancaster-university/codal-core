@@ -29,7 +29,7 @@ DEALINGS IN THE SOFTWARE.
   * Represents a virtual button, capable of reacting to simultaneous presses of two
   * other buttons.
   */
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "MultiButton.h"
 
 using namespace codal;

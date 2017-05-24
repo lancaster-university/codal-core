@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef LIS3DH_H
 #define LIS3DH_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "CodalComponent.h"
 #include "Pin.h"
 #include "I2C.h"

@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef DEVICE_MATRIX4_H
 #define DEVICE_MATRIX4_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 
 /**
 * Class definition for a simple matrix, that is optimised for nx4 or 4xn matrices.

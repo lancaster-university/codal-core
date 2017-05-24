@@ -29,10 +29,9 @@ DEALINGS IN THE SOFTWARE.
  * Represents an implementation of the Freescale LIS3DH 3 axis accelerometer
  * Also includes basic data caching and on demand activation.
  */
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "LIS3DH.h"
 #include "ErrorNo.h"
-#include "DeviceConfig.h"
 #include "Event.h"
 #include "CodalCompat.h"
 #include "CodalFiber.h"

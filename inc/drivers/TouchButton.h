@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #ifndef TOUCH_BUTTON_H
 #define TOUCH_BUTTON_H
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "Button.h"
 #include "CodalComponent.h"
 #include "Event.h"
