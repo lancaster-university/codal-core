@@ -29,7 +29,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "CodalComponent.h"
 #include "Event.h"
-#include "DeviceListener.h"
+#include "CodalListener.h"
 #include "EventModel.h"
 
 
@@ -116,9 +116,9 @@ namespace codal
           *
           * @param n The position in the list to return.
           *
-          * @return the DeviceListener at postion n in the list, or NULL if the position is invalid.
+          * @return the Listener at postion n in the list, or NULL if the position is invalid.
           */
-        virtual DeviceListener *elementAt(int n);
+        virtual Listener *elementAt(int n);
 
         /**
           * Destructor for MessageBus, where we deregister this instance from the array of fiber components.
@@ -126,35 +126,35 @@ namespace codal
         ~MessageBus();
 
         /**
-          * Add the given DeviceListener to the list of event handlers, unconditionally.
+          * Add the given Listener to the list of event handlers, unconditionally.
           *
-          * @param listener The DeviceListener to add.
+          * @param listener The Listener to add.
           *
           * @return DEVICE_OK if the listener is valid, DEVICE_INVALID_PARAMETER otherwise.
           */
-        virtual int add(DeviceListener *newListener);
+        virtual int add(Listener *newListener);
 
         /**
-          * Remove the given DeviceListener from the list of event handlers.
+          * Remove the given Listener from the list of event handlers.
           *
-          * @param listener The DeviceListener to remove.
+          * @param listener The Listener to remove.
           *
           * @return DEVICE_OK if the listener is valid, DEVICE_INVALID_PARAMETER otherwise.
           */
-        virtual int remove(DeviceListener *newListener);
+        virtual int remove(Listener *newListener);
 
 
 
         private:
 
-        DeviceListener            *listeners;           // Chain of active listeners.
+        Listener            *listeners;           // Chain of active listeners.
         EventQueueItem      *evt_queue_head;    // Head of queued events to be processed.
         EventQueueItem      *evt_queue_tail;    // Tail of queued events to be processed.
         uint16_t                    nonce_val;          // The last nonce issued.
         uint16_t                    queueLength;        // The number of events currently waiting to be processed.
 
         /**
-          * Cleanup any DeviceListeners marked for deletion from the list.
+          * Cleanup any Listeners marked for deletion from the list.
           *
           * @return The number of listeners removed from the list.
           */

@@ -30,7 +30,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "MemberFunctionCallback.h"
 
-// DeviceListener flags...
+// Listener flags...
 #define MESSAGE_BUS_LISTENER_PARAMETERISED          0x0001
 #define MESSAGE_BUS_LISTENER_METHOD                 0x0002
 #define MESSAGE_BUS_LISTENER_BUSY                   0x0004
@@ -44,13 +44,13 @@ DEALINGS IN THE SOFTWARE.
 #define MESSAGE_BUS_LISTENER_IMMEDIATE              (MESSAGE_BUS_LISTENER_NONBLOCKING |  MESSAGE_BUS_LISTENER_URGENT)
 
 /**
-  * This structure defines a DeviceListener used to invoke functions, or member
+  * This structure defines a Listener used to invoke functions, or member
   * functions if an instance of EventModel receives an event whose id and value
-  * match this DeviceListener's id and value.
+  * match this Listener's id and value.
   */
 namespace codal
 {
-    struct DeviceListener
+    struct Listener
     {
         uint16_t        id;             // The ID of the component that this listener is interested in.
         uint16_t        value;          // Value this listener is interested in receiving.
@@ -68,7 +68,7 @@ namespace codal
         Event                 evt;
         EventQueueItem        *evt_queue;
 
-        DeviceListener *next;
+        Listener *next;
 
         /**
           * Constructor.
@@ -84,7 +84,7 @@ namespace codal
           * @param flags User specified, implementation specific flags, that allow behaviour of this events listener
           * to be tuned.
           */
-        DeviceListener(uint16_t id, uint16_t value, void (*handler)(Event), uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS);
+        Listener(uint16_t id, uint16_t value, void (*handler)(Event), uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS);
 
         /**
           * Constructor.
@@ -103,7 +103,7 @@ namespace codal
           * @param flags User specified, implementation specific flags, that allow behaviour of this events listener
           * to be tuned.
           */
-        DeviceListener(uint16_t id, uint16_t value, void (*handler)(Event, void *), void* arg, uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS);
+        Listener(uint16_t id, uint16_t value, void (*handler)(Event, void *), void* arg, uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS);
 
 
         /**
@@ -123,12 +123,12 @@ namespace codal
           * to be tuned.
           */
         template <typename T>
-        DeviceListener(uint16_t id, uint16_t value, T* object, void (T::*method)(Event), uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS);
+        Listener(uint16_t id, uint16_t value, T* object, void (T::*method)(Event), uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS);
 
         /**
           * Destructor. Ensures all resources used by this listener are freed.
           */
-        ~DeviceListener();
+        ~Listener();
 
         /**
           * Queues and event up to be processed.
@@ -155,7 +155,7 @@ namespace codal
       * to be tuned.
       */
     template <typename T>
-    DeviceListener::DeviceListener(uint16_t id, uint16_t value, T* object, void (T::*method)(Event), uint16_t flags)
+    Listener::Listener(uint16_t id, uint16_t value, T* object, void (T::*method)(Event), uint16_t flags)
     {
         this->id = id;
         this->value = value;

@@ -24,12 +24,12 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
-  *	This structure defines a DeviceListener used to invoke functions, or member
+  *	This structure defines a Listener used to invoke functions, or member
   * functions if an instance of EventModel receives an event whose id and value
-  * match this DeviceListener's id and value.
+  * match this Listener's id and value.
   */
 #include "CodalConfig.h"
-#include "DeviceListener.h"
+#include "CodalListener.h"
 
 using namespace codal;
 
@@ -47,7 +47,7 @@ using namespace codal;
   * @param flags User specified, implementation specific flags, that allow behaviour of this events listener
   * to be tuned.
   */
-DeviceListener::DeviceListener(uint16_t id, uint16_t value, void (*handler)(Event), uint16_t flags)
+Listener::Listener(uint16_t id, uint16_t value, void (*handler)(Event), uint16_t flags)
 {
 	this->id = id;
 	this->value = value;
@@ -75,7 +75,7 @@ DeviceListener::DeviceListener(uint16_t id, uint16_t value, void (*handler)(Even
   * @param flags User specified, implementation specific flags, that allow behaviour of this events listener
   * to be tuned.
   */
-DeviceListener::DeviceListener(uint16_t id, uint16_t value, void (*handler)(Event, void *), void* arg, uint16_t flags)
+Listener::Listener(uint16_t id, uint16_t value, void (*handler)(Event, void *), void* arg, uint16_t flags)
 {
 	this->id = id;
 	this->value = value;
@@ -89,7 +89,7 @@ DeviceListener::DeviceListener(uint16_t id, uint16_t value, void (*handler)(Even
 /**
   * Destructor. Ensures all resources used by this listener are freed.
   */
-DeviceListener::~DeviceListener()
+Listener::~Listener()
 {
     if(this->flags & MESSAGE_BUS_LISTENER_METHOD)
         delete cb_method;
@@ -100,7 +100,7 @@ DeviceListener::~DeviceListener()
   *
   * @param e The event to queue
   */
-void DeviceListener::queue(Event e)
+void Listener::queue(Event e)
 {
     int queueDepth;
 

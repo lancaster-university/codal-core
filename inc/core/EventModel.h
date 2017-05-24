@@ -29,7 +29,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "CodalComponent.h"
 #include "Event.h"
-#include "DeviceListener.h"
+#include "CodalListener.h"
 #include "ErrorNo.h"
 
 /**
@@ -74,37 +74,37 @@ namespace codal
         }
 
         /**
-         * Add the given DeviceListener to the list of event handlers, unconditionally.
+         * Add the given Listener to the list of event handlers, unconditionally.
          *
-         * @param listener The DeviceListener to validate.
+         * @param listener The Listener to validate.
          *
          * @return This default implementation simply returns DEVICE_NOT_SUPPORTED.
          */
-        virtual int add(DeviceListener*)
+        virtual int add(Listener*)
         {
             return DEVICE_NOT_SUPPORTED;
         }
 
         /**
-         * Remove the given DeviceListener from the list of event handlers.
+         * Remove the given Listener from the list of event handlers.
          *
-         * @param listener The DeviceListener to remove.
+         * @param listener The Listener to remove.
          *
          * @return This default implementation simply returns DEVICE_NOT_SUPPORTED.
          */
-        virtual int remove(DeviceListener *)
+        virtual int remove(Listener *)
         {
             return DEVICE_NOT_SUPPORTED;
         }
 
         /**
-          * Returns the DeviceListener at the given position in the list.
+          * Returns the Listener at the given position in the list.
           *
-          * @param n The index of the desired DeviceListener.
+          * @param n The index of the desired Listener.
           *
           * @return This default implementation simply returns NULL.
           */
-        DeviceListener *elementAt(int)
+        Listener *elementAt(int)
         {
             return NULL;
         }
@@ -168,7 +168,7 @@ namespace codal
             if(id == DEVICE_ID_SCHEDULER && flags != MESSAGE_BUS_LISTENER_IMMEDIATE)
                 return DEVICE_INVALID_PARAMETER;
 
-            DeviceListener *newListener = new DeviceListener(id, value, handler, flags);
+            Listener *newListener = new Listener(id, value, handler, flags);
 
             if(add(newListener) == DEVICE_OK)
                 return DEVICE_OK;
@@ -219,7 +219,7 @@ namespace codal
             if(id == DEVICE_ID_SCHEDULER && flags != MESSAGE_BUS_LISTENER_IMMEDIATE)
                 return DEVICE_INVALID_PARAMETER;
 
-            DeviceListener *newListener = new DeviceListener(id, value, handler, arg, flags);
+            Listener *newListener = new Listener(id, value, handler, arg, flags);
 
             if(add(newListener) == DEVICE_OK)
                 return DEVICE_OK;
@@ -289,7 +289,7 @@ namespace codal
             if (handler == NULL)
                 return DEVICE_INVALID_PARAMETER;
 
-            DeviceListener listener(id, value, handler);
+            Listener listener(id, value, handler);
             remove(&listener);
 
             return DEVICE_OK;
@@ -324,7 +324,7 @@ namespace codal
             if (handler == NULL)
                 return DEVICE_INVALID_PARAMETER;
 
-            DeviceListener listener(id, value, handler, NULL);
+            Listener listener(id, value, handler, NULL);
             remove(&listener);
 
             return DEVICE_OK;
@@ -387,7 +387,7 @@ namespace codal
         if(id == DEVICE_ID_SCHEDULER && flags != MESSAGE_BUS_LISTENER_IMMEDIATE)
             return DEVICE_INVALID_PARAMETER;
 
-        DeviceListener *newListener = new DeviceListener(id, value, object, handler, flags);
+        Listener *newListener = new Listener(id, value, object, handler, flags);
 
         if(add(newListener) == DEVICE_OK)
             return DEVICE_OK;
@@ -428,7 +428,7 @@ namespace codal
         if (handler == NULL)
             return DEVICE_INVALID_PARAMETER;
 
-        DeviceListener listener(id, value, object, handler);
+        Listener listener(id, value, object, handler);
         remove(&listener);
 
         return DEVICE_OK;

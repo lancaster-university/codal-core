@@ -78,14 +78,14 @@ MessageBus::MessageBus()
 }
 
 /**
-  * Invokes a callback on a given DeviceListener
+  * Invokes a callback on a given Listener
   *
   * Internal wrapper function, used to enable
   * parameterised callbacks through the fiber scheduler.
   */
 void async_callback(void *param)
 {
-    DeviceListener *listener = (DeviceListener *)param;
+    Listener *listener = (Listener *)param;
 
     // OK, now we need to decide how to behave depending on our configuration.
     // If this a fiber f already active within this listener then check our
@@ -229,13 +229,13 @@ EventQueueItem* MessageBus::dequeueEvent()
 }
 
 /**
-  * Cleanup any DeviceListeners marked for deletion from the list.
+  * Cleanup any Listeners marked for deletion from the list.
   *
   * @return The number of listeners removed from the list.
   */
 int MessageBus::deleteMarkedListeners()
 {
-    DeviceListener *l, *p;
+    Listener *l, *p;
     int removed = 0;
 
     l = listeners;
@@ -252,7 +252,7 @@ int MessageBus::deleteMarkedListeners()
                 p->next = l->next;
 
             // delete the listener.
-            DeviceListener *t = l;
+            Listener *t = l;
             l = l->next;
 
             delete t;
@@ -346,7 +346,7 @@ int MessageBus::send(Event evt)
   */
 int MessageBus::process(Event &evt, bool urgent)
 {
-    DeviceListener *l;
+    Listener *l;
     int complete = 1;
     bool listenerUrgent;
 
@@ -392,15 +392,15 @@ int MessageBus::process(Event &evt, bool urgent)
 }
 
 /**
-  * Add the given DeviceListener to the list of event handlers, unconditionally.
+  * Add the given Listener to the list of event handlers, unconditionally.
   *
-  * @param listener The DeviceListener to add.
+  * @param listener The Listener to add.
   *
   * @return DEVICE_OK if the listener is valid, DEVICE_INVALID_PARAMETER otherwise.
   */
-int MessageBus::add(DeviceListener *newListener)
+int MessageBus::add(Listener *newListener)
 {
-    DeviceListener *l, *p;
+    Listener *l, *p;
     int methodCallback;
 
     //handler can't be NULL!
@@ -483,15 +483,15 @@ int MessageBus::add(DeviceListener *newListener)
 }
 
 /**
-  * Remove the given DeviceListener from the list of event handlers.
+  * Remove the given Listener from the list of event handlers.
   *
-  * @param listener The DeviceListener to remove.
+  * @param listener The Listener to remove.
   *
   * @return DEVICE_OK if the listener is valid, DEVICE_INVALID_PARAMETER otherwise.
   */
-int MessageBus::remove(DeviceListener *listener)
+int MessageBus::remove(Listener *listener)
 {
-    DeviceListener *l;
+    Listener *l;
     int removed = 0;
 
     //handler can't be NULL!
@@ -531,11 +531,11 @@ int MessageBus::remove(DeviceListener *listener)
   *
   * @param n The position in the list to return.
   *
-  * @return the DeviceListener at postion n in the list, or NULL if the position is invalid.
+  * @return the Listener at postion n in the list, or NULL if the position is invalid.
   */
-DeviceListener* MessageBus::elementAt(int n)
+Listener* MessageBus::elementAt(int n)
 {
-    DeviceListener *l = listeners;
+    Listener *l = listeners;
 
     while (n > 0)
     {
