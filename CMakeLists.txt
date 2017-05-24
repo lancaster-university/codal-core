@@ -17,7 +17,6 @@ set(CODAL_CPP_FILES
     "source/core/CodalFiber.cpp"
     "source/core/CodalHeapAllocator.cpp"
     "source/core/DeviceListener.cpp"
-    "source/core/Timer.cpp"
     "source/core/CodalUSB.cpp"
 
     "source/types/ManagedString.cpp"
@@ -41,6 +40,7 @@ set(CODAL_CPP_FILES
     "source/drivers/NonLinearAnalogSensor.cpp"
     "source/drivers/LevelDetector.cpp"
     "source/drivers/Synthesizer.cpp"
+    "source/drivers/Timer.cpp"
 )
 
 execute_process(WORKING_DIRECTORY "." COMMAND "git" "log" "--pretty=format:%h" "-n" "1" OUTPUT_VARIABLE git_hash)
