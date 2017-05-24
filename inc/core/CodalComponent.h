@@ -69,7 +69,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_COMPONENT_EVT_SYSTEM_TICK        1
 
 /**
-  * Class definition for DeviceComponent.
+  * Class definition for CodalComponent.
   *
   * All components should inherit from this class.
   *
@@ -93,31 +93,31 @@ DEALINGS IN THE SOFTWARE.
   */
 namespace codal
 {
-    class DeviceComponent
+    class CodalComponent
     {
         static uint8_t configuration;
 
         /**
-          * Adds the current DeviceComponent instance to our array of components.
+          * Adds the current CodalComponent instance to our array of components.
           */
         void addComponent();
 
         /**
-          * Removes the current DeviceComponent instance from our array of components.
+          * Removes the current CodalComponent instance from our array of components.
           */
         void removeComponent();
 
         public:
 
-        static DeviceComponent* components[DEVICE_COMPONENT_COUNT];
+        static CodalComponent* components[DEVICE_COMPONENT_COUNT];
 
         uint16_t id;                    // Event Bus ID of this component
         uint16_t status;                // Component defined state.
 
         /**
-          * The default constructor of a DeviceComponent
+          * The default constructor of a CodalComponent
           */
-        DeviceComponent()
+        CodalComponent()
         {
             this->id = 0;
             this->status = 0;
@@ -125,7 +125,7 @@ namespace codal
             addComponent();
         }
 
-        DeviceComponent(uint16_t id, uint16_t status)
+        CodalComponent(uint16_t id, uint16_t status)
         {
             this->id = id;
             this->status = status;
@@ -153,7 +153,7 @@ namespace codal
           * If you have added your component to the idle or system tick component arrays,
           * you must remember to remove your component from them if your component is destructed.
           */
-        virtual ~DeviceComponent()
+        virtual ~CodalComponent()
         {
             status = 0;
             removeComponent();

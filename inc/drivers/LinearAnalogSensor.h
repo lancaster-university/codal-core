@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #define LINEAR_ANALOG_SENSOR_H
 
 #include "DeviceConfig.h"
-#include "DeviceComponent.h"
+#include "CodalComponent.h"
 #include "Pin.h"
 #include "DeviceEvent.h"
 #include "AnalogSensor.h"

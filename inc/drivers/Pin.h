@@ -29,7 +29,7 @@ DEALINGS IN THE SOFTWARE.
 #include <Pin.h>
 #include "DeviceConfig.h"
 #include "device_types.h"
-#include "DeviceComponent.h"
+#include "CodalComponent.h"
                                                         // Status Field flags...
 #define IO_STATUS_DIGITAL_IN                0x01        // Pin is configured as a digital input, with no pull up.
 #define IO_STATUS_DIGITAL_OUT               0x02        // Pin is configured as a digital output
@@ -74,7 +74,7 @@ namespace codal
       *
       * Commonly represents an I/O pin on the edge connector.
       */
-    class Pin : public DeviceComponent
+    class Pin : public CodalComponent
     {
         protected:
         PinCapability capability;

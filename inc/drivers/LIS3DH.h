@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #define LIS3DH_H
 
 #include "DeviceConfig.h"
-#include "DeviceComponent.h"
+#include "CodalComponent.h"
 #include "Pin.h"
 #include "I2C.h"
 #include "CoordinateSystem.h"
@@ -170,7 +170,7 @@ namespace codal
      * Represents an implementation of the Freescale MMA8653 3 axis accelerometer
      * Also includes basic data caching and on demand activation.
      */
-    class LIS3DH : public DeviceComponent
+    class LIS3DH : public CodalComponent
     {
         I2C&            i2c;                // The I2C interface to use.
         Pin             &int1;              // Data ready interrupt.

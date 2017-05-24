@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_MESSAGE_BUS_H
 
 #include "DeviceConfig.h"
-#include "DeviceComponent.h"
+#include "CodalComponent.h"
 #include "DeviceEvent.h"
 #include "DeviceListener.h"
 #include "EventModel.h"
@@ -59,7 +59,7 @@ namespace codal
       *
       * 2) Make few assumptions about the underlying platform, but allow optimizations where possible.
       */
-    class MessageBus : public EventModel, public DeviceComponent
+    class MessageBus : public EventModel, public CodalComponent
     {
         uint16_t        userNotifyId;
 

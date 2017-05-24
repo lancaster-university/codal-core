@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-#include "DeviceComponent.h"
+#include "CodalComponent.h"
 #include "list.h"
 #include "ErrorNo.h"
 #include "CodalDevice.h"
@@ -96,7 +96,7 @@ namespace codal
         };
     };
 
-    class Timer : protected DeviceComponent
+    class Timer : protected CodalComponent
     {
 
     public:

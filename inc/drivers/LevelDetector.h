@@ -48,7 +48,7 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_DEFAULT_WINDOW_SIZE              128
 
 namespace codal{
-    class LevelDetector : public DeviceComponent, public DataSink
+    class LevelDetector : public CodalComponent, public DataSink
     {
     public:
 

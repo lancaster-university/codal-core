@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #define NONLINEAR_ANALOG_SENSOR_H
 
 #include "DeviceConfig.h"
-#include "DeviceComponent.h"
+#include "CodalComponent.h"
 #include "Pin.h"
 #include "DeviceEvent.h"
 #include "AnalogSensor.h"
@@ -71,7 +71,7 @@ namespace codal
          */
         virtual void updateSample();
 
-    };    
+    };
 }
 
 #endif

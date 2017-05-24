@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #define ANALOG_SENSOR_H
 
 #include "DeviceConfig.h"
-#include "DeviceComponent.h"
+#include "CodalComponent.h"
 #include "Pin.h"
 #include "DeviceEvent.h"
 
@@ -54,7 +54,7 @@ namespace codal
     /**
      * Class definition for a generic analog sensor, and performs periodic sampling, buffering and low pass filtering of the data.
      */
-    class AnalogSensor : public DeviceComponent
+    class AnalogSensor : public CodalComponent
     {
         protected:
 

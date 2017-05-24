@@ -28,7 +28,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "AbstractButton.h"
 #include "DeviceConfig.h"
-#include "DeviceComponent.h"
+#include "CodalComponent.h"
 #include "DeviceEvent.h"
 #include "Pin.h"
 

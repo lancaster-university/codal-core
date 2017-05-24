@@ -1,5 +1,5 @@
 #include "DataStream.h"
-#include "DeviceComponent.h"
+#include "CodalComponent.h"
 #include "DeviceFiber.h"
 #include "ErrorNo.h"
 

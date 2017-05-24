@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #define TOUCH_SENSOR_H
 
 #include "DeviceConfig.h"
-#include "DeviceComponent.h"
+#include "CodalComponent.h"
 #include "DeviceEvent.h"
 #include "Pin.h"
 #include "TouchButton.h"
@@ -49,7 +49,7 @@ namespace codal
       *
       * Drives a number of TouchButtons ona device.
       */
-    class TouchSensor : DeviceComponent
+    class TouchSensor : CodalComponent
     {
         TouchButton*    buttons[TOUCH_SENSOR_MAX_BUTTONS];
         Pin             &drivePin;

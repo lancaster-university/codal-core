@@ -13,7 +13,7 @@ set(CODAL_CPP_FILES
     "source/core/CodalCompat.cpp"
     "source/core/CodalDmesg.cpp"
     "source/core/CodalDevice.cpp"
-    "source/core/DeviceComponent.cpp"
+    "source/core/CodalComponent.cpp"
     "source/core/DeviceFiber.cpp"
     "source/core/DeviceHeapAllocator.cpp"
     "source/core/DeviceListener.cpp"

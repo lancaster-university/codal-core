@@ -13,7 +13,7 @@ namespace codal
       * A Datastream holds a number of ManagedBuffer references, provides basic flow control through a push/pull mechanism
       * and byte level access to the datastream, even if it spans different buffers.
       */
-    class Synthesizer : public DataSource, public DeviceComponent
+    class Synthesizer : public DataSource, public CodalComponent
     {
         int     samplePeriodNs;        // The length of a single sample, in nanoseconds.
         int     bufferSize;            // The number of samples to create in a single buffer before scheduling it for playback

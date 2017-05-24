@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #define ABSTRACT_BUTTON_H
 
 #include "DeviceConfig.h"
-#include "DeviceComponent.h"
+#include "CodalComponent.h"
 #include "DeviceEvent.h"
 
 #define DEVICE_BUTTON_EVT_DOWN                1
@@ -70,7 +70,7 @@ namespace codal
       *
       * Represents a single, generic button on the device.
       */
-    class AbstractButton : public DeviceComponent
+    class AbstractButton : public CodalComponent
     {
         public:
 
