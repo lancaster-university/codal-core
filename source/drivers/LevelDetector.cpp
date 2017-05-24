@@ -23,7 +23,7 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "DeviceConfig.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 #include "CodalCompat.h"
 #include "Timer.h"
 #include "LevelDetector.h"
@@ -69,14 +69,14 @@ int LevelDetector::pullRequest()
 
             if ((!(status & LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
             {
-                DeviceEvent(id, LEVEL_THRESHOLD_HIGH);
+                Event(id, LEVEL_THRESHOLD_HIGH);
                 status |=  LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED;
                 status &= ~LEVEL_DETECTOR_LOW_THRESHOLD_PASSED;
             }
 
             if ((!(status & LEVEL_DETECTOR_LOW_THRESHOLD_PASSED)) && level < lowThreshold)
             {
-                DeviceEvent(id, LEVEL_THRESHOLD_LOW);
+                Event(id, LEVEL_THRESHOLD_LOW);
                 status |=  LEVEL_DETECTOR_LOW_THRESHOLD_PASSED;
                 status &= ~LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED;
             }

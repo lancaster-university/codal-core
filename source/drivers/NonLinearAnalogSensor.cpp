@@ -32,7 +32,7 @@ DEALINGS IN THE SOFTWARE.
 #include "NonLinearAnalogSensor.h"
 #include "ErrorNo.h"
 #include "DeviceConfig.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 #include "CodalCompat.h"
 #include "DeviceFiber.h"
 #include "Timer.h"

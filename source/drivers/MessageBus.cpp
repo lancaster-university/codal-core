@@ -130,7 +130,7 @@ void async_callback(void *param)
         // If there are more events to process, dequeue the next one and process it.
         if ((listener->flags & MESSAGE_BUS_LISTENER_QUEUE_IF_BUSY) && listener->evt_queue)
         {
-            DeviceEventQueueItem *item = listener->evt_queue;
+            EventQueueItem *item = listener->evt_queue;
 
             listener->evt = item->evt;
             listener->evt_queue = listener->evt_queue->next;
@@ -153,11 +153,11 @@ void async_callback(void *param)
   *
   * @param The event to queue.
   */
-void MessageBus::queueEvent(DeviceEvent &evt)
+void MessageBus::queueEvent(Event &evt)
 {
     int processingComplete;
 
-    DeviceEventQueueItem *prev = evt_queue_tail;
+    EventQueueItem *prev = evt_queue_tail;
 
     // Now process all handler regsitered as URGENT.
     // These pre-empt the queue, and are useful for fast, high priority services.
@@ -176,7 +176,7 @@ void MessageBus::queueEvent(DeviceEvent &evt)
     // We queue this event at the tail of the queue at the point where we entered queueEvent()
     // This is important as the processing above *may* have generated further events, and
     // we want to maintain ordering of events.
-    DeviceEventQueueItem *item = new DeviceEventQueueItem(evt);
+    EventQueueItem *item = new EventQueueItem(evt);
 
     // The queue was empty when we entered this function, so queue our event at the start of the queue.
     __disable_irq();
@@ -203,11 +203,11 @@ void MessageBus::queueEvent(DeviceEvent &evt)
 /**
   * Extract the next event from the front of the event queue (if present).
   *
-  * @return a pointer to the DeviceEventQueueItem that is at the head of the list.
+  * @return a pointer to the EventQueueItem that is at the head of the list.
   */
-DeviceEventQueueItem* MessageBus::dequeueEvent()
+EventQueueItem* MessageBus::dequeueEvent()
 {
-    DeviceEventQueueItem *item = NULL;
+    EventQueueItem *item = NULL;
 
     __disable_irq();
 
@@ -274,12 +274,12 @@ int MessageBus::deleteMarkedListeners()
   * Process at least one event from the event queue, if it is not empty.
   * We then continue processing events until something appears on the runqueue.
   */
-void MessageBus::idle(DeviceEvent)
+void MessageBus::idle(Event)
 {
     // Clear out any listeners marked for deletion
     this->deleteMarkedListeners();
 
-    DeviceEventQueueItem *item = this->dequeueEvent();
+    EventQueueItem *item = this->dequeueEvent();
 
     // Whilst there are events to process and we have no useful other work to do, pull them off the queue and process them.
     while (item)
@@ -309,11 +309,11 @@ void MessageBus::idle(DeviceEvent)
   * @code
   * MessageBus bus;
   *
-  * // Creates and sends the DeviceEvent using bus.
-  * DeviceEvent evt(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK);
+  * // Creates and sends the Event using bus.
+  * Event evt(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK);
   *
-  * // Creates the DeviceEvent, but delays the sending of that event.
-  * DeviceEvent evt1(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK, CREATE_ONLY);
+  * // Creates the Event, but delays the sending of that event.
+  * Event evt1(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK, CREATE_ONLY);
   *
   * bus.send(evt1);
   *
@@ -321,7 +321,7 @@ void MessageBus::idle(DeviceEvent)
   * evt1.fire()
   * @endcode
   */
-int MessageBus::send(DeviceEvent evt)
+int MessageBus::send(Event evt)
 {
     // We simply queue processing of the event until we're scheduled in normal thread context.
     // We do this to avoid the possibility of executing event handler code in IRQ context, which may bring
@@ -342,9 +342,9 @@ int MessageBus::send(DeviceEvent evt)
   * @return 1 if all matching listeners were processed, 0 if further processing is required.
   *
   * @note It is recommended that all external code uses the send() function instead of this function,
-  *       or the constructors provided by DeviceEvent.
+  *       or the constructors provided by Event.
   */
-int MessageBus::process(DeviceEvent &evt, bool urgent)
+int MessageBus::process(Event &evt, bool urgent)
 {
     DeviceListener *l;
     int complete = 1;
@@ -437,7 +437,7 @@ int MessageBus::add(DeviceListener *newListener)
     if (listeners == NULL)
     {
         listeners = newListener;
-        DeviceEvent(DEVICE_ID_MESSAGE_BUS_LISTENER, newListener->id);
+        Event(DEVICE_ID_MESSAGE_BUS_LISTENER, newListener->id);
 
         return DEVICE_OK;
     }
@@ -478,7 +478,7 @@ int MessageBus::add(DeviceListener *newListener)
         p->next = newListener;
     }
 
-    DeviceEvent(DEVICE_ID_MESSAGE_BUS_LISTENER, newListener->id);
+    Event(DEVICE_ID_MESSAGE_BUS_LISTENER, newListener->id);
     return DEVICE_OK;
 }
 

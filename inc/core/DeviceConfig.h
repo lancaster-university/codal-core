@@ -224,7 +224,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_BLE_DFU_SERVICE                1
 #endif
 
-// Enable/Disable BLE Service: DeviceEventService
+// Enable/Disable BLE Service: EventService
 // This allows routing of events from the codal device message bus over BLE.
 // Set '1' to enable.
 #ifndef DEVICE_BLE_EVENT_SERVICE

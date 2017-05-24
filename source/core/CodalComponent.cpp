@@ -12,7 +12,7 @@ uint8_t CodalComponent::configuration = 0;
 /**
   * The periodic callback for all components.
   */
-void component_callback(DeviceEvent evt)
+void component_callback(Event evt)
 {
     uint8_t i = 0;
 

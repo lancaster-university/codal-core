@@ -171,7 +171,7 @@ namespace codal
           *
           * @param evt the event received from the default EventModel.
           */
-        void onButtonEvent(DeviceEvent evt);
+        void onButtonEvent(Event evt);
     };
 }
 

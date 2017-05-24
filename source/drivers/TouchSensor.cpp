@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "TouchSensor.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 #include "DeviceFiber.h"
 #include "Timer.h"
 
@@ -106,7 +106,7 @@ int TouchSensor::removeTouchButton(TouchButton *button)
 /**
   * Initiate a scan of the sensors.
   */
-void TouchSensor::onSampleEvent(DeviceEvent)
+void TouchSensor::onSampleEvent(Event)
 {
     int cycles = 0;
     int activeSensors = 0;

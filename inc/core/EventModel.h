@@ -28,7 +28,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "DeviceConfig.h"
 #include "CodalComponent.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 #include "DeviceListener.h"
 #include "ErrorNo.h"
 
@@ -68,7 +68,7 @@ namespace codal
           *
           * @return This default implementation simply returns DEVICE_NOT_SUPPORTED.
           */
-        virtual int send(DeviceEvent)
+        virtual int send(Event)
         {
             return DEVICE_NOT_SUPPORTED;
         }
@@ -151,7 +151,7 @@ namespace codal
           * simply returns DEVICE_NOT_SUPPORTED.
           *
           * @code
-          * void onButtonBClicked(DeviceEvent)
+          * void onButtonBClicked(Event)
           * {
           *     //do something
           * }
@@ -160,7 +160,7 @@ namespace codal
           * uBit.messageBus.listen(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
           * @endcode
           */
-        int listen(int id, int value, void (*handler)(DeviceEvent), uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS)
+        int listen(int id, int value, void (*handler)(Event), uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS)
         {
             if (handler == NULL)
                 return DEVICE_INVALID_PARAMETER;
@@ -202,7 +202,7 @@ namespace codal
           * simply returns DEVICE_NOT_SUPPORTED.
           *
           * @code
-          * void onButtonBClicked(DeviceEvent, void* data)
+          * void onButtonBClicked(Event, void* data)
           * {
           *     //do something
           * }
@@ -211,7 +211,7 @@ namespace codal
           * uBit.messageBus.listen(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
           * @endcode
           */
-        int listen(int id, int value, void (*handler)(DeviceEvent, void*), void* arg, uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS)
+        int listen(int id, int value, void (*handler)(Event, void*), void* arg, uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS)
         {
             if (handler == NULL)
                 return DEVICE_INVALID_PARAMETER;
@@ -247,7 +247,7 @@ namespace codal
           *         pointers are NULL.
           *
           * @code
-          * void SomeClass::onButtonBClicked(DeviceEvent)
+          * void SomeClass::onButtonBClicked(Event)
           * {
           *     //do something
           * }
@@ -258,7 +258,7 @@ namespace codal
           * @endcode
           */
         template <typename T>
-        int listen(uint16_t id, uint16_t value, T* object, void (T::*handler)(DeviceEvent), uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS);
+        int listen(uint16_t id, uint16_t value, T* object, void (T::*handler)(Event), uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS);
 
         /**
           * Unregister a listener function.
@@ -273,7 +273,7 @@ namespace codal
           *
           * Example:
           * @code
-          * void onButtonBClick(DeviceEvent)
+          * void onButtonBClick(Event)
           * {
           *     //do something
           * }
@@ -284,7 +284,7 @@ namespace codal
           * uBit.messageBus.ignore(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
           * @endcode
           */
-        int ignore(int id, int value, void (*handler)(DeviceEvent))
+        int ignore(int id, int value, void (*handler)(Event))
         {
             if (handler == NULL)
                 return DEVICE_INVALID_PARAMETER;
@@ -308,7 +308,7 @@ namespace codal
           *
           * Example:
           * @code
-          * void onButtonBClick(DeviceEvent, void* data)
+          * void onButtonBClick(Event, void* data)
           * {
           *     //do something
           * }
@@ -319,7 +319,7 @@ namespace codal
           * uBit.messageBus.ignore(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
           * @endcode
           */
-        int ignore(int id, int value, void (*handler)(DeviceEvent, void*))
+        int ignore(int id, int value, void (*handler)(Event, void*))
         {
             if (handler == NULL)
                 return DEVICE_INVALID_PARAMETER;
@@ -357,7 +357,7 @@ namespace codal
           * @endcode
           */
         template <typename T>
-        int ignore(uint16_t id, uint16_t value, T* object, void (T::*handler)(DeviceEvent));
+        int ignore(uint16_t id, uint16_t value, T* object, void (T::*handler)(Event));
 
     };
 
@@ -379,7 +379,7 @@ namespace codal
       *         pointers are NULL.
       */
     template <typename T>
-    int EventModel::listen(uint16_t id, uint16_t value, T* object, void (T::*handler)(DeviceEvent), uint16_t flags)
+    int EventModel::listen(uint16_t id, uint16_t value, T* object, void (T::*handler)(Event), uint16_t flags)
     {
         if (object == NULL || handler == NULL)
             return DEVICE_INVALID_PARAMETER;
@@ -423,7 +423,7 @@ namespace codal
       * @endcode
       */
     template <typename T>
-    int EventModel::ignore(uint16_t id, uint16_t value, T* object, void (T::*handler)(DeviceEvent))
+    int EventModel::ignore(uint16_t id, uint16_t value, T* object, void (T::*handler)(Event))
     {
         if (handler == NULL)
             return DEVICE_INVALID_PARAMETER;

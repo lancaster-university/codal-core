@@ -32,7 +32,7 @@ DEALINGS IN THE SOFTWARE.
 #include "AnalogSensor.h"
 #include "ErrorNo.h"
 #include "DeviceConfig.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 #include "CodalCompat.h"
 #include "DeviceFiber.h"
 #include "Timer.h"
@@ -63,7 +63,7 @@ AnalogSensor::AnalogSensor(Pin &pin, uint16_t id) : _pin(pin)
 /*
  * Event Handler for periodic sample timer
  */
-void AnalogSensor::onSampleEvent(DeviceEvent)
+void AnalogSensor::onSampleEvent(Event)
 {
     updateSample();
 }
@@ -106,7 +106,7 @@ void AnalogSensor::checkThresholding()
 {
     if ((status & ANALOG_SENSOR_HIGH_THRESHOLD_ENABLED) && (!(status & ANALOG_SENSOR_HIGH_THRESHOLD_PASSED)) && (sensorValue >= highThreshold))
     {
-        DeviceEvent(id, ANALOG_THRESHOLD_HIGH);
+        Event(id, ANALOG_THRESHOLD_HIGH);
         status |=  ANALOG_SENSOR_HIGH_THRESHOLD_PASSED;
         status &= ~ANALOG_SENSOR_LOW_THRESHOLD_PASSED;
     }
@@ -114,7 +114,7 @@ void AnalogSensor::checkThresholding()
     if ((status & ANALOG_SENSOR_LOW_THRESHOLD_ENABLED) && (!(status & ANALOG_SENSOR_LOW_THRESHOLD_PASSED)) && (sensorValue <= lowThreshold))
 
     {
-        DeviceEvent(id, ANALOG_THRESHOLD_LOW);
+        Event(id, ANALOG_THRESHOLD_LOW);
         status |=  ANALOG_SENSOR_LOW_THRESHOLD_PASSED;
         status &= ~ANALOG_SENSOR_HIGH_THRESHOLD_PASSED;
     }

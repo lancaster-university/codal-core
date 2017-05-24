@@ -29,7 +29,7 @@ DEALINGS IN THE SOFTWARE.
 #include "AbstractButton.h"
 #include "DeviceConfig.h"
 #include "CodalComponent.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 #include "Pin.h"
 
 namespace codal

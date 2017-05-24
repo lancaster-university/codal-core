@@ -29,7 +29,7 @@ DEALINGS IN THE SOFTWARE.
 #include "DeviceConfig.h"
 #include "CodalComponent.h"
 #include "Pin.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 
 
 /**
@@ -80,7 +80,7 @@ namespace codal
         /*
          * Event Handler for periodic sample timer
          */
-        void onSampleEvent(DeviceEvent);
+        void onSampleEvent(Event);
 
         /**
          * Updates the internal reading of the sensor. Typically called periodicaly.

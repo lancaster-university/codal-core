@@ -28,7 +28,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "DeviceConfig.h"
 #include "CodalComponent.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 #include "Pin.h"
 #include "TouchButton.h"
 
@@ -80,7 +80,7 @@ namespace codal
         /**
          * Initiate a scan of the sensors.
          */
-        void onSampleEvent(DeviceEvent);
+        void onSampleEvent(Event);
 
         /**
           * Destructor.

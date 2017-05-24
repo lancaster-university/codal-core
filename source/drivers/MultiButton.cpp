@@ -233,7 +233,7 @@ void MultiButton::setEventConfiguration(ButtonEventConfiguration config)
   *
   * @param evt the event received from the default EventModel.
   */
-void MultiButton::onButtonEvent(DeviceEvent evt)
+void MultiButton::onButtonEvent(Event evt)
 {
     int button = evt.source;
     int otherButton = otherSubButton(button);
@@ -244,7 +244,7 @@ void MultiButton::onButtonEvent(DeviceEvent evt)
             setButtonState(button, 1);
             if(isSubButtonPressed(otherButton))
             {
-                DeviceEvent e(id, DEVICE_BUTTON_EVT_DOWN);
+                Event e(id, DEVICE_BUTTON_EVT_DOWN);
                 clickCount++;
             }
 
@@ -253,28 +253,28 @@ void MultiButton::onButtonEvent(DeviceEvent evt)
         case DEVICE_BUTTON_EVT_HOLD:
             setHoldState(button, 1);
             if(isSubButtonHeld(otherButton))
-                DeviceEvent e(id, DEVICE_BUTTON_EVT_HOLD);
+                Event e(id, DEVICE_BUTTON_EVT_HOLD);
 
         break;
 
         case DEVICE_BUTTON_EVT_UP:
             if(isSubButtonPressed(otherButton))
             {
-                DeviceEvent e(id, DEVICE_BUTTON_EVT_UP);
+                Event e(id, DEVICE_BUTTON_EVT_UP);
 
                 if (isSubButtonHeld(button) && isSubButtonHeld(otherButton))
-                    DeviceEvent e(id, DEVICE_BUTTON_EVT_LONG_CLICK);
+                    Event e(id, DEVICE_BUTTON_EVT_LONG_CLICK);
                 else
-                    DeviceEvent e(id, DEVICE_BUTTON_EVT_CLICK);
+                    Event e(id, DEVICE_BUTTON_EVT_CLICK);
 
                 setSupressedState(otherButton, 1);
             }
             else if (!isSubButtonSupressed(button) && eventConfiguration == DEVICE_BUTTON_ALL_EVENTS)
             {
                 if (isSubButtonHeld(button))
-                    DeviceEvent e(button, DEVICE_BUTTON_EVT_LONG_CLICK);
+                    Event e(button, DEVICE_BUTTON_EVT_LONG_CLICK);
                 else
-                    DeviceEvent e(button, DEVICE_BUTTON_EVT_CLICK);
+                    Event e(button, DEVICE_BUTTON_EVT_CLICK);
             }
 
             setButtonState(button, 0);

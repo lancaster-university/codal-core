@@ -38,7 +38,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_FIBER_H
 
 #include "DeviceConfig.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 #include "EventModel.h"
 #include "device_fiber.h"
 
@@ -182,7 +182,7 @@ namespace codal
       * This function checks to determine if any fibers blocked on the sleep queue need to be woken up
       * and made runnable.
       */
-    void scheduler_tick(DeviceEvent);
+    void scheduler_tick(Event);
 
     /**
       * Blocks the calling thread until the specified event is raised.
@@ -277,7 +277,7 @@ namespace codal
       *
       * @param evt the event that has just been raised on an instance of DeviceMessageBus.
       */
-    void scheduler_event(DeviceEvent evt);
+    void scheduler_event(Event evt);
 
     /**
       * Determines if any fibers are waiting to be scheduled.

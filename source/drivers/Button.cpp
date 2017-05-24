@@ -117,7 +117,7 @@ void Button::periodicCallback()
     {
         // Record we have a state change, and raise an event.
         status |= DEVICE_BUTTON_STATE;
-        DeviceEvent evt(id,DEVICE_BUTTON_EVT_DOWN);
+        Event evt(id,DEVICE_BUTTON_EVT_DOWN);
         clickCount++;
 
         //Record the time the button was pressed.
@@ -128,15 +128,15 @@ void Button::periodicCallback()
     if(sigma < DEVICE_BUTTON_SIGMA_THRESH_LO && (status & DEVICE_BUTTON_STATE))
     {
         status &= ~DEVICE_BUTTON_STATE;
-        DeviceEvent evt(id,DEVICE_BUTTON_EVT_UP);
+        Event evt(id,DEVICE_BUTTON_EVT_UP);
 
        if (eventConfiguration == DEVICE_BUTTON_ALL_EVENTS)
        {
            //determine if this is a long click or a normal click and send event
            if((system_timer_current_time() - downStartTime) >= DEVICE_BUTTON_LONG_CLICK_TIME)
-               DeviceEvent evt(id,DEVICE_BUTTON_EVT_LONG_CLICK);
+               Event evt(id,DEVICE_BUTTON_EVT_LONG_CLICK);
            else
-               DeviceEvent evt(id,DEVICE_BUTTON_EVT_CLICK);
+               Event evt(id,DEVICE_BUTTON_EVT_CLICK);
        }
     }
 
@@ -147,7 +147,7 @@ void Button::periodicCallback()
         status |= DEVICE_BUTTON_STATE_HOLD_TRIGGERED;
 
         //fire hold event
-        DeviceEvent evt(id,DEVICE_BUTTON_EVT_HOLD);
+        Event evt(id,DEVICE_BUTTON_EVT_HOLD);
     }
 }
 

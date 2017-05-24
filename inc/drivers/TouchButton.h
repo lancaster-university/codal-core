@@ -29,7 +29,7 @@ DEALINGS IN THE SOFTWARE.
 #include "DeviceConfig.h"
 #include "Button.h"
 #include "CodalComponent.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 #include "Pin.h"
 #include "TouchSensor.h"
 

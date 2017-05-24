@@ -28,7 +28,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "DeviceConfig.h"
 #include "CodalComponent.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 #include "DeviceListener.h"
 #include "EventModel.h"
 
@@ -81,11 +81,11 @@ namespace codal
           * @code
           * MessageBus bus;
           *
-          * // Creates and sends the DeviceEvent using bus.
-          * DeviceEvent evt(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK);
+          * // Creates and sends the Event using bus.
+          * Event evt(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK);
           *
-          * // Creates the DeviceEvent, but delays the sending of that event.
-          * DeviceEvent evt1(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK, CREATE_ONLY);
+          * // Creates the Event, but delays the sending of that event.
+          * Event evt1(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK, CREATE_ONLY);
           *
           * bus.send(evt1);
           *
@@ -93,7 +93,7 @@ namespace codal
           * evt1.fire()
           * @endcode
           */
-        virtual int send(DeviceEvent evt);
+        virtual int send(Event evt);
 
         /**
           * Internal function, used to deliver the given event to all relevant recipients.
@@ -107,9 +107,9 @@ namespace codal
           * @return 1 if all matching listeners were processed, 0 if further processing is required.
           *
           * @note It is recommended that all external code uses the send() function instead of this function,
-          *       or the constructors provided by DeviceEvent.
+          *       or the constructors provided by Event.
           */
-        int process(DeviceEvent &evt, bool urgent = false);
+        int process(Event &evt, bool urgent = false);
 
         /**
           * Returns the microBitListener with the given position in our list.
@@ -148,8 +148,8 @@ namespace codal
         private:
 
         DeviceListener            *listeners;           // Chain of active listeners.
-        DeviceEventQueueItem      *evt_queue_head;    // Head of queued events to be processed.
-        DeviceEventQueueItem      *evt_queue_tail;    // Tail of queued events to be processed.
+        EventQueueItem      *evt_queue_head;    // Head of queued events to be processed.
+        EventQueueItem      *evt_queue_tail;    // Tail of queued events to be processed.
         uint16_t                    nonce_val;          // The last nonce issued.
         uint16_t                    queueLength;        // The number of events currently waiting to be processed.
 
@@ -166,14 +166,14 @@ namespace codal
           *
           * @param The event to queue.
           */
-        void queueEvent(DeviceEvent &evt);
+        void queueEvent(Event &evt);
 
         /**
           * Extract the next event from the front of the event queue (if present).
           *
-          * @return a pointer to the DeviceEventQueueItem that is at the head of the list.
+          * @return a pointer to the EventQueueItem that is at the head of the list.
           */
-        DeviceEventQueueItem* dequeueEvent();
+        EventQueueItem* dequeueEvent();
 
         /**
           * Periodic callback from Device.
@@ -181,7 +181,7 @@ namespace codal
           * Process at least one event from the event queue, if it is not empty.
           * We then continue processing events until something appears on the runqueue.
           */
-        void idle(DeviceEvent);
+        void idle(Event);
     };
 
     /**

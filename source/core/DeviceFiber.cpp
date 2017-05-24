@@ -242,7 +242,7 @@ int codal::fiber_scheduler_running()
   * This function checks to determine if any fibers blocked on the sleep queue need to be woken up
   * and made runnable.
   */
-void codal::scheduler_tick(DeviceEvent evt)
+void codal::scheduler_tick(Event evt)
 {
     Fiber *f = sleepQueue;
     Fiber *t;
@@ -273,7 +273,7 @@ void codal::scheduler_tick(DeviceEvent evt)
   *
   * @param evt the event that has just been raised on an instance of DeviceMessageBus.
   */
-void codal::scheduler_event(DeviceEvent evt)
+void codal::scheduler_event(Event evt)
 {
     Fiber *f = waitQueue;
     Fiber *t;
@@ -891,7 +891,7 @@ void codal::idle()
     if(!(fiber_flags & DEVICE_SCHEDULER_IDLE))
     {
         fiber_flags |= DEVICE_SCHEDULER_IDLE;
-        DeviceEvent(DEVICE_ID_SCHEDULER, DEVICE_SCHEDULER_EVT_IDLE);
+        Event(DEVICE_ID_SCHEDULER, DEVICE_SCHEDULER_EVT_IDLE);
     }
 
     // If the above did create any useful work, enter power efficient sleep.

@@ -196,7 +196,7 @@ ManagedBuffer DataStream::pull()
 		bufferLength = bufferLength - out.length();
 	}
 
-    DeviceEvent(DEVICE_ID_NOTIFY_ONE, spaceAvailableEventCode);
+    Event(DEVICE_ID_NOTIFY_ONE, spaceAvailableEventCode);
 
 	return out;
 }
@@ -204,7 +204,7 @@ ManagedBuffer DataStream::pull()
 /**
  * Issue a pull request to our downstream component, if one has been registered.
  */
-void DataStream::onDeferredPullRequest(DeviceEvent)
+void DataStream::onDeferredPullRequest(Event)
 {
     if (downStream != NULL)
         downStream->pullRequest();
@@ -269,7 +269,7 @@ int DataStream::pullRequest()
         if (this->isBlocking)
             downStream->pullRequest();
         else
-            DeviceEvent(DEVICE_ID_NOTIFY, pullRequestEventCode);
+            Event(DEVICE_ID_NOTIFY, pullRequestEventCode);
     }
 
 	return DEVICE_OK;

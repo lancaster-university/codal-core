@@ -47,7 +47,7 @@ using namespace codal;
   * @param flags User specified, implementation specific flags, that allow behaviour of this events listener
   * to be tuned.
   */
-DeviceListener::DeviceListener(uint16_t id, uint16_t value, void (*handler)(DeviceEvent), uint16_t flags)
+DeviceListener::DeviceListener(uint16_t id, uint16_t value, void (*handler)(Event), uint16_t flags)
 {
 	this->id = id;
 	this->value = value;
@@ -75,7 +75,7 @@ DeviceListener::DeviceListener(uint16_t id, uint16_t value, void (*handler)(Devi
   * @param flags User specified, implementation specific flags, that allow behaviour of this events listener
   * to be tuned.
   */
-DeviceListener::DeviceListener(uint16_t id, uint16_t value, void (*handler)(DeviceEvent, void *), void* arg, uint16_t flags)
+DeviceListener::DeviceListener(uint16_t id, uint16_t value, void (*handler)(Event, void *), void* arg, uint16_t flags)
 {
 	this->id = id;
 	this->value = value;
@@ -100,14 +100,14 @@ DeviceListener::~DeviceListener()
   *
   * @param e The event to queue
   */
-void DeviceListener::queue(DeviceEvent e)
+void DeviceListener::queue(Event e)
 {
     int queueDepth;
 
-    DeviceEventQueueItem *p = evt_queue;
+    EventQueueItem *p = evt_queue;
 
     if (evt_queue == NULL)
-        evt_queue = new DeviceEventQueueItem(e);
+        evt_queue = new EventQueueItem(e);
     else
     {
         queueDepth = 1;
@@ -119,6 +119,6 @@ void DeviceListener::queue(DeviceEvent e)
         }
 
         if (queueDepth < MESSAGE_BUS_LISTENER_MAX_QUEUE_DEPTH)
-            p->next = new DeviceEventQueueItem(e);
+            p->next = new EventQueueItem(e);
     }
 }

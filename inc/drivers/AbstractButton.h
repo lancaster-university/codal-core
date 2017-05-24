@@ -28,7 +28,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "DeviceConfig.h"
 #include "CodalComponent.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 
 #define DEVICE_BUTTON_EVT_DOWN                1
 #define DEVICE_BUTTON_EVT_UP                  2

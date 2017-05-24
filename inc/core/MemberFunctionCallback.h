@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #define MEMBER_FUNCTION_CALLBACK_H
 
 #include "DeviceConfig.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 #include "CodalCompat.h"
 
 /**
@@ -47,8 +47,8 @@ namespace codal
         private:
         void* object;
         uint32_t method[4];
-        void (*invoke)(void *object, uint32_t *method, DeviceEvent e);
-        template <typename T> static void methodCall(void* object, uint32_t*method, DeviceEvent e);
+        void (*invoke)(void *object, uint32_t *method, Event e);
+        template <typename T> static void methodCall(void* object, uint32_t*method, Event e);
 
         public:
 
@@ -59,7 +59,7 @@ namespace codal
           *
           * @param method The method to invoke.
           */
-        template <typename T> MemberFunctionCallback(T* object, void (T::*method)(DeviceEvent e));
+        template <typename T> MemberFunctionCallback(T* object, void (T::*method)(Event e));
 
         /**
           * A comparison of two MemberFunctionCallback objects.
@@ -73,7 +73,7 @@ namespace codal
           *
           * @param e The event to deliver to the method
           */
-        void fire(DeviceEvent e);
+        void fire(Event e);
     };
 
     /**
@@ -84,7 +84,7 @@ namespace codal
       * @param method The method to invoke.
       */
     template <typename T>
-    MemberFunctionCallback::MemberFunctionCallback(T* object, void (T::*method)(DeviceEvent e))
+    MemberFunctionCallback::MemberFunctionCallback(T* object, void (T::*method)(Event e))
     {
         this->object = object;
         memclr(this->method, sizeof(this->method));
@@ -100,13 +100,13 @@ namespace codal
       *
       * @param method The method to invoke.
       *
-      * @param method The DeviceEvent to supply to the given member function.
+      * @param method The Event to supply to the given member function.
       */
     template <typename T>
-    void MemberFunctionCallback::methodCall(void *object, uint32_t *method, DeviceEvent e)
+    void MemberFunctionCallback::methodCall(void *object, uint32_t *method, Event e)
     {
         T* o = (T*)object;
-        void (T::*m)(DeviceEvent);
+        void (T::*m)(Event);
         memcpy(&m, method, sizeof(m));
 
         (o->*m)(e);

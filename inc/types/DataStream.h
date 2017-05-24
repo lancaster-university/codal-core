@@ -157,7 +157,7 @@ namespace codal
         /**
          * Issue a deferred pull request to our downstream component, if one has been registered.
          */
-        void onDeferredPullRequest(DeviceEvent);
+        void onDeferredPullRequest(Event);
 
     };
 }

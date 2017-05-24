@@ -33,7 +33,7 @@ DEALINGS IN THE SOFTWARE.
 #include "LIS3DH.h"
 #include "ErrorNo.h"
 #include "DeviceConfig.h"
-#include "DeviceEvent.h"
+#include "Event.h"
 #include "CodalCompat.h"
 #include "DeviceFiber.h"
 
@@ -234,7 +234,7 @@ int LIS3DH::updateSample()
         updateGesture();
 
         // Indicate that a new sample is available
-        DeviceEvent e(id, ACCELEROMETER_EVT_DATA_UPDATE);
+        Event e(id, ACCELEROMETER_EVT_DATA_UPDATE);
     }
 
     return DEVICE_OK;
@@ -371,17 +371,17 @@ void LIS3DH::updateGesture()
     {
         if (force > ACCELEROMETER_3G_THRESHOLD && !shake.impulse_3)
         {
-            DeviceEvent e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_3G);
+            Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_3G);
             shake.impulse_3 = 1;
         }
         if (force > ACCELEROMETER_6G_THRESHOLD && !shake.impulse_6)
         {
-            DeviceEvent e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_6G);
+            Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_6G);
             shake.impulse_6 = 1;
         }
         if (force > ACCELEROMETER_8G_THRESHOLD && !shake.impulse_8)
         {
-            DeviceEvent e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_8G);
+            Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_8G);
             shake.impulse_8 = 1;
         }
 
@@ -400,7 +400,7 @@ void LIS3DH::updateGesture()
 
     if (g == ACCELEROMETER_EVT_SHAKE)
     {
-        DeviceEvent e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_SHAKE);
+        Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_SHAKE);
         return;
     }
 
@@ -420,7 +420,7 @@ void LIS3DH::updateGesture()
     if (currentGesture != lastGesture && sigma >= ACCELEROMETER_GESTURE_DAMPING)
     {
         lastGesture = currentGesture;
-        DeviceEvent e(DEVICE_ID_GESTURE, lastGesture);
+        Event e(DEVICE_ID_GESTURE, lastGesture);
     }
 }
 

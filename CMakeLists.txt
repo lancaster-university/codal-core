@@ -22,7 +22,7 @@ set(CODAL_CPP_FILES
 
     "source/types/ManagedString.cpp"
     "source/types/Matrix4.cpp"
-    "source/types/DeviceEvent.cpp"
+    "source/types/Event.cpp"
     "source/types/DataStream.cpp"
     "source/types/ManagedBuffer.cpp"
     "source/types/RefCounted.cpp"

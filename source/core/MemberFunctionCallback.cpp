@@ -44,7 +44,7 @@ using namespace codal;
   *
   * @param e The event to deliver to the method
   */
-void MemberFunctionCallback::fire(DeviceEvent e)
+void MemberFunctionCallback::fire(Event e)
 {
     invoke(object, method, e);
 }

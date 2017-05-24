@@ -368,7 +368,7 @@ namespace codal
           * DevicePin P0(DEVICE_ID_IO_P0, DEVICE_PIN_P0, PIN_CAPABILITY_BOTH);
           * P0.eventOn(DEVICE_PIN_EVENT_ON_PULSE);
           *
-          * void onPulse(DeviceEvent evt)
+          * void onPulse(Event evt)
           * {
           *     int duration = evt.timestamp;
           * }
