@@ -24,35 +24,37 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
-  * Class definition for a DeviceImage.
+  * Class definition for a Image.
   *
-  * An DeviceImage is a simple bitmap representation of an image.
+  * An Image is a simple bitmap representation of an image.
   * n.b. This is a mutable, managed type.
   */
 
 #include "DeviceConfig.h"
-#include "DeviceImage.h"
+#include "Image.h"
 #include "DeviceFont.h"
 #include "DeviceCompat.h"
 #include "ManagedString.h"
 #include "ErrorNo.h"
 
 
+using namespace codal;
+
 /**
   * The null image. We actally create a small one byte buffer here, just to keep NULL pointers out of the equation.
   */
 static const uint16_t empty[] __attribute__ ((aligned (4))) = { 0xffff, 1, 1, 0, };
-DeviceImage DeviceImage::EmptyImage((ImageData*)(void*)empty);
+Image Image::EmptyImage((ImageData*)(void*)empty);
 
 /**
   * Default Constructor.
-  * Creates a new reference to the empty DeviceImage bitmap
+  * Creates a new reference to the empty Image bitmap
   *
   * @code
-  * DeviceImage i(); //an empty image instance
+  * Image i(); //an empty image instance
   * @endcode
   */
-DeviceImage::DeviceImage()
+Image::Image()
 {
     // Create new reference to the EmptyImage and we're done.
     init_empty();
@@ -78,23 +80,23 @@ DeviceImage::DeviceImage()
   * TODO: Consider an immutable flavour, which might save us RAM for animation spritesheets...
   * ...as these could be kept in FLASH.
   */
-DeviceImage::DeviceImage(const int16_t x, const int16_t y)
+Image::Image(const int16_t x, const int16_t y)
 {
     this->init(x,y,NULL);
 }
 
 /**
   * Copy Constructor.
-  * Add ourselves as a reference to an existing DeviceImage.
+  * Add ourselves as a reference to an existing Image.
   *
-  * @param image The DeviceImage to reference.
+  * @param image The Image to reference.
   *
   * @code
-  * DeviceImage i("0,1,0,1,0\n");
-  * DeviceImage i2(i); //points to i
+  * Image i("0,1,0,1,0\n");
+  * Image i2(i); //points to i
   * @endcode
   */
-DeviceImage::DeviceImage(const DeviceImage &image)
+Image::Image(const Image &image)
 {
     ptr = image.ptr;
     ptr->incr();
@@ -107,10 +109,10 @@ DeviceImage::DeviceImage(const DeviceImage &image)
   * @param s A text based representation of the image given whitespace delimited numeric values.
   *
   * @code
-  * DeviceImage i("0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n"); // 5x5 image
+  * Image i("0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n"); // 5x5 image
   * @endcode
   */
-DeviceImage::DeviceImage(const char *s)
+Image::Image(const char *s)
 {
     int width = 0;
     int height = 0;
@@ -202,10 +204,10 @@ DeviceImage::DeviceImage(const char *s)
   *
   * @code
   * static const uint8_t heart[] __attribute__ ((aligned (4))) = { 0xff, 0xff, 10, 0, 5, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, }; // a cute heart
-  * DeviceImage i((ImageData*)(void*)heart);
+  * Image i((ImageData*)(void*)heart);
   * @endcode
   */
-DeviceImage::DeviceImage(ImageData *p)
+Image::Image(ImageData *p)
 {
     ptr = p;
     ptr->incr();
@@ -216,7 +218,7 @@ DeviceImage::DeviceImage(ImageData *p)
   *
   * This is to be used by specialized runtimes which pass ImageData around.
   */
-ImageData *DeviceImage::leakData()
+ImageData *Image::leakData()
 {
     ImageData* res = ptr;
     init_empty();
@@ -236,10 +238,10 @@ ImageData *DeviceImage::leakData()
   *
   * @code
   * const uint8_t heart[] = { 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, }; // a cute heart
-  * DeviceImage i(10,5,heart);
+  * Image i(10,5,heart);
   * @endcode
   */
-DeviceImage::DeviceImage(const int16_t x, const int16_t y, const uint8_t *bitmap)
+Image::Image(const int16_t x, const int16_t y, const uint8_t *bitmap)
 {
     this->init(x,y,bitmap);
 }
@@ -249,7 +251,7 @@ DeviceImage::DeviceImage(const int16_t x, const int16_t y, const uint8_t *bitmap
   *
   * Removes buffer resources held by the instance.
   */
-DeviceImage::~DeviceImage()
+Image::~Image()
 {
     ptr->decr();
 }
@@ -257,7 +259,7 @@ DeviceImage::~DeviceImage()
 /**
   * Internal constructor which defaults to the EmptyImage instance variable
   */
-void DeviceImage::init_empty()
+void Image::init_empty()
 {
     ptr = (ImageData*)(void*)empty;
 }
@@ -271,7 +273,7 @@ void DeviceImage::init_empty()
   *
   * @param bitmap an array of integers that make up an image.
   */
-void DeviceImage::init(const int16_t x, const int16_t y, const uint8_t *bitmap)
+void Image::init(const int16_t x, const int16_t y, const uint8_t *bitmap)
 {
     //sanity check size of image - you cannot have a negative sizes
     if(x < 0 || y < 0)
@@ -299,23 +301,23 @@ void DeviceImage::init(const int16_t x, const int16_t y, const uint8_t *bitmap)
 /**
   * Copy assign operation.
   *
-  * Called when one DeviceImage is assigned the value of another using the '=' operator.
+  * Called when one Image is assigned the value of another using the '=' operator.
   *
   * Decrement our reference count and free up the buffer as necessary.
   *
-  * Then, update our buffer to refer to that of the supplied DeviceImage,
+  * Then, update our buffer to refer to that of the supplied Image,
   * and increase its reference count.
   *
-  * @param s The DeviceImage to reference.
+  * @param s The Image to reference.
   *
   * @code
   * const uint8_t heart[] = { 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, }; // a cute heart
-  * DeviceImage i(10,5,heart);
-  * DeviceImage i1();
+  * Image i(10,5,heart);
+  * Image i1();
   * i1 = i; // i1 now references i
   * @endcode
   */
-DeviceImage& DeviceImage::operator = (const DeviceImage& i)
+Image& Image::operator = (const Image& i)
 {
     if(ptr == i.ptr)
         return *this;
@@ -330,22 +332,22 @@ DeviceImage& DeviceImage::operator = (const DeviceImage& i)
 /**
   * Equality operation.
   *
-  * Called when one DeviceImage is tested to be equal to another using the '==' operator.
+  * Called when one Image is tested to be equal to another using the '==' operator.
   *
-  * @param i The DeviceImage to test ourselves against.
+  * @param i The Image to test ourselves against.
   *
-  * @return true if this DeviceImage is identical to the one supplied, false otherwise.
+  * @return true if this Image is identical to the one supplied, false otherwise.
   *
   * @code
   * DeviceDisplay display;
-  * DeviceImage i();
-  * DeviceImage i1();
+  * Image i();
+  * Image i1();
   *
   * if(i == i1) //will be true
   *     display.scroll("true");
   * @endcode
   */
-bool DeviceImage::operator== (const DeviceImage& i)
+bool Image::operator== (const Image& i)
 {
     if (ptr == i.ptr)
         return true;
@@ -358,11 +360,11 @@ bool DeviceImage::operator== (const DeviceImage& i)
   * Resets all pixels in this image to 0.
   *
   * @code
-  * DeviceImage i("0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n"); // 5x5 image
+  * Image i("0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n"); // 5x5 image
   * i.clear();
   * @endcode
   */
-void DeviceImage::clear()
+void Image::clear()
 {
     memclr(getBitmap(), getSize());
 }
@@ -379,13 +381,13 @@ void DeviceImage::clear()
   * @return DEVICE_OK, or DEVICE_INVALID_PARAMETER.
   *
   * @code
-  * DeviceImage i("0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n"); // 5x5 image
+  * Image i("0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n"); // 5x5 image
   * i.setPixelValue(0,0,255);
   * @endcode
   *
   * @note all coordinates originate from the top left of an image.
   */
-int DeviceImage::setPixelValue(int16_t x , int16_t y, uint8_t value)
+int Image::setPixelValue(int16_t x , int16_t y, uint8_t value)
 {
     //sanity check
     if(x >= getWidth() || y >= getHeight() || x < 0 || y < 0)
@@ -405,11 +407,11 @@ int DeviceImage::setPixelValue(int16_t x , int16_t y, uint8_t value)
   * @return The value assigned to the given pixel location (the brightness level 0-255), or DEVICE_INVALID_PARAMETER.
   *
   * @code
-  * DeviceImage i("0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n"); // 5x5 image
+  * Image i("0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n1,0,1,0,1\n0,1,0,1,0\n"); // 5x5 image
   * i.getPixelValue(0,0); //should be 0;
   * @endcode
   */
-int DeviceImage::getPixelValue(int16_t x , int16_t y)
+int Image::getPixelValue(int16_t x , int16_t y)
 {
     //sanity check
     if(x >= getWidth() || y >= getHeight() || x < 0 || y < 0)
@@ -432,13 +434,13 @@ int DeviceImage::getPixelValue(int16_t x , int16_t y)
   *
   * @code
   * const uint8_t heart[] = { 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, }; // a cute heart
-  * DeviceImage i();
+  * Image i();
   * i.printImage(0,0,heart);
   * @endcode
   *
   * @note all coordinates originate from the top left of an image.
   */
-int DeviceImage::printImage(int16_t width, int16_t height, const uint8_t *bitmap)
+int Image::printImage(int16_t width, int16_t height, const uint8_t *bitmap)
 {
     const uint8_t *pIn;
     uint8_t *pOut;
@@ -471,7 +473,7 @@ int DeviceImage::printImage(int16_t width, int16_t height, const uint8_t *bitmap
   *
   * Any pixels in the relevant area of this image are replaced.
   *
-  * @param image The DeviceImage to paste.
+  * @param image The Image to paste.
   *
   * @param x The leftmost X co-ordinate in this image where the given image should be pasted. Defaults to 0.
   *
@@ -483,11 +485,11 @@ int DeviceImage::printImage(int16_t width, int16_t height, const uint8_t *bitmap
   *
   * @code
   * const uint8_t heart[] = { 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, }; // a cute heart
-  * DeviceImage i(10,5,heart); // a big heart
+  * Image i(10,5,heart); // a big heart
   * i.paste(i, -5, 0); // a small heart
   * @endcode
   */
-int DeviceImage::paste(const DeviceImage &image, int16_t x, int16_t y, uint8_t alpha)
+int Image::paste(const Image &image, int16_t x, int16_t y, uint8_t alpha)
 {
     uint8_t *pIn, *pOut;
     int cx, cy;
@@ -559,11 +561,11 @@ int DeviceImage::paste(const DeviceImage &image, int16_t x, int16_t y, uint8_t a
   * @return DEVICE_OK on success, or DEVICE_INVALID_PARAMETER.
   *
   * @code
-  * DeviceImage i(5,5);
+  * Image i(5,5);
   * i.print('a');
   * @endcode
   */
-int DeviceImage::print(char c, int16_t x, int16_t y)
+int Image::print(char c, int16_t x, int16_t y)
 {
     unsigned char v;
     int x1, y1;
@@ -609,11 +611,11 @@ int DeviceImage::print(char c, int16_t x, int16_t y)
   *
   * @code
   * const uint8_t heart[] = { 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, }; // a cute heart
-  * DeviceImage i(10,5,heart); // a big heart
+  * Image i(10,5,heart); // a big heart
   * i.shiftLeft(5); // a small heart
   * @endcode
   */
-int DeviceImage::shiftLeft(int16_t n)
+int Image::shiftLeft(int16_t n)
 {
     uint8_t *p = getBitmap();
     int pixels = getWidth()-n;
@@ -647,12 +649,12 @@ int DeviceImage::shiftLeft(int16_t n)
   *
   * @code
   * const uint8_t heart[] = { 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, }; // a cute heart
-  * DeviceImage i(10,5,heart); // a big heart
+  * Image i(10,5,heart); // a big heart
   * i.shiftLeft(5); // a small heart
   * i.shiftRight(5); // a big heart
   * @endcode
   */
-int DeviceImage::shiftRight(int16_t n)
+int Image::shiftRight(int16_t n)
 {
     uint8_t *p = getBitmap();
     int pixels = getWidth()-n;
@@ -687,11 +689,11 @@ int DeviceImage::shiftRight(int16_t n)
   *
   * @code
   * const uint8_t heart[] = { 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, }; // a cute heart
-  * DeviceImage i(10,5,heart);
+  * Image i(10,5,heart);
   * i.shiftUp(1);
   * @endcode
   */
-int DeviceImage::shiftUp(int16_t n)
+int Image::shiftUp(int16_t n)
 {
     uint8_t *pOut, *pIn;
 
@@ -732,11 +734,11 @@ int DeviceImage::shiftUp(int16_t n)
   *
   * @code
   * const uint8_t heart[] = { 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, }; // a cute heart
-  * DeviceImage i(10,5,heart);
+  * Image i(10,5,heart);
   * i.shiftDown(1);
   * @endcode
   */
-int DeviceImage::shiftDown(int16_t n)
+int Image::shiftDown(int16_t n)
 {
     uint8_t *pOut, *pIn;
 
@@ -773,11 +775,11 @@ int DeviceImage::shiftDown(int16_t n)
   *
   * @code
   * const uint8_t heart[] = { 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, }; // a cute heart
-  * DeviceImage i(10,5,heart);
+  * Image i(10,5,heart);
   * uBit.serial.printString(i.toString()); // "0,1,0,1,0,0,0,0,0,0\n..."
   * @endcode
   */
-ManagedString DeviceImage::toString()
+ManagedString Image::toString()
 {
     //width including commans and \n * height
     int stringSize = getSize() * 2;
@@ -832,11 +834,11 @@ ManagedString DeviceImage::toString()
   *
   * @code
   * const uint8_t heart[] = { 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 1, 0, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 1, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, }; // a cute heart
-  * DeviceImage i(10,5,heart);
+  * Image i(10,5,heart);
   * i.crop(0,0,2,2).toString() // "0,1\n1,1\n"
   * @endcode
   */
-DeviceImage DeviceImage::crop(int startx, int starty, int cropWidth, int cropHeight)
+Image Image::crop(int startx, int starty, int cropWidth, int cropHeight)
 {
     int newWidth = startx + cropWidth;
     int newHeight = starty + cropHeight;
@@ -865,13 +867,13 @@ DeviceImage DeviceImage::crop(int startx, int starty, int cropWidth, int cropHei
         pastePointer += newHeight;
     }
 
-    return DeviceImage(newWidth, newHeight, cropped);
+    return Image(newWidth, newHeight, cropped);
 }
 
 /**
   * Check if image is read-only (i.e., residing in flash).
   */
-bool DeviceImage::isReadOnly()
+bool Image::isReadOnly()
 {
     return ptr->isReadOnly();
 }
@@ -879,9 +881,9 @@ bool DeviceImage::isReadOnly()
 /**
   * Create a copy of the image bitmap. Used particularly, when isReadOnly() is true.
   *
-  * @return an instance of DeviceImage which can be modified independently of the current instance
+  * @return an instance of Image which can be modified independently of the current instance
   */
-DeviceImage DeviceImage::clone()
+Image Image::clone()
 {
-    return DeviceImage(getWidth(), getHeight(), getBitmap());
+    return Image(getWidth(), getHeight(), getBitmap());
 }
