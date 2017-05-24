@@ -15,7 +15,7 @@ set(CODAL_CPP_FILES
     "source/core/CodalDevice.cpp"
     "source/core/CodalComponent.cpp"
     "source/core/CodalFiber.cpp"
-    "source/core/DeviceHeapAllocator.cpp"
+    "source/core/CodalHeapAllocator.cpp"
     "source/core/DeviceListener.cpp"
     "source/core/Timer.cpp"
     "source/core/CodalUSB.cpp"

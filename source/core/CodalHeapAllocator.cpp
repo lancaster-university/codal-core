@@ -49,7 +49,7 @@ DEALINGS IN THE SOFTWARE.
   */
 
 #include "CodalConfig.h"
-#include "DeviceHeapAllocator.h"
+#include "CodalHeapAllocator.h"
 #include "CodalDevice.h"
 #include "CodalCompat.h"
 #include "ErrorNo.h"
