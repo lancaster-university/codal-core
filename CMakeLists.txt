@@ -57,15 +57,15 @@ set(CODAL_VERSION_FLAGS "-DCODAL_VERSION=\\\"${CODAL_VERSION_STRING}\\\"")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CODAL_VERSION_FLAGS}")
 
 if(CMAKE_COMPILER_IS_GNUCC)
-  file(REMOVE "./source/asm/CortexContextSwitch.s")
-  configure_file("./source/asm/CortexContextSwitch.s.gcc" "./source/asm/CortexContextSwitch.s" COPYONLY)
+  file(REMOVE "${CMAKE_CURRENT_SOURCE_DIR}/source/asm/CortexContextSwitch.s")
+  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/source/asm/CortexContextSwitch.s.gcc" "${CMAKE_CURRENT_SOURCE_DIR}/source/asm/CortexContextSwitch.s" COPYONLY)
 else()
   file(REMOVE "./source/asm/CortexContextSwitch.s")
   configure_file("./source/asm/CortexContextSwitch.s.armcc" "./source/asm/CortexContextSwitch.s" COPYONLY)
 endif()
 
 set(CODAL_S_FILES
-    "./source/asm/CortexContextSwitch.s"
+    "${CMAKE_CURRENT_SOURCE_DIR}/source/asm/CortexContextSwitch.s"
 )
 
 add_library(codal-core
