@@ -10,10 +10,9 @@
 
 #define SYSTEM_CLOCK_INIT 0x01
 
-extern CodalDevice& device;
-
 namespace codal
 {
+
     struct TimerEvent
     {
         uint16_t id;
@@ -90,9 +89,9 @@ namespace codal
 
             this->period = repeating ? period : 0;
 
-            device.disableInterrupts();
+            target_disable_irq();
             addToList(this, head);
-            device.enableInterrupts();
+            target_enable_irq();
         };
     };
 

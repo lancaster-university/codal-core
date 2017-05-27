@@ -29,6 +29,8 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "device_types.h"
 #include "ErrorNo.h"
+#include "codal_target_hal.h"
+#include "CodalFiber.h"
 
 /**
   * Class definition for CodalDevice.
@@ -37,120 +39,110 @@ DEALINGS IN THE SOFTWARE.
   * to provide define core functionality needed by codal.
   *
   */
-class CodalDevice
+namespace codal
 {
-    public:
-    uint32_t random_value;
-
-    /**
-      * The default constructor of a DeviceComponent
-      */
-    CodalDevice()
+    class CodalDevice
     {
-        if (random_value == 0)
-            random_value = 0xC0DA1;
-    }
+        public:
+        uint32_t random_value;
 
-    /**
-      * Perform a hard reset of the device.
-      * default: Use CMSIS NVIC reset vector.
-      */
-    virtual void reset() { }
+        /**
+          * The default constructor of a DeviceComponent
+          */
+        CodalDevice()
+        {
+            if (random_value == 0)
+                random_value = 0xC0DA1;
+        }
 
-    /**
-      * Disable global interrupts.
-      */
-    virtual inline void disableInterrupts() { }
+        /**
+          * Perform a hard reset of the device.
+          * default: Use CMSIS NVIC reset vector.
+          */
+        virtual void reset()
+        {
+            target_reset();
+        }
 
-    /**
-      * Enable global interrupts.
-      */
-    virtual inline void enableInterrupts() { }
+        /**
+         * Delay execution for the given amount of time.
+         *
+         * If the scheduler is running, this will deschedule the current fiber and perform
+         * a power efficient, concurrent sleep operation.
+         *
+         * If the scheduler is disabled or we're running in an interrupt context, this
+         * will revert to a busy wait.
+         *
+         * Alternatively: wait, wait_ms, wait_us can be used which will perform a blocking sleep
+         * operation.
+         *
+         * @param milliseconds the amount of time, in ms, to wait for. This number cannot be negative.
+         */
+        virtual void sleep(unsigned long milliseconds);
 
-    /**
-      * Enable global interrupts.
-      */
-    virtual inline void waitForEvent() { }
+        /**
+          * A blocking pause without using the fiber scheduler
+          * @param milliseconds the time to wait in milliseconds
+          */
+        virtual void wait(uint32_t milliseconds)
+        {
+            target_wait(milliseconds);
+        }
 
-    /**
-     * Delay execution for the given amount of time.
-     *
-     * If the scheduler is running, this will deschedule the current fiber and perform
-     * a power efficient, concurrent sleep operation.
-     *
-     * If the scheduler is disabled or we're running in an interrupt context, this
-     * will revert to a busy wait.
-     *
-     * Alternatively: wait, wait_ms, wait_us can be used which will perform a blocking sleep
-     * operation.
-     *
-     * @param milliseconds the amount of time, in ms, to wait for. This number cannot be negative.
-     */
-    virtual void sleep(uint32_t milliseconds) { }
+        /**
+         * Determine the version of system software currently running.
+         * default: The version of the codal runtime being used.
+         * @return a pointer to a NULL terminated character buffer containing a representation of the current version using semantic versioning.
+         */
+        virtual const char *
+        getVersion()
+        {
+            return DEVICE_DAL_VERSION;
+        }
 
-    /**
-      * A blocking pause without using the fiber scheduler
-      * @param milliseconds the time to wait in milliseconds
-      */
-    virtual void wait(uint32_t milliseconds) { }
+        /**
+          * Determines a unique 32 bit ID for this device, if provided by the hardware.
+          * default: 0.
+          * @return A 32 bit unique identifier.
+          */
+        virtual uint32_t getSerialNumber()
+        {
+            return 0;
+        }
 
-    /**
-      * returns the current stack pointer
-      */
-    virtual PROCESSOR_WORD_TYPE getMSP() { return 0; }
+        /**
+         * Default: Disables all interrupts and user processing and periodically outputs the status code over the default USB serial port.
+         * @param statusCode the appropriate status code, must be in the range 0-999.
+         */
+        virtual void panic(int statusCode)
+        {
+            target_panic(statusCode);
+        }
 
-    /**
-     * Determine the version of system software currently running.
-     * default: The version of the codal runtime being used.
-     * @return a pointer to a NULL terminated character buffer containing a representation of the current version using semantic versioning.
-     */
-    virtual const char *
-    getVersion()
-    {
-        return DEVICE_DAL_VERSION;
-    }
+        /**
+         * Generate a random number in the given range.
+         * default: A simple Galois LFSR random number generator.
+         * A well seeded Galois LFSR is sufficient for most applications, and much more lightweight
+         * than hardware random number generators often built int processor, which takes
+         * a long time and uses a lot of energy.
+         *
+         * @param max the upper range to generate a number for. This number cannot be negative.
+         * @return A random, natural number between 0 and the max-1. Or DEVICE_INVALID_VALUE if max is <= 0.
+         */
+        int random(int max);
 
-    /**
-      * Determines a unique 32 bit ID for this device, if provided by the hardware.
-      * default: 0.
-      * @return A 32 bit unique identifier.
-      */
-    virtual uint32_t getSerialNumber()
-    {
-        return 0;
-    }
-
-    /**
-     * Default: Disables all interrupts and user processing and periodically outputs the status code over the default USB serial port.
-     * @param statusCode the appropriate status code, must be in the range 0-999.
-     */
-    virtual void panic(int statusCode);
-
-    /**
-     * Generate a random number in the given range.
-     * default: A simple Galois LFSR random number generator.
-     * A well seeded Galois LFSR is sufficient for most applications, and much more lightweight
-     * than hardware random number generators often built int processor, which takes
-     * a long time and uses a lot of energy.
-     *
-     * @param max the upper range to generate a number for. This number cannot be negative.
-     * @return A random, natural number between 0 and the max-1. Or DEVICE_INVALID_VALUE if max is <= 0.
-     */
-    int random(int max);
-
-    /**
-     * Seed the random number generator (RNG).
-     *
-     * @param seed an unsigned 32 bit value used to seed codal's lightweight Galois LFSR.
-     * @return DEVICE_OK on success
-     */
-    virtual int seedRandom(uint32_t seed)
-    {
-        random_value = seed;
-        return DEVICE_OK;
-    }
-};
-
-extern CodalDevice& device;
+        /**
+         * Seed the random number generator (RNG).
+         *
+         * @param seed an unsigned 32 bit value used to seed codal's lightweight Galois LFSR.
+         * @return DEVICE_OK on success
+         */
+        virtual int seedRandom(uint32_t seed)
+        {
+            random_value = seed;
+            return DEVICE_OK;
+        }
+    };
+}
 
 #endif

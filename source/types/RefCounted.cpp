@@ -59,7 +59,7 @@ static inline bool isReadOnlyInline(RefCounted *t)
     // Do some sanity checking while we're here
     if (refCount == 1 ||        // object should have been deleted
         (refCount & 1) == 0)    // refCount doesn't look right
-        device.panic(DEVICE_HEAP_ERROR);
+        target_panic(DEVICE_HEAP_ERROR);
 
     // Not read only
     return false;

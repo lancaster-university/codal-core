@@ -128,7 +128,7 @@ public:
       */
     T* operator->() {
         if (object == NULL)
-            device.panic(DEVICE_NULL_DEREFERENCE);
+            target_panic(DEVICE_NULL_DEREFERENCE);
         return object;
     }
 

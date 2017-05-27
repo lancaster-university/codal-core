@@ -26,23 +26,11 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalDevice.h"
 #include "CodalDmesg.h"
 
-void CodalDevice::panic(int statusCode)
-{
-    this->disableInterrupts();
+using namespace codal;
 
-#if DEVICE_DMESG_BUFFER_SIZE > 0
-    DMESG("*** CODAL PANIC : [%d]", statusCode);
-    while (1)
-    {
-    }
-#else
-    Serial pc(USBTX, USBRX);
-    while (1)
-    {
-        pc.printf("*** CODAL PANIC : [%.3d]\n", statusCode);
-        wait_ms(500);
-    }
-#endif
+void CodalDevice::sleep(unsigned long milliseconds)
+{
+    fiber_sleep(milliseconds);
 }
 
 int CodalDevice::random(int max)

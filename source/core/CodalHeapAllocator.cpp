@@ -91,7 +91,7 @@ void device_heap_print(HeapDefinition &heap)
     if(SERIAL_DEBUG) SERIAL_DEBUG->printf("heap_size  : %d\n", (int)heap.heap_end - (int)heap.heap_start);
 
     // Disable IRQ temporarily to ensure no race conditions!
-    device.disableInterrupts();
+    __disable_irq();
 
     block = heap.heap_start;
     while (block < heap.heap_end)
@@ -113,7 +113,7 @@ void device_heap_print(HeapDefinition &heap)
     }
 
     // Enable Interrupts
-    device.enableInterrupts();
+    target_enable_irq();
 
     if(SERIAL_DEBUG) SERIAL_DEBUG->printf("\n");
 
@@ -167,7 +167,7 @@ int device_create_heap(uint32_t start, uint32_t end)
         return DEVICE_INVALID_PARAMETER;
 
     // Disable IRQ temporarily to ensure no race conditions!
-    device.disableInterrupts();
+    target_disable_irq();
 
     // Record the dimensions of this new heap
     heap[heap_count].heap_start = (uint32_t *)start;
@@ -178,7 +178,7 @@ int device_create_heap(uint32_t start, uint32_t end)
     heap_count++;
 
     // Enable Interrupts
-    device.enableInterrupts();
+    target_enable_irq();
 
 #if CONFIG_ENABLED(DEVICE_DBG) && CONFIG_ENABLED(DEVICE_HEAP_DBG)
     device_heap_print();
@@ -209,7 +209,7 @@ void *device_malloc(size_t size, HeapDefinition &heap)
     blocksNeeded++;
 
     // Disable IRQ temporarily to ensure no race conditions!
-    device.disableInterrupts();
+    target_disable_irq();
 
     // We implement a first fit algorithm with cache to handle rapid churn...
     // We also defragment free blocks as we search, to optimise this and future searches.
@@ -252,7 +252,7 @@ void *device_malloc(size_t size, HeapDefinition &heap)
     // We're full!
     if (block >= heap.heap_end)
     {
-        device.enableInterrupts();
+        target_enable_irq();
         return NULL;
     }
 
@@ -273,7 +273,7 @@ void *device_malloc(size_t size, HeapDefinition &heap)
     }
 
     // Enable Interrupts
-    device.enableInterrupts();
+    target_enable_irq();
 
     return block+1;
 }
@@ -316,7 +316,7 @@ void* malloc (size_t size)
 #endif
 
 #if CONFIG_ENABLED(DEVICE_PANIC_HEAP_FULL)
-    device.panic(DEVICE_OOM);
+    target_panic(DEVICE_OOM);
 #endif
 
     return NULL;
@@ -347,13 +347,15 @@ void free (void *mem)
         {
             // The memory block given is part of this heap, so we can simply
             // flag that this memory area is now free, and we're done.
+            if (*cb == 0 || *cb & DEVICE_HEAP_BLOCK_FREE)
+                target_panic(DEVICE_HEAP_ERROR);
             *cb |= DEVICE_HEAP_BLOCK_FREE;
             return;
         }
     }
 
     // If we reach here, then the memory is not part of any registered heap.
-    // Quietly ignore the request, as the standard free() call has no return code...
+    target_panic(DEVICE_HEAP_ERROR);
 }
 
 void* calloc (size_t num, size_t size)
@@ -383,6 +385,18 @@ void* realloc (void* ptr, size_t size)
     }
 
     return mem;
+}
+
+// make sure the libc allocator is not pulled in
+
+void *_malloc_r(struct _reent *, size_t len)
+{
+    return malloc(len);
+}
+
+void _free_r(struct _reent *, void *addr)
+{
+    free(addr);
 }
 
 #endif

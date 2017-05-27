@@ -427,7 +427,7 @@ int CodalUSB::start()
 void usb_panic(int lineNumber)
 {
     DMESG("USB assertion failed: line %d", lineNumber);
-    device.panic(DEVICE_USB_ERROR);
+    target_panic(DEVICE_USB_ERROR);
 }
 
 #endif

@@ -34,6 +34,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "CodalFiber.h"
 #include "Timer.h"
+#include "codal_target_hal.h"
 
 #define INITIAL_STACK_DEPTH (fiber_initial_stack_base() - 0x04)
 
@@ -69,8 +70,6 @@ static EventModel *messageBus = NULL;
 
 using namespace codal;
 
-extern CodalDevice& device;
-
 /**
   * Utility function to add the currenty running fiber to the given queue.
   *
@@ -85,7 +84,7 @@ extern CodalDevice& device;
   */
 void codal::queue_fiber(Fiber *f, Fiber **queue)
 {
-    device.disableInterrupts();
+    target_disable_irq();
 
     // Record which queue this fiber is on.
     f->queue = queue;
@@ -112,7 +111,7 @@ void codal::queue_fiber(Fiber *f, Fiber **queue)
         f->next = NULL;
     }
 
-    device.enableInterrupts();
+    target_enable_irq();
 }
 
 /**
@@ -127,7 +126,7 @@ void codal::dequeue_fiber(Fiber *f)
         return;
 
     // Remove this fiber fromm whichever queue it is on.
-    device.disableInterrupts();
+    target_disable_irq();
 
     if (f->prev != NULL)
         f->prev->next = f->next;
@@ -141,7 +140,7 @@ void codal::dequeue_fiber(Fiber *f)
     f->prev = NULL;
     f->queue = NULL;
 
-    device.enableInterrupts();
+    target_enable_irq();
 }
 
 /**
@@ -151,7 +150,7 @@ Fiber *getFiberContext()
 {
     Fiber *f;
 
-    device.disableInterrupts();
+    target_disable_irq();
 
     if (fiberPool != NULL)
     {
@@ -169,7 +168,7 @@ Fiber *getFiberContext()
         f->stack_top = 0;
     }
 
-    device.enableInterrupts();
+    target_enable_irq();
 
     // Ensure this fiber is in suitable state for reuse.
     f->flags = 0;
@@ -340,7 +339,7 @@ void codal::fiber_sleep(unsigned long t)
     // If the scheduler is not running, then simply perform a spin wait and exit.
     if (!fiber_scheduler_running())
     {
-        device.wait(t);
+        target_wait(t);
         return;
     }
 
@@ -900,7 +899,7 @@ void codal::idle()
         // because we enforce MESSAGE_BUS_LISTENER_IMMEDIATE for listeners placed
         // on the scheduler.
         fiber_flags &= ~DEVICE_SCHEDULER_IDLE;
-        device.waitForEvent();
+        target_wait_for_event();
     }
 }
 
