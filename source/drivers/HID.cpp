@@ -2,6 +2,8 @@
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
+using namespace codal;
+
 static const char hidDescriptor[] = {
     0x06, 0x00, 0xFF, // usage page vendor #0
     0x09, 0x01,       // usage 1

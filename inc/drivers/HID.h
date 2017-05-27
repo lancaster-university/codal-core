@@ -12,27 +12,30 @@
 #define HID_REQUEST_SET_IDLE 0x0A
 #define HID_REQUEST_SET_PROTOCOL 0x0B
 
-
-typedef struct {
-    uint8_t len;
-    uint8_t type; // 0x21
-    uint16_t hidBCD; // 0x100
-    uint8_t countryCode;
-    uint8_t numDesc;
-    uint8_t reportDescType; // 0x22
-    uint16_t sizeOfReport;
-} __attribute__((packed)) HIDReportDescriptor;
-
-class USBHID : public CodalUSBInterface
+namespace codal
 {
-    public:
-    USBHID();
+    typedef struct {
+        uint8_t len;
+        uint8_t type; // 0x21
+        uint16_t hidBCD; // 0x100
+        uint8_t countryCode;
+        uint8_t numDesc;
+        uint8_t reportDescType; // 0x22
+        uint16_t sizeOfReport;
+    } __attribute__((packed)) HIDReportDescriptor;
 
-    virtual int classRequest(UsbEndpointIn &ctrl, USBSetup& setup);
-    virtual int stdRequest(UsbEndpointIn &ctrl, USBSetup& setup);
-    virtual int endpointRequest();
-    virtual const InterfaceInfo *getInterfaceInfo();
-};
+    class USBHID : public CodalUSBInterface
+    {
+        public:
+        USBHID();
+
+        virtual int classRequest(UsbEndpointIn &ctrl, USBSetup& setup);
+        virtual int stdRequest(UsbEndpointIn &ctrl, USBSetup& setup);
+        virtual int endpointRequest();
+        virtual const InterfaceInfo *getInterfaceInfo();
+    };
+}
+
 
 #endif
 

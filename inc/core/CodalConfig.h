@@ -27,8 +27,8 @@ DEALINGS IN THE SOFTWARE.
   * Compile time configuration options for the codal device runtime.
   */
 
-#ifndef DEVICE_CONFIG_H
-#define DEVICE_CONFIG_H
+#ifndef CODAL_CONFIG_H
+#define CODAL_CONFIG_H
 
 #include "yotta_cfg_mappings.h"
 #include "common_includes.h"
@@ -101,6 +101,13 @@ DEALINGS IN THE SOFTWARE.
 #ifndef DEVICE_HEAP_REUSE_SD
 #define DEVICE_HEAP_REUSE_SD                  1
 #endif
+
+// If enabled, RefCounted objects include a constant tag at the beginning.
+// Set '1' to enable.
+#ifndef DEVICE_TAG
+#define DEVICE_TAG                            0
+#endif
+
 
 // The amount of memory allocated to Soft Device to hold its BLE GATT table.
 // For standard S110 builds, this should be word aligned and in the range 0x300 - 0x700.
@@ -224,7 +231,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_BLE_DFU_SERVICE                1
 #endif
 
-// Enable/Disable BLE Service: EventService
+// Enable/Disable BLE Service: DeviceEventService
 // This allows routing of events from the codal device message bus over BLE.
 // Set '1' to enable.
 #ifndef DEVICE_BLE_EVENT_SERVICE
