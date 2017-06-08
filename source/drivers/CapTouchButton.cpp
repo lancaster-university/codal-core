@@ -29,16 +29,18 @@ DEALINGS IN THE SOFTWARE.
  * Represents a single, software controlled capacitative touch button on the device.
  */
 
-#include "DeviceConfig.h"
+#include "CodalConfig.h"
 #include "CodalDevice.h"
 #include "CodalDmesg.h"
 #include "CapTouchButton.h"
-#include "DeviceSystemTimer.h"
+#include "Timer.h"
 #include "EventModel.h"
 
 static bool clock_initialized;
 
 #define CAP_TOUCH_BUTTON_UPDATE_NEEDED 0x4242
+
+using namespace codal;
 
 /**
  * Constructor.
@@ -48,8 +50,8 @@ static bool clock_initialized;
  * @param pin The physical pin on the device to sense.
  * @param sensor The touch sensor driver for this touch sensitive pin.
  */
-CapTouchButton::CapTouchButton(DevicePin &pin, int threshold)
-    : DeviceButton(pin, pin.id, DEVICE_BUTTON_ALL_EVENTS, ACTIVE_LOW, PullNone)
+CapTouchButton::CapTouchButton(Pin &pin, int threshold)
+    : Button(pin, pin.id, DEVICE_BUTTON_ALL_EVENTS, ACTIVE_LOW, PullNone)
 {
     // Disable periodic events. These will come from our TouchSensor.
     this->threshold = threshold;
@@ -77,7 +79,7 @@ CapTouchButton::CapTouchButton(DevicePin &pin, int threshold)
     else if (PB02 <= pin.name && pin.name <= PB09)
         config.yline = (pin.name - 32) + 6;
     else
-        device.panic(0);
+        target_panic(0);
 
     adafruit_ptc_init(PTC, &config);
 
@@ -91,7 +93,7 @@ CapTouchButton::CapTouchButton(DevicePin &pin, int threshold)
                                         MESSAGE_BUS_LISTENER_IMMEDIATE);
 }
 
-void CapTouchButton::update(DeviceEvent)
+void CapTouchButton::update(Event)
 {
     adafruit_ptc_start_conversion(PTC, &config);
 

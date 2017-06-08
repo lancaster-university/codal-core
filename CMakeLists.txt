@@ -29,6 +29,7 @@ set(CODAL_CPP_FILES
 
     "source/drivers/AbstractButton.cpp"
     "source/drivers/Button.cpp"
+    "source/drivers/CapTouchButton.cpp"
     "source/drivers/MultiButton.cpp"
     "source/drivers/TouchButton.cpp"
     "source/drivers/TouchSensor.cpp"

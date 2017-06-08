@@ -26,11 +26,11 @@ DEALINGS IN THE SOFTWARE.
 #ifndef CAP_TOUCH_BUTTON_H
 #define CAP_TOUCH_BUTTON_H
 
-#include "DeviceConfig.h"
-#include "DeviceButton.h"
-#include "DeviceComponent.h"
-#include "DeviceEvent.h"
-#include "DevicePin.h"
+#include "CodalConfig.h"
+#include "Button.h"
+#include "CodalComponent.h"
+#include "Event.h"
+#include "Pin.h"
 #include "adafruit_ptc.h"
 
 
@@ -45,74 +45,77 @@ DEALINGS IN THE SOFTWARE.
 #define CAP_TOUCH_BUTTON_CALIBRATING            0x10
 
 
-/**
-  * Class definition for a CapTouchButtonButton.
-  *
-  * Represents a single, software controlled capacitative touch button on the device.
-  */
-class CapTouchButton : public DeviceButton
+namespace codal
 {
-    public:
-
-    int             threshold;              // The calibration threshold of this button
-    int             reading;                // The last sample taken of this button.
-    bool            active;                 // true if this button is currnelty being sensed, false otherwise.
-
-    struct adafruit_ptc_config config;
-
-
     /**
-      * Constructor.
+      * Class definition for a CapTouchButtonButton.
       *
-      * Enables software controlled capacitative touch sensing on the given pin.
-      *
-      * @param pin The physical pin on the device to sense.
-      * @param sensor The touch sensor driver for this touch sensitive pin.
-      * @param threshold The calibration threshold to use for this button. If undefined, auto calibration will be performed.
+      * Represents a single, software controlled capacitative touch button on the device.
       */
-    CapTouchButton(DevicePin &pin, int threshold = -1);
+    class CapTouchButton : public Button
+    {
+        public:
 
-    /**
-      * Estimate and apply a threshold based on the current reading of the device.
-      */
-    void calibrate();
+        int             threshold;              // The calibration threshold of this button
+        int             reading;                // The last sample taken of this button.
+        bool            active;                 // true if this button is currnelty being sensed, false otherwise.
 
-    /**
-      * Manually define the threshold use to detect a touch event. Any sensed value equal to or greater than this value will
-      * be interpreted as a touch. See getValue().
-      *
-      * @param threshold The threshold value to use for this touchButton. 
-      */
-    void setThreshold(int threshold);
+        struct adafruit_ptc_config config;
 
-    /**
-      * Determine the last reading taken from this button.
-      *
-      * @return the last reading taken.
-      */
-    int getValue();
 
-    /**
-     * Determines if this button is instantenously active (i.e. pressed).
-     * Internal method, use before debouncing.
-     */
-    int buttonActive();
+        /**
+          * Constructor.
+          *
+          * Enables software controlled capacitative touch sensing on the given pin.
+          *
+          * @param pin The physical pin on the device to sense.
+          * @param sensor The touch sensor driver for this touch sensitive pin.
+          * @param threshold The calibration threshold to use for this button. If undefined, auto calibration will be performed.
+          */
+        CapTouchButton(Pin &pin, int threshold = -1);
 
-    /**
-      * Destructor for CapTouchButton, where we deregister our callback
-      */
-    ~CapTouchButton();
+        /**
+          * Estimate and apply a threshold based on the current reading of the device.
+          */
+        void calibrate();
 
-private:
-    /**
-      * Sample capacity and store in 'reading' field
-      */
-    void update(DeviceEvent);
+        /**
+          * Manually define the threshold use to detect a touch event. Any sensed value equal to or greater than this value will
+          * be interpreted as a touch. See getValue().
+          *
+          * @param threshold The threshold value to use for this touchButton.
+          */
+        void setThreshold(int threshold);
 
-    /**
-     * Updates the record of the last reading from this button.
-     */
-    void setValue(int reading);
-};
+        /**
+          * Determine the last reading taken from this button.
+          *
+          * @return the last reading taken.
+          */
+        int getValue();
+
+        /**
+         * Determines if this button is instantenously active (i.e. pressed).
+         * Internal method, use before debouncing.
+         */
+        int buttonActive();
+
+        /**
+          * Destructor for CapTouchButton, where we deregister our callback
+          */
+        ~CapTouchButton();
+
+    private:
+        /**
+          * Sample capacity and store in 'reading' field
+          */
+        void update(Event);
+
+        /**
+         * Updates the record of the last reading from this button.
+         */
+        void setValue(int reading);
+    };
+}
 
 #endif
