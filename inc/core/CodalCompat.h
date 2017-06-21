@@ -37,6 +37,10 @@ DEALINGS IN THE SOFTWARE.
 #define PI 3.14159265359
 #endif
 
+// Required for gcc 6+
+#undef min
+#undef max
+
 namespace codal
 {
     /**
