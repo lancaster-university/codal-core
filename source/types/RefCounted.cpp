@@ -34,15 +34,6 @@ DEALINGS IN THE SOFTWARE.
 using namespace codal;
 
 /**
-  * Initializes for one outstanding reference.
-  */
-void RefCounted::init()
-{
-    // Initialize to one reference (lowest bit set to 1)
-    refCount = 3;
-}
-
-/**
   * Checks if the object resides in flash memory.
   *
   * @param t the object to check.
