@@ -549,12 +549,16 @@ Listener* MessageBus::elementAt(int n)
     return l;
 }
 
+namespace codal {
+
 /**
  * Allocate a NOTIFY event code dynamicaly, for generally purpose condition synchronisation.
  */
 uint16_t allocateNotifyEvent()
 {
     return userNotifyId++;
+}
+
 }
 
 /**
