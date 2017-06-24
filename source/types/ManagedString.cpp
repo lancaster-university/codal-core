@@ -49,6 +49,8 @@ DEALINGS IN THE SOFTWARE.
 #include "ManagedString.h"
 #include "CodalCompat.h"
 
+using namespace codal;
+
 #define REF_TAG REF_TAG_STRING
 #define EMPTY_DATA ((StringData*)(void*)emptyData)
 
