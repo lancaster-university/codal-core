@@ -383,9 +383,9 @@ namespace codal
         /**
           * Internal constructor helper.
           *
-          * Creates this ManagedString based on a given null terminated char array.
+          * Creates this ManagedString based on a given data.
           */
-        void initString(const char *str);
+        void initString(const char *str, int len);
 
         /**
           * Private Constructor.
