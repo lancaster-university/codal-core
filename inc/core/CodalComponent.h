@@ -97,6 +97,7 @@ namespace codal
     {
         static uint8_t configuration;
 
+        public:
         /**
           * Adds the current CodalComponent instance to our array of components.
           */
@@ -106,8 +107,6 @@ namespace codal
           * Removes the current CodalComponent instance from our array of components.
           */
         void removeComponent();
-
-        public:
 
         static CodalComponent* components[DEVICE_COMPONENT_COUNT];
 
