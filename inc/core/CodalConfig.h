@@ -57,8 +57,8 @@ DEALINGS IN THE SOFTWARE.
 #endif
 
 // Physical address of the top of the system stack (on mbed-classic this is the top of SRAM)
-#ifndef CORTEX_M0_STACK_BASE
-#define CORTEX_M0_STACK_BASE                    DEVICE_SRAM_END
+#ifndef DEVICE_STACK_BASE
+#define DEVICE_STACK_BASE                    DEVICE_SRAM_END
 #endif
 
 // Amount of memory reserved for the stack at the end of memory (bytes).
@@ -74,7 +74,7 @@ DEALINGS IN THE SOFTWARE.
 
 // Physical address of the end of heap space.
 #ifndef CODAL_HEAP_END
-#define CODAL_HEAP_END                        (CORTEX_M0_STACK_BASE - DEVICE_STACK_SIZE)
+#define CODAL_HEAP_END                        (DEVICE_STACK_BASE - DEVICE_STACK_SIZE)
 #endif
 
 // Enables or disables the DeviceHeapllocator. Note that if disabled, no reuse of the SRAM normally
@@ -375,7 +375,7 @@ DEALINGS IN THE SOFTWARE.
 #endif
 
 #ifndef DEVICE_USB
-#define DEVICE_USB                            1
+#define DEVICE_USB                            0
 #endif
 
 //
