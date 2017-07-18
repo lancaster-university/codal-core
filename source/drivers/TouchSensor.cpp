@@ -115,9 +115,7 @@ void TouchSensor::onSampleEvent(Event)
     // TODO: Move this to a platform specific library function (DevicePin).
     for (int i=0; i<numberOfButtons; i++)
     {
-        PORT->Group[0].OUTCLR.reg = 1 << buttons[i]->_pin.name;
-        PORT->Group[0].DIRSET.reg = 1 << buttons[i]->_pin.name;
-        PORT->Group[0].DIRCLR.reg = 1 << buttons[i]->_pin.name;
+        buttons[i]->_pin.drainPin();
         buttons[i]->active = true;
     }
 
