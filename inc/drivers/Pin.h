@@ -62,12 +62,14 @@ namespace codal
       * Pin capabilities enum.
       * Used to determine the capabilities of each Pin as some can only be digital, or can be both digital and analogue.
       */
-    enum PinCapability{
+    enum PinCapability
+    {
         PIN_CAPABILITY_DIGITAL = 0x01,
         PIN_CAPABILITY_ANALOG = 0x02,
         PIN_CAPABILITY_AD = PIN_CAPABILITY_DIGITAL | PIN_CAPABILITY_ANALOG,
         PIN_CAPABILITY_ALL = PIN_CAPABILITY_DIGITAL | PIN_CAPABILITY_ANALOG
     };
+
 
     /**
       * Class definition for DevicePin.

@@ -2,7 +2,7 @@
 #define CODAL_DMESG_H
 
 #include "CodalConfig.h"
-#include <cstdarg>
+#include "common_includes.h"
 
 #if DEVICE_DMESG_BUFFER_SIZE > 0
 
@@ -39,7 +39,7 @@ extern CodalLogStore codalLogStore;
   */
 void codal_dmesg(const char *format, ...);
 
-void codal_vdmesg(const char *format, std::va_list ap);
+void codal_vdmesg(const char *format, va_list ap);
 
 #define DMESG codal_dmesg
 

@@ -53,7 +53,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalDevice.h"
 #include "CodalCompat.h"
 #include "ErrorNo.h"
-#include <malloc.h>
+#include "common_includes.h"
 
 using namespace codal;
 
@@ -388,7 +388,6 @@ void* realloc (void* ptr, size_t size)
 }
 
 // make sure the libc allocator is not pulled in
-
 void *_malloc_r(struct _reent *, size_t len)
 {
     return malloc(len);
@@ -399,4 +398,16 @@ void _free_r(struct _reent *, void *addr)
     free(addr);
 }
 
+#endif
+
+#ifndef new
+void* operator new(size_t objsize) {
+    return malloc(objsize);
+}
+#endif
+
+#ifndef delete
+void operator delete(void* obj) {
+    free(obj);
+}
 #endif

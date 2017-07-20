@@ -1,8 +1,6 @@
 #include "CodalDmesg.h"
-
 #if DEVICE_DMESG_BUFFER_SIZE > 0
 
-#include <cstdarg>
 #include "CodalCompat.h"
 
 CodalLogStore codalLogStore;
