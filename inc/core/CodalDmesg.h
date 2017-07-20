@@ -2,7 +2,7 @@
 #define CODAL_DMESG_H
 
 #include "CodalConfig.h"
-#include <cstdarg>
+#include "common_includes.h"
 
 #if DEVICE_DMESG_BUFFER_SIZE > 0
 
@@ -45,7 +45,7 @@ void codal_dmesgf(const char *format, ...);
 void codal_dmesg_set_flush_fn(void (*fn)(void));
 void codal_dmesg_flush();
 
-void codal_vdmesg(const char *format, std::va_list ap);
+void codal_vdmesg(const char *format, va_list ap);
 
 #define DMESG  codal_dmesg
 #define DMESGF  codal_dmesgf

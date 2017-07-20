@@ -35,7 +35,6 @@ set(CODAL_CPP_FILES
     "source/drivers/Button.cpp"
     "source/drivers/MultiButton.cpp"
     "source/drivers/TouchButton.cpp"
-    "source/drivers/TouchSensor.cpp"
     "source/drivers/MessageBus.cpp"
     "source/drivers/HID.cpp"
     "source/drivers/LIS3DH.cpp"
@@ -69,16 +68,8 @@ set(CODAL_VERSION_FLAGS "-DCODAL_VERSION=\\\"${CODAL_VERSION_STRING}\\\"")
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CODAL_VERSION_FLAGS}")
 
-if(CMAKE_COMPILER_IS_GNUCC)
-  file(REMOVE "${CMAKE_CURRENT_SOURCE_DIR}/source/asm/CortexContextSwitch.s")
-  configure_file("${CMAKE_CURRENT_SOURCE_DIR}/source/asm/CortexContextSwitch.s.gcc" "${CMAKE_CURRENT_SOURCE_DIR}/source/asm/CortexContextSwitch.s" COPYONLY)
-else()
-  file(REMOVE "./source/asm/CortexContextSwitch.s")
-  configure_file("./source/asm/CortexContextSwitch.s.armcc" "./source/asm/CortexContextSwitch.s" COPYONLY)
-endif()
-
 set(CODAL_S_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/source/asm/CortexContextSwitch.s"
+    "${CMAKE_CURRENT_SOURCE_DIR}/source/asm/AVRContextSwitch.S"
 )
 
 add_library(codal-core

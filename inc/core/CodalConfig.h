@@ -32,6 +32,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "yotta_cfg_mappings.h"
 #include "common_includes.h"
+#include "device_types.h"
 
 //
 // Memory configuration
@@ -68,8 +69,8 @@ DEALINGS IN THE SOFTWARE.
 
 // Physical address of the end of heap space.
 #ifndef CODAL_HEAP_START
-                                              extern uint32_t __end__;
-#define CODAL_HEAP_START                      (uint32_t)(&__end__)
+                                              extern PROCESSOR_WORD_TYPE codal_heap_start;
+#define CODAL_HEAP_START                      codal_heap_start
 #endif
 
 // Physical address of the end of heap space.
@@ -81,7 +82,7 @@ DEALINGS IN THE SOFTWARE.
 // reserved for SoftDevice is possible, and out of memory condition will no longer be trapped...
 // i.e. panic() will no longer be triggered on memory full conditions.
 #ifndef DEVICE_HEAP_ALLOCATOR
-#define DEVICE_HEAP_ALLOCATOR                 1
+#define DEVICE_HEAP_ALLOCATOR                 0
 #endif
 
 // Block size used by the allocator in bytes.

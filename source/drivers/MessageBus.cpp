@@ -179,7 +179,7 @@ void MessageBus::queueEvent(Event &evt)
     EventQueueItem *item = new EventQueueItem(evt);
 
     // The queue was empty when we entered this function, so queue our event at the start of the queue.
-    __disable_irq();
+    target_disable_irq();
 
     if (prev == NULL)
     {
@@ -197,7 +197,7 @@ void MessageBus::queueEvent(Event &evt)
 
     queueLength++;
 
-    __enable_irq();
+    target_enable_irq();
 }
 
 /**
@@ -209,7 +209,7 @@ EventQueueItem* MessageBus::dequeueEvent()
 {
     EventQueueItem *item = NULL;
 
-    __disable_irq();
+    target_disable_irq();
 
     if (evt_queue_head != NULL)
     {
@@ -222,7 +222,7 @@ EventQueueItem* MessageBus::dequeueEvent()
         queueLength--;
     }
 
-    __enable_irq();
+    target_enable_irq();
 
 
     return item;
