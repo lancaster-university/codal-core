@@ -21,8 +21,10 @@ extern CodalLogStore codalLogStore;
   * Log formatted message to an internal buffer.
   *
   * Supported format strings:
+  *    %c - single character 
   *    %d - decimal number
   *    %x - hexadecimal number (with 0x)
+  *    %p - hexadecimal number padded with zeros (and with 0x)
   *    %X - hexadecimal number padded with zeros (and with 0x)
   *    %s - '\0'-terminated string
   *    %% - literal %

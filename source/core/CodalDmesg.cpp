@@ -87,6 +87,9 @@ void codal_vdmesg(const char *format, va_list ap)
             uint32_t val = va_arg(ap, uint32_t);
             switch (*end++)
             {
+            case 'c':
+                logwriten((const char *)&val, 1);
+                break;
             case 'd':
                 logwritenum(val, false, false);
                 break;
