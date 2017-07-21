@@ -340,9 +340,6 @@ DEALINGS IN THE SOFTWARE.
 //
 // Debug options
 //
-#ifndef DEVICE_DMESG
-#define DEVICE_DMESG                          0
-#endif
 
 // When non-zero internal debug messages (DMESG() macro) go to a in-memory buffer of this size (in bytes).
 // It can be inspected from GDB (with 'print codalLogStore'), or accessed by the application.
@@ -351,19 +348,23 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_DMESG_BUFFER_SIZE              1024
 #endif
 
-// Enable this to route debug messages through the USB serial interface.
-// n.b. This also disables the user serial port 'uBit.serial'.
-// Set '1' to enable.
-#ifndef DEVICE_DBG
-#define DEVICE_DBG                            0
+//
+// Set this to enable the generation debugging messages through the DMESG interface.
+//
+// 0: Debug message disabled
+// 1: Diagnostics logging
+// 2: Heap allocaion diagnostics
+//
+#ifndef CODAL_DEBUG_DISABLED
+#define CODAL_DEBUG_DISABLED                  0
+#define CODAL_DEBUG_DIAGNOSTICS               1
+#define CODAL_DEBUG_HEAP                      2
 #endif
 
-// Enable this to receive diagnostic messages from the heap allocator via the USB serial interface.
-// n.b. This requires DEVICE_DBG to be defined.
-// Set '1' to enable.
-#ifndef DEVICE_HEAP_DBG
-#define DEVICE_HEAP_DBG                       0
+#ifndef CODAL_DEBUG
+#define CODAL_DEBUG                           CODAL_DEBUG_DISABLED
 #endif
+
 
 // Versioning options.
 // We use semantic versioning (http://semver.org/) to identify differnet versions of the codal device runtime.
@@ -383,9 +384,5 @@ DEALINGS IN THE SOFTWARE.
 //
 #define CONFIG_ENABLED(X) (X == 1)
 #define CONFIG_DISABLED(X) (X != 1)
-
-#if CONFIG_ENABLED(DEVICE_DBG)
-extern RawSerial* SERIAL_DEBUG;
-#endif
 
 #endif

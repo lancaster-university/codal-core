@@ -52,6 +52,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalHeapAllocator.h"
 #include "CodalDevice.h"
 #include "CodalCompat.h"
+#include "CodalDmesg.h"
 #include "ErrorNo.h"
 #include <malloc.h>
 
@@ -69,8 +70,8 @@ struct HeapDefinition
 HeapDefinition heap[DEVICE_MAXIMUM_HEAPS] = { };
 uint8_t heap_count = 0;
 
+#if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
 
-#if CONFIG_ENABLED(DEVICE_DBG) && CONFIG_ENABLED(DEVICE_HEAP_DBG)
 // Diplays a usage summary about a given heap...
 void device_heap_print(HeapDefinition &heap)
 {
@@ -82,13 +83,13 @@ void device_heap_print(HeapDefinition &heap)
 
     if (heap.heap_start == NULL)
     {
-        if(SERIAL_DEBUG) SERIAL_DEBUG->printf("--- HEAP NOT INITIALISED ---\n");
+        DMESG("--- HEAP NOT INITIALISED ---\n");
         return;
     }
 
-    if(SERIAL_DEBUG) SERIAL_DEBUG->printf("heap_start : %p\n", heap.heap_start);
-    if(SERIAL_DEBUG) SERIAL_DEBUG->printf("heap_end   : %p\n", heap.heap_end);
-    if(SERIAL_DEBUG) SERIAL_DEBUG->printf("heap_size  : %d\n", (int)heap.heap_end - (int)heap.heap_start);
+    DMESG("heap_start : %p\n", heap.heap_start);
+    DMESG("heap_end   : %p\n", heap.heap_end);
+    DMESG("heap_size  : %d\n", (int)heap.heap_end - (int)heap.heap_start);
 
     // Disable IRQ temporarily to ensure no race conditions!
     __disable_irq();
@@ -97,10 +98,10 @@ void device_heap_print(HeapDefinition &heap)
     while (block < heap.heap_end)
     {
     blockSize = *block & ~DEVICE_HEAP_BLOCK_FREE;
-        if(SERIAL_DEBUG) SERIAL_DEBUG->printf("[%c:%d] ", *block & DEVICE_HEAP_BLOCK_FREE ? 'F' : 'U', blockSize*4);
+        DMESG("[%c:%d] ", *block & DEVICE_HEAP_BLOCK_FREE ? 'F' : 'U', blockSize*4);
         if (cols++ == 20)
         {
-            if(SERIAL_DEBUG) SERIAL_DEBUG->printf("\n");
+            DMESG("\n");
             cols = 0;
         }
 
@@ -115,10 +116,10 @@ void device_heap_print(HeapDefinition &heap)
     // Enable Interrupts
     target_enable_irq();
 
-    if(SERIAL_DEBUG) SERIAL_DEBUG->printf("\n");
+    DMESG("\n");
 
-    if(SERIAL_DEBUG) SERIAL_DEBUG->printf("mb_total_free : %d\n", totalFreeBlock*4);
-    if(SERIAL_DEBUG) SERIAL_DEBUG->printf("mb_total_used : %d\n", totalUsedBlock*4);
+    DMESG("mb_total_free : %d\n", totalFreeBlock*4);
+    DMESG("mb_total_used : %d\n", totalUsedBlock*4);
 }
 
 
@@ -127,7 +128,7 @@ void device_heap_print()
 {
     for (int i=0; i < heap_count; i++)
     {
-        if(SERIAL_DEBUG) SERIAL_DEBUG->printf("\nHEAP %d: \n", i);
+        DMESG("\nHEAP %d: \n", i);
         device_heap_print(heap[i]);
     }
 }
@@ -180,7 +181,7 @@ int device_create_heap(uint32_t start, uint32_t end)
     // Enable Interrupts
     target_enable_irq();
 
-#if CONFIG_ENABLED(DEVICE_DBG) && CONFIG_ENABLED(DEVICE_HEAP_DBG)
+#if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
     device_heap_print();
 #endif
 
@@ -302,17 +303,17 @@ void* malloc (size_t size)
         p = device_malloc(size, heap[i]);
         if (p != NULL)
         {
-#if CONFIG_ENABLED(DEVICE_DBG) && CONFIG_ENABLED(DEVICE_HEAP_DBG)
-            if(SERIAL_DEBUG) SERIAL_DEBUG->printf("device_malloc: ALLOCATED: %d [%p]\n", size, p);
+#if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
+            DMESG("device_malloc: ALLOCATED: %d [%p]\n", size, p);
 #endif
             return p;
         }
     }
 
     // We're totally out of options (and memory!).
-#if CONFIG_ENABLED(DEVICE_DBG) && CONFIG_ENABLED(DEVICE_HEAP_DBG)
+#if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
     // Keep everything transparent if we've not been initialised yet
-    if(SERIAL_DEBUG) SERIAL_DEBUG->printf("device_malloc: OUT OF MEMORY [%d]\n", size);
+    DMESG("device_malloc: OUT OF MEMORY [%d]\n", size);
 #endif
 
 #if CONFIG_ENABLED(DEVICE_PANIC_HEAP_FULL)
@@ -332,9 +333,9 @@ void free (void *mem)
     uint32_t	*memory = (uint32_t *)mem;
     uint32_t	*cb = memory-1;
 
-#if CONFIG_ENABLED(DEVICE_DBG) && CONFIG_ENABLED(DEVICE_HEAP_DBG)
+#if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
     if (heap_count > 0)
-        if(SERIAL_DEBUG) SERIAL_DEBUG->printf("device_free:   %p\n", mem);
+        DMESG("device_free:   %p\n", mem);
 #endif
     // Sanity check.
     if (memory == NULL)
