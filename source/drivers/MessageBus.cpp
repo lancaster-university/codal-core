@@ -52,6 +52,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalFiber.h"
 #include "ErrorNo.h"
 #include "NotifyEvents.h"
+#include "codal_target_hal.h"
 
 using namespace codal;
 

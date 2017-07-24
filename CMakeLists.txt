@@ -34,10 +34,8 @@ set(CODAL_CPP_FILES
     "source/drivers/AbstractButton.cpp"
     "source/drivers/Button.cpp"
     "source/drivers/MultiButton.cpp"
-    "source/drivers/TouchButton.cpp"
     "source/drivers/MessageBus.cpp"
     "source/drivers/HID.cpp"
-    "source/drivers/LIS3DH.cpp"
     "source/drivers/AnalogSensor.cpp"
     "source/drivers/LinearAnalogSensor.cpp"
     "source/drivers/NonLinearAnalogSensor.cpp"
@@ -68,13 +66,8 @@ set(CODAL_VERSION_FLAGS "-DCODAL_VERSION=\\\"${CODAL_VERSION_STRING}\\\"")
 
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CODAL_VERSION_FLAGS}")
 
-set(CODAL_S_FILES
-    "${CMAKE_CURRENT_SOURCE_DIR}/source/asm/AVRContextSwitch.S"
-)
-
 add_library(codal-core
     ${CODAL_CPP_FILES}
-    ${CODAL_S_FILES}
 )
 
 target_include_directories(codal-core PUBLIC ${INCLUDE_DIRS})
