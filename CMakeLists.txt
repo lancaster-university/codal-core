@@ -11,6 +11,7 @@ RECURSIVE_FIND_DIR(INCLUDE_DIRS "./inc" "*.h")
 set(CODAL_CPP_FILES
     "source/core/MemberFunctionCallback.cpp"
     "source/core/CodalCompat.cpp"
+    "source/core/CodalUtil.cpp"
     "source/core/CodalDmesg.cpp"
     "source/core/CodalDevice.cpp"
     "source/core/CodalComponent.cpp"
@@ -41,6 +42,11 @@ set(CODAL_CPP_FILES
     "source/drivers/LevelDetector.cpp"
     "source/drivers/Synthesizer.cpp"
     "source/drivers/Timer.cpp"
+    "source/drivers/Accelerometer.cpp"
+    "source/drivers/Compass.cpp"
+    "source/drivers/FXOS8700.cpp"
+    "source/drivers/FXOS8700Accelerometer.cpp"
+    "source/drivers/FXOS8700Magnetometer.cpp"
 )
 
 execute_process(WORKING_DIRECTORY "." COMMAND "git" "log" "--pretty=format:%h" "-n" "1" OUTPUT_VARIABLE git_hash)
