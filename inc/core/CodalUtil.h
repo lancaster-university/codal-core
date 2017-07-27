@@ -57,6 +57,7 @@ namespace codal
         KeyValuePair* find(const uint32_t key) const;
         uint32_t get(const uint32_t key) const;
         uint32_t getKey(const uint32_t key) const;
+        bool hasKey(const uint32_t key) const;
     };
 
 }

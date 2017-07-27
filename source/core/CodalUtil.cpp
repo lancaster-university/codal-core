@@ -60,4 +60,9 @@ uint32_t KeyValueTable::getKey(const uint32_t key) const
 	return find(key)->key;
 }
 
+bool KeyValueTable::hasKey(const uint32_t key) const
+{
+	return (find(key)->key == key);
+}
+
 
