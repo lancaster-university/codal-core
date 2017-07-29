@@ -256,56 +256,7 @@ DEALINGS IN THE SOFTWARE.
 #define USE_ACCEL_LSB                           0
 #endif
 
-//
-// Display options
-//
 
-// Selects the matrix configuration for the display driver.
-// Known, acceptable options are:
-//
-#define MICROBUG_REFERENCE_DEVICE               1
-#define DEVICE_3X9                            2
-#define DEVICE_SB1                            3
-#define DEVICE_SB2                            4
-
-#ifndef DEVICE_DISPLAY_TYPE
-#define DEVICE_DISPLAY_TYPE                   DEVICE_SB2
-#endif
-
-// Selects the minimum permissable brightness level for the device
-// in the region of 0 (off) to 255 (full brightness)
-#ifndef DEVICE_DISPLAY_MINIMUM_BRIGHTNESS
-#define DEVICE_DISPLAY_MINIMUM_BRIGHTNESS     1
-#endif
-
-// Selects the maximum permissable brightness level for the device
-// in the region of 0 (off) to 255 (full brightness)
-#ifndef DEVICE_DISPLAY_MAXIMUM_BRIGHTNESS
-#define DEVICE_DISPLAY_MAXIMUM_BRIGHTNESS     255
-#endif
-
-// Selects the default brightness for the display
-// in the region of zero (off) to 255 (full brightness)
-#ifndef DEVICE_DISPLAY_DEFAULT_BRIGHTNESS
-#define DEVICE_DISPLAY_DEFAULT_BRIGHTNESS     DEVICE_DISPLAY_MAXIMUM_BRIGHTNESS
-#endif
-
-// Selects the default scroll speed for the display.
-// The time taken to move a single pixel (ms).
-#ifndef DEVICE_DEFAULT_SCROLL_SPEED
-#define DEVICE_DEFAULT_SCROLL_SPEED           120
-#endif
-
-// Selects the number of pixels a scroll will move in each quantum.
-#ifndef DEVICE_DEFAULT_SCROLL_STRIDE
-#define DEVICE_DEFAULT_SCROLL_STRIDE          -1
-#endif
-
-// Selects the time each character will be shown on the display during print operations.
-// The time each character is shown on the screen  (ms).
-#ifndef DEVICE_DEFAULT_PRINT_SPEED
-#define DEVICE_DEFAULT_PRINT_SPEED            400
-#endif
 
 //Configures the default serial mode used by serial read and send calls.
 #ifndef DEVICE_DEFAULT_SERIAL_MODE

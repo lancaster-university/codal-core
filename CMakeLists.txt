@@ -27,6 +27,8 @@ set(CODAL_CPP_FILES
     "source/types/ManagedBuffer.cpp"
     "source/types/RefCounted.cpp"
     "source/types/RefCountedInit.cpp"
+    "source/types/BitmapFont.cpp"
+    "source/types/Image.cpp"
 
     "source/drivers/AbstractButton.cpp"
     "source/drivers/Button.cpp"
@@ -47,6 +49,9 @@ set(CODAL_CPP_FILES
     "source/drivers/FXOS8700.cpp"
     "source/drivers/FXOS8700Accelerometer.cpp"
     "source/drivers/FXOS8700Magnetometer.cpp"
+    "source/drivers/LEDMatrix.cpp"
+    "source/drivers/Display.cpp"
+    "source/drivers/AnimatedDisplay.cpp"
 )
 
 execute_process(WORKING_DIRECTORY "." COMMAND "git" "log" "--pretty=format:%h" "-n" "1" OUTPUT_VARIABLE git_hash)

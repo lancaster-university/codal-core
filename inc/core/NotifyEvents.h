@@ -30,10 +30,11 @@ DEALINGS IN THE SOFTWARE.
   * This file contains events used on the general purpose Eventing channel
   * DEVICE_ID_NOTIFY, new events should be added here, to prevent duplication.
   */
-#define DEVICE_DISPLAY_EVT_FREE           1
+#define DISPLAY_EVT_FREE                  1
 #define CODAL_SERIAL_EVT_TX_EMPTY         2
 #define DEVICE_UART_S_EVT_TX_EMPTY        3
 
+// Any values after 1024 are available for application use
 #define DEVICE_NOTIFY_USER_EVENT_BASE     1024
 
 #endif

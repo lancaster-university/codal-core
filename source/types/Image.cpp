@@ -32,8 +32,8 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 #include "Image.h"
-#include "DeviceFont.h"
-#include "DeviceCompat.h"
+#include "BitmapFont.h"
+#include "CodalCompat.h"
 #include "ManagedString.h"
 #include "ErrorNo.h"
 
@@ -271,7 +271,7 @@ Image::~Image()
   */
 void Image::init_empty()
 {
-    ptr = (ImageData*)(void*)empty;
+    ptr = EMPTY_DATA;
 }
 
 /**
@@ -578,35 +578,32 @@ int Image::paste(const Image &image, int16_t x, int16_t y, uint8_t alpha)
   */
 int Image::print(char c, int16_t x, int16_t y)
 {
-    unsigned char v;
+    const uint8_t *v;
     int x1, y1;
 
-    DeviceFont font = DeviceFont::getSystemFont();
+    BitmapFont font = BitmapFont::getSystemFont();
 
     // Sanity check. Silently ignore anything out of bounds.
-    if (x >= getWidth() || y >= getHeight() || c < DEVICE_FONT_ASCII_START || c > font.asciiEnd)
+    if (x >= getWidth() || y >= getHeight() || c < BITMAP_FONT_ASCII_START || c > font.asciiEnd)
         return DEVICE_INVALID_PARAMETER;
 
     // Paste.
-    int offset = (c-DEVICE_FONT_ASCII_START) * 5;
+    v = font.get(c);
 
-    for (int row=0; row<DEVICE_FONT_HEIGHT; row++)
+    for (int row=0; row<BITMAP_FONT_HEIGHT; row++)
     {
-        v = (char)*(font.characters + offset);
-
-        offset++;
-
         // Update our Y co-ord write position
         y1 = y+row;
 
-        for (int col = 0; col < DEVICE_FONT_WIDTH; col++)
+        for (int col = 0; col < BITMAP_FONT_WIDTH; col++)
         {
             // Update our X co-ord write position
             x1 = x+col;
 
             if (x1 < getWidth() && y1 < getHeight())
-                this->getBitmap()[y1*getWidth()+x1] = (v & (0x10 >> col)) ? 255 : 0;
+                this->getBitmap()[y1*getWidth()+x1] = ((*v) & (0x10 >> col)) ? 255 : 0;
         }
+        v++;
     }
 
     return DEVICE_OK;
