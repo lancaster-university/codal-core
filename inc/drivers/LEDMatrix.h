@@ -32,6 +32,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Display.h"
 #include "Image.h"
 #include "Pin.h"
+#include "Timer.h"
 
 //
 // Internal constants
@@ -42,6 +43,7 @@ DEALINGS IN THE SOFTWARE.
 // Event codes raised by an LEDMatrix
 //
 #define LED_MATRIX_EVT_LIGHT_SENSE                2
+#define LED_MATRIX_EVT_FRAME_TIMEOUT              3
 
 //
 // Compile Time Configuration Options
@@ -126,8 +128,7 @@ namespace codal
         uint8_t mode;
         uint8_t greyscaleBitMsk;
         uint8_t timingCount;
-
-        Timeout renderTimer;
+        int frameTimeout;
 
         //
         // State used by all animation routines.
@@ -142,6 +143,11 @@ namespace codal
          *  of brightness.
          */
         void renderFinish();
+
+        /**
+         * Event handler, called when a requested time has elapsed (used for brightness control).
+         */
+        void onTimeoutEvent(Event);
 
         /**
          * Translates a bit mask to a bit mask suitable for the nrf PORT0 and PORT1.
@@ -252,6 +258,16 @@ namespace codal
          * @endcode
          */
         void clear();
+
+        /**
+         * Configures the brightness of the display.
+         *
+         * @param b The brightness to set the brightness to, in the range 0 - 255.
+         *
+         * @return DEVICE_OK, or DEVICE_INVALID_PARAMETER
+         */
+        virtual int setBrightness(int b);
+
 
         /**
          * Destructor for CodalDisplay, where we deregister this instance from the array of system components.

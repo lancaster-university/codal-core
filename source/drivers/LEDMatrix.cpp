@@ -54,6 +54,9 @@ LEDMatrix::LEDMatrix(const MatrixMap &map, uint16_t id) : Display(map.width, map
     this->mode = DISPLAY_MODE_BLACK_AND_WHITE;
     this->strobeRow = 0;
 
+    if(EventModel::defaultEventBus)
+        EventModel::defaultEventBus->listen(id, LED_MATRIX_EVT_FRAME_TIMEOUT, this, &LEDMatrix::onTimeoutEvent, MESSAGE_BUS_LISTENER_IMMEDIATE);
+
     this->status |= DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
     this->status |= DEVICE_COMPONENT_RUNNING;
 }
@@ -89,6 +92,11 @@ void LEDMatrix::periodicCallback()
 void LEDMatrix::renderFinish()
 {
     matrixMap.rowPins[strobeRow]->setDigitalValue(0);
+}
+
+void LEDMatrix::onTimeoutEvent(Event)
+{
+    renderFinish();
 }
 
 void LEDMatrix::render()
@@ -154,7 +162,7 @@ void LEDMatrix::render()
 
     //timer does not have enough resolution for brightness of 1. 23.53 us
     if(brightness != LED_MATRIX_MAXIMUM_BRIGHTNESS && brightness > LED_MATRIX_MINIMUM_BRIGHTNESS)
-        renderTimer.attach_us(callback(this, &LEDMatrix::renderFinish), (((brightness * 950) / (LED_MATRIX_MAXIMUM_BRIGHTNESS)) * SCHEDULER_TICK_PERIOD_US));
+        system_timer_event_after_us(frameTimeout, id, LED_MATRIX_EVT_FRAME_TIMEOUT);
 
     //this will take around 23us to execute
     if(brightness <= LED_MATRIX_MINIMUM_BRIGHTNESS)
@@ -338,6 +346,26 @@ void LEDMatrix::disable()
 void LEDMatrix::clear()
 {
     image.clear();
+}
+
+/**
+ * Configures the brightness of the display.
+ *
+ * @param b The brightness to set the brightness to, in the range 0 - 255.
+ *
+ * @return DEVICE_OK, or DEVICE_INVALID_PARAMETER
+ */
+int LEDMatrix::setBrightness(int b)
+{
+    int result = Display::setBrightness(b);
+
+    if (result != DEVICE_OK)
+        return result;
+
+    // Precalculate the per frame "on" time for this brightness level.
+    frameTimeout = ((brightness * 950) / (LED_MATRIX_MAXIMUM_BRIGHTNESS)) * SCHEDULER_TICK_PERIOD_US;
+
+    return DEVICE_OK;
 }
 
 /**
