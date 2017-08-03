@@ -101,8 +101,6 @@ void LEDMatrix::onTimeoutEvent(Event)
 
 void LEDMatrix::render()
 {
-    uint32_t s;
-
     // Simple optimisation.
     // If display is at zero brightness, there's nothing to do.
     if(brightness == 0)
@@ -110,11 +108,7 @@ void LEDMatrix::render()
 
     // Turn off the previous row
     matrixMap.rowPins[strobeRow]->setDigitalValue(0);
-
-    // TODO: Swap this out for an efficient getDigitalValue() call.
-    //matrixMap.rowPins[strobeRow]->getDigitalValue();
-    s = NRF_GPIO->PIN_CNF[matrixMap.rowPins[strobeRow]->name] & 0xfffffffe;
-    NRF_GPIO->PIN_CNF[matrixMap.rowPins[strobeRow]->name] = s;
+    matrixMap.rowPins[strobeRow]->getDigitalValue();
 
     // Move on to the next row.
     strobeRow++;
@@ -154,11 +148,7 @@ void LEDMatrix::render()
     }
 
     // Turn off the previous row
-    // TODO: Swap this out for an efficient setDigitalValue() call.
-    //matrixMap.rowPins[strobeRow]->getDigitalValue();
     matrixMap.rowPins[strobeRow]->setDigitalValue(1);
-    s = NRF_GPIO->PIN_CNF[matrixMap.rowPins[strobeRow]->name] & 0xfffffffe;
-    NRF_GPIO->PIN_CNF[matrixMap.rowPins[strobeRow]->name] = s | 0x00000001;
 
     //timer does not have enough resolution for brightness of 1. 23.53 us
     if(brightness != LED_MATRIX_MAXIMUM_BRIGHTNESS && brightness > LED_MATRIX_MINIMUM_BRIGHTNESS)
