@@ -30,6 +30,7 @@ DEALINGS IN THE SOFTWARE.
  * Also includes basic data caching and on demand activation.
  */
 #include "CodalConfig.h"
+#include "CodalDmesg.h"
 #include "FXOS8700Accelerometer.h"
 #include "ErrorNo.h"
 #include "Event.h"
@@ -49,6 +50,7 @@ using namespace codal;
  */
 FXOS8700Accelerometer::FXOS8700Accelerometer(FXOS8700 &fxos8700, CoordinateSpace &coordinateSpace, uint16_t id) : Accelerometer(coordinateSpace, id), fxo(fxos8700)
 {
+    fxo.setAccelerometerAPI(this);
 }
 
 /**

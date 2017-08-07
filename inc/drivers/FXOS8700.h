@@ -182,9 +182,8 @@ namespace codal
     /**
      * Class definition for an FXSO8700 hybrid Accelerometer/Magnetometer
      */
-    class FXOS8700
+    class FXOS8700 : CodalComponent
     {
-        uint8_t         status;                 // Status flags
         I2C&            i2c;                    // The I2C interface to use.
         Pin             &int1;                  // Data ready interrupt.
         uint16_t        address;                // I2C address of this accelerometer.

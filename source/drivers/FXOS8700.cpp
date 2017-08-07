@@ -31,10 +31,12 @@ DEALINGS IN THE SOFTWARE.
  */
 #include "FXOS8700.h"
 #include "FXOS8700Accelerometer.h"
+#include "FXOS8700Magnetometer.h"
 #include "ErrorNo.h"
 #include "Event.h"
 #include "CodalCompat.h"
 #include "CodalFiber.h"
+#include "CodalDmesg.h"
 #include "Accelerometer.h"
 
 using namespace codal;
@@ -78,6 +80,7 @@ CREATE_KEY_VALUE_TABLE(accelerometerPeriod, accelerometerPeriodData);
 int FXOS8700::configure()
 {
     int result;
+    uint8_t value;
 
     // First find the nearest sample rate to that specified.
     samplePeriod = accelerometerPeriod.getKey(samplePeriod * 1000) / 1000;
@@ -86,45 +89,83 @@ int FXOS8700::configure()
     // Now configure the accelerometer accordingly.
 
     // Firstly, disable the module (as some registers cannot be changed while its running).
-    result = i2c.write(address, FXOS8700_CTRL_REG1, 0x00);
+    value = 0x00;
+    result = i2c.write(address, FXOS8700_CTRL_REG1, value);
     if (result != 0)
+    {
+        DMESG("I2C ERROR: FXOS8700_CTRL_REG1");
         return DEVICE_I2C_ERROR;
+    }
     
     // Enter hybrid mode (interleave accelerometer and magnetometer samples).
     // Also, select full oversampling on the magnetometer 
     // TODO: Determine power / accuracy tradeoff here.
-    result = i2c.write(address, FXOS8700_M_CTRL_REG1, 0x1F);
+    value = 0x1F;
+    result = i2c.write(address, FXOS8700_M_CTRL_REG1, value);
     if (result != 0)
+    {
+        DMESG("I2C ERROR: FXOS8700_M_CTRL_REG1");
         return DEVICE_I2C_ERROR;
+    }
 
     // Select the auto incremement mode, which allows a contiguous I2C block
     // read of both acceleromter and magnetometer data despite them being non-contguous 
     // in memory... funky!
-    result = i2c.write(address, FXOS8700_M_CTRL_REG2, 0x20);
+    value = 0x20;
+    result = i2c.write(address, FXOS8700_M_CTRL_REG2, value);
     if (result != 0)
+    {
+        DMESG("I2C ERROR: FXOS8700_M_CTRL_REG2");
         return DEVICE_I2C_ERROR;
+    }
+
+    // Configure PushPull Active LOW interrupt mode. 
+    // n.b. This may need to be reconfigured if the interrupt line is shared.
+    value = 0x00;
+    result = i2c.write(address, FXOS8700_CTRL_REG3, value);
+    if (result != 0)
+    {
+        DMESG("I2C ERROR: FXOS8700_CTRL_REG3");
+        return DEVICE_I2C_ERROR;
+    }
 
     // Enable a data ready interrupt.
     // TODO: This is currently PUSHPULL mode. This may nede to be reconfigured
     // to OPEN_DRAIN if the interrupt line is shared.
-    result = i2c.write(address, FXOS8700_CTRL_REG4, 0x01);
+    value = 0x01;
+    result = i2c.write(address, FXOS8700_CTRL_REG4, value);
     if (result != 0)
+    {
+        DMESG("I2C ERROR: FXOS8700_CTRL_REG4");
         return DEVICE_I2C_ERROR;
+    }
 
     // Route the data ready interrupt to INT1 pin.
-    result = i2c.write(address, FXOS8700_CTRL_REG5, 0x01);
+    value = 0x01;
+    result = i2c.write(address, FXOS8700_CTRL_REG5, value);
     if (result != 0)
+    {
+        DMESG("I2C ERROR: FXOS8700_CTRL_REG5");
         return DEVICE_I2C_ERROR;
+    }
 
     // Configure acceleromter g range.
-    result = i2c.write(address, FXOS8700_XYZ_DATA_CFG, accelerometerRange.get(sampleRange));
+    value = accelerometerRange.get(sampleRange);
+    result = i2c.write(address, FXOS8700_XYZ_DATA_CFG, value);
     if (result != 0)
+    {
+        DMESG("I2C ERROR: FXOS8700_XYZ_DATA_CFG");
         return DEVICE_I2C_ERROR;
+    }
 
     // Configure sample rate and re-enable the sensor.
-    result = i2c.write(address, FXOS8700_CTRL_REG1, accelerometerPeriod.get(samplePeriod * 1000) | 0x01);
+    value = accelerometerPeriod.get(samplePeriod * 1000) | 0x01;
+    result = i2c.write(address, FXOS8700_CTRL_REG1, value);
     if (result != 0)
+    {
+        DMESG("I2C ERROR: FXOS8700_CTRL_REG1");
         return DEVICE_I2C_ERROR;
+    }
 
     return DEVICE_OK;
 }
@@ -197,37 +238,49 @@ int FXOS8700::updateSample()
     // Poll interrupt line from device (ACTIVE LOW)
     if(int1.getDigitalValue() == 0)
     {
-#ifdef POOP
-        int16_t data[6];
+        uint8_t data[12];
+        uint8_t *ptr;
         int result;
 
         // Read the combined accelerometer and magnetometer data.
-        // N.b. old code set an eight but in the address here... dunno why.
-        result = i2c.read(address, FXOS8700_OUT_X_MSB, (uint8_t *)data, 12);
+        result = i2c.read(address, FXOS8700_OUT_X_MSB, data, 12);
 
         if (result !=0)
             return DEVICE_I2C_ERROR;
 
-        // read sensor data...
-        accelerometerSample.x = data[0];
-        accelerometerSample.y = data[1];
-        accelerometerSample.z = data[2];
+        // read sensor data (and translate into signed little endian)
+        ptr = (uint8_t *)&accelerometerSample; 
+        *ptr++ = data[1];
+        *ptr++ = data[0];
+        *ptr++ = data[3];
+        *ptr++ = data[2];
+        *ptr++ = data[5];
+        *ptr++ = data[4];
 
-        magnetometerSample.x = data[3];
-        magnetometerSample.y = data[4];
-        magnetometerSample.z = data[5];
+        ptr = (uint8_t *)&magnetometerSample; 
+        *ptr++ = data[7];
+        *ptr++ = data[6];
+        *ptr++ = data[9];
+        *ptr++ = data[8];
+        *ptr++ = data[11];
+        *ptr++ = data[10];
 
-        // scale the 14 bit data into SI units (milli-g)
-        accelerometerSample.x = (accelerometerSample.x * this->sampleRange) / 8;
-        accelerometerSample.y = (accelerometerSample.y * this->sampleRange) / 8;
-        accelerometerSample.z = (accelerometerSample.z * this->sampleRange) / 8;
+        // scale the 14 bit data (packed into 16 bits) into SI units (milli-g)
+        accelerometerSample.x = (accelerometerSample.x * this->sampleRange) / 32;
+        accelerometerSample.y = (accelerometerSample.y * this->sampleRange) / 32;
+        accelerometerSample.z = (accelerometerSample.z * this->sampleRange) / 32;
+
+        // align to ENU coordinate system 
+        accelerometerSample.x = -accelerometerSample.x;
+        magnetometerSample.x = -magnetometerSample.x;
+
+        //DMESG("ENU: [AX:%d][AY:%d][AZ:%d][MX:%d][MY:%d][MZ:%d]", accelerometerSample.x, accelerometerSample.y, accelerometerSample.z, magnetometerSample.x, magnetometerSample.y, magnetometerSample.z);
 
         if (accelerometerAPI)
             accelerometerAPI->dataReady();
 
         if (magnetometerAPI)
             magnetometerAPI->dataReady();
-#endif
     }
 
     return DEVICE_OK;
@@ -305,7 +358,6 @@ int FXOS8700::getRange()
  */
 Sample3D FXOS8700::getAccelerometerSample()
 {
-    //updateSample();
     return accelerometerSample;
 }
 
@@ -319,7 +371,6 @@ Sample3D FXOS8700::getAccelerometerSample()
  */
 Sample3D FXOS8700::getMagnetometerSample()
 {
-    //updateSample();
     return magnetometerSample;
 }
 

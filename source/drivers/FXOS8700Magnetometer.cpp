@@ -49,6 +49,7 @@ using namespace codal;
  */
 FXOS8700Magnetometer::FXOS8700Magnetometer(FXOS8700 &fxos8700, CoordinateSpace &coordinateSpace, uint16_t id) : Compass(coordinateSpace, id), fxo(fxos8700)
 {
+    fxo.setMagnetometerAPI(this);
 }
 
 /**
