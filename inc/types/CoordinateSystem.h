@@ -58,12 +58,10 @@
  *
  */
 
-#define COORDINATE_SPACE_ROTATED_0
-#define COORDINATE_SPACE_ROTATED_90
-#define COORDINATE_SPACE_ROTATED_180
-#define COORDINATE_SPACE_ROTATED_270
-
-#define COORDINATE_SPACE_UPSIDE_DOWN
+#define COORDINATE_SPACE_ROTATED_0      0
+#define COORDINATE_SPACE_ROTATED_90     1
+#define COORDINATE_SPACE_ROTATED_180    2
+#define COORDINATE_SPACE_ROTATED_270    3
 
 namespace codal
 {
@@ -126,7 +124,7 @@ namespace codal
              * when viewing the device from its "natural" (user defined) orientation. n.b. if the sensor is upside down, the rotation
              * should be defined w.r.t. lookign at the side of the device where the sensor is mounted.
              */
-            CoordinateSpace(CoordinateSystem system, bool upsidedown, int rotated);
+            CoordinateSpace(CoordinateSystem system, bool upsidedown = false, int rotated = COORDINATE_SPACE_ROTATED_0);
 
             /**
              * Transforms a given 3D x,y,z tuple from ENU format into that format defined in this instance.

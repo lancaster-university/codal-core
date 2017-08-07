@@ -24,6 +24,9 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "CoordinateSystem.h"
+#include "CodalDmesg.h"
+
+using namespace codal;
 
 /**
  * Constructor.
@@ -68,15 +71,14 @@ Sample3D CoordinateSpace::transform(Sample3D s, CoordinateSystem system)
 
     // Firstly, handle any inversions.
     // As we know the input is in ENU format, this means we flip the polarity of the X and Z axes.
-    if(_upsidedown)
+    if(upsidedown)
     { 
         result.x = -result.x;
         result.z = -result.z;
     }
 
-    // Now, handle ant rotations.
-
-    switch (_rotated)
+    // Now, handle any rotations.
+    switch (rotated)
     {
         case COORDINATE_SPACE_ROTATED_90:
             temp = -result.x;
@@ -85,8 +87,8 @@ Sample3D CoordinateSpace::transform(Sample3D s, CoordinateSystem system)
             break;
 
         case COORDINATE_SPACE_ROTATED_180:
-            temp.x = -result.x;
-            temp.y = -result.y;
+            result.x = -result.x;
+            result.y = -result.y;
             break;
 
         case COORDINATE_SPACE_ROTATED_270:
@@ -100,14 +102,20 @@ Sample3D CoordinateSpace::transform(Sample3D s, CoordinateSystem system)
     switch (system)
     {
         case NORTH_EAST_DOWN:
+            temp = result.x;
+
+            result.x = result.y;
+            result.y = -temp;
             result.z = - result.z;
             break;
 
         case SIMPLE_CARTESIAN:
-            temp = result.x;
-            result.x = result.y
-            result.y = temp;
-            result.z = - result.z;
+            result.x = -result.x;
+            result.y = -result.y;
+            break;
+
+        case NORTH_EAST_UP:
+        case RAW:
             break;
     }
 

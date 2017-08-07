@@ -29,6 +29,7 @@ set(CODAL_CPP_FILES
     "source/types/RefCountedInit.cpp"
     "source/types/BitmapFont.cpp"
     "source/types/Image.cpp"
+    "source/types/CoordinateSystem.cpp"
 
     "source/drivers/AbstractButton.cpp"
     "source/drivers/Button.cpp"
