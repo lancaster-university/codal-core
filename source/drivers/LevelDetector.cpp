@@ -106,7 +106,7 @@ int LevelDetector::getValue()
  *
  * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
  */
-int LevelDetector::setLowThreshold(uint16_t value)
+int LevelDetector::setLowThreshold(int value)
 {
     // Protect against churn if the same threshold is set repeatedly.
     if (lowThreshold == value)
@@ -132,7 +132,7 @@ int LevelDetector::setLowThreshold(uint16_t value)
  *
  * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
  */
-int LevelDetector::setHighThreshold(uint16_t value)
+int LevelDetector::setHighThreshold(int value)
 {
     // Protect against churn if the same threshold is set repeatedly.
     if (highThreshold == value)

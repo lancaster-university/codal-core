@@ -75,7 +75,7 @@ void AnalogSensor::onSampleEvent(Event)
  */
 int AnalogSensor::getValue()
 {
-    return sensorValue;
+    return (int)sensorValue;
 }
 
 /**
@@ -83,17 +83,18 @@ int AnalogSensor::getValue()
  */
 void AnalogSensor::updateSample()
 {
-    int value = _pin.getAnalogValue();
+    uint32_t value = _pin.getAnalogValue();
 
     // If this is the first reading performed, take it a a baseline. Otherwise, perform a decay average to smooth out the data.
     if (!(status & ANALOG_SENSOR_INITIALISED))
     {
-        sensorValue = value;
+        sensorValue = (uint16_t)value;
         status |=  ANALOG_SENSOR_INITIALISED;
     }
     else
     {
-        sensorValue = ((sensorValue * (1023 - sensitivity)) + (value * sensitivity)) >> 10;
+        value = ((value * (1023 - sensitivity)) + (value * sensitivity)) >> 10;
+        sensorValue = (uint16_t)value;
     }
 
     checkThresholding();

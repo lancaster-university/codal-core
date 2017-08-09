@@ -63,7 +63,7 @@ namespace codal
         uint16_t        sensitivity;        // A value between 0..1023 used with a decay average to smooth the sample data.
         uint16_t        highThreshold;      // threshold at which a HIGH event is generated
         uint16_t        lowThreshold;       // threshold at which a LOW event is generated
-        int             sensorValue;        // Last sampled data.
+        uint16_t        sensorValue;        // Last sampled data.
 
         public:
 

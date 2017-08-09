@@ -91,7 +91,7 @@ namespace codal{
          *
          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
          */
-        int setLowThreshold(uint16_t value);
+        int setLowThreshold(int value);
 
         /**
          * Set threshold to the given value. Events will be generated when these thresholds are crossed.
@@ -100,7 +100,7 @@ namespace codal{
          *
          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
          */
-        int setHighThreshold(uint16_t value);
+        int setHighThreshold(int value);
 
         /**
          * Determines the currently defined low threshold.
