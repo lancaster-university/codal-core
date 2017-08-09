@@ -206,7 +206,7 @@ bool ManagedBuffer::operator== (const ManagedBuffer& p)
  */
 int ManagedBuffer::setByte(int position, uint8_t value)
 {
-    if (0 <= position && position < ptr->length)
+    if (0 <= position && (uint16_t)position < ptr->length)
     {
         ptr->payload[position] = value;
         return DEVICE_OK;
@@ -232,7 +232,7 @@ int ManagedBuffer::setByte(int position, uint8_t value)
  */
 int ManagedBuffer::getByte(int position)
 {
-    if (0 <= position && position < ptr->length)
+    if (0 <= position && (uint16_t)position < ptr->length)
         return ptr->payload[position];
     else
         return DEVICE_INVALID_PARAMETER;
@@ -252,11 +252,11 @@ BufferData *ManagedBuffer::leakData()
 
 int ManagedBuffer::fill(uint8_t value, int offset, int length)
 {
-    if (offset < 0 || offset > ptr->length)
+    if (offset < 0 || (uint16_t)offset > ptr->length)
         return DEVICE_INVALID_PARAMETER;
     if (length < 0)
-        length = ptr->length;
-    length = min(length, ptr->length - offset);
+        length = (int)ptr->length;
+    length = min(length, (int)ptr->length - offset);
 
     memset(ptr->payload + offset, value, length);
 
@@ -265,17 +265,17 @@ int ManagedBuffer::fill(uint8_t value, int offset, int length)
 
 ManagedBuffer ManagedBuffer::slice(int offset, int length) const
 {
-    offset = min(ptr->length, offset);
+    offset = min((int)ptr->length, offset);
     if (length < 0)
-        length = ptr->length;
-    length = min(length, ptr->length - offset);
+        length = (int)ptr->length;
+    length = min(length, (int)ptr->length - offset);
     return ManagedBuffer(ptr->payload + offset, length);
 }
 
 void ManagedBuffer::shift(int offset, int start, int len)
 {
-    if (len < 0) len = ptr->length - start;
-    if (start < 0 || start + len > ptr->length || start + len < start
+    if (len < 0) len = (int)ptr->length - start;
+    if (start < 0 || start + len > (int)ptr->length || start + len < start
         || len == 0 || offset == 0 || offset == INT_MIN) return;
     if (offset <= -len || offset >= len) {
         fill(0);
@@ -296,8 +296,8 @@ void ManagedBuffer::shift(int offset, int start, int len)
 
 void ManagedBuffer::rotate(int offset, int start, int len)
 {
-    if (len < 0) len = ptr->length - start;
-    if (start < 0 || start + len > ptr-> length || start + len < start
+    if (len < 0) len = (int)ptr->length - start;
+    if (start < 0 || start + len > (int)ptr-> length || start + len < start
         || len == 0 || offset == 0 || offset == INT_MIN) return;
 
     if (offset < 0)
@@ -330,10 +330,10 @@ int ManagedBuffer::writeBuffer(int dstOffset, const ManagedBuffer &src, int srcO
     if (length < 0)
         length = src.length();
 
-    if (srcOffset < 0 || dstOffset < 0 || dstOffset > ptr->length)
+    if (srcOffset < 0 || dstOffset < 0 || dstOffset > (int)ptr->length)
         return DEVICE_INVALID_PARAMETER;
 
-    length = min(src.length() - srcOffset, ptr->length - dstOffset);
+    length = min(src.length() - srcOffset, (int)ptr->length - dstOffset);
 
     if (length < 0)
         return DEVICE_INVALID_PARAMETER;
@@ -349,7 +349,7 @@ int ManagedBuffer::writeBuffer(int dstOffset, const ManagedBuffer &src, int srcO
 
 int ManagedBuffer::writeBytes(int offset, uint8_t *src, int length, bool swapBytes)
 {
-    if (offset < 0 || length < 0 || offset + length > ptr->length)
+    if (offset < 0 || length < 0 || offset + length > (int)ptr->length)
         return DEVICE_INVALID_PARAMETER;
 
     if (swapBytes) {
@@ -365,7 +365,7 @@ int ManagedBuffer::writeBytes(int offset, uint8_t *src, int length, bool swapByt
 
 int ManagedBuffer::readBytes(uint8_t *dst, int offset, int length, bool swapBytes) const
 {
-    if (offset < 0 || length < 0 || offset + length > ptr->length)
+    if (offset < 0 || length < 0 || offset + length > (int)ptr->length)
         return DEVICE_INVALID_PARAMETER;
 
     if (swapBytes) {
@@ -381,7 +381,7 @@ int ManagedBuffer::readBytes(uint8_t *dst, int offset, int length, bool swapByte
 
 int ManagedBuffer::truncate(int length)
 {
-    if (length < 0 || length > ptr->length)
+    if (length < 0 || length > (int)ptr->length)
         return DEVICE_INVALID_PARAMETER;
 
     ptr->length = length;
