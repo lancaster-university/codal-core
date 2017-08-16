@@ -1,1 +1,4 @@
 source/asm/CortexContextSwitch.s
+*~
+*.swp
+
