@@ -55,6 +55,10 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_TAG                            0
 #endif
 
+#ifndef CODAL_TIMESTAMP
+#define CODAL_TIMESTAMP                       uint32_t
+#endif
+
 //
 // Fiber scheduler configuration
 //

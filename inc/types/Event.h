@@ -51,9 +51,9 @@ namespace codal
     {
         public:
 
-        uint16_t source;         // ID of the Device Component that generated the event e.g. DEVICE_ID_BUTTON_A.
-        uint16_t value;          // Component specific code indicating the cause of the event.
-        uint64_t timestamp;      // Time at which the event was generated. us since power on.
+        uint16_t            source;         // ID of the Device Component that generated the event e.g. DEVICE_ID_BUTTON_A.
+        uint16_t            value;          // Component specific code indicating the cause of the event.
+        CODAL_TIMESTAMP      timestamp;      // Time at which the event was generated. us since power on.
 
         /**
           * Constructor.
