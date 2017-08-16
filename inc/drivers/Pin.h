@@ -76,11 +76,14 @@ namespace codal
       *
       * Commonly represents an I/O pin on the edge connector.
       */
-    class Pin : public CodalComponent
+    class Pin
     {
         protected:
         PinCapability capability;
         PinMode pullMode;
+
+        uint16_t status;
+        uint16_t id;
 
         public:
 
@@ -104,6 +107,7 @@ namespace codal
           */
         Pin(int id, PinName name, PinCapability capability)
         {
+            this->status = 0;
             this->id = id;
             this->name = name;
             this->capability = capability;
@@ -159,7 +163,8 @@ namespace codal
           */
         virtual int getDigitalValue(PinMode pull)
         {
-            return DEVICE_NOT_IMPLEMENTED;
+            setPull(pull);
+            return getDigitalValue();
         }
 
         /**
@@ -220,7 +225,7 @@ namespace codal
           */
         virtual int isInput()
         {
-            return DEVICE_NOT_IMPLEMENTED;
+            return (status & (IO_STATUS_DIGITAL_IN | IO_STATUS_ANALOG_IN)) == 0 ? 0 : 1;
         }
 
         /**
@@ -230,7 +235,7 @@ namespace codal
           */
         virtual int isOutput()
         {
-            return DEVICE_NOT_IMPLEMENTED;
+            return (status & (IO_STATUS_DIGITAL_OUT | IO_STATUS_ANALOG_OUT)) == 0 ? 0 : 1;
         }
 
         /**
@@ -240,7 +245,7 @@ namespace codal
           */
         virtual int isDigital()
         {
-            return DEVICE_NOT_IMPLEMENTED;
+            return (status & (IO_STATUS_DIGITAL_IN | IO_STATUS_DIGITAL_OUT)) == 0 ? 0 : 1;
         }
 
         /**
@@ -250,7 +255,7 @@ namespace codal
           */
         virtual int isAnalog()
         {
-            return DEVICE_NOT_IMPLEMENTED;
+            return (status & (IO_STATUS_ANALOG_IN | IO_STATUS_ANALOG_OUT)) == 0 ? 0 : 1;
         }
 
         /**
@@ -288,7 +293,7 @@ namespace codal
           * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if value is out of range, or DEVICE_NOT_SUPPORTED
           *         if the given pin does not have analog capability.
           */
-        virtual int setServoPulseUs(int pulseWidth)
+        virtual int setServoPulseUs(uint32_t pulseWidth)
         {
             return DEVICE_NOT_IMPLEMENTED;
         }
@@ -303,7 +308,7 @@ namespace codal
           */
         virtual int setAnalogPeriod(int period)
         {
-            return DEVICE_NOT_IMPLEMENTED;
+            return setAnalogPeriodUs(((uint32_t)period)*1000);
         }
 
         /**
@@ -314,7 +319,7 @@ namespace codal
           * @return DEVICE_OK on success, or DEVICE_NOT_SUPPORTED if the
           *         given pin is not configured as an analog output.
           */
-        virtual int setAnalogPeriodUs(int period)
+        virtual int setAnalogPeriodUs(uint32_t period)
         {
             return DEVICE_NOT_IMPLEMENTED;
         }
@@ -325,7 +330,7 @@ namespace codal
           * @return the period on success, or DEVICE_NOT_SUPPORTED if the
           *         given pin is not configured as an analog output.
           */
-        virtual int getAnalogPeriodUs()
+        virtual uint32_t getAnalogPeriodUs()
         {
             return DEVICE_NOT_IMPLEMENTED;
         }
@@ -338,7 +343,7 @@ namespace codal
           */
         virtual int getAnalogPeriod()
         {
-            return DEVICE_NOT_IMPLEMENTED;
+            return (int) (getAnalogPeriodUs()/1000);
         }
 
         /**
