@@ -44,6 +44,7 @@ set(CODAL_CPP_FILES
     "source/drivers/NonLinearAnalogSensor.cpp"
     "source/drivers/LevelDetector.cpp"
     "source/drivers/Synthesizer.cpp"
+    "source/drivers/StreamNormalizer.cpp"
     "source/drivers/Timer.cpp"
     "source/drivers/Accelerometer.cpp"
     "source/drivers/Compass.cpp"
