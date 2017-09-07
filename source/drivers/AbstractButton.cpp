@@ -38,6 +38,7 @@ using namespace codal;
 AbstractButton::AbstractButton()
 {
     clickCount = 0;
+    enable();
 }
 
 /**
@@ -72,6 +73,25 @@ int AbstractButton::wasPressed()
 
     return c;
 }
+
+/**
+ * Enables this button.
+ * Buttons are normally created in an enabled state, but use this funciton to re-enable a previously disabled button.
+ */
+void AbstractButton::enable()
+{
+    status |= DEVICE_COMPONENT_RUNNING;
+}
+
+/**
+ * Disable this button.
+ * Buttons are normally created in an enabled state. Use this funciton to disable this button.
+ */
+void AbstractButton::disable()
+{
+    status &= ~DEVICE_COMPONENT_RUNNING;
+}
+
 
 /**
  * Destructor

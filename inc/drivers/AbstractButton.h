@@ -108,6 +108,18 @@ namespace codal
         int wasPressed();
 
         /**
+         * Enables this button.
+         * Buttons are normally created in an enabled state, but use this funciton to re-enable a previously disabled button.
+         */
+        void enable();
+
+        /**
+         * Disable this button.
+         * Buttons are normally created in an enabled state. Use this funciton to disable this button.
+         */
+        void disable();
+
+        /**
          * Destructor
          */
         ~AbstractButton();

@@ -95,6 +95,10 @@ int Button::buttonActive()
   */
 void Button::periodicCallback()
 {
+    // If this button is disabled, do nothing.
+    if (!(status & DEVICE_COMPONENT_RUNNING))
+        return;
+
     //
     // If the pin is pulled low (touched), increment our culumative counter.
     // otherwise, decrement it. We're essentially building a lazy follower here.
