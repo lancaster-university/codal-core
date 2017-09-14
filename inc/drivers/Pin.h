@@ -83,9 +83,10 @@ namespace codal
         PinMode pullMode;
 
         uint16_t status;
-        uint16_t id;
 
         public:
+
+        uint16_t id;
 
         // the name of this pin, a number that maps to hardware.
         PinName name;
