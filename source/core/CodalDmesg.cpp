@@ -6,6 +6,7 @@
 #include "CodalCompat.h"
 
 CodalLogStore codalLogStore;
+static void (*dmesg_flush_fn)(void) = NULL;
 
 using namespace codal;
 
@@ -73,6 +74,26 @@ void codal_dmesg(const char *format, ...)
     va_start(arg, format);
     codal_vdmesg(format, arg);
     va_end(arg);
+}
+
+void codal_dmesgf(const char *format, ...)
+{
+    va_list arg;
+    va_start(arg, format);
+    codal_vdmesg(format, arg);
+    va_end(arg);
+    codal_dmesg_flush();
+}
+
+void codal_dmesg_set_flush_fn(void (*fn)(void))
+{
+    dmesg_flush_fn = fn;
+}
+
+void codal_dmesg_flush()
+{
+    if (dmesg_flush_fn)
+        dmesg_flush_fn();
 }
 
 void codal_vdmesg(const char *format, va_list ap)

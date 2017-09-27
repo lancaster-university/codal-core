@@ -40,10 +40,15 @@ extern CodalLogStore codalLogStore;
   * @endcode
   */
 void codal_dmesg(const char *format, ...);
+void codal_dmesgf(const char *format, ...);
+
+void codal_dmesg_set_flush_fn(void (*fn)(void));
+void codal_dmesg_flush();
 
 void codal_vdmesg(const char *format, std::va_list ap);
 
-#define DMESG codal_dmesg
+#define DMESG  codal_dmesg
+#define DMESGF  codal_dmesgf
 
 #else
 
