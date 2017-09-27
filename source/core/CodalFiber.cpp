@@ -718,6 +718,10 @@ void codal::release_fiber(void)
     // Add ourselves to the list of free fibers
     queue_fiber(currentFiber, &fiberPool);
 
+    // Reset fiber state, to ensure it can be safely reused.
+    currentFiber->flags = 0;
+    tcb_configure_stack_base(&currentFiber->tcb, fiber_initial_stack_base());
+
     // Find something else to do!
     schedule();
 }
