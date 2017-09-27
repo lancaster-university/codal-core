@@ -31,13 +31,13 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
-KeyValuePair* KeyValueTable::find(const uint32_t key) const
+KeyValueTableEntry* KeyValueTable::find(const uint32_t key) const
 {
 	// Now find the nearest sample range to that specified.
-	KeyValuePair *p = (KeyValuePair *)data + (length - 1);
-	KeyValuePair *result = p;
+	KeyValueTableEntry *p = (KeyValueTableEntry *)data + (length - 1);
+	KeyValueTableEntry *result = p;
 
-	while (p >= (KeyValuePair *)data)
+	while (p >= (KeyValueTableEntry *)data)
 	{
 		if (p->key < key)
 			break;

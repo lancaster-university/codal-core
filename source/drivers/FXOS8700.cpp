@@ -45,7 +45,7 @@ using namespace codal;
 // Configuration table for available g force ranges.
 // Maps g -> XYZ_DATA_CFG bit [0..1] 
 //
-static const KeyValuePair accelerometerRangeData[] = {
+static const KeyValueTableEntry accelerometerRangeData[] = {
     {2,0},
     {4,1},
     {8,2}
@@ -56,7 +56,7 @@ CREATE_KEY_VALUE_TABLE(accelerometerRange, accelerometerRangeData);
 // Configuration table for available data update frequency.
 // maps microsecond period -> CTRL_REG1 data rate selection bits [3..5]
 //
-static const KeyValuePair accelerometerPeriodData[] = {
+static const KeyValueTableEntry accelerometerPeriodData[] = {
     {2500,0x00},
     {5000,0x08},
     {10000,0x10},

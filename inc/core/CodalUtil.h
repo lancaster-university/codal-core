@@ -33,7 +33,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 
-#define CREATE_KEY_VALUE_TABLE(NAME, PAIRS) const KeyValueTable NAME { PAIRS, sizeof(PAIRS) / sizeof(KeyValuePair) };
+#define CREATE_KEY_VALUE_TABLE(NAME, PAIRS) const KeyValueTable NAME { PAIRS, sizeof(PAIRS) / sizeof(KeyValueTableEntry) };
 
 namespace codal
 {
@@ -43,7 +43,7 @@ namespace codal
      * in ascending order.
      */
 
-    struct KeyValuePair
+    struct KeyValueTableEntry
     {
         const uint32_t key;
         const uint32_t value;
@@ -51,10 +51,10 @@ namespace codal
 
     struct KeyValueTable
     {
-        const KeyValuePair *data;
+        const KeyValueTableEntry *data;
         const int length;
 
-        KeyValuePair* find(const uint32_t key) const;
+        KeyValueTableEntry* find(const uint32_t key) const;
         uint32_t get(const uint32_t key) const;
         uint32_t getKey(const uint32_t key) const;
         bool hasKey(const uint32_t key) const;
