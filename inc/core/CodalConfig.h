@@ -29,8 +29,6 @@ DEALINGS IN THE SOFTWARE.
 #ifndef CODAL_CONFIG_H
 #define CODAL_CONFIG_H
 
-#include "TargetConfig.h"
-
 // Enables or disables the DeviceHeapllocator. Note that if disabled, no reuse of the SRAM normally
 // reserved for SoftDevice is possible, and out of memory condition will no longer be trapped...
 // i.e. panic() will no longer be triggered on memory full conditions.
