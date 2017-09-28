@@ -145,8 +145,8 @@ void AnimatedDisplay::updateScrollText()
 
             v++;
         }
-    } 
-    
+    }
+
     scrollingPosition++;
 
     if (scrollingPosition == display.getWidth() + DISPLAY_SPACING)
@@ -276,7 +276,7 @@ void AnimatedDisplay::fiberWait()
 {
     if (fiber_wait_for_event(DEVICE_ID_DISPLAY, DISPLAY_EVT_ANIMATION_COMPLETE) == DEVICE_NOT_SUPPORTED)
         while(animationMode != ANIMATION_MODE_NONE && animationMode != ANIMATION_MODE_STOPPED)
-            __WFE();
+            target_wait_for_event();
 }
 
 /**
