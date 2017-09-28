@@ -39,15 +39,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalCompat.h"
 #include "ErrorNo.h"
 
-#ifdef VS_DEBUG
-#include "stdafx.h"
-#endif
-
-#include "ATMegaSerial.h"
-
 using namespace codal;
-
-extern ATMegaSerial *SERIAL_DEBUG;
 
 //
 // Default system wide timer, if created.
@@ -134,7 +126,7 @@ int Timer::setEvent(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, bool re
     }
 
     return DEVICE_OK;
-} 
+}
 
 
 /**
@@ -148,7 +140,7 @@ int Timer::cancel(uint16_t id, uint16_t value)
 {
     // TOOD:
     return DEVICE_OK;
-    
+
 }
 
 /**
@@ -262,7 +254,7 @@ void Timer::trigger()
 				// TODO: Handle rollove case above...
 
                 eventsFired++;
-				
+
 				// This likely needs recomputing.
 				nextTimerEvent = NULL;
             }
@@ -298,9 +290,9 @@ Timer::~Timer()
 }
 
 
-/* 
+/*
  *
- * Convenience C API Interface that wraps this class, using the first compatible timer that is created 
+ * Convenience C API Interface that wraps this class, using the first compatible timer that is created
  *
  */
 /**

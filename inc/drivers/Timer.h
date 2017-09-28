@@ -4,16 +4,6 @@
 #include "CodalConfig.h"
 #include "ErrorNo.h"
 
-#ifdef VS_DEBUG
-#include "stdafx.h"
-#include "malloc.h"
-#include "string.h"
-#include "stdio.h"
-
-#define memclr(P,N) memset(P,0,N)
-#define CODAL_TIMESTAMP uint32_t
-#endif
-
 #ifndef CODAL_TIMER_DEFAULT_EVENT_LIST_SIZE
 #define CODAL_TIMER_DEFAULT_EVENT_LIST_SIZE     5
 #endif
@@ -27,7 +17,7 @@ namespace codal
         CODAL_TIMESTAMP period;
         CODAL_TIMESTAMP timestamp;
 
-        void set(CODAL_TIMESTAMP timestamp, CODAL_TIMESTAMP period, uint16_t id, uint16_t value) 
+        void set(CODAL_TIMESTAMP timestamp, CODAL_TIMESTAMP period, uint16_t id, uint16_t value)
         {
             this->timestamp = timestamp;
             this->period = period;
@@ -36,7 +26,7 @@ namespace codal
         }
     };
 
-    class Timer 
+    class Timer
     {
     public:
 
@@ -139,24 +129,12 @@ namespace codal
          * note: it is perfectly legitimate for the implementation to trigger before this time if convenient.
          * @param t Indication that t time units (typically microsends) have elapsed.
          */
-        virtual void triggerIn(CODAL_TIMESTAMP t) 
-		{
-#ifdef VS_DEBUG
-			printf("Requested trigger in %d us\n", t);
-#endif
-
-		};
+        virtual void triggerIn(CODAL_TIMESTAMP t);
 
         /**
          * request to the physical timer implementation code to trigger immediately.
          */
-        virtual void syncRequest() 
-		{
-#ifdef VS_DEBUG
-			printf("SYNC requested...\n");
-#endif
-		};
-
+        virtual void syncRequest();
 
     protected:
         CODAL_TIMESTAMP currentTime;
@@ -170,13 +148,13 @@ namespace codal
         TimerEvent *getTimerEvent();
         void releaseTimerEvent(TimerEvent *event);
         int setEvent(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, bool repeat);
-        
+
 
     };
 
-    /* 
+    /*
      *
-     * Convenience C API Interface that wraps this class, using the first compatible timer that is created 
+     * Convenience C API Interface that wraps this class, using the first compatible timer that is created
      *
      */
 
