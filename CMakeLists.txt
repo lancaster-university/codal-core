@@ -24,6 +24,7 @@ set(CODAL_CPP_FILES
     "source/types/Matrix4.cpp"
     "source/types/Event.cpp"
     "source/types/DataStream.cpp"
+    "source/types/List.cpp"
     "source/types/ManagedBuffer.cpp"
     "source/types/RefCounted.cpp"
     "source/types/RefCountedInit.cpp"
