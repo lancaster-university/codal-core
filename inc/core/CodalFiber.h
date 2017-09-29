@@ -40,7 +40,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "Event.h"
 #include "EventModel.h"
-#include "device_fiber.h"
+#include "codal_target_hal.h"
 
 // Fiber Scheduler Flags
 #define DEVICE_SCHEDULER_RUNNING            0x01
@@ -62,9 +62,9 @@ namespace codal
       */
     struct Fiber
     {
-        PROCESSOR_TCB tcb;                  // Thread context when last scheduled out.
-        PROCESSOR_WORD_TYPE stack_bottom;              // The start address of this Fiber's stack. The stack is heap allocated, and full descending.
-        PROCESSOR_WORD_TYPE stack_top;                 // The end address of this Fiber's stack.
+        void* tcb;                          // Thread context when last scheduled out.
+        PROCESSOR_WORD_TYPE stack_bottom;   // The start address of this Fiber's stack. The stack is heap allocated, and full descending.
+        PROCESSOR_WORD_TYPE stack_top;      // The end address of this Fiber's stack.
         uint32_t context;                   // Context specific information.
         uint32_t flags;                     // Information about this fiber.
         Fiber **queue;                      // The queue this fiber is stored on.
@@ -326,9 +326,9 @@ namespace codal
   * Assembler Context switch routing.
   * Defined in CortexContextSwitch.s.
   */
-extern "C" void swap_context(PROCESSOR_TCB *from, PROCESSOR_TCB *to, PROCESSOR_WORD_TYPE from_stack, PROCESSOR_WORD_TYPE to_stack);
-extern "C" void save_context(PROCESSOR_TCB *tcb, PROCESSOR_WORD_TYPE stack);
-extern "C" void save_register_context(PROCESSOR_TCB *tcb);
-extern "C" void restore_register_context(PROCESSOR_TCB *tcb);
+extern "C" void swap_context(void* from, void* to, PROCESSOR_WORD_TYPE from_stack, PROCESSOR_WORD_TYPE to_stack);
+extern "C" void save_context(void* tcb, PROCESSOR_WORD_TYPE stack);
+extern "C" void save_register_context(void* tcb);
+extern "C" void restore_register_context(void* tcb);
 
 #endif
