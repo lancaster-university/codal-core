@@ -38,6 +38,8 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "CodalCompat.h"
 #include "ErrorNo.h"
+#include "codal_target_hal.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -119,11 +121,15 @@ int Timer::setEvent(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, bool re
     syncRequest();
     evt->set(currentTimeUs + period, repeat ? period: 0, id, value);
 
+    target_disable_irq();
+
     if (nextTimerEvent == NULL || evt->timestamp < nextTimerEvent->timestamp)
     {
         nextTimerEvent = evt;
         triggerIn(period);
     }
+
+    target_enable_irq();
 
     return DEVICE_OK;
 }
@@ -223,8 +229,6 @@ void Timer::trigger()
 {
     int eventsFired;
 
-    //SERIAL_DEBUG->send("TRIG\n");
-
     // Now, walk the list and trigger any events that are pending.
     do
     {
@@ -236,23 +240,15 @@ void Timer::trigger()
             if (e->id != 0 && currentTimeUs >= e->timestamp)
             {
                 // We need to trigger this event.
-#ifndef VS_DEBUG
 				Event evt(e->id, e->value, CREATE_ONLY);
-#endif
-
-#ifdef VS_DEBUG
-				printf("EVT: [id: %d]  [value: %d] [currentTimeUs: %d]\n", e->id, e->value, currentTimeUs);
-#else
 				evt.fire();
-                //SERIAL_DEBUG->send("FIRE\n");
-#endif
+
                 if (e->period == 0)
                     releaseTimerEvent(e);
 				else
 					e->timestamp += e->period;
 
-				// TODO: Handle rollove case above...
-
+				// TODO: Handle rollover case above...
                 eventsFired++;
 
 				// This likely needs recomputing.
@@ -278,8 +274,6 @@ void Timer::trigger()
         if (nextTimerEvent)
             triggerIn(nextTimerEvent->timestamp - currentTimeUs);
     }
-
-    //SERIAL_DEBUG->send("/TRIG\n");
 }
 
 /**

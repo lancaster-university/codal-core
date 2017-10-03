@@ -1,11 +1,11 @@
-#ifndef CODAL_SYSTEM_CLOCK_H
-#define CODAL_SYSTEM_CLOCK_H
+#ifndef CODAL_TIMER_H
+#define CODAL_TIMER_H
 
 #include "CodalConfig.h"
 #include "ErrorNo.h"
 
 #ifndef CODAL_TIMER_DEFAULT_EVENT_LIST_SIZE
-#define CODAL_TIMER_DEFAULT_EVENT_LIST_SIZE     5
+#define CODAL_TIMER_DEFAULT_EVENT_LIST_SIZE     10
 #endif
 
 namespace codal
@@ -129,12 +129,12 @@ namespace codal
          * note: it is perfectly legitimate for the implementation to trigger before this time if convenient.
          * @param t Indication that t time units (typically microsends) have elapsed.
          */
-        virtual void triggerIn(CODAL_TIMESTAMP t);
+        virtual void triggerIn(CODAL_TIMESTAMP t) = 0;
 
         /**
          * request to the physical timer implementation code to trigger immediately.
          */
-        virtual void syncRequest();
+        virtual void syncRequest() = 0;
 
     protected:
         CODAL_TIMESTAMP currentTime;
