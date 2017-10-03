@@ -1,8 +1,8 @@
 #ifndef CODAL_I2C_H
 #define CODAL_I2C_H
 
-#include "device_types.h"
 #include "ErrorNo.h"
+#include "Pin.h"
 
 namespace codal
 {
@@ -15,7 +15,7 @@ namespace codal
           *  @param sda I2C data line pin
           *  @param scl I2C clock line pin
           */
-        I2C(PinName sda, PinName scl)
+        I2C(Pin& sda, Pin& scl)
         {
         }
 
