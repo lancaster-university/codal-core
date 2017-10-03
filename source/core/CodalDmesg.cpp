@@ -133,7 +133,7 @@ void codal_vdmesg(const char *format, va_list ap)
         }
     }
     logwriten(format, end - format);
-    logwrite("\n");
+    logwrite("\r\n");
 }
 
 #endif
