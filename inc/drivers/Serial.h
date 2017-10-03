@@ -27,7 +27,6 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_SERIAL_H
 
 #include "ManagedString.h"
-#include "device_types.h"
 
 #define CODAL_SERIAL_DEFAULT_BAUD_RATE   115200
 #define CODAL_SERIAL_DEFAULT_BUFFER_SIZE 20
