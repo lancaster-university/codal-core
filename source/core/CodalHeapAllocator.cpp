@@ -54,7 +54,6 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalCompat.h"
 #include "CodalDmesg.h"
 #include "ErrorNo.h"
-#include "common_includes.h"
 
 using namespace codal;
 
@@ -293,7 +292,8 @@ void* malloc (size_t size)
 
     if (!initialised)
     {
-        device_create_heap(CODAL_HEAP_START, CODAL_HEAP_END);
+        extern PROCESSOR_WORD_TYPE __end__;
+        device_create_heap((PROCESSOR_WORD_TYPE)(&__end__), DEVICE_STACK_BASE - DEVICE_STACK_SIZE);
         initialised = 1;
     }
 
@@ -399,8 +399,6 @@ void _free_r(struct _reent *, void *addr)
     free(addr);
 }
 
-#endif
-
 #ifndef new
 void* operator new(size_t objsize) {
     return malloc(objsize);
@@ -411,4 +409,6 @@ void* operator new(size_t objsize) {
 void operator delete(void* obj) {
     free(obj);
 }
+#endif
+
 #endif
