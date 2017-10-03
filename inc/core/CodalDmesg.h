@@ -2,7 +2,6 @@
 #define CODAL_DMESG_H
 
 #include "CodalConfig.h"
-#include "common_includes.h"
 
 #if DEVICE_DMESG_BUFFER_SIZE > 0
 
@@ -21,7 +20,7 @@ extern CodalLogStore codalLogStore;
   * Log formatted message to an internal buffer.
   *
   * Supported format strings:
-  *    %c - single character 
+  *    %c - single character
   *    %d - decimal number
   *    %x - hexadecimal number (with 0x)
   *    %p - hexadecimal number padded with zeros (and with 0x)

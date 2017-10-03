@@ -27,7 +27,6 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_DEVICE_H
 
 #include "CodalConfig.h"
-#include "device_types.h"
 #include "ErrorNo.h"
 #include "codal_target_hal.h"
 #include "CodalFiber.h"

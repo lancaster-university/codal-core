@@ -29,6 +29,20 @@ DEALINGS IN THE SOFTWARE.
 #ifndef CODAL_CONFIG_H
 #define CODAL_CONFIG_H
 
+// Set this to enable the generation debugging messages through the DMESG interface.
+//
+// 0: Debug message disabled
+// 1: Diagnostics logging
+// 2: Heap allocaion diagnostics
+//
+#ifndef CODAL_DEBUG_DISABLED
+#define CODAL_DEBUG_DISABLED                  0
+#define CODAL_DEBUG_DIAGNOSTICS               1
+#define CODAL_DEBUG_HEAP                      2
+#endif
+
+#include "platform_includes.h"
+
 // Enables or disables the DeviceHeapllocator. Note that if disabled, no reuse of the SRAM normally
 // reserved for SoftDevice is possible, and out of memory condition will no longer be trapped...
 // i.e. panic() will no longer be triggered on memory full conditions.
@@ -105,7 +119,7 @@ DEALINGS IN THE SOFTWARE.
 // valid options are PullDown, PullUp and PullNone.
 //
 #ifndef DEVICE_DEFAULT_PULLMODE
-#define DEVICE_DEFAULT_PULLMODE                PullNone
+#define DEVICE_DEFAULT_PULLMODE                PullMode::None
 #endif
 
 //
