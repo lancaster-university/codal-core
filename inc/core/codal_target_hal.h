@@ -24,6 +24,8 @@ extern "C"
       */
     void tcb_configure_lr(void* tcb, PROCESSOR_WORD_TYPE function);
 
+    void* tcb_allocate();
+
     /**
       * Configures the link register of the given tcb to have the value function.
       *

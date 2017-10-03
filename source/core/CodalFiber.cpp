@@ -164,6 +164,8 @@ Fiber *getFiberContext()
         if (f == NULL)
             return NULL;
 
+        f->tcb = tcb_allocate();
+
         f->stack_bottom = 0;
         f->stack_top = 0;
     }
@@ -173,7 +175,7 @@ Fiber *getFiberContext()
     // Ensure this fiber is in suitable state for reuse.
     f->flags = 0;
 
-    tcb_configure_stack_base(&f->tcb, fiber_initial_stack_base());
+    tcb_configure_stack_base(f->tcb, fiber_initial_stack_base());
 
     return f;
 }
@@ -207,8 +209,8 @@ void codal::scheduler_init(EventModel &_messageBus)
     // Configure the fiber to directly enter the idle task.
     idleFiber = getFiberContext();
 
-    tcb_configure_sp(&idleFiber->tcb, INITIAL_STACK_DEPTH);
-    tcb_configure_lr(&idleFiber->tcb, (PROCESSOR_WORD_TYPE)&idle_task);
+    tcb_configure_sp(idleFiber->tcb, INITIAL_STACK_DEPTH);
+    tcb_configure_lr(idleFiber->tcb, (PROCESSOR_WORD_TYPE)&idle_task);
 
     if (messageBus)
     {
@@ -487,7 +489,7 @@ int codal::invoke(void (*entry_fn)(void))
 
     // Snapshot current context, but also update the Link Register to
     // refer to our calling function.
-    save_register_context(&currentFiber->tcb);
+    save_register_context(currentFiber->tcb);
 
     // If we're here, there are two possibilities:
     // 1) We're about to attempt to execute the user code
@@ -553,7 +555,7 @@ int codal::invoke(void (*entry_fn)(void *), void *param)
 
     // Snapshot current context, but also update the Link Register to
     // refer to our calling function.
-    save_register_context(&currentFiber->tcb);
+    save_register_context(currentFiber->tcb);
 
     //Serial.println("AFTER SAVE");
     //while (!(UCSR0A & _BV(TXC0)));
@@ -640,9 +642,9 @@ Fiber *__create_fiber(uint32_t ep, uint32_t cp, uint32_t pm, int parameterised)
     if (newFiber == NULL)
         return NULL;
 
-    tcb_configure_args(&newFiber->tcb, ep, cp, pm);
-    tcb_configure_sp(&newFiber->tcb, INITIAL_STACK_DEPTH);
-    tcb_configure_lr(&newFiber->tcb, parameterised ? (PROCESSOR_WORD_TYPE) &launch_new_fiber_param : (PROCESSOR_WORD_TYPE) &launch_new_fiber);
+    tcb_configure_args(newFiber->tcb, ep, cp, pm);
+    tcb_configure_sp(newFiber->tcb, INITIAL_STACK_DEPTH);
+    tcb_configure_lr(newFiber->tcb, parameterised ? (PROCESSOR_WORD_TYPE) &launch_new_fiber_param : (PROCESSOR_WORD_TYPE) &launch_new_fiber);
 
     // Add new fiber to the run queue.
     queue_fiber(newFiber, &runQueue);
@@ -720,7 +722,7 @@ void codal::release_fiber(void)
 
     // Reset fiber state, to ensure it can be safely reused.
     currentFiber->flags = 0;
-    tcb_configure_stack_base(&currentFiber->tcb, fiber_initial_stack_base());
+    tcb_configure_stack_base(currentFiber->tcb, fiber_initial_stack_base());
 
     // Find something else to do!
     schedule();
@@ -743,7 +745,7 @@ void codal::verify_stack_size(Fiber *f)
     PROCESSOR_WORD_TYPE bufferSize;
 
     // Calculate the stack depth.
-    stackDepth = tcb_get_stack_base(&f->tcb) - (PROCESSOR_WORD_TYPE)get_current_sp();
+    stackDepth = tcb_get_stack_base(f->tcb) - (PROCESSOR_WORD_TYPE)get_current_sp();
 
     // Calculate the size of our allocated stack buffer
     bufferSize = f->stack_top - f->stack_bottom;
@@ -800,19 +802,19 @@ void codal::schedule()
         forkedFiber->flags |= DEVICE_FIBER_FLAG_CHILD;
 
         // Define the stack base of the forked fiber to be align with the entry point of the parent fiber
-        tcb_configure_stack_base(&forkedFiber->tcb, tcb_get_sp(&currentFiber->tcb));
+        tcb_configure_stack_base(forkedFiber->tcb, tcb_get_sp(currentFiber->tcb));
 
         // Ensure the stack allocation of the new fiber is large enough
         verify_stack_size(forkedFiber);
 
         // Store the full context of this fiber.
-        save_context(&forkedFiber->tcb, forkedFiber->stack_top);
+        save_context(forkedFiber->tcb, forkedFiber->stack_top);
 
         // We may now be either the newly created thread, or the one that created it.
         // if the DEVICE_FIBER_FLAG_PARENT flag is still set, we're the old thread, so
         // restore the current fiber to its stored context and we're done.
         if (currentFiber->flags & DEVICE_FIBER_FLAG_PARENT)
-            restore_register_context(&currentFiber->tcb);
+            restore_register_context(currentFiber->tcb);
 
         // If we're the new thread, we must have been unblocked by the scheduler, so simply return
         // and continue processing.
@@ -860,14 +862,14 @@ void codal::schedule()
         // Special case for the idle task, as we don't maintain a stack context (just to save memory).
         if (currentFiber == idleFiber)
         {
-            tcb_configure_sp(&idleFiber->tcb, INITIAL_STACK_DEPTH);
-            tcb_configure_lr(&idleFiber->tcb, (PROCESSOR_WORD_TYPE)&idle_task);
+            tcb_configure_sp(idleFiber->tcb, INITIAL_STACK_DEPTH);
+            tcb_configure_lr(idleFiber->tcb, (PROCESSOR_WORD_TYPE)&idle_task);
         }
 
         if (oldFiber == idleFiber)
         {
             // Just swap in the new fiber, and discard changes to stack and register context.
-            swap_context(NULL, &currentFiber->tcb, 0, currentFiber->stack_top);
+            swap_context(NULL, currentFiber->tcb, 0, currentFiber->stack_top);
         }
         else
         {
@@ -875,7 +877,7 @@ void codal::schedule()
             verify_stack_size(oldFiber);
 
             // Schedule in the new fiber.
-            swap_context(&oldFiber->tcb, &currentFiber->tcb, oldFiber->stack_top, currentFiber->stack_top);
+            swap_context(oldFiber->tcb, currentFiber->tcb, oldFiber->stack_top, currentFiber->stack_top);
         }
     }
 }
