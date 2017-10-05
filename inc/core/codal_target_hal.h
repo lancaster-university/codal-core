@@ -1,6 +1,8 @@
 #ifndef CODAL_TARGET_HAL_H
 #define CODAL_TARGET_HAL_H
 
+#include "platform_includes.h"
+
 extern "C"
 {
     void target_enable_irq();
