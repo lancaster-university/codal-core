@@ -96,7 +96,7 @@ void device_heap_print(HeapDefinition &heap)
     block = heap.heap_start;
     while (block < heap.heap_end)
     {
-    blockSize = *block & ~DEVICE_HEAP_BLOCK_FREE;
+        blockSize = *block & ~DEVICE_HEAP_BLOCK_FREE;
         DMESG("[%c:%d] ", *block & DEVICE_HEAP_BLOCK_FREE ? 'F' : 'U', blockSize*4);
         if (cols++ == 20)
         {
@@ -109,7 +109,7 @@ void device_heap_print(HeapDefinition &heap)
         else
             totalUsedBlock += blockSize;
 
-    block += blockSize;
+        block += blockSize;
     }
 
     // Enable Interrupts
@@ -203,7 +203,7 @@ void *device_malloc(size_t size, HeapDefinition &heap)
     uint32_t	*next;
 
     if (size <= 0)
-    return NULL;
+        return NULL;
 
     // Account for the index block;
     blocksNeeded++;
@@ -264,12 +264,12 @@ void *device_malloc(size_t size, HeapDefinition &heap)
     }
     else
     {
-    // We need to split the block.
-    uint32_t *splitBlock = block + blocksNeeded;
-    *splitBlock = blockSize - blocksNeeded;
-    *splitBlock |= DEVICE_HEAP_BLOCK_FREE;
+        // We need to split the block.
+        uint32_t *splitBlock = block + blocksNeeded;
+        *splitBlock = blockSize - blocksNeeded;
+        *splitBlock |= DEVICE_HEAP_BLOCK_FREE;
 
-    *block = blocksNeeded;
+        *block = blocksNeeded;
     }
 
     // Enable Interrupts
@@ -292,11 +292,14 @@ void* malloc (size_t size)
 
     if (!initialised)
     {
-        extern PROCESSOR_WORD_TYPE __end__;
-        device_create_heap((PROCESSOR_WORD_TYPE)(&__end__), DEVICE_STACK_BASE - DEVICE_STACK_SIZE);
+        extern PROCESSOR_WORD_TYPE codal_heap_start;
+        int ret = device_create_heap((PROCESSOR_WORD_TYPE)(codal_heap_start), (PROCESSOR_WORD_TYPE)(DEVICE_STACK_BASE) - (PROCESSOR_WORD_TYPE)(DEVICE_STACK_SIZE));
+
+        if(ret == DEVICE_INVALID_PARAMETER)
+            target_panic(DEVICE_HEAP_ERROR);
+
         initialised = 1;
     }
-
     // Assign the memory from the first heap created that has space.
     for (int i=0; i < heap_count; i++)
     {
@@ -309,6 +312,7 @@ void* malloc (size_t size)
             return p;
         }
     }
+
 
     // We're totally out of options (and memory!).
 #if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
@@ -398,17 +402,5 @@ void _free_r(struct _reent *, void *addr)
 {
     free(addr);
 }
-
-#ifndef new
-void* operator new(size_t objsize) {
-    return malloc(objsize);
-}
-#endif
-
-#ifndef delete
-void operator delete(void* obj) {
-    free(obj);
-}
-#endif
 
 #endif
