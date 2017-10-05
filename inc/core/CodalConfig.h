@@ -47,7 +47,7 @@ DEALINGS IN THE SOFTWARE.
 // reserved for SoftDevice is possible, and out of memory condition will no longer be trapped...
 // i.e. panic() will no longer be triggered on memory full conditions.
 #ifndef DEVICE_HEAP_ALLOCATOR
-#define DEVICE_HEAP_ALLOCATOR                 0
+#define DEVICE_HEAP_ALLOCATOR                 1
 #endif
 
 // Block size used by the allocator in bytes.
@@ -144,19 +144,6 @@ DEALINGS IN THE SOFTWARE.
 // Typical size range between 512 and 4096. Set to 0 to disable.
 #ifndef DEVICE_DMESG_BUFFER_SIZE
 #define DEVICE_DMESG_BUFFER_SIZE              1024
-#endif
-
-//
-// Set this to enable the generation debugging messages through the DMESG interface.
-//
-// 0: Debug message disabled
-// 1: Diagnostics logging
-// 2: Heap allocaion diagnostics
-//
-#ifndef CODAL_DEBUG_DISABLED
-#define CODAL_DEBUG_DISABLED                  0
-#define CODAL_DEBUG_DIAGNOSTICS               1
-#define CODAL_DEBUG_HEAP                      2
 #endif
 
 #ifndef CODAL_DEBUG
