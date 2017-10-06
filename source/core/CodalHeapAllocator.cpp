@@ -91,7 +91,7 @@ void device_heap_print(HeapDefinition &heap)
     DMESG("heap_size  : %d\n", (int)heap.heap_end - (int)heap.heap_start);
 
     // Disable IRQ temporarily to ensure no race conditions!
-    __disable_irq();
+    target_disable_irq();
 
     block = heap.heap_start;
     while (block < heap.heap_end)
