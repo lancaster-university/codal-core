@@ -111,10 +111,10 @@ namespace codal
         ManagedString scrollingText;
 
         // The index of the character currently being displayed.
-        uint16_t scrollingChar;
+        int16_t scrollingChar;
 
         // The number of pixels the current character has been shifted on the display.
-        uint8_t scrollingPosition;
+        int8_t scrollingPosition;
 
         //
         // State for printString() method.
@@ -126,7 +126,7 @@ namespace codal
         ManagedString printingText;
 
         // The index of the character currently being displayed.
-        uint16_t printingChar;
+        int16_t printingChar;
 
         //
         // State for scrollImage() method.

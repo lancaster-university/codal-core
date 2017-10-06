@@ -105,12 +105,12 @@ int Accelerometer::update(Sample3D s)
   *
   * @return the sum of the square of the acceleration of the device across all axes.
   */
-int Accelerometer::instantaneousAccelerationSquared()
+uint32_t Accelerometer::instantaneousAccelerationSquared()
 {
     requestUpdate();
 
     // Use pythagoras theorem to determine the combined force acting on the device.
-    return (int)sample.x*(int)sample.x + (int)sample.y*(int)sample.y + (int)sample.z*(int)sample.z;
+    return (uint32_t)sample.x*(uint32_t)sample.x + (uint32_t)sample.y*(uint32_t)sample.y + (uint32_t)sample.z*(uint32_t)sample.z;
 }
 
 /**
@@ -187,7 +187,8 @@ uint16_t Accelerometer::instantaneousPosture()
         }
     }
 
-    if (instantaneousAccelerationSquared() < ACCELEROMETER_FREEFALL_THRESHOLD)
+    uint32_t force = instantaneousAccelerationSquared();
+    if (force < ACCELEROMETER_FREEFALL_THRESHOLD)
         return ACCELEROMETER_EVT_FREEFALL;
 
     // Determine our posture.
@@ -221,7 +222,7 @@ void Accelerometer::updateGesture()
     // Check for High/Low G force events - typically impulses, impacts etc.
     // Again, during such spikes, these event take priority of the posture of the device.
     // For these events, we don't perform any low pass filtering.
-    int force = instantaneousAccelerationSquared();
+    uint32_t force = instantaneousAccelerationSquared();
 
     if (force > ACCELEROMETER_3G_THRESHOLD)
     {
