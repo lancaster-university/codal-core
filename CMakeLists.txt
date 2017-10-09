@@ -38,6 +38,7 @@ set(CODAL_CPP_FILES
     "source/drivers/HID.cpp"
     "source/drivers/AnalogSensor.cpp"
     "source/drivers/LinearAnalogSensor.cpp"
+    "source/drivers/LIS3DH.cpp"
     "source/drivers/NonLinearAnalogSensor.cpp"
     "source/drivers/LevelDetector.cpp"
     "source/drivers/Synthesizer.cpp"
