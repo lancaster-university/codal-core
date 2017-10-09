@@ -4,6 +4,8 @@
 
 #include "ErrorNo.h"
 #include "list.h"
+#include "CodalDmesg.h"
+#include "codal_target_hal.h"
 
 #define send(p, l) ctrlIn->write(p, l)
 

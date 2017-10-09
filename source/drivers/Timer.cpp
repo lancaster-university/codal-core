@@ -87,7 +87,6 @@ Timer::Timer()
     currentTimeUs = 0;
 }
 
-
 /**
  * Retrieves the current time tracked by this Timer instance
  * in milliseconds
@@ -229,6 +228,8 @@ void Timer::trigger()
 {
     int eventsFired;
 
+    syncRequest();
+
     // Now, walk the list and trigger any events that are pending.
     do
     {
@@ -240,8 +241,7 @@ void Timer::trigger()
             if (e->id != 0 && currentTimeUs >= e->timestamp)
             {
                 // We need to trigger this event.
-				Event evt(e->id, e->value, CREATE_ONLY);
-				evt.fire();
+                Event evt(e->id, e->value, currentTimeUs);
 
                 if (e->period == 0)
                     releaseTimerEvent(e);
