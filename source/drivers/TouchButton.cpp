@@ -44,7 +44,7 @@ using namespace codal;
  * @param pin The physical pin on the device to sense.
  * @param sensor The touch sensor driver for this touch sensitive pin.
  */
-TouchButton::TouchButton(Pin &pin, TouchSensor &sensor, int threshold) : Button(pin, pin.id, DEVICE_BUTTON_ALL_EVENTS, ACTIVE_LOW, PullNone), touchSensor(sensor)
+TouchButton::TouchButton(Pin &pin, TouchSensor &sensor, int threshold) : Button(pin, pin.id, DEVICE_BUTTON_ALL_EVENTS, ACTIVE_LOW, PullMode::None), touchSensor(sensor)
 {
     // Disable periodic events. These will come from our TouchSensor.
     this->threshold = threshold;
