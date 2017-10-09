@@ -27,6 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "CodalFiber.h"
 #include "Timer.h"
+#include "codal_target_hal.h"
 
 using namespace codal;
 
@@ -121,7 +122,7 @@ void TouchSensor::onSampleEvent(Event)
 
     // Wait for any charge to drain.
     // TODO: minimise this value.
-    wait_ms(1);
+    target_wait(1);
 
     // raise the drive pin, and start testing the receiver pins...
     drivePin.setDigitalValue(1);
