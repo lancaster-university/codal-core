@@ -50,6 +50,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 #include "CodalHeapAllocator.h"
+#include "platform_includes.h"
 #include "CodalDevice.h"
 #include "CodalCompat.h"
 #include "CodalDmesg.h"
