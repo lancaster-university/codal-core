@@ -550,15 +550,9 @@ int codal::invoke(void (*entry_fn)(void *), void *param)
         return DEVICE_OK;
     }
 
-    //Serial.println("BEFORE SAVE");
-    //while (!(UCSR0A & _BV(TXC0)));
-
     // Snapshot current context, but also update the Link Register to
     // refer to our calling function.
     save_register_context(currentFiber->tcb);
-
-    //Serial.println("AFTER SAVE");
-    //while (!(UCSR0A & _BV(TXC0)));
 
     // If we're here, there are two possibilities:
     // 1) We're about to attempt to execute the user code
