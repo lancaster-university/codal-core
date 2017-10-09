@@ -250,29 +250,32 @@ void Timer::trigger()
 
 				// TODO: Handle rollover case above...
                 eventsFired++;
-
-				// This likely needs recomputing.
-				nextTimerEvent = NULL;
             }
 			e++;
         }
 
     } while (eventsFired);
 
-    if (nextTimerEvent == NULL)
+    // always recompute nextTimerEvent - event firing could have added new timer events
+    nextTimerEvent = NULL;
+
+    TimerEvent *e = timerEventList;
+
+    // Find the next most recent and schedule it.
+    for (int i=0; i<eventListSize; i++)
     {
-        TimerEvent *e = timerEventList;
+        if (e->id != 0 && (nextTimerEvent == NULL || (e->timestamp < nextTimerEvent->timestamp)))
+            nextTimerEvent = e;
+        e++;
+    }
 
-        // Find the next most recent and schedule it.
-        for (int i=0; i<eventListSize; i++)
-        {
-            if (e->id != 0 && (nextTimerEvent == NULL || (e->timestamp < nextTimerEvent->timestamp)))
-                nextTimerEvent = e;
-			e++;
-        }
-
-        if (nextTimerEvent)
+    if (nextTimerEvent) {
+        // this may possibly happen if a new timer event was added to the queue while
+        // we were running - it might be already in the past
+        if (currentTimeUs < nextTimerEvent->timestamp)
             triggerIn(nextTimerEvent->timestamp - currentTimeUs);
+        else
+            triggerIn(1);
     }
 }
 
