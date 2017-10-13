@@ -50,15 +50,13 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_HEAP_ALLOCATOR                 1
 #endif
 
-// Block size used by the allocator in bytes.
-// n.b. Currently only 32 bits (4 bytes) is supported.
-#ifndef DEVICE_HEAP_BLOCK_SIZE
-#define DEVICE_HEAP_BLOCK_SIZE                4
-#endif
-
-// The proportion of SRAM available on the mbed heap to reserve for the codal device heap.
-#ifndef DEVICE_NESTED_HEAP_SIZE
-#define DEVICE_NESTED_HEAP_SIZE               0.75
+//
+// The CODAL heap allocator supports the use of multiple, independent heap regions if needed.
+// This defines the maximum number of heap regions permitted. 
+// n.b. Setting this option to '1' will also optimise the heap allocator for code space.
+//
+#ifndef DEVICE_MAXIMUM_HEAPS
+#define DEVICE_MAXIMUM_HEAPS                  1
 #endif
 
 // If enabled, RefCounted objects include a constant tag at the beginning.
@@ -148,6 +146,14 @@ DEALINGS IN THE SOFTWARE.
 
 #ifndef CODAL_DEBUG
 #define CODAL_DEBUG                           CODAL_DEBUG_DISABLED
+#endif
+
+// When set to '1', this option enables parameter validation checking into low level system modules
+// such as the heap alloctor and scheduler. When set to '0', these checks will not take place resulting in 
+// lower code size and faster operation of low level component.
+//
+#ifndef CODAL_LOW_LEVEL_VALIDATION
+#define CODAL_LOW_LEVEL_VALIDATION            0
 #endif
 
 // Versioning options.

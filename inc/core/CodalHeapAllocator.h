@@ -53,11 +53,16 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 
-// The maximum number of heap segments that can be created.
-#define DEVICE_MAXIMUM_HEAPS          2
+// Flag to indicate that a given block is FREE/USED (top bit of a CPU word)
+#define DEVICE_HEAP_BLOCK_FREE		(1 << (sizeof(PROCESSOR_WORD_TYPE) * 8 - 1))
+#define DEVICE_HEAP_BLOCK_SIZE      (sizeof(PROCESSOR_WORD_TYPE)) 
 
-// Flag to indicate that a given block is FREE/USED
-#define DEVICE_HEAP_BLOCK_FREE		0x80000000
+struct HeapDefinition
+{
+    PROCESSOR_WORD_TYPE *heap_start;		// Physical address of the start of this heap.
+    PROCESSOR_WORD_TYPE *heap_end;		    // Physical address of the end of this heap.
+};
+extern PROCESSOR_WORD_TYPE codal_heap_start;
 
 /**
   * Create and initialise a given memory region as for heap storage.
@@ -75,6 +80,6 @@ DEALINGS IN THE SOFTWARE.
   * code, and user code targetting the runtime. External code can choose to include this file, or
   * simply use the standard heap.
   */
-int device_create_heap(uint32_t start, uint32_t end);
+int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end);
 
 #endif
