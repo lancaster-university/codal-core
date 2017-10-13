@@ -860,10 +860,11 @@ void codal::schedule()
             tcb_configure_lr(idleFiber->tcb, (PROCESSOR_WORD_TYPE)&idle_task);
         }
 
-        if (oldFiber == idleFiber)
+        // If we're returning for IDLE or our last fiber has been destroyed, we don't need to waste time 
+        // saving the processor context - Just swap in the new fiber, and discard changes to stack and register context.
+        if (oldFiber == idleFiber || oldFiber->queue == &fiberPool)
         {
-            // Just swap in the new fiber, and discard changes to stack and register context.
-            swap_context(NULL, currentFiber->tcb, 0, currentFiber->stack_top);
+            swap_context(NULL, 0, currentFiber->tcb, currentFiber->stack_top);
         }
         else
         {
@@ -871,7 +872,7 @@ void codal::schedule()
             verify_stack_size(oldFiber);
 
             // Schedule in the new fiber.
-            swap_context(oldFiber->tcb, currentFiber->tcb, oldFiber->stack_top, currentFiber->stack_top);
+            swap_context(oldFiber->tcb, oldFiber->stack_top, currentFiber->tcb, currentFiber->stack_top);
         }
     }
 }

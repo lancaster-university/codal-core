@@ -326,7 +326,7 @@ namespace codal
   * Assembler Context switch routing.
   * Defined in CortexContextSwitch.s.
   */
-extern "C" void swap_context(void* from, void* to, PROCESSOR_WORD_TYPE from_stack, PROCESSOR_WORD_TYPE to_stack);
+extern "C" void swap_context(void* from_tcb, PROCESSOR_WORD_TYPE from_stack, void* to_tcb, PROCESSOR_WORD_TYPE to_stack);
 extern "C" void save_context(void* tcb, PROCESSOR_WORD_TYPE stack);
 extern "C" void save_register_context(void* tcb);
 extern "C" void restore_register_context(void* tcb);
