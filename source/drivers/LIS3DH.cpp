@@ -79,22 +79,22 @@ int LIS3DH::configure()
     // Now configure the accelerometer accordingly.
 
     // Firstly, Configure for normal precision operation at the sample rate requested.
-    result = i2c.write(address, LIS3DH_CTRL_REG1, actualSampleRate->value | 0x07);
+    result = i2c.writeRegister(address, LIS3DH_CTRL_REG1, actualSampleRate->value | 0x07);
     if (result != 0)
         return DEVICE_I2C_ERROR;
 
     // Enable the INT1 interrupt pin when XYZ data is available.
-    result = i2c.write(address, LIS3DH_CTRL_REG3, 0x10);
+    result = i2c.writeRegister(address, LIS3DH_CTRL_REG3, 0x10);
     if (result != 0)
         return DEVICE_I2C_ERROR;
 
     // Configure for the selected g range.
-    result = i2c.write(address, LIS3DH_CTRL_REG4,  actualSampleRange->value << 4);
+    result = i2c.writeRegister(address, LIS3DH_CTRL_REG4,  actualSampleRange->value << 4);
     if (result != 0)
         return DEVICE_I2C_ERROR;
 
     // Configure for a latched interrupt request.
-    result = i2c.write(address, LIS3DH_CTRL_REG5, 0x08);
+    result = i2c.writeRegister(address, LIS3DH_CTRL_REG5, 0x08);
     if (result != 0)
         return DEVICE_I2C_ERROR;
 
@@ -162,7 +162,7 @@ int LIS3DH::whoAmI()
     uint8_t data;
     int result;
 
-    result = i2c.read(address, LIS3DH_WHOAMI, &data, 1);
+    result = i2c.readRegister(address, LIS3DH_WHOAMI, &data, 1);
     if (result !=0)
         return DEVICE_I2C_ERROR;
 
@@ -196,13 +196,13 @@ int LIS3DH::updateSample()
 
         // read the XYZ data (16 bit)
         // n.b. we need to set the MSB bit to enable multibyte transfers from this device (WHY? Who Knows!)
-        result = i2c.read(address, 0x80 | LIS3DH_OUT_X_L, (uint8_t *)data, 6);
+        result = i2c.readRegister(address, 0x80 | LIS3DH_OUT_X_L, (uint8_t *)data, 6);
 
         if (result !=0)
             return DEVICE_I2C_ERROR;
 
         // Acknowledge the interrupt.
-        i2c.read(address, LIS3DH_INT1_SRC, &src, 1);
+        i2c.readRegister(address, LIS3DH_INT1_SRC, &src, 1);
 
         // read MSB values...
         sample.x = data[1];

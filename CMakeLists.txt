@@ -36,6 +36,7 @@ set(CODAL_CPP_FILES
     "source/drivers/MultiButton.cpp"
     "source/drivers/MessageBus.cpp"
     "source/drivers/HID.cpp"
+    "source/drivers/I2C.cpp"
     "source/drivers/AnalogSensor.cpp"
     "source/drivers/LinearAnalogSensor.cpp"
     "source/drivers/LIS3DH.cpp"

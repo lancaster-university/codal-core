@@ -90,7 +90,7 @@ int FXOS8700::configure()
 
     // Firstly, disable the module (as some registers cannot be changed while its running).
     value = 0x00;
-    result = i2c.write(address, FXOS8700_CTRL_REG1, value);
+    result = i2c.writeRegister(address, FXOS8700_CTRL_REG1, value);
     if (result != 0)
     {
         DMESG("I2C ERROR: FXOS8700_CTRL_REG1");
@@ -101,7 +101,7 @@ int FXOS8700::configure()
     // Also, select full oversampling on the magnetometer 
     // TODO: Determine power / accuracy tradeoff here.
     value = 0x1F;
-    result = i2c.write(address, FXOS8700_M_CTRL_REG1, value);
+    result = i2c.writeRegister(address, FXOS8700_M_CTRL_REG1, value);
     if (result != 0)
     {
         DMESG("I2C ERROR: FXOS8700_M_CTRL_REG1");
@@ -112,7 +112,7 @@ int FXOS8700::configure()
     // read of both acceleromter and magnetometer data despite them being non-contguous 
     // in memory... funky!
     value = 0x20;
-    result = i2c.write(address, FXOS8700_M_CTRL_REG2, value);
+    result = i2c.writeRegister(address, FXOS8700_M_CTRL_REG2, value);
     if (result != 0)
     {
         DMESG("I2C ERROR: FXOS8700_M_CTRL_REG2");
@@ -122,7 +122,7 @@ int FXOS8700::configure()
     // Configure PushPull Active LOW interrupt mode. 
     // n.b. This may need to be reconfigured if the interrupt line is shared.
     value = 0x00;
-    result = i2c.write(address, FXOS8700_CTRL_REG3, value);
+    result = i2c.writeRegister(address, FXOS8700_CTRL_REG3, value);
     if (result != 0)
     {
         DMESG("I2C ERROR: FXOS8700_CTRL_REG3");
@@ -133,7 +133,7 @@ int FXOS8700::configure()
     // TODO: This is currently PUSHPULL mode. This may nede to be reconfigured
     // to OPEN_DRAIN if the interrupt line is shared.
     value = 0x01;
-    result = i2c.write(address, FXOS8700_CTRL_REG4, value);
+    result = i2c.writeRegister(address, FXOS8700_CTRL_REG4, value);
     if (result != 0)
     {
         DMESG("I2C ERROR: FXOS8700_CTRL_REG4");
@@ -142,7 +142,7 @@ int FXOS8700::configure()
 
     // Route the data ready interrupt to INT1 pin.
     value = 0x01;
-    result = i2c.write(address, FXOS8700_CTRL_REG5, value);
+    result = i2c.writeRegister(address, FXOS8700_CTRL_REG5, value);
     if (result != 0)
     {
         DMESG("I2C ERROR: FXOS8700_CTRL_REG5");
@@ -151,7 +151,7 @@ int FXOS8700::configure()
 
     // Configure acceleromter g range.
     value = accelerometerRange.get(sampleRange);
-    result = i2c.write(address, FXOS8700_XYZ_DATA_CFG, value);
+    result = i2c.writeRegister(address, FXOS8700_XYZ_DATA_CFG, value);
     if (result != 0)
     {
         DMESG("I2C ERROR: FXOS8700_XYZ_DATA_CFG");
@@ -160,7 +160,7 @@ int FXOS8700::configure()
 
     // Configure sample rate and re-enable the sensor.
     value = accelerometerPeriod.get(samplePeriod * 1000) | 0x01;
-    result = i2c.write(address, FXOS8700_CTRL_REG1, value);
+    result = i2c.writeRegister(address, FXOS8700_CTRL_REG1, value);
     if (result != 0)
     {
         DMESG("I2C ERROR: FXOS8700_CTRL_REG1");
@@ -210,7 +210,7 @@ int FXOS8700::whoAmI()
     uint8_t data;
     int result;
 
-    result = i2c.read(address, FXOS8700_WHO_AM_I, &data, 1);
+    result = i2c.readRegister(address, FXOS8700_WHO_AM_I, &data, 1);
     if (result !=0)
         return DEVICE_I2C_ERROR;
 
@@ -243,7 +243,7 @@ int FXOS8700::updateSample()
         int result;
 
         // Read the combined accelerometer and magnetometer data.
-        result = i2c.read(address, FXOS8700_OUT_X_MSB, data, 12);
+        result = i2c.readRegister(address, FXOS8700_OUT_X_MSB, data, 12);
 
         if (result !=0)
             return DEVICE_I2C_ERROR;
