@@ -33,7 +33,6 @@ namespace codal
   */
 I2C::I2C(Pin &sda, Pin &scl)
 {
-    setFrequency(100000);
 }
 
 /** 
