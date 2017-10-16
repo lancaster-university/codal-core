@@ -235,12 +235,9 @@ int I2C::readRegister(uint16_t address, uint8_t reg, uint8_t *data, int length)
     if (result != DEVICE_OK)
         return result;
 
-    for (int i=0; i<length; i++)
-    {
-        result = read(address, data, 1);
-        if (result != DEVICE_OK)
-            return result;
-    }
+    result = read(address, data, length);
+    if (result != DEVICE_OK)
+        return result;
 
     return DEVICE_OK;
 }
