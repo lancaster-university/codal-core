@@ -80,7 +80,7 @@ int I2C::write(uint8_t data)
 *
 * @return the byte read from the I2C bus, or DEVICE_I2C_ERROR if the the write request failed.
 */
-int I2C::read()
+int I2C::read(AcknowledgeType ack)
 {
     return DEVICE_NOT_IMPLEMENTED;
 }
@@ -186,6 +186,8 @@ int I2C::read()
 */
 int I2C::read(uint16_t address, uint8_t *data, int len, bool repeated)
 {
+    int i = 0;
+
     if (data == NULL || len <= 0)
         return DEVICE_INVALID_PARAMETER;
 
@@ -196,8 +198,10 @@ int I2C::read(uint16_t address, uint8_t *data, int len, bool repeated)
     write((uint8_t)(address | 0x01));
 
     // Read the body of the data
-    for (int i = 0; i < len; i++)
+    for (i = 0; i < len-1; i++)
         data[i] = read();
+
+    data[i] = read(NACK);
 
     // Send a stop condition
     if (!repeated)

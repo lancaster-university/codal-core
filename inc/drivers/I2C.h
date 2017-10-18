@@ -35,6 +35,9 @@ namespace codal
 /**
   * Class definition for an I2C interface. 
   */
+
+enum AcknowledgeType {ACK, NACK};
+
 class I2C
 {
 public:
@@ -74,7 +77,7 @@ public:
     *
     * @return the byte read from the I2C bus, or DEVICE_I2C_ERROR if the the write request failed.
     */
-    virtual int read();
+    virtual int read(AcknowledgeType ack = ACK);
 
     /**
       * Issues a standard, 2 byte I2C command write to the I2C bus.
