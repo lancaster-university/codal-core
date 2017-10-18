@@ -93,8 +93,7 @@ void AnalogSensor::updateSample()
     }
     else
     {
-        value = ((value * (1023 - sensitivity)) + (value * sensitivity)) >> 10;
-        sensorValue = (uint16_t)value;
+        sensorValue = ((sensorValue * (1023 - sensitivity)) + (value * sensitivity)) >> 10;
     }
 
     checkThresholding();

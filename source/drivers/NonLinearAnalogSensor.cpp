@@ -79,7 +79,7 @@ void NonLinearAnalogSensor::updateSample()
     }
     else
     {
-        sensorValue = (sensorValue * (1.0f - sensitivity)) + (value * sensitivity);
+        sensorValue = ((sensorValue * (1023 - sensitivity)) + ((uint16_t)value * sensitivity)) >> 10;
     }
 
     checkThresholding();
