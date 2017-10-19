@@ -14,7 +14,7 @@ namespace codal
 
     /**
       * Class definition for a ManagedBuffer.
-      * A ManagedBuffer holds a series of bytes, used with MicroBitRadio channels and in other places.
+      * A ManagedBuffer holds a series of bytes for general purpose use.
       * n.b. This is a mutable, managed type.
       */
     class ManagedBuffer

@@ -116,7 +116,7 @@ void Display::disable()
 /**
   * Captures the bitmap currently being rendered on the display.
   *
-  * @return a MicroBitImage containing the captured data.
+  * @return an Image containing the captured data.
   */
 Image Display::screenShot()
 {

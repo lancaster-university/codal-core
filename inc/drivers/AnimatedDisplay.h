@@ -77,7 +77,7 @@ namespace codal
      * Class definition for AnimatedDisplay.
      *
      * This class provides a high level abstraction level to show text and graphic animations on a
-     * Display, e.g. on the MicroBit LED matrix display.
+     * Display, e.g. on the LED matrix display.
      */
     class AnimatedDisplay : public CodalComponent
     {
@@ -200,7 +200,7 @@ namespace codal
          *
          * Create a software representation of an animated display.
          * This class provides a high level abstraction level to show text and graphic animations on a
-         * CodalDisplay, e.g. on the MicroBit LED matrix display.
+         * CodalDisplay, e.g. on the LED matrix display.
          *
          * @param display The CodalDisplay instance that is used to show the text and graphic animations of this class
          *

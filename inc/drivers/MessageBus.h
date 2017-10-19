@@ -112,7 +112,7 @@ namespace codal
         int process(Event &evt, bool urgent = false);
 
         /**
-          * Returns the microBitListener with the given position in our list.
+          * Returns the Listener with the given position in our list.
           *
           * @param n The position in the list to return.
           *

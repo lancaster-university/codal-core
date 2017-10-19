@@ -27,7 +27,7 @@ DEALINGS IN THE SOFTWARE.
   * Class definition for AnimatedDisplay.
   *
   * This class provides a high level abstraction level to show text and graphic animations on a
-  * Display, e.g. on the MicroBit LED matrix display.
+  * Display, e.g. on an LED matrix display.
   */
 
 #include "AnimatedDisplay.h"
@@ -41,7 +41,7 @@ using namespace codal;
   *
   * Create a software representation of an animated display.
   * This class provides a high level abstraction level to show text and graphic animations on a
-  * Display, e.g. on the MicroBit LED matrix display.
+  * Display, e.g. on an LED matrix display.
   *
   * @param display The Display instance that is used to show the text and graphic animations of this class
   * @param id The id the display should use when sending events on the MessageBus. Defaults to DEVICE_ID_DISPLAY.

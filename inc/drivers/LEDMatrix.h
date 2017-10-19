@@ -184,9 +184,6 @@ namespace codal
          * @param map The mapping information that relates pin inputs/outputs to physical screen coordinates.
          * @param id The id the display should use when sending events on the MessageBus. Defaults to DEVICE_ID_DISPLAY.
          *
-         * @code
-         * MicroBitDisplay display;
-         * @endcode
          */
         LEDMatrix(const MatrixMap &map, uint16_t id = DEVICE_ID_DISPLAY);
 

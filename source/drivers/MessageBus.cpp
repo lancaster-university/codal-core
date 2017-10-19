@@ -528,7 +528,7 @@ int MessageBus::remove(Listener *listener)
 }
 
 /**
-  * Returns the microBitListener with the given position in our list.
+  * Returns the Listener with the given position in our list.
   *
   * @param n The position in the list to return.
   *

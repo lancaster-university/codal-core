@@ -101,7 +101,7 @@ namespace codal
         /**
          * Captures the bitmap currently being rendered on the display.
          *
-         * @return a MicroBitImage containing the captured data.
+         * @return a Image containing the captured data.
          */
         virtual Image screenShot();
 

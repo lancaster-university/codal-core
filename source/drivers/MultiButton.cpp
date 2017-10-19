@@ -229,7 +229,7 @@ void MultiButton::setEventConfiguration(ButtonEventConfiguration config)
 
 /**
   * A member function that is invoked when any event is detected from the two
-  * button IDs this MicrobitMultiButton instance was constructed with.
+  * button IDs this MultiButton instance was constructed with.
   *
   * @param evt the event received from the default EventModel.
   */
