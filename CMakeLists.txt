@@ -2,7 +2,7 @@ include("${CODAL_UTILS_LOCATION}")
 
 include("${CODAL_UTILS_LOCATION}")
 RECURSIVE_FIND_DIR(INCLUDE_DIRS "./inc" "*.h")
-RECURSIVE_FIND_FILES(SOURCE_FILES "./source" "*.c??")
+RECURSIVE_FIND_FILE(SOURCE_FILES "./source" "*.c??")
 
 execute_process(WORKING_DIRECTORY "." COMMAND "git" "log" "--pretty=format:%h" "-n" "1" OUTPUT_VARIABLE git_hash)
 execute_process(WORKING_DIRECTORY "." COMMAND "git" "rev-parse" "--abbrev-ref" "HEAD" OUTPUT_VARIABLE git_branch OUTPUT_STRIP_TRAILING_WHITESPACE)
