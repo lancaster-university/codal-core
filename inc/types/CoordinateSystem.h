@@ -1,27 +1,26 @@
 /*
-   The MIT License (MIT)
+The MIT License (MIT)
 
-   Copyright (c) 2016 British Broadcasting Corporation.
-   This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
-   Permission is hereby granted, free of charge, to any person obtaining a
-   copy of this software and associated documentation files (the "Software"),
-   to deal in the Software without restriction, including without limitation
-   the rights to use, copy, modify, merge, publish, distribute, sublicense,
-   and/or sell copies of the Software, and to permit persons to whom the
-   Software is furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
 
-   The above copyright notice and this permission notice shall be included in
-   all copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
-   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-   THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
-   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
-   DEALINGS IN THE SOFTWARE.
-   */
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+*/
 
 #ifndef COORDINATE_SYSTEM_H
 #define COORDINATE_SYSTEM_H
@@ -119,7 +118,7 @@ namespace codal
              * Creates a new coordinatespace transformation object.
              *
              * @param system the CoordinateSystem to generated as output.
-             * @param upsidedown set if the sensor is mounted inverted (upside down) on the device board. 
+             * @param upsidedown set if the sensor is mounted inverted (upside down) on the device board.
              * @param rotated defines the rotation of the sensor on the PCB, with respect to pin 1 being at the top left corner
              * when viewing the device from its "natural" (user defined) orientation. n.b. if the sensor is upside down, the rotation
              * should be defined w.r.t. lookign at the side of the device where the sensor is mounted.
@@ -131,7 +130,7 @@ namespace codal
              *
              * @param a the sample point to convert, in ENU format.
              * @return the equivalent location of 's' in the coordinate space specified in the constructor.
-             */ 
+             */
             Sample3D transform(Sample3D s);
 
             /**
@@ -140,7 +139,7 @@ namespace codal
              * @param a the sample point to convert, in ENU format.
              * @param system The coordinate system to use in the result.
              * @return the equivalent location of 's' in the coordinate space specified in the constructor, and coordinate system supplied.
-             */ 
+             */
             Sample3D transform(Sample3D s, CoordinateSystem system);
 
     };

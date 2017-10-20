@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -152,7 +151,7 @@ int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end)
     // Sanity check. Ensure range is valid, large enough and word aligned.
     if (end <= start || end - start < DEVICE_HEAP_BLOCK_SIZE*2 || end % DEVICE_HEAP_BLOCK_SIZE != 0 || start % DEVICE_HEAP_BLOCK_SIZE != 0)
         return DEVICE_INVALID_PARAMETER;
-#endif    
+#endif
 
     // Disable IRQ temporarily to ensure no race conditions!
     target_disable_irq();
@@ -288,7 +287,7 @@ void* malloc (size_t size)
             target_panic(DEVICE_HEAP_ERROR);
 #else
         device_create_heap((PROCESSOR_WORD_TYPE)(codal_heap_start), (PROCESSOR_WORD_TYPE)(DEVICE_STACK_BASE) - (PROCESSOR_WORD_TYPE)(DEVICE_STACK_SIZE));
-#endif        
+#endif
         initialised = 1;
     }
 
@@ -348,7 +347,7 @@ void free (void *mem)
 
 #if (DEVICE_MAXIMUM_HEAPS > 1)
     for (i=0; i < heap_count; i++)
-#endif        
+#endif
     {
         if(memory > heap[i].heap_start && memory < heap[i].heap_end)
         {

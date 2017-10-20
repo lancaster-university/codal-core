@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -37,9 +36,9 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
-// 
+//
 // Configuration table for available g force ranges.
-// Maps g -> LIS3DH_CTRL_REG4 [5..4] 
+// Maps g -> LIS3DH_CTRL_REG4 [5..4]
 //
 static const KeyValueTableEntry accelerometerRangeData[] = {
     {2, 0},
@@ -49,9 +48,9 @@ static const KeyValueTableEntry accelerometerRangeData[] = {
 };
 CREATE_KEY_VALUE_TABLE(accelerometerRange, accelerometerRangeData);
 
-// 
+//
 // Configuration table for available data update frequency.
-// maps microsecond period -> LIS3DH_CTRL_REG1 data rate selection bits 
+// maps microsecond period -> LIS3DH_CTRL_REG1 data rate selection bits
 //
 static const KeyValueTableEntry accelerometerPeriodData[] = {
     {2500,      0x70},
@@ -70,7 +69,7 @@ CREATE_KEY_VALUE_TABLE(accelerometerPeriod, accelerometerPeriodData);
   *
   * @param _i2c an instance of DeviceI2C used to communicate with the onboard accelerometer.
   * @param _int1 the pin connected to the LIS3DH IRQ line.
-  * @param coordinateSpace The orientation of the sensor. 
+  * @param coordinateSpace The orientation of the sensor.
   * @param address the default I2C address of the accelerometer. Defaults to: LIS3DH_DEFAULT_ADDR.
   * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
   *
@@ -165,7 +164,7 @@ int LIS3DH::whoAmI()
 
 /**
  * Poll to see if new data is available from the hardware. If so, update it.
- * n.b. it is not necessary to explicitly call this funciton to update data 
+ * n.b. it is not necessary to explicitly call this funciton to update data
  * (it normally happens in the background when the scheduler is idle), but a check is performed
  * if the user explicitly requests up to date data.
  *

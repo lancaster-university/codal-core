@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -55,7 +54,7 @@ DEALINGS IN THE SOFTWARE.
 
 // Flag to indicate that a given block is FREE/USED (top bit of a CPU word)
 #define DEVICE_HEAP_BLOCK_FREE		(1 << (sizeof(PROCESSOR_WORD_TYPE) * 8 - 1))
-#define DEVICE_HEAP_BLOCK_SIZE      (sizeof(PROCESSOR_WORD_TYPE)) 
+#define DEVICE_HEAP_BLOCK_SIZE      (sizeof(PROCESSOR_WORD_TYPE))
 
 struct HeapDefinition
 {

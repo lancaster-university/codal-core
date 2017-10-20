@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -110,7 +109,7 @@ int Compass::heading()
     if(accelerometer != NULL)
         return tiltCompensatedBearing();
 
-    return basicBearing();    
+    return basicBearing();
 }
 
 /**
@@ -273,7 +272,7 @@ int Compass::getPeriod()
 
 /**
  * Poll to see if new data is available from the hardware. If so, update it.
- * n.b. it is not necessary to explicitly call this funciton to update data 
+ * n.b. it is not necessary to explicitly call this funciton to update data
  * (it normally happens in the background when the scheduler is idle), but a check is performed
  * if the user explicitly requests up to date data.
  *
@@ -314,7 +313,7 @@ int Compass::update(Sample3D s)
 /**
  * Reads the last compass value stored, and provides it in the coordinate system requested.
  *
- * @param coordinateSpace The coordinate system to use. 
+ * @param coordinateSpace The coordinate system to use.
  * @return The force measured in each axis, in milli-g.
  */
 Sample3D Compass::getSample(CoordinateSystem coordinateSystem)
@@ -378,7 +377,7 @@ int Compass::tiltCompensatedBearing()
     float phi = accelerometer->getRollRadians();
     float theta = accelerometer->getPitchRadians();
 
-    Sample3D s = getSample(NORTH_EAST_DOWN); 
+    Sample3D s = getSample(NORTH_EAST_DOWN);
 
     float x = (float) s.x;
     float y = (float) s.y;
@@ -408,7 +407,7 @@ int Compass::basicBearing()
     if (bearing < 0)
         bearing += 360.0;
 
-    return (int)(360.0 - bearing);    
+    return (int)(360.0 - bearing);
 }
 
 /**

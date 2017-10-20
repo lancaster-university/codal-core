@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -34,7 +33,7 @@ using namespace codal;
  * Creates a new coordinatespace transformation object.
  *
  * @param system the CoordinateSystem to generated as output.
- * @param upsidedown set if the sensor is mounted inverted (upside down) on the device board. 
+ * @param upsidedown set if the sensor is mounted inverted (upside down) on the device board.
  * @param rotated defines the rotation of the sensor on the PCB, with respect to pin 1 being at the top left corner
  * when viewing the device from its "natural" (user defined) orientation. n.b. if the sensor is upside down, the rotation
  * should be defined w.r.t. lookign at the side of the device where the sensor is mounted.
@@ -51,7 +50,7 @@ CoordinateSpace::CoordinateSpace(CoordinateSystem system, bool upsidedown, int r
  *
  * @param a the sample point to convert, in ENU format.
  * @return the equivalent location of 's' in the coordinate space specified in the constructor.
- */ 
+ */
 Sample3D CoordinateSpace::transform(Sample3D s)
 {
     return transform(s, system);
@@ -63,7 +62,7 @@ Sample3D CoordinateSpace::transform(Sample3D s)
  * @param a the sample point to convert, in ENU format.
  * @param system The coordinate system to use in the result.
  * @return the equivalent location of 's' in the coordinate space specified in the constructor, and coordinate system supplied.
- */ 
+ */
 Sample3D CoordinateSpace::transform(Sample3D s, CoordinateSystem system)
 {
     Sample3D result = s;
@@ -72,7 +71,7 @@ Sample3D CoordinateSpace::transform(Sample3D s, CoordinateSystem system)
     // Firstly, handle any inversions.
     // As we know the input is in ENU format, this means we flip the polarity of the X and Z axes.
     if(upsidedown)
-    { 
+    {
         result.x = -result.x;
         result.z = -result.z;
     }

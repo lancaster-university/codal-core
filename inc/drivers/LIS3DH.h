@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -223,7 +222,7 @@ namespace codal
 
         /**
          * Poll to see if new data is available from the hardware. If so, update it.
-         * n.b. it is not necessary to explicitly call this funciton to update data 
+         * n.b. it is not necessary to explicitly call this funciton to update data
          * (it normally happens in the background when the scheduler is idle), but a check is performed
          * if the user explicitly requests up to date data.
          *

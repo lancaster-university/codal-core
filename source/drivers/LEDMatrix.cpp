@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -47,7 +46,7 @@ const int greyScaleTimings[LED_MATRIX_GREYSCALE_BIT_DEPTH] = {1, 23, 70, 163, 35
   */
 LEDMatrix::LEDMatrix(const MatrixMap &map, uint16_t id) : Display(map.width, map.height, id), matrixMap(map)
 {
-    this->rotation = MATRIX_DISPLAY_ROTATION_0; 
+    this->rotation = MATRIX_DISPLAY_ROTATION_0;
     this->greyscaleBitMsk = 0x01;
     this->timingCount = 0;
     this->setBrightness(LED_MATRIX_DEFAULT_BRIGHTNESS);

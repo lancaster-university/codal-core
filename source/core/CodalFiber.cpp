@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -860,7 +859,7 @@ void codal::schedule()
             tcb_configure_lr(idleFiber->tcb, (PROCESSOR_WORD_TYPE)&idle_task);
         }
 
-        // If we're returning for IDLE or our last fiber has been destroyed, we don't need to waste time 
+        // If we're returning for IDLE or our last fiber has been destroyed, we don't need to waste time
         // saving the processor context - Just swap in the new fiber, and discard changes to stack and register context.
         if (oldFiber == idleFiber || oldFiber->queue == &fiberPool)
         {

@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -36,7 +35,7 @@ namespace codal
      */
     class Display : public CodalComponent
     {
-        protected: 
+        protected:
         uint16_t width;
         uint16_t height;
         uint8_t  brightness;

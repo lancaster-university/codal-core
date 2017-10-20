@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -41,9 +40,9 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
-// 
+//
 // Configuration table for available g force ranges.
-// Maps g -> XYZ_DATA_CFG bit [0..1] 
+// Maps g -> XYZ_DATA_CFG bit [0..1]
 //
 static const KeyValueTableEntry accelerometerRangeData[] = {
     {2,0},
@@ -51,8 +50,8 @@ static const KeyValueTableEntry accelerometerRangeData[] = {
     {8,2}
 };
 CREATE_KEY_VALUE_TABLE(accelerometerRange, accelerometerRangeData);
-    
-// 
+
+//
 // Configuration table for available data update frequency.
 // maps microsecond period -> CTRL_REG1 data rate selection bits [3..5]
 //
@@ -96,9 +95,9 @@ int FXOS8700::configure()
         DMESG("I2C ERROR: FXOS8700_CTRL_REG1");
         return DEVICE_I2C_ERROR;
     }
-    
+
     // Enter hybrid mode (interleave accelerometer and magnetometer samples).
-    // Also, select full oversampling on the magnetometer 
+    // Also, select full oversampling on the magnetometer
     // TODO: Determine power / accuracy tradeoff here.
     value = 0x1F;
     result = i2c.writeRegister(address, FXOS8700_M_CTRL_REG1, value);
@@ -109,7 +108,7 @@ int FXOS8700::configure()
     }
 
     // Select the auto incremement mode, which allows a contiguous I2C block
-    // read of both acceleromter and magnetometer data despite them being non-contguous 
+    // read of both acceleromter and magnetometer data despite them being non-contguous
     // in memory... funky!
     value = 0x20;
     result = i2c.writeRegister(address, FXOS8700_M_CTRL_REG2, value);
@@ -119,7 +118,7 @@ int FXOS8700::configure()
         return DEVICE_I2C_ERROR;
     }
 
-    // Configure PushPull Active LOW interrupt mode. 
+    // Configure PushPull Active LOW interrupt mode.
     // n.b. This may need to be reconfigured if the interrupt line is shared.
     value = 0x00;
     result = i2c.writeRegister(address, FXOS8700_CTRL_REG3, value);
@@ -249,7 +248,7 @@ int FXOS8700::updateSample()
             return DEVICE_I2C_ERROR;
 
         // read sensor data (and translate into signed little endian)
-        ptr = (uint8_t *)&accelerometerSample; 
+        ptr = (uint8_t *)&accelerometerSample;
         *ptr++ = data[1];
         *ptr++ = data[0];
         *ptr++ = data[3];
@@ -257,7 +256,7 @@ int FXOS8700::updateSample()
         *ptr++ = data[5];
         *ptr++ = data[4];
 
-        ptr = (uint8_t *)&magnetometerSample; 
+        ptr = (uint8_t *)&magnetometerSample;
         *ptr++ = data[7];
         *ptr++ = data[6];
         *ptr++ = data[9];
@@ -270,7 +269,7 @@ int FXOS8700::updateSample()
         accelerometerSample.y = (accelerometerSample.y * this->sampleRange) / 32;
         accelerometerSample.z = (accelerometerSample.z * this->sampleRange) / 32;
 
-        // align to ENU coordinate system 
+        // align to ENU coordinate system
         accelerometerSample.x = -accelerometerSample.x;
         magnetometerSample.x = -magnetometerSample.x;
 

@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -18,7 +17,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
 THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
@@ -107,7 +106,7 @@ namespace codal
         uint8_t         sampleRange;        // The sample range of the accelerometer in g.
         Sample3D        sample;             // The last sample read, in the coordinate system specified by the coordinateSpace variable.
         Sample3D        sampleENU;          // The last sample read, in raw ENU format (stored in case requests are made for data in other coordinate spaces)
-        CoordinateSpace &coordinateSpace;   // The coordinate space transform (if any) to apply to the raw data from the hardware. 
+        CoordinateSpace &coordinateSpace;   // The coordinate space transform (if any) to apply to the raw data from the hardware.
 
         float           pitch;              // Pitch of the device, in radians.
         float           roll;               // Roll of the device, in radians.
@@ -186,7 +185,7 @@ namespace codal
 
         /**
          * Poll to see if new data is available from the hardware. If so, update it.
-         * n.b. it is not necessary to explicitly call this funciton to update data 
+         * n.b. it is not necessary to explicitly call this funciton to update data
          * (it normally happens in the background when the scheduler is idle), but a check is performed
          * if the user explicitly requests up to date data.
          *
@@ -214,7 +213,7 @@ namespace codal
         /**
           * Reads the last accelerometer value stored, and provides it in the coordinate system requested.
           *
-          * @param coordinateSpace The coordinate system to use. 
+          * @param coordinateSpace The coordinate system to use.
           * @return The force measured in each axis, in milli-g.
           */
         Sample3D getSample(CoordinateSystem coordinateSystem);
