@@ -1,59 +1,8 @@
-# This file is no longer auto-generated to make the repository builds with GCC
-# and ARMCC no matter what.
-
-cmake_minimum_required(VERSION 2.8.12)
-
-enable_language(ASM)
+include("${CODAL_UTILS_LOCATION}")
 
 include("${CODAL_UTILS_LOCATION}")
 RECURSIVE_FIND_DIR(INCLUDE_DIRS "./inc" "*.h")
-
-set(CODAL_CPP_FILES
-    "source/core/MemberFunctionCallback.cpp"
-    "source/core/CodalCompat.cpp"
-    "source/core/CodalUtil.cpp"
-    "source/core/CodalDmesg.cpp"
-    "source/core/CodalDevice.cpp"
-    "source/core/CodalComponent.cpp"
-    "source/core/CodalFiber.cpp"
-    "source/core/CodalHeapAllocator.cpp"
-    "source/core/CodalListener.cpp"
-    "source/core/CodalUSB.cpp"
-
-    "source/types/ManagedString.cpp"
-    "source/types/Matrix4.cpp"
-    "source/types/Event.cpp"
-    "source/types/DataStream.cpp"
-    "source/types/ManagedBuffer.cpp"
-    "source/types/RefCounted.cpp"
-    "source/types/RefCountedInit.cpp"
-    "source/types/BitmapFont.cpp"
-    "source/types/Image.cpp"
-    "source/types/CoordinateSystem.cpp"
-
-    "source/drivers/AbstractButton.cpp"
-    "source/drivers/Button.cpp"
-    "source/drivers/MultiButton.cpp"
-    "source/drivers/MessageBus.cpp"
-    "source/drivers/HID.cpp"
-    "source/drivers/I2C.cpp"
-    "source/drivers/AnalogSensor.cpp"
-    "source/drivers/LinearAnalogSensor.cpp"
-    "source/drivers/LIS3DH.cpp"
-    "source/drivers/NonLinearAnalogSensor.cpp"
-    "source/drivers/LevelDetector.cpp"
-    "source/drivers/Synthesizer.cpp"
-    "source/drivers/StreamNormalizer.cpp"
-    "source/drivers/Timer.cpp"
-    "source/drivers/Accelerometer.cpp"
-    "source/drivers/Compass.cpp"
-    "source/drivers/FXOS8700.cpp"
-    "source/drivers/FXOS8700Accelerometer.cpp"
-    "source/drivers/FXOS8700Magnetometer.cpp"
-    "source/drivers/LEDMatrix.cpp"
-    "source/drivers/Display.cpp"
-    "source/drivers/AnimatedDisplay.cpp"
-)
+RECURSIVE_FIND_FILES(SOURCE_FILES "./source" "*.c??")
 
 execute_process(WORKING_DIRECTORY "." COMMAND "git" "log" "--pretty=format:%h" "-n" "1" OUTPUT_VARIABLE git_hash)
 execute_process(WORKING_DIRECTORY "." COMMAND "git" "rev-parse" "--abbrev-ref" "HEAD" OUTPUT_VARIABLE git_branch OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -69,7 +18,7 @@ set(CODAL_VERSION_FLAGS "-DCODAL_VERSION=\\\"${CODAL_VERSION_STRING}\\\"")
 set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CODAL_VERSION_FLAGS}")
 
 add_library(codal-core
-    ${CODAL_CPP_FILES}
+    ${SOURCE_FILES}
 )
 
 target_include_directories(codal-core PUBLIC ${INCLUDE_DIRS})
