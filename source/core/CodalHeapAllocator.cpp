@@ -386,7 +386,7 @@ void* realloc (void* ptr, size_t size)
         PROCESSOR_WORD_TYPE *cb = ((PROCESSOR_WORD_TYPE *)ptr) - 1;
         PROCESSOR_WORD_TYPE blockSize = *cb & ~DEVICE_HEAP_BLOCK_FREE;
 
-        memcpy(mem, ptr, min(blockSize * sizeof(PROCESSOR_WORD_TYPE), size);
+        memcpy(mem, ptr, min(blockSize * sizeof(PROCESSOR_WORD_TYPE), size));
         free(ptr);
     }
 
