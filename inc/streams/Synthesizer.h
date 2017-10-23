@@ -139,6 +139,17 @@ namespace codal
          */
         void setTone(const uint16_t *tonePrint);
 
+        private:
+
+        /**
+         * Determine the number of samples required for the given playout time.
+         *
+         * @param playoutTimeUs The playout time (in microseconds)
+         * @return The number if samples required to play for the given amount fo time
+         * (at the currently defined sample rate)
+         */
+        int determineSampleCount(int playoutTimeUs);
+
     };
 }
 

@@ -142,7 +142,7 @@ void Synthesizer::generate(int playoutTimeUs)
     toneSigma = (int) ((toneRate - (float)toneDelta) * 1000.0f);
 
     int sigma = 0;
-    int playoutSamples = playoutTimeUs < 0 ? -1 : (1000 * playoutTimeUs) / samplePeriodNs;
+    int playoutSamples = determineSampleCount(playoutTimeUs);
 
     while(playoutSamples != 0)
     {
@@ -182,7 +182,7 @@ void Synthesizer::generate(int playoutTimeUs)
                     toneRate = periodNs == 0 ? 0 : ((float)samplePeriodNs * (float) TONE_WIDTH) / (float) periodNs;
                     toneDelta = (int) toneRate;
                     toneSigma = (int) ((toneRate - (float)toneDelta) * 1000.0f);
-                    playoutSamples = playoutTimeUs < 0 ? playoutTimeUs : (1000 * playoutTimeUs) / samplePeriodNs;
+                    playoutSamples = determineSampleCount(playoutTimeUs);
 
                     position = 0;
                     sigma = 0;
@@ -274,3 +274,22 @@ void Synthesizer::setTone(const uint16_t *tonePrint)
 {
     this->tonePrint = tonePrint;
 }
+
+/**
+ * Determine the number of samples required for the given playout time.
+ *
+ * @param playoutTimeUs The playout time (in microseconds)
+ * @return The number if samples required to play for the given amount fo time
+ * (at the currently defined sample rate)
+ */
+int Synthesizer::determineSampleCount(int playoutTimeUs)
+{
+    if (playoutTimeUs < 0)
+        return -1;
+
+    int a = (playoutTimeUs / 1000) * 1000;
+    int b = (playoutTimeUs % 1000);
+
+    return ((a / samplePeriodNs) * 1000) + ((1000 * b) / samplePeriodNs);
+}
+
