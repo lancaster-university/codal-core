@@ -771,6 +771,8 @@ int codal::scheduler_runqueue_empty()
     return (runQueue == NULL);
 }
 
+extern void toggle_gpio(int);
+
 /**
   * Calls the Fiber scheduler.
   * The calling Fiber will likely be blocked, and control given to another waiting fiber.
@@ -847,6 +849,8 @@ void codal::schedule()
         currentFiber = runQueue;
     }
 
+
+
     // Swap to the context of the chosen fiber, and we're done.
     // Don't bother with the overhead of switching if there's only one fiber on the runqueue!
     if (currentFiber != oldFiber)
@@ -863,15 +867,19 @@ void codal::schedule()
         // saving the processor context - Just swap in the new fiber, and discard changes to stack and register context.
         if (oldFiber == idleFiber || oldFiber->queue == &fiberPool)
         {
+            toggle_gpio(0);
             swap_context(NULL, 0, currentFiber->tcb, currentFiber->stack_top);
+            toggle_gpio(0);
         }
         else
         {
             // Ensure the stack allocation of the fiber being scheduled out is large enough
             verify_stack_size(oldFiber);
 
+            toggle_gpio(1);
             // Schedule in the new fiber.
             swap_context(oldFiber->tcb, oldFiber->stack_top, currentFiber->tcb, currentFiber->stack_top);
+            toggle_gpio(1);
         }
     }
 }
