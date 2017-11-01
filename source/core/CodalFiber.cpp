@@ -759,6 +759,8 @@ void codal::verify_stack_size(Fiber *f)
         // Recalculate where the top of the stack is and we're done.
         f->stack_top = f->stack_bottom + bufferSize;
     }
+
+    DMESG("sd: %d, bs: %d, f: %p\r\n", stackDepth, bufferSize, currentFiber);
 }
 
 /**
@@ -771,7 +773,7 @@ int codal::scheduler_runqueue_empty()
     return (runQueue == NULL);
 }
 
-extern void toggle_gpio(int);
+extern void set_gpio(int,int);
 
 /**
   * Calls the Fiber scheduler.
@@ -866,20 +868,16 @@ void codal::schedule()
         // If we're returning for IDLE or our last fiber has been destroyed, we don't need to waste time
         // saving the processor context - Just swap in the new fiber, and discard changes to stack and register context.
         if (oldFiber == idleFiber || oldFiber->queue == &fiberPool)
-        {
-            toggle_gpio(0);
             swap_context(NULL, 0, currentFiber->tcb, currentFiber->stack_top);
-            toggle_gpio(0);
-        }
         else
         {
             // Ensure the stack allocation of the fiber being scheduled out is large enough
             verify_stack_size(oldFiber);
 
-            toggle_gpio(1);
+            set_gpio(2,1);
             // Schedule in the new fiber.
             swap_context(oldFiber->tcb, oldFiber->stack_top, currentFiber->tcb, currentFiber->stack_top);
-            toggle_gpio(1);
+            set_gpio(2,0);
         }
     }
 }
