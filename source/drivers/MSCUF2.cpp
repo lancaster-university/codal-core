@@ -5,9 +5,6 @@
 #define UF2_DEFINE_HANDOVER 1
 #include "uf2format.h"
 
-#define FLASH_SIZE (256 * 1024)
-#define VOLUME_LABEL "UF2BOOT"
-
 namespace codal
 {
 
@@ -76,7 +73,7 @@ const char *MSCUF2::textFileContent(int id)
     return NULL;
 }
 
-#define UF2_SIZE (FLASH_SIZE * 2)
+#define UF2_SIZE (flashSize() * 2)
 #define UF2_SECTORS (UF2_SIZE / 512)
 #define UF2_FIRST_SECTOR (numTextFiles() + 1)
 #define UF2_LAST_SECTOR (UF2_FIRST_SECTOR + UF2_SECTORS - 1)
@@ -111,7 +108,7 @@ static const FAT_BootBlock BootBlock = {
     0,                                        // Reserved
     0x29,                                     // ExtendedBootSig
     0x00420042,                               // VolumeSerialNumber
-    VOLUME_LABEL,                             // VolumeLabel
+    "",                                       // VolumeLabel
     {'F', 'A', 'T', '1', '6', ' ', ' ', ' '}, // FilesystemIdentifier
 };
 
@@ -140,6 +137,8 @@ void MSCUF2::buildBlock(uint32_t block_no, uint8_t *data)
     if (block_no == 0)
     {
         memcpy(data, &BootBlock, sizeof(BootBlock));
+        FAT_BootBlock *bb = (FAT_BootBlock*)data;
+        padded_memcpy(bb->VolumeLabel, volumeLabel(), 11);
         data[510] = 0x55;
         data[511] = 0xaa;
         // logval("data[0]", data[0]);
@@ -172,7 +171,7 @@ void MSCUF2::buildBlock(uint32_t block_no, uint8_t *data)
         {
             DirEntry *d = (DirEntry *)data;
             unsigned i;
-            padded_memcpy(d->name, BootBlock.VolumeLabel, 11);
+            padded_memcpy(d->name, volumeLabel(), 11);
             d->attrs = 0x28;
             for (i = 0; i < numTextFiles(); ++i)
             {
@@ -193,20 +192,20 @@ void MSCUF2::buildBlock(uint32_t block_no, uint8_t *data)
         sectionIdx -= START_CLUSTERS;
         if (sectionIdx < numTextFiles() - 1)
         {
-            strcpy((char*)data, textFileContent(sectionIdx));
+            strcpy((char *)data, textFileContent(sectionIdx));
         }
         else
         {
             sectionIdx -= numTextFiles() - 1;
             uint32_t addr = sectionIdx * 256;
-            if (addr < FLASH_SIZE)
+            if (addr < flashSize())
             {
                 UF2_Block *bl = (UF2_Block *)data;
                 bl->magicStart0 = UF2_MAGIC_START0;
                 bl->magicStart1 = UF2_MAGIC_START1;
                 bl->magicEnd = UF2_MAGIC_END;
                 bl->blockNo = sectionIdx;
-                bl->numBlocks = FLASH_SIZE / 256;
+                bl->numBlocks = flashSize() / 256;
                 bl->targetAddr = addr;
                 bl->payloadSize = 256;
                 memcpy(bl->data, (void *)addr, bl->payloadSize);

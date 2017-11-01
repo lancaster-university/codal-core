@@ -31,17 +31,21 @@ DEALINGS IN THE SOFTWARE.
 
 namespace codal
 {
-    
+
 class MSCUF2 : public USBMSC
 {
     void buildBlock(uint32_t block_no, uint8_t *data);
+
 public:
     MSCUF2();
-    
+
+    virtual uint32_t flashSize() { return 256 * 1024; }
+    virtual const char *volumeLabel() { return "UF2BOOT"; }
+
     virtual uint32_t numTextFiles() { return 2; }
     virtual const char *textFileName(int id);
     virtual const char *textFileContent(int id); // up to 512 bytes!
-    
+
     virtual uint32_t getCapacity();
     virtual void readBlocks(int blockAddr, int numBlocks);
     virtual void writeBlocks(int blockAddr, int numBlocks);
