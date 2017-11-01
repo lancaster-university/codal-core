@@ -415,4 +415,8 @@ int USBMSC::currLUN()
     return state->CommandBlock.LUN;
 }
 
+uint32_t USBMSC::cbwTag() {
+    return state->CommandBlock.Tag;
+}
+
 #endif
