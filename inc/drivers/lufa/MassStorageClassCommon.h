@@ -50,17 +50,13 @@
 #ifndef _MS_CLASS_COMMON_H_
 #define _MS_CLASS_COMMON_H_
 
+#define ATTR_PACKED __attribute__((packed))
+
 	/* Includes: */
-		#include "../../Core/StdDescriptors.h"
 
 	/* Enable C linkage for C++ Compilers: */
 		#if defined(__cplusplus)
 			extern "C" {
-		#endif
-
-	/* Preprocessor Checks: */
-		#if !defined(__INCLUDE_FROM_MS_DRIVER)
-			#error Do not include this file directly. Include LUFA/Drivers/USB.h instead.
 		#endif
 
 	/* Macros: */
