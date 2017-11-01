@@ -1,53 +1,28 @@
 #include "MSCUF2.h"
+#include "FAT.h"
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
 #define UF2_DEFINE_HANDOVER 1
 #include "uf2format.h"
 
+
+#define NUM_FAT_BLOCKS 8000
+
+#define UF2_SIZE (flashSize() * 2)
+#define UF2_SECTORS (UF2_SIZE / 512)
+#define UF2_FIRST_SECTOR (numTextFiles() + 1)
+#define UF2_LAST_SECTOR (UF2_FIRST_SECTOR + UF2_SECTORS - 1)
+
+#define SECTORS_PER_FAT FAT_SECTORS_PER_FAT(NUM_FAT_BLOCKS)
+#define START_FAT0 FAT_START_FAT0(NUM_FAT_BLOCKS)
+#define START_FAT1 FAT_START_FAT1(NUM_FAT_BLOCKS)
+#define START_ROOTDIR FAT_START_ROOTDIR(NUM_FAT_BLOCKS)
+#define START_CLUSTERS FAT_START_ROOTDIR(NUM_FAT_BLOCKS)
+
+
 namespace codal
 {
-
-typedef struct
-{
-    uint8_t JumpInstruction[3];
-    uint8_t OEMInfo[8];
-    uint16_t SectorSize;
-    uint8_t SectorsPerCluster;
-    uint16_t ReservedSectors;
-    uint8_t FATCopies;
-    uint16_t RootDirectoryEntries;
-    uint16_t TotalSectors16;
-    uint8_t MediaDescriptor;
-    uint16_t SectorsPerFAT;
-    uint16_t SectorsPerTrack;
-    uint16_t Heads;
-    uint32_t HiddenSectors;
-    uint32_t TotalSectors32;
-    uint8_t PhysicalDriveNum;
-    uint8_t Reserved;
-    uint8_t ExtendedBootSig;
-    uint32_t VolumeSerialNumber;
-    char VolumeLabel[11];
-    uint8_t FilesystemIdentifier[8];
-} __attribute__((packed)) FAT_BootBlock;
-
-typedef struct
-{
-    char name[8];
-    char ext[3];
-    uint8_t attrs;
-    uint8_t reserved;
-    uint8_t createTimeFine;
-    uint16_t createTime;
-    uint16_t createDate;
-    uint16_t lastAccessDate;
-    uint16_t highStartCluster;
-    uint16_t updateTime;
-    uint16_t updateDate;
-    uint16_t startCluster;
-    uint32_t size;
-} __attribute__((packed)) DirEntry;
 
 const char *MSCUF2::textFileName(int id)
 {
@@ -73,57 +48,6 @@ const char *MSCUF2::textFileContent(int id)
     return NULL;
 }
 
-#define UF2_SIZE (flashSize() * 2)
-#define UF2_SECTORS (UF2_SIZE / 512)
-#define UF2_FIRST_SECTOR (numTextFiles() + 1)
-#define UF2_LAST_SECTOR (UF2_FIRST_SECTOR + UF2_SECTORS - 1)
-
-#define RESERVED_SECTORS 1
-#define ROOT_DIR_SECTORS 4
-#define SECTORS_PER_FAT ((NUM_FAT_BLOCKS * 2 + 511) / 512)
-
-#define START_FAT0 RESERVED_SECTORS
-#define START_FAT1 (START_FAT0 + SECTORS_PER_FAT)
-#define START_ROOTDIR (START_FAT1 + SECTORS_PER_FAT)
-#define START_CLUSTERS (START_ROOTDIR + ROOT_DIR_SECTORS)
-
-#define NUM_FAT_BLOCKS 8000
-
-static const FAT_BootBlock BootBlock = {
-    {0xeb, 0x3c, 0x90},                       // JumpInstruction
-    {'U', 'F', '2', ' ', 'U', 'F', '2', ' '}, // OEMInfo
-    512,                                      // SectorSize
-    1,                                        // SectorsPerCluster
-    RESERVED_SECTORS,                         // ReservedSectors
-    2,                                        // FATCopies
-    (ROOT_DIR_SECTORS * 512 / 32),            // RootDirectoryEntries
-    NUM_FAT_BLOCKS - 2,                       // TotalSectors16
-    0xF8,                                     // MediaDescriptor
-    SECTORS_PER_FAT,                          // SectorsPerFAT
-    1,                                        // SectorsPerTrack
-    1,                                        // Heads
-    0,                                        // HiddenSectors
-    0,                                        // TotalSectors32
-    0,                                        // PhysicalDriveNum
-    0,                                        // Reserved
-    0x29,                                     // ExtendedBootSig
-    0x00420042,                               // VolumeSerialNumber
-    "",                                       // VolumeLabel
-    {'F', 'A', 'T', '1', '6', ' ', ' ', ' '}, // FilesystemIdentifier
-};
-
-void padded_memcpy(char *dst, const char *src, int len)
-{
-    for (int i = 0; i < len; ++i)
-    {
-        if (*src)
-            *dst = *src++;
-        else
-            *dst = ' ';
-        dst++;
-    }
-}
-
 uint32_t MSCUF2::getCapacity()
 {
     return NUM_FAT_BLOCKS;
@@ -136,12 +60,7 @@ void MSCUF2::buildBlock(uint32_t block_no, uint8_t *data)
 
     if (block_no == 0)
     {
-        memcpy(data, &BootBlock, sizeof(BootBlock));
-        FAT_BootBlock *bb = (FAT_BootBlock*)data;
-        padded_memcpy(bb->VolumeLabel, volumeLabel(), 11);
-        data[510] = 0x55;
-        data[511] = 0xaa;
-        // logval("data[0]", data[0]);
+        buildFATBootBlock(data, volumeLabel(), NUM_FAT_BLOCKS);
     }
     else if (block_no < START_ROOTDIR)
     {
@@ -170,21 +89,16 @@ void MSCUF2::buildBlock(uint32_t block_no, uint8_t *data)
         if (sectionIdx == 0)
         {
             DirEntry *d = (DirEntry *)data;
-            unsigned i;
-            padded_memcpy(d->name, volumeLabel(), 11);
-            d->attrs = 0x28;
-            for (i = 0; i < numTextFiles(); ++i)
-            {
-                d++;
-                d->size = strlen(textFileContent(i));
-                d->startCluster = i + 2;
-                padded_memcpy(d->name, textFileName(i), 11);
-            }
 
+            fillFATDirEntry(d, volumeLabel(), 0, 0);
+            d->attrs = 0x28;
             d++;
-            d->size = UF2_SIZE;
-            d->startCluster = i + 2;
-            padded_memcpy(d->name, "CURRENT UF2", 11);
+
+            unsigned i;
+            for (i = 0; i < numTextFiles(); ++i)
+                fillFATDirEntry(d++, textFileName(i), strlen(textFileContent(i)), i + 2);
+
+            fillFATDirEntry(d++, "CURRENT UF2", UF2_SIZE, i + 2);
         }
     }
     else
