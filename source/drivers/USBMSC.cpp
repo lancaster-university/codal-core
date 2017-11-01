@@ -54,8 +54,6 @@ DEALINGS IN THE SOFTWARE.
   this software.
 */
 
-
-
 #include "USBMSC.h"
 
 #if CONFIG_ENABLED(DEVICE_USB)
@@ -187,9 +185,9 @@ int USBMSC::sendResponse(bool ok)
 
     // TODO wait for stall clear?
 
-    if (in->write(&state->CommandStatus, sizeof(MS_CommandStatusWrapper_t)) < 0)
+    if (!writePadded(&state->CommandStatus, sizeof(state->CommandStatus),
+                     sizeof(state->CommandStatus)))
         return -1;
-
     return 0;
 }
 
@@ -239,8 +237,39 @@ int USBMSC::handeSCSICommand()
     return sendResponse(ok);
 }
 
+void USBMSC::readBulk(void *ptr, int dataSize)
+{
+    usb_assert(dataSize % 64 == 0);
+    if (failed)
+    {
+        memset(ptr, 0, dataSize);
+        return;
+    }
+    state->CommandBlock.DataTransferLength -= dataSize;
+    if (out->read(ptr, dataSize) < 0)
+        fail();
+}
+
+void USBMSC::fail()
+{
+    failed = true;
+}
+
+void USBMSC::writeBulk(const void *ptr, int dataSize)
+{
+    usb_assert(dataSize % 64 == 0);
+    if (failed)
+        return;
+    state->CommandBlock.DataTransferLength -= dataSize;
+    in->flags |= USB_EP_FLAG_NO_AUTO_ZLP; // disable AUTO-ZLP
+    if (in->write(ptr, dataSize) < 0)
+        fail();
+}
+
 bool USBMSC::writePadded(const void *ptr, int dataSize, int allocSize)
 {
+    in->flags &= ~USB_EP_FLAG_NO_AUTO_ZLP; // enable AUTO-ZLP
+
     if (dataSize >= allocSize)
     {
         if (in->write(ptr, allocSize) < 0)
@@ -332,10 +361,11 @@ bool USBMSC::cmdSend_Diagnostic()
     return true;
 }
 
-int USBMSC::finishReadWrite(bool ok, int numblocks)
+void USBMSC::finishReadWrite()
 {
-    state->CommandBlock.DataTransferLength -= numblocks * 512;
-    return sendResponse(ok);
+    bool ok = !failed;
+    failed = false;
+    sendResponse(ok);
 }
 
 void USBMSC::cmdReadWrite_10(bool isRead)
@@ -366,6 +396,7 @@ void USBMSC::cmdReadWrite_10(bool isRead)
         return;
     }
 
+    failed = false;
     if (isRead)
         readBlocks(BlockAddress, TotalBlocks);
     else

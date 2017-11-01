@@ -37,11 +37,13 @@ struct MSCState;
 class USBMSC : public CodalUSBInterface
 {
     struct MSCState *state;
+    bool failed;
 
     bool writePadded(const void *ptr, int dataSize, int allocSize);
 
     int handeSCSICommand();
     int sendResponse(bool ok);
+    void fail();
 
     bool cmdInquiry();
     bool cmdRequest_Sense();
@@ -56,13 +58,15 @@ public:
     virtual int classRequest(UsbEndpointIn &ctrl, USBSetup &setup);
     virtual const InterfaceInfo *getInterfaceInfo();
 
-    int finishReadWrite(bool ok, int numblocks);
-    int currLUN();
-
     virtual int totalLUNs() { return 1; }
     virtual bool storageOK() { return true; }
     virtual bool isReadOnly() { return false; }
     virtual uint32_t getCapacity() { return 8 * 1024 * 2; } // 8M
+
+    void writeBulk(const void *ptr, int dataSize);
+    void readBulk(void *ptr, int dataSize);
+    void finishReadWrite();
+    int currLUN();
 
     virtual void readBlocks(int blockAddr, int numBlocks) = 0;
     virtual void writeBlocks(int blockAddr, int numBlocks) = 0;
