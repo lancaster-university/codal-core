@@ -17,7 +17,7 @@
 #define START_FAT0 FAT_START_FAT0(NUM_FAT_BLOCKS)
 #define START_FAT1 FAT_START_FAT1(NUM_FAT_BLOCKS)
 #define START_ROOTDIR FAT_START_ROOTDIR(NUM_FAT_BLOCKS)
-#define START_CLUSTERS FAT_START_ROOTDIR(NUM_FAT_BLOCKS)
+#define START_CLUSTERS FAT_START_CLUSTERS(NUM_FAT_BLOCKS)
 
 namespace codal
 {
@@ -102,13 +102,13 @@ void MSCUF2::buildBlock(uint32_t block_no, uint8_t *data)
     else
     {
         sectionIdx -= START_CLUSTERS;
-        if (sectionIdx < numTextFiles() - 1)
+        if (sectionIdx < numTextFiles())
         {
             strcpy((char *)data, textFileContent(sectionIdx));
         }
         else
         {
-            sectionIdx -= numTextFiles() - 1;
+            sectionIdx -= numTextFiles();
             uint32_t addr = sectionIdx * 256;
             if (addr < flashSize())
             {
