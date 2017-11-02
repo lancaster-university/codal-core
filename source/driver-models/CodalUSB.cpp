@@ -35,6 +35,9 @@ DEALINGS IN THE SOFTWARE.
 
 CodalUSB *CodalUSB::usbInstance = NULL;
 
+//#define LOG DMESG
+#define LOG(...)
+
 static uint8_t usb_initialised = 0;
 // usb_20.pdf
 static uint8_t usb_status = 0;
@@ -292,6 +295,8 @@ int CodalUSB::interfaceRequest(USBSetup &setup, bool isClass)
     else if ((setup.bmRequestType & REQUEST_DESTINATION) == REQUEST_ENDPOINT)
         epIdx = setup.wIndex & 0xff;
 
+    LOG("iface req: ifaceIdx=%d epIdx=%d", ifaceIdx, epIdx);
+
     list_for_each_safe(iter, q, &usb_list)
     {
         tmp = list_entry(iter, InterfaceList, list);
@@ -301,6 +306,7 @@ int CodalUSB::interfaceRequest(USBSetup &setup, bool isClass)
         {
             int res = isClass ? tmp->interface->classRequest(*ctrlIn, setup)
                               : tmp->interface->stdRequest(*ctrlIn, setup);
+            LOG("iface req res=%d", res);
             if (res == DEVICE_OK)
                 return DEVICE_OK;
         }

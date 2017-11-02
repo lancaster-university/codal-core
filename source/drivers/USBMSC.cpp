@@ -58,6 +58,9 @@ DEALINGS IN THE SOFTWARE.
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
+#include "CodalDmesg.h"
+#define LOG DMESG
+
 #include "lufa/MassStorageClassCommon.h"
 
 #define CPU_TO_LE32(x) (x)
@@ -106,7 +109,7 @@ static const InterfaceInfo ifaceInfo = {
         2,    // numEndpoints
         0x08, // class code - mass storage
         0x06, // subclass - SCSI transparent command set
-        0x80, // protocol code - bulk only transport
+        80,   // protocol code - bulk only transport
         0x00, // iface string
         0x00, // alt setting
     },
@@ -121,8 +124,10 @@ int USBMSC::classRequest(UsbEndpointIn &ctrl, USBSetup &setup)
     switch (setup.bRequest)
     {
     case MS_REQ_GetMaxLUN:
+        LOG("get max lun");
         tmp = totalLUNs() - 1;
-        return ctrl.write(&tmp, 1);
+        ctrl.write(&tmp, 1);
+        return DEVICE_OK;
     }
 
     return DEVICE_NOT_SUPPORTED;
@@ -151,7 +156,7 @@ int USBMSC::endpointRequest()
 stall:
     out->stall();
     in->stall();
-    return 0;
+    return DEVICE_OK;
 }
 
 USBMSC::USBMSC() : CodalUSBInterface()
@@ -168,6 +173,8 @@ int USBMSC::sendResponse(bool ok)
     {
         SCSI_SET_SENSE(SCSI_SENSE_KEY_GOOD, SCSI_ASENSE_NO_ADDITIONAL_INFORMATION,
                        SCSI_ASENSEQ_NO_QUALIFIER);
+    } else {
+        LOG("response failed: sense key %x", state->SenseData.SenseKey);
     }
 
     state->CommandStatus.Status = ok ? MS_SCSI_COMMAND_Pass : MS_SCSI_COMMAND_Fail;
@@ -175,6 +182,7 @@ int USBMSC::sendResponse(bool ok)
     state->CommandStatus.Tag = state->CommandBlock.Tag;
     state->CommandStatus.DataTransferResidue = state->CommandBlock.DataTransferLength;
 
+    /*
     if (!ok && (le32_to_cpu(state->CommandStatus.DataTransferResidue)))
     {
         if (state->CommandBlock.Flags & MS_COMMAND_DIR_DATA_IN)
@@ -182,6 +190,7 @@ int USBMSC::sendResponse(bool ok)
         else
             out->stall();
     }
+    */
 
     // TODO wait for stall clear?
 
@@ -194,6 +203,8 @@ int USBMSC::sendResponse(bool ok)
 int USBMSC::handeSCSICommand()
 {
     bool ok = false;
+
+    LOG("SCSI CMD %x", state->CommandBlock.SCSICommandData[0]);
 
     /* Run the appropriate SCSI command hander function based on the passed command */
     switch (state->CommandBlock.SCSICommandData[0])
@@ -245,9 +256,15 @@ void USBMSC::readBulk(void *ptr, int dataSize)
         memset(ptr, 0, dataSize);
         return;
     }
-    state->CommandBlock.DataTransferLength -= dataSize;
-    if (out->read(ptr, dataSize) < 0)
-        fail();
+    for (int i = 0; i < dataSize; ) {
+        int len = out->read(ptr + i, dataSize - i);
+        if (len < 0) {
+            fail();
+            return;
+        }
+        state->CommandBlock.DataTransferLength -= len;
+        i += len;
+    }
 }
 
 void USBMSC::fail()
@@ -415,7 +432,8 @@ int USBMSC::currLUN()
     return state->CommandBlock.LUN;
 }
 
-uint32_t USBMSC::cbwTag() {
+uint32_t USBMSC::cbwTag()
+{
     return state->CommandBlock.Tag;
 }
 

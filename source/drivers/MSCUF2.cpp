@@ -6,7 +6,6 @@
 #define UF2_DEFINE_HANDOVER 1
 #include "uf2format.h"
 
-
 #define NUM_FAT_BLOCKS 8000
 
 #define UF2_SIZE (flashSize() * 2)
@@ -19,7 +18,6 @@
 #define START_FAT1 FAT_START_FAT1(NUM_FAT_BLOCKS)
 #define START_ROOTDIR FAT_START_ROOTDIR(NUM_FAT_BLOCKS)
 #define START_CLUSTERS FAT_START_ROOTDIR(NUM_FAT_BLOCKS)
-
 
 namespace codal
 {
@@ -162,6 +160,12 @@ void MSCUF2::writeBlocks(int blockAddr, int numBlocks)
 
     finishReadWrite();
 }
+
+MSCUF2::MSCUF2()
+{
+}
+
+
 }
 
 #endif
