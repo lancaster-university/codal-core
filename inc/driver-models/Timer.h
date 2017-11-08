@@ -160,10 +160,20 @@ namespace codal
          */
         virtual void syncRequest() = 0;
 
+        /**
+          * Enables interrupts for this timer instance.
+          */
+        virtual int enableInterrupts();
+
+        /**
+          * Disables interrupts for this timer instance.
+          */
+        virtual int disableInterrupts();
+
     protected:
-        CODAL_TIMESTAMP currentTime;
-        CODAL_TIMESTAMP currentTimeUs;
-        CODAL_TIMESTAMP overflow;
+        volatile CODAL_TIMESTAMP currentTime;
+        volatile CODAL_TIMESTAMP currentTimeUs;
+        volatile CODAL_TIMESTAMP overflow;
 
         TimerEvent *timerEventList;
         TimerEvent *nextTimerEvent;
