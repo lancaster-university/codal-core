@@ -10,7 +10,7 @@
 
 #define UF2_SIZE (flashSize() * 2)
 #define UF2_SECTORS (UF2_SIZE / 512)
-#define UF2_FIRST_SECTOR (numTextFiles() + 1)
+#define UF2_FIRST_SECTOR (numTextFiles() + 2)
 #define UF2_LAST_SECTOR (UF2_FIRST_SECTOR + UF2_SECTORS - 1)
 
 #define SECTORS_PER_FAT FAT_SECTORS_PER_FAT(NUM_FAT_BLOCKS)

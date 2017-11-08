@@ -142,14 +142,23 @@ int USBMSC::endpointRequest()
 {
     int len = out->read(&state->CommandBlock, sizeof(state->CommandBlock));
 
+    if (len == 0)
+        return DEVICE_OK;
+
     if (len != sizeof(state->CommandBlock))
+    {
+        DMESG("MSC: read cmd len=%d", len);
         goto stall;
+    }
 
     if ((state->CommandBlock.Signature != CPU_TO_LE32(MS_CBW_SIGNATURE)) ||
         (state->CommandBlock.LUN >= totalLUNs()) || (state->CommandBlock.Flags & 0x1F) ||
         (state->CommandBlock.SCSICommandLength == 0) ||
         (state->CommandBlock.SCSICommandLength > 16))
+    {
+        DMESG("MSC: read cmd invalid; cmdlen=%d", state->CommandBlock.SCSICommandLength);
         goto stall;
+    }
 
     return handeSCSICommand();
 
@@ -173,7 +182,9 @@ int USBMSC::sendResponse(bool ok)
     {
         SCSI_SET_SENSE(SCSI_SENSE_KEY_GOOD, SCSI_ASENSE_NO_ADDITIONAL_INFORMATION,
                        SCSI_ASENSEQ_NO_QUALIFIER);
-    } else {
+    }
+    else
+    {
         LOG("response failed: sense key %x", state->SenseData.SenseKey);
     }
 
@@ -256,9 +267,11 @@ void USBMSC::readBulk(void *ptr, int dataSize)
         memset(ptr, 0, dataSize);
         return;
     }
-    for (int i = 0; i < dataSize; ) {
+    for (int i = 0; i < dataSize;)
+    {
         int len = out->read(ptr + i, dataSize - i);
-        if (len < 0) {
+        if (len < 0)
+        {
             fail();
             return;
         }
