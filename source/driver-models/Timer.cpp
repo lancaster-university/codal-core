@@ -111,16 +111,27 @@ CODAL_TIMESTAMP Timer::getTimeUs()
     return currentTimeUs;
 }
 
+int Timer::disableInterrupts()
+{
+    target_disable_irq();
+    return DEVICE_OK;
+}
+
+int Timer::enableInterrupts()
+{
+    target_enable_irq();
+    return DEVICE_OK;
+}
+
 int Timer::setEvent(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, bool repeat)
 {
     TimerEvent *evt = getTimerEvent();
     if (evt == NULL)
         return DEVICE_NO_RESOURCES;
 
-    syncRequest();
-    evt->set(currentTimeUs + period, repeat ? period: 0, id, value);
+    evt->set(getTimeUs() + period, repeat ? period: 0, id, value);
 
-    target_disable_irq();
+    disableInterrupts();
 
     if (nextTimerEvent == NULL || evt->timestamp < nextTimerEvent->timestamp)
     {
@@ -128,7 +139,7 @@ int Timer::setEvent(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, bool re
         triggerIn(period);
     }
 
-    target_enable_irq();
+    enableInterrupts();
 
     return DEVICE_OK;
 }
