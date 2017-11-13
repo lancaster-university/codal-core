@@ -29,9 +29,9 @@ DEALINGS IN THE SOFTWARE.
 
 #if DEVICE_DMESG_BUFFER_SIZE > 0
 
-#if DEVICE_DMESG_BUFFER_SIZE < 256
-#error "Too small DMESG buffer"
-#endif
+// #if DEVICE_DMESG_BUFFER_SIZE < 256
+// #error "Too small DMESG buffer"
+// #endif
 
 struct CodalLogStore
 {

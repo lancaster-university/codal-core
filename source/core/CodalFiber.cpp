@@ -34,6 +34,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalFiber.h"
 #include "Timer.h"
 #include "codal_target_hal.h"
+#include "CodalDmesg.h"
 
 #define INITIAL_STACK_DEPTH (fiber_initial_stack_base() - 0x04)
 
@@ -760,7 +761,8 @@ void codal::verify_stack_size(Fiber *f)
         f->stack_top = f->stack_bottom + bufferSize;
     }
 
-    DMESG("sd: %d, bs: %d, f: %p\r\n", stackDepth, bufferSize, currentFiber);
+    //DMESGF("sd: %d ", stackDepth);
+    //DMESGF("bs: %d\r\n", bufferSize);
 }
 
 /**
