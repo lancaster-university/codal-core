@@ -876,10 +876,10 @@ void codal::schedule()
             // Ensure the stack allocation of the fiber being scheduled out is large enough
             verify_stack_size(oldFiber);
 
-            set_gpio(2,1);
+//            set_gpio(2,1);
             // Schedule in the new fiber.
             swap_context(oldFiber->tcb, oldFiber->stack_top, currentFiber->tcb, currentFiber->stack_top);
-            set_gpio(2,0);
+//            set_gpio(2,0);
         }
     }
 }
