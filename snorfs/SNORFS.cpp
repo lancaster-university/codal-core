@@ -201,6 +201,8 @@ File::File(FS &f, const char *filename) : fs(f)
 {
     bool found = false;
 
+    fs.mount();
+
     uint8_t h = fnhash(filename);
     uint16_t buflen = strlen(filename) + 2;
 
@@ -417,3 +419,23 @@ void File::allocatePage()
     }
     currSeekPage = pageIdx;
 }
+
+#ifdef SNORFS_TEST
+void FS::debugDump()
+{
+    if (numDataRows == 0)
+    {
+        printf("not mounted\n");
+        mount();
+    }
+    printf("row#: %d; remap: ", numDataRows);
+    for (int i = 0; i < numDataRows; ++i)
+    {
+        printf("%d->%d, ", i, rowRemapCache[i]);
+    }
+    printf("META PTRS:");
+    for (int i = 0; i < SNORFS_META_ROWS; ++i)
+        printf(" %d", metaFree[i]);
+    printf("\n");
+}
+#endif

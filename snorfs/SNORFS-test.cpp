@@ -54,10 +54,11 @@ public:
 
 int main()
 {
-    MemFlash flash(2 * 1024 * 1024 / SPIFLASH_PAGE_SIZE);
+    MemFlash flash(1024 * 1024 / SPIFLASH_PAGE_SIZE);
     flash.eraseChip();
     codal::snorfs::FS fs(flash);
 
+    fs.debugDump();
     printf("OK\n");
 
     return 0;

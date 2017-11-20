@@ -2,6 +2,10 @@
 #define CODAL_SNORFS_H
 
 #ifndef __arm__
+#define SNORFS_TEST 1
+#endif
+
+#ifdef SNORFS_TEST
 #include "SNORFS-test.h"
 #endif
 
@@ -31,9 +35,7 @@ class FS
     uint8_t numDataRows;
     uint8_t metaFree[SNORFS_META_ROWS];
 
-    void mount();
     int firstFree(uint32_t addr, int startOff);
-    void oops() { abort(); }
 
     uint32_t dataRowAddr(uint8_t rowIdx) { return rowRemapCache[rowIdx] * SPIFLASH_BIG_ROW_SIZE; }
     uint32_t dataIndexAddr(uint16_t ptr) { return dataRowAddr(ptr >> 8) + (ptr & 0xff); }
@@ -62,6 +64,8 @@ class FS
 public:
     FS(SPIFlash &f);
     ~FS();
+    void debugDump();
+    void mount();
 };
 
 class File
@@ -76,7 +80,6 @@ class File
     uint8_t metaSizeOff;
 
     uint32_t metaPageAddr() { return fs.metaPageAddr(metaRow, metaPage); }
-    void oops() { fs.oops(); }
 
     void updateSize(uint32_t newSize);
     void readSize();
