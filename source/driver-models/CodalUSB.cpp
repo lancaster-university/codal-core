@@ -293,7 +293,7 @@ int CodalUSB::interfaceRequest(USBSetup &setup, bool isClass)
     if ((setup.bmRequestType & REQUEST_DESTINATION) == REQUEST_INTERFACE)
         ifaceIdx = setup.wIndex & 0xff;
     else if ((setup.bmRequestType & REQUEST_DESTINATION) == REQUEST_ENDPOINT)
-        epIdx = setup.wIndex & 0xff;
+        epIdx = setup.wIndex & 0x7f;
 
     LOG("iface req: ifaceIdx=%d epIdx=%d", ifaceIdx, epIdx);
 
@@ -348,6 +348,20 @@ void CodalUSB::setupRequest(USBSetup &setup)
             if ((request_type == (REQUEST_HOSTTODEVICE | REQUEST_STANDARD | REQUEST_DEVICE)) &&
                 (wValue == DEVICE_REMOTE_WAKEUP))
                 usb_status &= ~FEATURE_REMOTE_WAKEUP_ENABLED;
+
+            if (request_type == (REQUEST_HOSTTODEVICE | REQUEST_STANDARD | REQUEST_ENDPOINT)) {
+                InterfaceList *tmp = NULL;
+                struct list_head *iter, *q = NULL;
+
+                list_for_each_safe(iter, q, &usb_list)
+                {
+                    tmp = list_entry(iter, InterfaceList, list);
+                    if (tmp->interface->in && tmp->interface->in->ep == (setup.wIndex & 0x7f))
+                        tmp->interface->in->reset();
+                    else if (tmp->interface->out && tmp->interface->out->ep == (setup.wIndex & 0x7f))
+                        tmp->interface->out->reset();
+                }    
+            }
             sendzlp();
             break;
         case SET_FEATURE:

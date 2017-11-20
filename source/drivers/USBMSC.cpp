@@ -123,6 +123,13 @@ int USBMSC::classRequest(UsbEndpointIn &ctrl, USBSetup &setup)
 
     switch (setup.bRequest)
     {
+    case MS_REQ_MassStorageReset:
+        LOG("MSC reset");
+        inreset = true;
+        in->reset();
+        out->reset();
+        // ctrl.write(&tmp, 0);
+        return DEVICE_OK;
     case MS_REQ_GetMaxLUN:
         LOG("get max lun");
         tmp = totalLUNs() - 1;
@@ -174,6 +181,8 @@ USBMSC::USBMSC() : CodalUSBInterface()
     memset(state, 0, sizeof(*state));
     state->SenseData.ResponseCode = 0x70;
     state->SenseData.AdditionalLength = 0x0A;
+    failed = false;
+    inreset = false;
 }
 
 int USBMSC::sendResponse(bool ok)
@@ -193,17 +202,14 @@ int USBMSC::sendResponse(bool ok)
     state->CommandStatus.Tag = state->CommandBlock.Tag;
     state->CommandStatus.DataTransferResidue = state->CommandBlock.DataTransferLength;
 
-    /*
     if (!ok && (le32_to_cpu(state->CommandStatus.DataTransferResidue)))
     {
         if (state->CommandBlock.Flags & MS_COMMAND_DIR_DATA_IN)
             in->stall();
         else
             out->stall();
+        return 0;
     }
-    */
-
-    // TODO wait for stall clear?
 
     if (!writePadded(&state->CommandStatus, sizeof(state->CommandStatus),
                      sizeof(state->CommandStatus)))
