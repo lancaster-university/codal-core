@@ -7,6 +7,8 @@
 
 #define oops() assert(false)
 
+#define MAX_WR 2000000
+
 typedef codal::snorfs::File File;
 codal::snorfs::FS *fs;
 
@@ -18,6 +20,7 @@ public:
 
     void append(const void *buf, uint32_t len)
     {
+        assert(len < MAX_WR);
         uint8_t *ptr = (uint8_t *)buf;
         while (len--)
             data.push_back(*ptr++);
@@ -76,7 +79,7 @@ public:
     }
 };
 
-vector<FileCache> files;
+vector<FileCache *> files;
 
 class MemFlash : public codal::SPIFlash
 {
@@ -143,28 +146,28 @@ const char *getFileName(uint32_t id)
 
 FileCache *lookupFile(const char *fn)
 {
-    for (auto &f : files)
+    for (auto f : files)
     {
-        if (strcmp(f.name, fn) == 0)
-            return &f;
+        if (strcmp(f->name, fn) == 0)
+            return f;
     }
-    files.push_back(FileCache());
-    auto r = &files.back();
+    auto r = new FileCache();
+    files.push_back(r);
     strcpy(r->name, fn);
     return r;
 }
 
-void simpleTest(const char *fn, const void *data, int len, int rep = 1)
+uint8_t *getRandomData()
+{
+    return randomData + rand() % (sizeof(randomData) - MAX_WR);
+}
+
+void simpleTest(const char *fn, int len, int rep = 1)
 {
     if (fn == NULL)
         fn = getFileName(++fileSeqNo);
 
     LOG("\n\n* %s\n", fn);
-
-    if (data == NULL)
-    {
-        data = randomData + rand() % (sizeof(randomData) - len - 1);
-    }
 
     auto fc = lookupFile(fn);
 
@@ -172,7 +175,13 @@ void simpleTest(const char *fn, const void *data, int len, int rep = 1)
     f->debugDump();
     while (rep--)
     {
+        auto data = getRandomData();
         f->append(data, len);
+        if (rep % 32 == 0)
+        {
+            delete f;
+            f = mk(fn);
+        }
         fc->append(data, len);
         f->debugDump();
     }
@@ -187,12 +196,36 @@ void simpleTest(const char *fn, const void *data, int len, int rep = 1)
     delete f;
 }
 
+void multiTest(int nfiles, int blockSize, int reps)
+{
+    auto fs = new File *[nfiles];
+    auto fcs = new FileCache *[nfiles];
+    for (int i = 0; i < nfiles; ++i)
+    {
+        fcs[i] = lookupFile(getFileName(++fileSeqNo));
+        fs[i] = mk(fcs[i]->name);
+    }
+    reps *= nfiles;
+    while (reps--)
+    {
+        int i = rand() % nfiles;
+        auto d = getRandomData();
+        auto len = (rand() % blockSize) + 1;
+        fs[i]->append(d, len);
+        fcs[i]->append(d, len);
+    }
+    for (int i = 0; i < nfiles; ++i)
+    {
+        fcs[i]->validate(fs[i]);
+    }
+}
+
 void testAll()
 {
-    for (auto &fc : files)
+    for (auto fc : files)
     {
-        auto f = mk(fc.name);
-        fc.validate(f);
+        auto f = mk(fc->name);
+        fc->validate(f);
         delete f;
     }
 }
@@ -201,22 +234,27 @@ int main()
 {
     for (uint32_t i = 0; i < sizeof(randomData); ++i)
         randomData[i] = rand();
-    MemFlash flash(1024 * 1024 / SPIFLASH_PAGE_SIZE);
+    MemFlash flash(2 * 1024 * 1024 / SPIFLASH_PAGE_SIZE);
     flash.eraseChip();
     fs = new codal::snorfs::FS(flash);
     fs->debugDump();
-    simpleTest("hello.txt", NULL, 100);
+    simpleTest("hello.txt", 100);
     fs->debugDump();
-    simpleTest(NULL, NULL, 1000);
-    simpleTest(NULL, NULL, 256);
-    simpleTest(NULL, NULL, 10000);
-    simpleTest(NULL, NULL, 400000);
-    simpleTest(NULL, NULL, 100, 20);
-    simpleTest(NULL, NULL, 128, 20);
-    simpleTest(NULL, NULL, 128, 2000);
-    simpleTest(NULL, NULL, 13, 2000);
-    simpleTest(NULL, NULL, 1003, 20);
+    simpleTest(NULL, 1000);
+    simpleTest(NULL, 256);
+    simpleTest(NULL, 10000);
+    simpleTest(NULL, 400000);
+    simpleTest(NULL, 100, 20);
+    simpleTest(NULL, 128, 20);
+    simpleTest(NULL, 128, 2000);
+    simpleTest(NULL, 13, 2000);
+    simpleTest(NULL, 1003, 20);
     testAll();
+
+    multiTest(2, 1000, 100);
+    multiTest(10, 1000, 100);
+    testAll();
+
     printf("OK\n");
 
     return 0;
