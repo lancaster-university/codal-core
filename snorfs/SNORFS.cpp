@@ -257,7 +257,7 @@ File::File(FS &f, const char *filename) : fs(f)
             oops(); // out of meta space
 
         fs.flash.writeBytes(metaPageAddr(), fs.buf, buflen);
-        fs.flash.writeBytes(fs.metaIdxAddr(metaRow) + metaRow, &h, 1);
+        fs.flash.writeBytes(fs.metaIdxAddr(metaRow) + metaPage, &h, 1);
     }
 
     readSize();
@@ -434,23 +434,23 @@ void FS::debugDump()
 {
     if (numDataRows == 0)
     {
-        printf("not mounted\n");
+        LOG("not mounted\n");
         mount();
     }
-    printf("row#: %d; remap: ", numDataRows);
+    LOG("row#: %d; remap: ", numDataRows);
     for (int i = 0; i < numDataRows; ++i)
     {
-        printf("%d->%d, ", i, rowRemapCache[i]);
+        LOG("%d->%d, ", i, rowRemapCache[i]);
     }
-    printf("META PTRS:");
+    LOG("META PTRS:");
     for (int i = 0; i < SNORFS_META_ROWS; ++i)
-        printf(" %d", metaFree[i]);
-    printf("\n");
+        LOG(" %d", metaFree[i]);
+    LOG("\n");
 }
 
 void File::debugDump()
 {
-    printf("fileID: 0x%x, sz=%d tell=%d start=0x%x curr=0x%x mso=%d\n", fileID(), size(), tell(),
-           firstPage, currSeekPage, metaSizeOff);
+    LOG("fileID: 0x%x, sz=%d tell=%d start=0x%x curr=0x%x mso=%d\n", fileID(), size(), tell(),
+        firstPage, currSeekPage, metaSizeOff);
 }
 #endif

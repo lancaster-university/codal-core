@@ -8,3 +8,5 @@
 // min/max
 #include <algorithm>
 using namespace std;
+
+#define LOG printf

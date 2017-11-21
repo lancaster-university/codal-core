@@ -54,11 +54,20 @@ public:
             }
             len = min(data.size() - ptr, len);
 
+            memset(tmp, 0, sizeof(tmp));
+
             int l = f->read(tmp, len);
+            LOG("read len=%d (read %d) at %d / %x %x %x %x\n", (int)len, l, ptr, tmp[0], tmp[1],
+                   tmp[2], tmp[3]);
+            f->debugDump();
             assert(l == (int)len);
             for (unsigned i = 0; i < len; ++i)
             {
-                assert(tmp[i] == data[ptr + i]);
+                if (tmp[i] != data[ptr + i])
+                {
+                    LOG("failure: %d != %d at %d (i=%d)\n", tmp[i], data[ptr + i], ptr + i, i);
+                    assert(false);
+                }
             }
             ptr += len;
         }
