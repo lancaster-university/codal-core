@@ -111,6 +111,48 @@ FS::~FS()
     delete rowRemapCache;
 }
 
+void File::findFreeMetaPage()
+{
+    for (metaRow = 0; metaRow < SNORFS_META_ROWS; ++metaRow)
+    {
+        // last page is index
+        if (fs.metaFree[metaRow] < SPIFLASH_BIG_ROW_PAGES - 1)
+        {
+            metaPage = fs.metaFree[metaRow]++;
+            break;
+        }
+    }
+    if (metaRow >= SNORFS_META_ROWS)
+        oops(); // out of meta space
+}
+
+void File::newMetaPage()
+{
+    uint32_t prevAddr = metaPageAddr();
+    uint32_t prevIdx = fs.metaIdxAddr(metaRow) + metaPage;
+    uint32_t prevSize = metaSize;
+
+    fs.flash.readBytes(prevAddr, fs.buf, 64);
+    fs.buf[64] = 0;
+    const char *fn = (const char *)fs.buf + 1;
+    int fnlen = strlen(fn);
+    uint8_t h = fnhash(fn);
+    memset(fs.buf + fnlen + 2, 0xff, SPIFLASH_PAGE_SIZE - (fnlen + 2));
+    readSize();
+    if (metaSize != 0)
+        oops();
+
+    findFreeMetaPage();
+    fs.flash.writeBytes(metaPageAddr(), fs.buf, fnlen + 2);
+    updateSize(prevSize);
+    fs.flash.writeBytes(metaPageAddr() + SNORFS_END_SIZE, &firstPage, 2);
+
+    uint8_t zero = 0;
+    fs.flash.writeBytes(prevAddr, &zero, 1);
+    fs.flash.writeBytes(prevIdx, &zero, 1);
+    fs.flash.writeBytes(fs.metaIdxAddr(metaRow) + metaPage, &h, 1);
+}
+
 void File::updateSize(uint32_t newSize)
 {
     int sizeDiff = newSize - metaSize;
@@ -133,7 +175,11 @@ void File::updateSize(uint32_t newSize)
     for (int i = 0; i < num; ++i)
         buf[i] ^= 0xff;
     if (metaSizeOff + num >= SNORFS_END_SIZE)
-        oops(); // TODO re-allocate a new meta page
+    {
+        metaSize = newSize;
+        newMetaPage(); // this will call back here, but only once
+        return;
+    }
     LOG("WRSZ: num=%d at %d: 0x%x 0x%x, meta=%x\n", num, metaSizeOff, buf[0] ^ 0xff, buf[1] ^ 0xff,
         metaPageAddr());
     fs.flash.writeBytes(metaPageAddr() + metaSizeOff, buf, num);
@@ -217,6 +263,9 @@ File::File(FS &f, const char *filename) : fs(f)
     uint8_t h = fnhash(filename);
     uint16_t buflen = strlen(filename) + 2;
 
+    if (buflen > 64)
+        oops();
+
     for (int i = 0; i < SNORFS_META_ROWS; ++i)
     {
         if (!fs.metaFree[i])
@@ -244,20 +293,11 @@ File::File(FS &f, const char *filename) : fs(f)
 
     if (!found)
     {
+        findFreeMetaPage();
+
         memset(fs.buf, 0xff, SPIFLASH_PAGE_SIZE);
         fs.buf[0] = 0x01;
         memcpy(fs.buf + 1, filename, buflen - 1);
-        for (metaRow = 0; metaRow < SNORFS_META_ROWS; ++metaRow)
-        {
-            // last page is index
-            if (fs.metaFree[metaRow] < SPIFLASH_BIG_ROW_PAGES - 1)
-            {
-                metaPage = fs.metaFree[metaRow]++;
-                break;
-            }
-        }
-        if (metaRow >= SNORFS_META_ROWS)
-            oops(); // out of meta space
 
         fs.flash.writeBytes(metaPageAddr(), fs.buf, buflen);
         fs.flash.writeBytes(fs.metaIdxAddr(metaRow) + metaPage, &h, 1);
@@ -416,8 +456,7 @@ void File::allocatePage()
         {
             if (startPtr[i] == 0xffff)
             {
-                startPtr[i] = firstPage;
-                fs.flash.writeBytes(metaPageAddr() + SNORFS_END_SIZE + i * 2, &startPtr[i], 2);
+                fs.flash.writeBytes(metaPageAddr() + SNORFS_END_SIZE + i * 2, &firstPage, 2);
                 startPtr = NULL;
                 break;
             }

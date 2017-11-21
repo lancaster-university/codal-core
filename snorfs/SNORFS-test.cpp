@@ -57,7 +57,8 @@ public:
             memset(tmp, 0, sizeof(tmp));
 
             int l = f->read(tmp, len);
-            LOG("read len=%d at %d / %x %x %x %x\n", (int)len, ptr, tmp[0], tmp[1], tmp[2], tmp[3]);
+            LOG("read len=%d l=%d at %d / %x %x %x %x\n", (int)len, l, ptr, tmp[0], tmp[1], tmp[2],
+                tmp[3]);
             f->debugDump();
             assert(l == (int)len);
             for (unsigned i = 0; i < len; ++i)
@@ -173,8 +174,8 @@ void simpleTest(const char *fn, const void *data, int len, int rep = 1)
     {
         f->append(data, len);
         fc->append(data, len);
+        f->debugDump();
     }
-    f->debugDump();
 
     fc->validate(f);
     delete f;
@@ -186,7 +187,8 @@ void simpleTest(const char *fn, const void *data, int len, int rep = 1)
     delete f;
 }
 
-void testAll() {
+void testAll()
+{
     for (auto &fc : files)
     {
         auto f = mk(fc.name);
@@ -211,6 +213,9 @@ int main()
     simpleTest(NULL, NULL, 400000);
     simpleTest(NULL, NULL, 100, 20);
     simpleTest(NULL, NULL, 128, 20);
+    simpleTest(NULL, NULL, 128, 2000);
+    simpleTest(NULL, NULL, 13, 2000);
+    simpleTest(NULL, NULL, 1003, 20);
     testAll();
     printf("OK\n");
 

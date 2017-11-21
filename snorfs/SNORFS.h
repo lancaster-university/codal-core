@@ -89,6 +89,8 @@ class File
     void allocatePage();
     void seekToStableAddr(uint16_t nextPtr);
     uint16_t stablePageAddr(uint16_t pageIdx);
+    void newMetaPage();
+    void findFreeMetaPage();
 
 public:
     File(FS &f, const char *filename);
