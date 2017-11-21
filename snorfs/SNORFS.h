@@ -62,18 +62,30 @@ public:
 
 class File
 {
+    // Invariants:
+    // firstPage == 0 <==> no pages has been allocated
+    // readOffset % SPIFLASH_PAGE_SIZE == 0 && readPage != 0 ==>
+    //       readPage is on page for (readOffset - 1)
+    // writePage % SPIFLASH_PAGE_SIZE == 0 && writePage != 0 ==>
+    //       writePage is on page for (metaSize - 1)
+    // if readPage is 0 it needs to be recomputed
+    // if writePage is 0 it needs to be recomputed
+    // should never open the same file twice
+
     FS &fs;
     uint32_t metaSize;
-    uint32_t currSeekOffset;
-    uint16_t firstPage; // row idx : page idx
-    uint16_t currSeekPage;
+    uint16_t firstPage; // row idx : page ID
+    // this is for reading
+    uint16_t readPage; // row idx : page idx
+    uint32_t readOffset;
+    // this is for writing (append)
+    uint16_t writePage;
     uint8_t metaRow;
     uint8_t metaPage;
     uint8_t metaSizeOff;
 
     uint32_t metaPageAddr() { return fs.metaPageAddr(metaRow, metaPage); }
 
-    void updateSize(uint32_t newSize);
     void readSize();
     void findFirstPage();
     void rewind();
@@ -83,6 +95,8 @@ class File
     uint16_t stablePageAddr(uint16_t pageIdx);
     void newMetaPage();
     void findFreeMetaPage();
+    void computeWritePage();
+    void saveSizeDiff(int32_t sizeDiff);
 
 public:
     File(FS &f, const char *filename);
@@ -90,7 +104,7 @@ public:
     void append(const void *data, uint32_t len);
     void seek(uint32_t pos);
     uint32_t size() { return metaSize; }
-    uint32_t tell() { return currSeekOffset; }
+    uint32_t tell() { return readOffset; }
     uint32_t fileID() { return metaRow * 256 + metaPage; }
     void debugDump();
 };

@@ -180,7 +180,8 @@ void simpleTest(const char *fn, int len, int rep = 1)
     {
         auto data = getRandomData();
         f->append(data, len);
-        if (rep % 32 == 0)
+        f->debugDump();
+        if (rep % 32 == 7)
         {
             delete f;
             f = mk(fn);
