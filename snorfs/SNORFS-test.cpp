@@ -57,8 +57,7 @@ public:
             memset(tmp, 0, sizeof(tmp));
 
             int l = f->read(tmp, len);
-            LOG("read len=%d (read %d) at %d / %x %x %x %x\n", (int)len, l, ptr, tmp[0], tmp[1],
-                   tmp[2], tmp[3]);
+            LOG("read len=%d at %d / %x %x %x %x\n", (int)len, ptr, tmp[0], tmp[1], tmp[2], tmp[3]);
             f->debugDump();
             assert(l == (int)len);
             for (unsigned i = 0; i < len; ++i)
@@ -130,7 +129,7 @@ File *mk(const char *fn)
     return new File(*fs, fn);
 }
 
-uint8_t randomData[256 * 256 * 4];
+uint8_t randomData[1024 * 1024 * 16];
 uint32_t fileSeqNo;
 
 const char *getFileName(uint32_t id)
@@ -154,10 +153,12 @@ FileCache *lookupFile(const char *fn)
     return r;
 }
 
-void simpleTest(const char *fn, const void *data, int len)
+void simpleTest(const char *fn, const void *data, int len, int rep = 1)
 {
     if (fn == NULL)
         fn = getFileName(++fileSeqNo);
+
+    LOG("\n\n* %s\n", fn);
 
     if (data == NULL)
     {
@@ -168,16 +169,30 @@ void simpleTest(const char *fn, const void *data, int len)
 
     auto f = mk(fn);
     f->debugDump();
-    f->append(data, len);
-    fc->append(data, len);
+    while (rep--)
+    {
+        f->append(data, len);
+        fc->append(data, len);
+    }
     f->debugDump();
 
     fc->validate(f);
     delete f;
 
+    LOG("\nAgain.\n");
+
     f = mk(fn);
     fc->validate(f);
     delete f;
+}
+
+void testAll() {
+    for (auto &fc : files)
+    {
+        auto f = mk(fc.name);
+        fc.validate(f);
+        delete f;
+    }
 }
 
 int main()
@@ -190,6 +205,13 @@ int main()
     fs->debugDump();
     simpleTest("hello.txt", NULL, 100);
     fs->debugDump();
+    simpleTest(NULL, NULL, 1000);
+    simpleTest(NULL, NULL, 256);
+    simpleTest(NULL, NULL, 10000);
+    simpleTest(NULL, NULL, 400000);
+    simpleTest(NULL, NULL, 100, 20);
+    simpleTest(NULL, NULL, 128, 20);
+    testAll();
     printf("OK\n");
 
     return 0;

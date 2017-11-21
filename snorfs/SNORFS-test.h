@@ -9,4 +9,5 @@
 #include <algorithm>
 using namespace std;
 
-#define LOG printf
+//#define LOG printf
+#define LOG(...) do{}while(0)

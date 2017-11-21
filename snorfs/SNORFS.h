@@ -87,6 +87,8 @@ class File
     void rewind();
     void seekNextPage();
     void allocatePage();
+    void seekToStableAddr(uint16_t nextPtr);
+    uint16_t stablePageAddr(uint16_t pageIdx);
 
 public:
     File(FS &f, const char *filename);

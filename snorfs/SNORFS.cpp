@@ -124,9 +124,9 @@ void File::updateSize(uint32_t newSize)
     }
     else
     {
-        int b0 = sizeDiff >> 14;
+        int b0 = sizeDiff >> 13;
         if (b0 != -1 && b0 != 0)
-            buf[num++] = b0;
+            buf[num++] = 0x80 | (b0 >> 1);
         buf[num++] = 0x80 | (sizeDiff >> 7);
         buf[num++] = sizeDiff & 0x7f;
     }
@@ -134,7 +134,7 @@ void File::updateSize(uint32_t newSize)
         buf[i] ^= 0xff;
     if (metaSizeOff + num >= SNORFS_END_SIZE)
         oops(); // TODO re-allocate a new meta page
-    LOG("WRSZ: num=%d at %d: %d %d, meta=%x\n", num, metaSizeOff, buf[0] ^ 0xff, buf[1] ^ 0xff,
+    LOG("WRSZ: num=%d at %d: 0x%x 0x%x, meta=%x\n", num, metaSizeOff, buf[0] ^ 0xff, buf[1] ^ 0xff,
         metaPageAddr());
     fs.flash.writeBytes(metaPageAddr() + metaSizeOff, buf, num);
     metaSizeOff += num;
@@ -162,7 +162,7 @@ void File::readSize()
     while (len--)
     {
         uint8_t c = 0xff ^ *buf++;
-        if (!c)
+        if (!c & !mid)
             break;
 
         if (c & 0x80)
@@ -204,7 +204,7 @@ void File::findFirstPage()
 
 void File::rewind()
 {
-    currSeekPage = firstPage;
+    currSeekPage = 0;
     currSeekOffset = 0;
 }
 
@@ -277,10 +277,26 @@ void File::seek(uint32_t pos)
     read(NULL, pos - currSeekOffset);
 }
 
+void File::seekToStableAddr(uint16_t nextPtr)
+{
+    fs.flash.readBytes(fs.dataIndexAddr(nextPtr & 0xff00), fs.buf, SPIFLASH_PAGE_SIZE);
+    for (int i = 0; i < SPIFLASH_PAGE_SIZE; ++i)
+    {
+        if (fs.buf[i] == (nextPtr & 0xff))
+        {
+            currSeekPage = (nextPtr & 0xff00) | i;
+            return;
+        }
+    }
+    oops();
+}
+
 void File::seekNextPage()
 {
     if (currSeekOffset == 0)
-        currSeekPage = firstPage;
+    {
+        seekToStableAddr(firstPage);
+    }
     else
     {
         uint16_t nextPtr;
@@ -291,16 +307,7 @@ void File::seekNextPage()
         }
         else
         {
-            fs.flash.readBytes(fs.dataIndexAddr(nextPtr & 0xff00), fs.buf, SPIFLASH_PAGE_SIZE);
-            for (int i = 0; i < SPIFLASH_PAGE_SIZE; ++i)
-            {
-                if (fs.buf[i] == (nextPtr & 0xff))
-                {
-                    currSeekPage = (nextPtr & 0xff00) | i;
-                    return;
-                }
-            }
-            oops();
+            seekToStableAddr(nextPtr);
         }
     }
 }
@@ -352,8 +359,10 @@ void File::append(const void *data, uint32_t len)
         if (off == 0)
             allocatePage();
 
+        LOG("write: left=%d page=0x%x\n", len, currSeekPage);
+
         int nwrite = min(len, SPIFLASH_PAGE_SIZE - off);
-        fs.flash.writeBytes(fs.dataDataAddr(currSeekPage), data, nwrite);
+        fs.flash.writeBytes(fs.dataDataAddr(currSeekPage) + off, data, nwrite);
         len -= nwrite;
         data = (uint8_t *)data + nwrite;
         metaSize += nwrite;
@@ -366,6 +375,30 @@ void File::append(const void *data, uint32_t len)
         oops();
 }
 
+uint16_t File::stablePageAddr(uint16_t pageIdx)
+{
+    fs.flash.readBytes(fs.dataIndexAddr(pageIdx & 0xff00), fs.buf, SPIFLASH_PAGE_SIZE);
+    uint8_t blockID = metaPage * 13 + pageIdx * 17;
+    if (blockID < 2 || blockID == 0xff)
+        blockID = 2;
+    for (;;)
+    {
+        for (int i = 0; i < SPIFLASH_PAGE_SIZE; ++i)
+        {
+            if (fs.buf[i] == blockID)
+                goto nextOne;
+        }
+        break;
+    nextOne:
+        blockID++;
+        if (blockID == 0xff)
+            blockID = 2;
+    }
+
+    fs.flash.writeBytes(fs.dataIndexAddr(pageIdx), &blockID, 1);
+    return (pageIdx & 0xff00) | blockID;
+}
+
 void File::allocatePage()
 {
     if (currSeekOffset != metaSize)
@@ -376,14 +409,14 @@ void File::allocatePage()
         oops(); // out of space
     if (firstPage == 0)
     {
-        firstPage = pageIdx;
+        firstPage = stablePageAddr(pageIdx);
         fs.flash.readBytes(metaPageAddr() + SNORFS_END_SIZE, fs.buf, SNORFS_REP_START_BLOCK * 2);
         uint16_t *startPtr = (uint16_t *)fs.buf;
         for (int i = 0; i < SNORFS_REP_START_BLOCK; ++i)
         {
             if (startPtr[i] == 0xffff)
             {
-                startPtr[i] = pageIdx;
+                startPtr[i] = firstPage;
                 fs.flash.writeBytes(metaPageAddr() + SNORFS_END_SIZE + i * 2, &startPtr[i], 2);
                 startPtr = NULL;
                 break;
@@ -397,36 +430,19 @@ void File::allocatePage()
         if (currSeekPage == 0)
             oops();
         uint16_t off;
-        uint8_t blockID = 1;
         if ((currSeekPage >> 8) == (pageIdx >> 8))
         {
             off = pageIdx - currSeekPage;
             if (off & 0xff00)
                 oops();
             off |= 0xff00;
+            uint8_t noId = 1;
+            fs.flash.writeBytes(fs.dataIndexAddr(pageIdx), &noId, 1);
         }
         else
         {
-            fs.flash.readBytes(fs.dataIndexAddr(pageIdx & 0xff00), fs.buf, SPIFLASH_PAGE_SIZE);
-            blockID = metaPage * 13 + pageIdx * 17;
-            if (blockID < 2 || blockID == 0xff)
-                blockID = 2;
-            for (;;)
-            {
-                for (int i = 0; i < SPIFLASH_PAGE_SIZE; ++i)
-                {
-                    if (fs.buf[i] == blockID)
-                        goto nextOne;
-                }
-                break;
-            nextOne:
-                blockID++;
-                if (blockID == 0xff)
-                    blockID = 2;
-            }
-            off = (pageIdx & 0xff00) | blockID;
+            off = stablePageAddr(pageIdx);
         }
-        fs.flash.writeBytes(fs.dataIndexAddr(pageIdx), &blockID, 1);
         fs.flash.writeBytes(fs.dataNextPtrAddr(currSeekPage), &off, 2);
     }
     currSeekPage = pageIdx;
