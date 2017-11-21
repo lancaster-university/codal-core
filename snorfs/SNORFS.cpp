@@ -134,6 +134,8 @@ void File::updateSize(uint32_t newSize)
         buf[i] ^= 0xff;
     if (metaSizeOff + num >= SNORFS_END_SIZE)
         oops(); // TODO re-allocate a new meta page
+    LOG("WRSZ: num=%d at %d: %d %d, meta=%x\n", num, metaSizeOff, buf[0] ^ 0xff, buf[1] ^ 0xff,
+        metaPageAddr());
     fs.flash.writeBytes(metaPageAddr() + metaSizeOff, buf, num);
     metaSizeOff += num;
     metaSize = newSize;
@@ -184,7 +186,7 @@ void File::readSize()
         }
     }
 
-    metaSizeOff = buf - fs.buf;
+    metaSizeOff = buf - fs.buf - 1;
     metaSize = res;
 }
 
@@ -229,11 +231,12 @@ File::File(FS &f, const char *filename) : fs(f)
                 if (tmp[0] != 0 && memcmp(tmp + 1, filename, buflen - 1) == 0)
                 {
                     memcpy(fs.buf, tmp, buflen);
-                    fs.flash.readBytes(fs.metaPageAddr(i, j) + buflen, fs.buf,
+                    fs.flash.readBytes(fs.metaPageAddr(i, j) + buflen, fs.buf + buflen,
                                        SPIFLASH_PAGE_SIZE - buflen);
                     found = true;
                     metaRow = i;
                     metaPage = j;
+                    break;
                 }
             }
         }
