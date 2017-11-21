@@ -3,5 +3,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#define min(a, b) ((a) < (b) ? (a) : (b))
 #define oops() assert(false)
+
+// min/max
+#include <algorithm>
+using namespace std;

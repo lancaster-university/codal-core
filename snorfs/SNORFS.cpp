@@ -1,5 +1,14 @@
 #include "SNORFS.h"
 
+/*
+TODO:
+- seperate pointer for append
+- keep files in list in FS
+- nuke caches in files on GC
+- implement file data GC
+- implement meta-data GC
+*/
+
 using namespace codal::snorfs;
 
 #define SNORFS_RESERVED_META_PAGES (SPIFLASH_SMALL_ROW_PAGES)
@@ -8,9 +17,9 @@ using namespace codal::snorfs;
 
 static uint8_t fnhash(const char *fn)
 {
-    uint32_t h = 2166136261;
+    uint32_t h = 0x811c9dc5;
     while (*fn)
-        h = (h * 16777619) ^ (uint8_t)*fn++;
+        h = (h * 0x1000193) ^ (uint8_t)*fn++;
     h &= 0xff;
     if (h == 0x00)
         return 0x01;
@@ -50,7 +59,7 @@ void FS::mount()
         return;
 
     numDataRows = (flash.numPages() / SPIFLASH_BIG_ROW_PAGES) - SNORFS_META_ROWS - 1;
-    rowRemapCache = new uint8_t[3 * numDataRows];
+    rowRemapCache = new uint8_t[numDataRows];
 
     for (int i = 0; i < SNORFS_META_ROWS; ++i)
     {
@@ -175,7 +184,7 @@ void File::readSize()
         }
     }
 
-    metaSizeOff = fs.buf - buf;
+    metaSizeOff = buf - fs.buf;
     metaSize = res;
 }
 
@@ -293,7 +302,7 @@ void File::seekNextPage()
     }
 }
 
-int File::read(uint8_t *data, uint32_t len)
+int File::read(void *data, uint32_t len)
 {
     if (!metaSize || !len)
         return 0;
@@ -312,7 +321,7 @@ int File::read(uint8_t *data, uint32_t len)
         if (data)
         {
             fs.flash.readBytes(fs.dataDataAddr(currSeekPage) + off, data, n);
-            data += n;
+            data = (uint8_t *)data + n;
         }
         nread += n;
         len -= n;
@@ -322,7 +331,7 @@ int File::read(uint8_t *data, uint32_t len)
     return nread;
 }
 
-void File::append(const uint8_t *data, uint32_t len)
+void File::append(const void *data, uint32_t len)
 {
     if (currSeekOffset != metaSize)
     {
@@ -343,7 +352,7 @@ void File::append(const uint8_t *data, uint32_t len)
         int nwrite = min(len, SPIFLASH_PAGE_SIZE - off);
         fs.flash.writeBytes(fs.dataDataAddr(currSeekPage), data, nwrite);
         len -= nwrite;
-        data += nwrite;
+        data = (uint8_t *)data + nwrite;
         metaSize += nwrite;
         currSeekOffset += nwrite;
     }
@@ -437,5 +446,11 @@ void FS::debugDump()
     for (int i = 0; i < SNORFS_META_ROWS; ++i)
         printf(" %d", metaFree[i]);
     printf("\n");
+}
+
+void File::debugDump()
+{
+    printf("fileID: 0x%x, sz=%d tell=%d start=0x%x curr=0x%x mso=%d\n", fileID(), size(), tell(),
+           firstPage, currSeekPage, metaSizeOff);
 }
 #endif

@@ -90,11 +90,14 @@ class File
 
 public:
     File(FS &f, const char *filename);
+    int read(void *data, uint32_t len);
+    void append(const void *data, uint32_t len);
     void seek(uint32_t pos);
-    int read(uint8_t *data, uint32_t len);
-    void append(const uint8_t *data, uint32_t len);
+    uint32_t size() { return metaSize; }
+    uint32_t tell() { return currSeekOffset; }
+    uint32_t fileID() { return metaRow * 256 + metaPage; }
+    void debugDump();
 };
-
 }
 }
 
