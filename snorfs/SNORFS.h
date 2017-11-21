@@ -1,14 +1,6 @@
 #ifndef CODAL_SNORFS_H
 #define CODAL_SNORFS_H
 
-#ifndef __arm__
-#define SNORFS_TEST 1
-#endif
-
-#ifdef SNORFS_TEST
-#include "SNORFS-test.h"
-#endif
-
 #include "SPIFlash.h"
 
 // each meta row gives you 256 more file entries
