@@ -42,7 +42,10 @@ class FS
     }
 
     // last page in meta row is index
-    uint32_t metaIdxAddr(int i) { return (i + 1) * SPIFLASH_BIG_ROW_SIZE - SPIFLASH_PAGE_SIZE; }
+    uint32_t metaIdxAddr(int page)
+    {
+        return (((page >> 8) + 1) * SPIFLASH_BIG_ROW_SIZE - SPIFLASH_PAGE_SIZE) + (page & 0xff);
+    }
     uint32_t metaPageAddr(int i, int j)
     {
         return i * SPIFLASH_BIG_ROW_SIZE + j * SPIFLASH_PAGE_SIZE;
@@ -52,12 +55,17 @@ class FS
         return min(SPIFLASH_SMALL_ROW_SIZE / numDataRows, SPIFLASH_PAGE_SIZE);
     }
     uint16_t findFreeDataPage(int startRow);
+    void mount();
+    uint16_t findMetaEntry(const char *filename);
+    uint16_t createMetaPage(const char *filename);
+    uint16_t findFreeMetaPage();
 
 public:
     FS(SPIFlash &f);
     ~FS();
     void debugDump();
-    void mount();
+    // returns NULL if file doesn't exists and create==false
+    File *open(const char *filename, bool create = true);
 };
 
 class File
@@ -70,7 +78,8 @@ class File
     //       writePage is on page for (metaSize - 1)
     // if readPage is 0 it needs to be recomputed
     // if writePage is 0 it needs to be recomputed
-    // should never open the same file twice
+
+    friend class FS;
 
     FS &fs;
     uint32_t metaSize;
@@ -80,11 +89,10 @@ class File
     uint32_t readOffset;
     // this is for writing (append)
     uint16_t writePage;
-    uint8_t metaRow;
-    uint8_t metaPage;
+    uint16_t metaPage;
     uint8_t metaSizeOff;
 
-    uint32_t metaPageAddr() { return fs.metaPageAddr(metaRow, metaPage); }
+    uint32_t metaPageAddr() { return fs.metaPageAddr(metaPage>>8, metaPage&0xff); }
 
     void readSize();
     void findFirstPage();
@@ -97,16 +105,23 @@ class File
     void findFreeMetaPage();
     void computeWritePage();
     void saveSizeDiff(int32_t sizeDiff);
+    void truncateCore();
+    void appendCore(const void *data, uint32_t len);
+    File(FS &f, uint16_t filePage);
+    File(FS &f, const char *filename);
 
 public:
-    File(FS &f, const char *filename);
     int read(void *data, uint32_t len);
     void append(const void *data, uint32_t len);
     void seek(uint32_t pos);
     uint32_t size() { return metaSize; }
     uint32_t tell() { return readOffset; }
-    uint32_t fileID() { return metaRow * 256 + metaPage; }
+    uint32_t fileID() { return metaPage; }
     void debugDump();
+    bool isDeleted() { return writePage == 0xffff; }
+    void overwrite(const void *data, uint32_t len);
+    void del();
+    void truncate() { overwrite(NULL, 0); }
 };
 }
 }

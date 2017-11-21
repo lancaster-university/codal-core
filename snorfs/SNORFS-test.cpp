@@ -133,7 +133,7 @@ public:
 
 File *mk(const char *fn)
 {
-    return new File(*fs, fn);
+    return fs->open(fn);
 }
 
 uint8_t randomData[1024 * 1024 * 16];
