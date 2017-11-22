@@ -3,11 +3,6 @@
 
 #include "SPIFlash.h"
 
-// each meta row gives you 256 more file entries
-#define SNORFS_META_ROWS 2
-
-#define SNORFS_RESERVED_META_PAGES (SPIFLASH_SMALL_ROW_PAGES)
-
 namespace codal
 {
 namespace snorfs
@@ -24,38 +19,32 @@ class FS
     uint8_t buf[SPIFLASH_PAGE_SIZE];
 
     uint8_t *rowRemapCache;
-    uint8_t numDataRows;
-    uint8_t metaFree[SNORFS_META_ROWS];
+    uint8_t numRows;
+    uint8_t numMetaRows;
+    uint8_t freeRow;
 
-    int firstFree(uint32_t addr, int startOff);
+    int firstFree(uint32_t addr);
 
-    uint32_t dataRowAddr(uint8_t rowIdx) { return rowRemapCache[rowIdx] * SPIFLASH_BIG_ROW_SIZE; }
-    uint32_t dataIndexAddr(uint16_t ptr) { return dataRowAddr(ptr >> 8) + (ptr & 0xff); }
-    uint32_t dataNextPtrAddr(uint16_t ptr)
+    uint32_t rowAddr(uint8_t rowIdx)
     {
-        return dataRowAddr(ptr >> 8) + SPIFLASH_BIG_ROW_SIZE - 2 * SPIFLASH_PAGE_SIZE +
+        if (rowIdx >= numRows)
+            oops();
+        return rowRemapCache[rowIdx] * SPIFLASH_BIG_ROW_SIZE;
+    }
+    uint32_t indexAddr(uint16_t ptr) { return rowAddr(ptr >> 8) + (ptr & 0xff); }
+    uint32_t nextPtrAddr(uint16_t ptr)
+    {
+        return rowAddr(ptr >> 8) + SPIFLASH_BIG_ROW_SIZE - 2 * SPIFLASH_PAGE_SIZE +
                2 * (ptr & 0xff);
     }
-    uint32_t dataDataAddr(uint16_t ptr)
+    uint32_t pageAddr(uint16_t ptr)
     {
-        return dataRowAddr(ptr >> 8) + SPIFLASH_PAGE_SIZE * (ptr & 0xff);
+        return rowAddr(ptr >> 8) + SPIFLASH_PAGE_SIZE * (ptr & 0xff);
     }
 
-    // last page in meta row is index
-    uint32_t metaIdxAddr(int page)
-    {
-        return (((page >> 8) + 1) * SPIFLASH_BIG_ROW_SIZE - SPIFLASH_PAGE_SIZE) + (page & 0xff);
-    }
-    uint32_t metaPageAddr(int i, int j)
-    {
-        return i * SPIFLASH_BIG_ROW_SIZE + j * SPIFLASH_PAGE_SIZE;
-    }
-    uint32_t getRemapSize()
-    {
-        return min(SPIFLASH_SMALL_ROW_SIZE / numDataRows, SPIFLASH_PAGE_SIZE);
-    }
     uint16_t findFreeDataPage(int startRow);
     void mount();
+    void format();
     uint16_t findMetaEntry(const char *filename);
     uint16_t createMetaPage(const char *filename);
     uint16_t findFreeMetaPage();
@@ -66,6 +55,7 @@ public:
     void debugDump();
     // returns NULL if file doesn't exists and create==false
     File *open(const char *filename, bool create = true);
+    void progress();
 };
 
 class File
@@ -92,15 +82,13 @@ class File
     uint16_t metaPage;
     uint8_t metaSizeOff;
 
-    uint32_t metaPageAddr() { return fs.metaPageAddr(metaPage>>8, metaPage&0xff); }
+    uint32_t metaPageAddr() { return fs.pageAddr(metaPage); }
 
     void readSize();
     void findFirstPage();
     void rewind();
     void seekNextPage();
     void allocatePage();
-    void seekToStableAddr(uint16_t nextPtr);
-    uint16_t stablePageAddr(uint16_t pageIdx);
     void newMetaPage();
     void findFreeMetaPage();
     void computeWritePage();

@@ -30,14 +30,14 @@ static uint8_t fnhash(const char *fn)
 
 FS::FS(SPIFlash &f) : flash(f)
 {
-    numDataRows = 0;
+    numRows = 0;
 }
 
-int FS::firstFree(uint32_t addr, int startOff)
+int FS::firstFree(uint32_t addr)
 {
     flash.readBytes(addr, buf, SPIFLASH_PAGE_SIZE);
     uint8_t firstFree = 0;
-    for (int k = startOff; k < SPIFLASH_PAGE_SIZE; ++k)
+    for (int k = 1; k < SPIFLASH_PAGE_SIZE - 2; ++k)
     {
         if (firstFree == 0)
         {
@@ -53,54 +53,110 @@ int FS::firstFree(uint32_t addr, int startOff)
     return firstFree;
 }
 
+void FS::progress()
+{
+    // blink LED or something
+}
+
+void FS::format()
+{
+    uint32_t end = flash.numPages() * SPIFLASH_PAGE_SIZE;
+    uint8_t rowIdx = 0;
+    const char *header = "SNORFS\x02\x00";
+
+    for (uint32_t addr = 0; addr < end; addr += SPIFLASH_BIG_ROW_SIZE)
+    {
+        progress();
+        for (uint32_t off = 0; off < SPIFLASH_BIG_ROW_SIZE; off += SPIFLASH_PAGE_SIZE)
+        {
+            flash.readBytes(addr + off, buf, SPIFLASH_PAGE_SIZE);
+            for (int i = 0; i < SPIFLASH_PAGE_SIZE; ++i)
+                if (buf[i] != 0xff)
+                    goto clearRow;
+        }
+        goto flashMeta;
+    clearRow:
+        progress();
+        flash.eraseBigRow(addr);
+    flashMeta:
+        // the last empty row?
+        if (addr + SPIFLASH_BIG_ROW_SIZE >= end)
+            rowIdx = 0xff;
+        LOG("format: %d\n", rowIdx);
+        flash.writeBytes(addr, &rowIdx, 1);
+        if (rowIdx < 4)
+            flash.writeBytes(addr + SPIFLASH_PAGE_SIZE - 2, header + rowIdx * 2, 2);
+        rowIdx++;
+    }
+    progress();
+}
+
 void FS::mount()
 {
-    if (numDataRows > 0)
+    if (numRows > 0)
         return;
 
-    numDataRows = (flash.numPages() / SPIFLASH_BIG_ROW_PAGES) - SNORFS_META_ROWS - 1;
-    rowRemapCache = new uint8_t[numDataRows];
+    numRows = (flash.numPages() / SPIFLASH_BIG_ROW_PAGES) - 1;
+    rowRemapCache = new uint8_t[numRows];
 
-    for (int i = 0; i < SNORFS_META_ROWS; ++i)
+    for (;;)
     {
-        // last page in meta row is index
-        int startPos = i == 0 ? SNORFS_RESERVED_META_PAGES : 0;
-        metaFree[i] = firstFree(metaIdxAddr(i << 8), startPos);
-    }
+        memset(rowRemapCache, 0xff, numRows);
 
-    uint32_t remapSize = getRemapSize();
-    uint32_t addr = 0;
-    for (int i = 0; i < numDataRows; ++i)
-    {
-        rowRemapCache[i] = SNORFS_META_ROWS + i; // default
-        flash.readBytes(addr, buf, remapSize);
-        for (unsigned k = 0; k < remapSize; ++k)
+        uint8_t fsheader[8];
+        int freeRow = -1;
+        for (unsigned i = 0; i < numRows + 1; ++i)
         {
-            if (buf[k] == 0xff)
-                break;
-            rowRemapCache[i] = buf[k] + 1;
+            auto addr = i * SPIFLASH_BIG_ROW_SIZE;
+            if (i * 2 < sizeof(fsheader))
+                flash.readBytes(addr + SPIFLASH_PAGE_SIZE - 2, fsheader + i * 2, 2);
+            uint8_t remap;
+            flash.readBytes(addr, &remap, 1);
+            if (remap == 0xff)
+            {
+                if (freeRow == -1)
+                    freeRow = remap;
+                else
+                    goto fmt;
+            }
+            else
+            {
+                if (remap >= numRows || rowRemapCache[remap] != 0xff)
+                    goto fmt;
+                rowRemapCache[remap] = i;
+            }
         }
-        addr += remapSize;
+
+        numMetaRows = fsheader[6];
+        this->freeRow = freeRow;
+
+        if (freeRow == -1 || !numMetaRows || numMetaRows > numRows / 2)
+            goto fmt;
+
+        if (memcmp(fsheader, "SNORFS", 6) == 0)
+            break;
+
+    fmt:
+        format();
+        // and re-try the mount
     }
 }
 
 uint16_t FS::findFreeDataPage(int startRow)
 {
     bool wrapped = false;
-    int ptr = startRow;
+    int ptr = max((int)numMetaRows, startRow);
     for (;;)
     {
-        int fr = firstFree(dataIndexAddr(ptr << 8), 1);
-        if (fr < SPIFLASH_BIG_ROW_PAGES - 2)
-        {
+        int fr = firstFree(indexAddr(ptr << 8));
+        if (fr)
             return (ptr << 8) | fr;
-        }
         ptr++;
-        if (ptr == numDataRows)
+        if (ptr == numRows)
         {
             if (wrapped)
                 return 0;
-            ptr = 0;
+            ptr = numMetaRows;
             wrapped = true;
         }
     }
@@ -113,14 +169,11 @@ FS::~FS()
 
 uint16_t FS::findFreeMetaPage()
 {
-    int metaRow;
-    for (metaRow = 0; metaRow < SNORFS_META_ROWS; ++metaRow)
+    for (int ptr = 0; ptr < numMetaRows; ++ptr)
     {
-        // last page is index
-        if (metaFree[metaRow] < SPIFLASH_BIG_ROW_PAGES - 1)
-        {
-            return (metaRow << 8) | (metaFree[metaRow]++);
-        }
+        int fr = firstFree(indexAddr(ptr << 8));
+        if (fr)
+            return (ptr << 8) | fr;
     }
     oops(); // out of meta space
     return 0;
@@ -129,7 +182,7 @@ uint16_t FS::findFreeMetaPage()
 void File::newMetaPage()
 {
     uint32_t prevAddr = metaPageAddr();
-    uint32_t prevIdx = fs.metaIdxAddr(metaPage);
+    uint32_t prevIdx = fs.indexAddr(metaPage);
     uint32_t prevSize = metaSize;
 
     fs.flash.readBytes(prevAddr, fs.buf, 64);
@@ -143,6 +196,8 @@ void File::newMetaPage()
         oops();
 
     metaPage = fs.findFreeMetaPage();
+
+    fs.flash.readBytes(prevAddr, fs.buf, fnlen + 2);
     fs.flash.writeBytes(metaPageAddr(), fs.buf, fnlen + 2);
     metaSize = prevSize;
     saveSizeDiff(metaSize);
@@ -151,7 +206,7 @@ void File::newMetaPage()
     uint8_t zero = 0;
     fs.flash.writeBytes(prevAddr, &zero, 1);
     fs.flash.writeBytes(prevIdx, &zero, 1);
-    fs.flash.writeBytes(fs.metaIdxAddr(metaPage), &h, 1);
+    fs.flash.writeBytes(fs.indexAddr(metaPage), &h, 1);
 }
 
 void File::saveSizeDiff(int32_t sizeDiff)
@@ -275,23 +330,22 @@ uint16_t FS::findMetaEntry(const char *filename)
     if (buflen > 64)
         oops();
 
-    for (int i = 0; i < SNORFS_META_ROWS; ++i)
+    for (int i = 0; i < numMetaRows; ++i)
     {
-        if (!metaFree[i])
-            continue;
-        flash.readBytes(metaIdxAddr(i << 8), buf, metaFree[i]);
-        for (int j = i == 0 ? SNORFS_RESERVED_META_PAGES : 0; j < metaFree[i]; ++j)
+        flash.readBytes(indexAddr(i << 8), buf, SPIFLASH_PAGE_SIZE);
+        for (int j = 1; j < SPIFLASH_PAGE_SIZE - 2; ++j)
         {
             if (buf[j] == h)
             {
                 uint8_t tmp[buflen];
-                flash.readBytes(metaPageAddr(i, j), tmp, buflen);
+                uint16_t pageIdx = (i << 8) | j;
+                auto addr = pageAddr(pageIdx);
+                flash.readBytes(addr, tmp, buflen);
                 if (tmp[0] != 0 && memcmp(tmp + 1, filename, buflen - 1) == 0)
                 {
                     memcpy(buf, tmp, buflen);
-                    flash.readBytes(metaPageAddr(i, j) + buflen, buf + buflen,
-                                    SPIFLASH_PAGE_SIZE - buflen);
-                    return (i << 8) | j;
+                    flash.readBytes(addr + buflen, buf + buflen, SPIFLASH_PAGE_SIZE - buflen);
+                    return pageIdx;
                 }
             }
         }
@@ -311,8 +365,8 @@ uint16_t FS::createMetaPage(const char *filename)
     buf[0] = 0x01;
     memcpy(buf + 1, filename, buflen - 1);
 
-    flash.writeBytes(metaPageAddr(page >> 8, page & 0xff), buf, buflen);
-    flash.writeBytes(metaIdxAddr(page), &h, 1);
+    flash.writeBytes(pageAddr(page), buf, buflen);
+    flash.writeBytes(indexAddr(page), &h, 1);
 
     return page;
 }
@@ -335,40 +389,19 @@ void File::seek(uint32_t pos)
     read(NULL, pos - readOffset);
 }
 
-void File::seekToStableAddr(uint16_t nextPtr)
-{
-    fs.flash.readBytes(fs.dataIndexAddr(nextPtr & 0xff00), fs.buf, SPIFLASH_PAGE_SIZE);
-    for (int i = 0; i < SPIFLASH_PAGE_SIZE; ++i)
-    {
-        if (fs.buf[i] == (nextPtr & 0xff))
-        {
-            readPage = (nextPtr & 0xff00) | i;
-            return;
-        }
-    }
-    oops();
-}
-
 void File::seekNextPage()
 {
     if (readOffset == 0)
     {
-        seekToStableAddr(firstPage);
+        readPage = firstPage;
     }
     else
     {
         uint16_t nextPtr;
-        fs.flash.readBytes(fs.dataNextPtrAddr(readPage), (uint8_t *)&nextPtr, 2);
+        fs.flash.readBytes(fs.nextPtrAddr(readPage), (uint8_t *)&nextPtr, 2);
         if (nextPtr == 0xffff)
             oops();
-        if ((nextPtr & 0xff00) == 0xff00)
-        {
-            readPage += nextPtr & 0xff;
-        }
-        else
-        {
-            seekToStableAddr(nextPtr);
-        }
+        readPage = nextPtr;
     }
 }
 
@@ -390,7 +423,7 @@ int File::read(void *data, uint32_t len)
         int n = min(min(len, SPIFLASH_PAGE_SIZE - off), metaSize - readOffset);
         if (data)
         {
-            fs.flash.readBytes(fs.dataDataAddr(readPage) + off, data, n);
+            fs.flash.readBytes(fs.pageAddr(readPage) + off, data, n);
             data = (uint8_t *)data + n;
         }
         nread += n;
@@ -431,7 +464,7 @@ void File::appendCore(const void *data, uint32_t len)
         LOG("write: left=%d page=0x%x\n", len, writePage);
 
         int nwrite = min(len, SPIFLASH_PAGE_SIZE - off);
-        fs.flash.writeBytes(fs.dataDataAddr(writePage) + off, data, nwrite);
+        fs.flash.writeBytes(fs.pageAddr(writePage) + off, data, nwrite);
         len -= nwrite;
         data = (uint8_t *)data + nwrite;
         metaSize += nwrite;
@@ -444,39 +477,15 @@ void File::append(const void *data, uint32_t len)
     saveSizeDiff(len);
 }
 
-uint16_t File::stablePageAddr(uint16_t pageIdx)
-{
-    fs.flash.readBytes(fs.dataIndexAddr(pageIdx & 0xff00), fs.buf, SPIFLASH_PAGE_SIZE);
-    uint8_t blockID = metaPage * 13 + pageIdx * 17;
-    if (blockID < 2 || blockID == 0xff)
-        blockID = 2;
-    for (;;)
-    {
-        for (int i = 0; i < SPIFLASH_PAGE_SIZE; ++i)
-        {
-            if (fs.buf[i] == blockID)
-                goto nextOne;
-        }
-        break;
-    nextOne:
-        blockID++;
-        if (blockID == 0xff)
-            blockID = 2;
-    }
-
-    fs.flash.writeBytes(fs.dataIndexAddr(pageIdx), &blockID, 1);
-    return (pageIdx & 0xff00) | blockID;
-}
-
 void File::allocatePage()
 {
-    int start = writePage ? (writePage >> 8) : (metaPage * 13) % fs.numDataRows;
-    int pageIdx = fs.findFreeDataPage(start);
+    int start = writePage ? (writePage >> 8) : (metaPage * 13) % fs.numRows;
+    uint16_t pageIdx = fs.findFreeDataPage(start);
     if (pageIdx == 0)
         oops(); // out of space
     if (firstPage == 0)
     {
-        firstPage = stablePageAddr(pageIdx);
+        firstPage = pageIdx;
         fs.flash.readBytes(metaPageAddr() + SNORFS_END_SIZE, fs.buf, SNORFS_REP_START_BLOCK * 2);
         uint16_t *startPtr = (uint16_t *)fs.buf;
         for (int i = 0; i < SNORFS_REP_START_BLOCK; ++i)
@@ -495,21 +504,7 @@ void File::allocatePage()
     {
         if (writePage == 0)
             oops();
-        uint16_t off;
-        if ((writePage >> 8) == (pageIdx >> 8))
-        {
-            off = pageIdx - writePage;
-            if (off & 0xff00)
-                oops();
-            off |= 0xff00;
-            uint8_t noId = 1;
-            fs.flash.writeBytes(fs.dataIndexAddr(pageIdx), &noId, 1);
-        }
-        else
-        {
-            off = stablePageAddr(pageIdx);
-        }
-        fs.flash.writeBytes(fs.dataNextPtrAddr(writePage), &off, 2);
+        fs.flash.writeBytes(fs.nextPtrAddr(writePage), &pageIdx, 2);
     }
     writePage = pageIdx;
 }
@@ -525,7 +520,7 @@ void File::truncateCore()
     for (uint32_t off = 0; off < metaSize; off += SPIFLASH_PAGE_SIZE)
     {
         seekNextPage();
-        fs.flash.writeBytes(fs.dataIndexAddr(readPage), &deleted, 1);
+        fs.flash.writeBytes(fs.indexAddr(readPage), &deleted, 1);
     }
 
     rewind();
@@ -538,7 +533,7 @@ void File::del()
     truncateCore();
     uint8_t deleted = 0;
     fs.flash.writeBytes(metaPageAddr(), &deleted, 1);
-    fs.flash.writeBytes(fs.metaIdxAddr(metaPage), &deleted, 1);
+    fs.flash.writeBytes(fs.indexAddr(metaPage), &deleted, 1);
     metaSize = 0;
     writePage = 0xffff;
 }
@@ -554,19 +549,16 @@ void File::overwrite(const void *data, uint32_t len)
 #ifdef SNORFS_TEST
 void FS::debugDump()
 {
-    if (numDataRows == 0)
+    if (numRows == 0)
     {
         LOG("not mounted\n");
         mount();
     }
-    LOG("row#: %d; remap: ", numDataRows);
-    for (int i = 0; i < numDataRows; ++i)
+    LOG("row#: %d; remap: ", numRows);
+    for (int i = 0; i < numRows; ++i)
     {
         LOG("%d->%d, ", i, rowRemapCache[i]);
     }
-    LOG("META PTRS:");
-    for (int i = 0; i < SNORFS_META_ROWS; ++i)
-        LOG(" %d", metaFree[i]);
     LOG("\n");
 }
 
