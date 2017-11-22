@@ -23,22 +23,41 @@ This is specific to the 2M flash part.
 
 Use 64k rows. There's 32 of them.
 
-### Row re-map
+## Row
 
-4k region. For each of the data rows it has a sequence of bytes.
-The last byte (which isn't 0xff) in sequence is the valid one.
-Offsets are one off, to allow for physical row 0xff.
+Row structure:
+* 1 index page
+* 253 payload pages
+* 2 next-pointer pages
 
-For every row we keep in memory after mounting:
-* phys. row index (5 bits)
-* first free page (8 bits)
-* num. deleted pages (8 bits)
+Bytes in index correspond to pages in row. Byte 0 corresponds to index itself, and is therefore
+used otherwise - to store the row re-map ID, see below. The last two bytes correspond to 
+next-pointer pages, and are thus also used differently - in the first few physical rows they
+hold filesystem header.
 
+## Meta-data rows
 
-### Index pages
+Index values:
+* 0x00 - deleted file
+* 0x01-0xfe - hash of file name
+* 0xff - free metadata entry
 
-First 1 page after re-map. For every meta page, 8 bit hash of file name.
-Special values: 0x00 - deleted, 0xff - free.
+Next-pointers are currently not used.
+
+## Data rows
+
+Index values:
+* 0x00 - deleted data page
+* 0x01 - occupied
+* 0xff - free data page
+
+Next pointers hold two bytes each for every page in the row. Again, the first two bytes, and the last
+four are meaningless. The two bytes are page index and logical row index.
+
+## Row re-map
+
+First byte of every physical row states which logical row it contains.
+The special value 0xff is used to indicate that this is a scratch physical row.
 
 ### Meta pages
 
@@ -46,8 +65,8 @@ These are in the first row, after indexes.
 
 Each has:
 * flags (1 byte)
-* file name (63 bytes)
-* file size, encoded seq. (128 bytes)
+* file name (up to 63 bytes; NUL-terminated)
+* file size, encoded seq. (128+ bytes)
 * first page: row idx + page ID (16 bit); repeated 32 times
 
 #### File size encoding
@@ -56,19 +75,5 @@ Each has:
 * 0x80|L0 - add L0 bytes, 1 <= L0 <= 126
 * 0x00|L0, 0x80|L1 = add signextend((L0<<7)|L1) bytes
 * 0x00|L0, 0x00|L1, 0x80|L2 = add signextend((L0<<14)|(L1<<7)|L1) bytes
-
-### Data row
-
-Data row has following index data in front and back:
-
-* for every page 8 bits for page ID; this sits in first page of row
-  * 0x00 - deleted page
-  * 0x01 - no page ID
-  * 0xff - free page
-  * other number - page ID
-
-* for every page, 16 bit for the next page pointer (a few bits left here); this sits in last two pages of a row
-  * either how many pages down in current row
-  * or row idx + page ID
 
 

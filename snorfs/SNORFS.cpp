@@ -506,6 +506,9 @@ void File::allocatePage()
             oops();
         fs.flash.writeBytes(fs.nextPtrAddr(writePage), &pageIdx, 2);
     }
+
+    uint8_t occupied = 1;
+    fs.flash.writeBytes(fs.indexAddr(pageIdx), &occupied, 1);
     writePage = pageIdx;
 }
 

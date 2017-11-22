@@ -239,7 +239,6 @@ int main()
     for (uint32_t i = 0; i < sizeof(randomData); ++i)
         randomData[i] = rand();
     MemFlash flash(2 * 1024 * 1024 / SPIFLASH_PAGE_SIZE);
-    flash.eraseChip();
     fs = new codal::snorfs::FS(flash);
     fs->debugDump();
     simpleTest("hello.txt", 100);
