@@ -76,7 +76,7 @@ int FS::firstFree(uint16_t pageIdx)
     flash.readBytes(indexAddr(pageIdx), buf, SPIFLASH_PAGE_SIZE);
     for (int k = 2; k < SPIFLASH_PAGE_SIZE - 2; ++k)
         if (buf[k] == 0xff)
-            return k;
+            return pageIdx | k;
     return 0;
 }
 
@@ -342,7 +342,7 @@ void FS::mount()
     maybeGC();
 }
 
-uint16_t FS::findFreePage(bool isData)
+uint16_t FS::findFreePage(bool isData, uint16_t hint)
 {
     bool wrapped = false;
     bool gc = false;
@@ -350,11 +350,20 @@ uint16_t FS::findFreePage(bool isData)
     uint16_t end = isData ? numRows : numMetaRows;
     uint16_t ptr = random(end - start) + start;
 
+    uint16_t fr;
+
+    if (hint != 0)
+    {
+        fr = firstFree(hint & 0xff00);
+        if (fr)
+            return fr;
+    }
+
     for (;;)
     {
-        uint16_t fr = firstFree(ptr << 8);
+        fr = firstFree(ptr << 8);
         if (fr)
-            return (ptr << 8) | fr;
+            return fr;
         if (++ptr == end)
         {
             if (wrapped)
@@ -691,7 +700,8 @@ void File::append(const void *data, uint32_t len)
 void File::allocatePage()
 {
     fs.feedRandom(fileID());
-    uint16_t pageIdx = fs.findFreePage(true);
+    // if writePage is set, try to keep the new page on the same row - this helps with delete locality
+    uint16_t pageIdx = fs.findFreePage(true, writePage);
     if (firstPage == 0)
     {
         firstPage = pageIdx;

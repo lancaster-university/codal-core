@@ -51,7 +51,7 @@ class FS
     }
 
     int firstFree(uint16_t pageIdx);
-    uint16_t findFreePage(bool isData);
+    uint16_t findFreePage(bool isData, uint16_t hint = 0);
     uint32_t random(uint32_t max);
     void feedRandom(uint32_t max);
     void mount();
