@@ -115,7 +115,7 @@ void FS::format()
             hd.logicalBlockId = 0xffff;
         else
             hd.logicalBlockId = rowIdx;
-        LOG("format: %d\n", rowIdx);
+        LOGV("format: %d\n", rowIdx);
         flash.writeBytes(addr, &hd, sizeof(hd));
         rowIdx++;
     }
@@ -188,12 +188,13 @@ void FS::gcCore(bool force, bool isData)
         readHeaders(); // this will trigger levelling on the new free block
     }
 
-    printf("GC: ");
+    LOG("GC: ");
     dump();
 }
 
 void FS::swapRow(int row)
 {
+    LOG("swap row: %d\n", row);
     if (freeRow == row || row > numRows)
         oops();
     uint32_t trg = freeRow * SPIFLASH_BIG_ROW_SIZE;
@@ -416,8 +417,8 @@ void File::saveSizeDiff(int32_t sizeDiff)
         newMetaPage(); // this will call back here, but only once
         return;
     }
-    LOG("WRSZ: num=%d at %d: 0x%x 0x%x, meta=%x\n", num, metaSizeOff, buf[0] ^ 0xff, buf[1] ^ 0xff,
-        metaPageAddr());
+    LOGV("WRSZ: num=%d at %d: 0x%x 0x%x, meta=%x\n", num, metaSizeOff, buf[0] ^ 0xff, buf[1] ^ 0xff,
+         metaPageAddr());
     fs.flash.writeBytes(metaPageAddr() + metaSizeOff, buf, num);
     metaSizeOff += num;
 }
@@ -643,7 +644,7 @@ void File::appendCore(const void *data, uint32_t len)
         if (off == 0)
             allocatePage();
 
-        LOG("write: left=%d page=0x%x\n", len, writePage);
+        LOGV("write: left=%d page=0x%x\n", len, writePage);
 
         int nwrite = min(len, SPIFLASH_PAGE_SIZE - off);
         fs.flash.writeBytes(fs.pageAddr(writePage) + off, data, nwrite);
@@ -731,19 +732,17 @@ void FS::dump()
 {
     if (numRows == 0)
     {
-        printf("not mounted\n");
+        LOG("not mounted\n");
         mount();
     }
-    printf("row#: %d; remap: ", numRows);
-    /*
+    LOG("row#: %d; remap: ", numRows);
     for (int i = 0; i < numRows; ++i)
     {
-        printf("%d->%d, ", i, rowRemapCache[i]);
+        LOGV("%d->%d, ", i, rowRemapCache[i]);
     }
-    */
-    printf("free: %d, deleted: %d, total: %d", freePages, deletedPages,
-           fullPages + freePages + deletedPages);
-    printf("\n");
+    LOG("free: %d, deleted: %d, total: %d", freePages, deletedPages,
+        fullPages + freePages + deletedPages);
+    LOG("\n");
 }
 
 void FS::debugDump()
@@ -753,7 +752,7 @@ void FS::debugDump()
 
 void File::debugDump()
 {
-    LOG("fileID: 0x%x/st:0x%x, rd: 0x%x/%d, wr: 0x%x/%d\n", fileID(), firstPage, readPage, tell(),
-        writePage, size());
+    LOGV("fileID: 0x%x/st:0x%x, rd: 0x%x/%d, wr: 0x%x/%d\n", fileID(), firstPage, readPage, tell(),
+         writePage, size());
 }
 #endif

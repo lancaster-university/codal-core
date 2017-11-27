@@ -63,7 +63,7 @@ public:
             memset(tmp, 0, sizeof(tmp));
 
             int l = f->read(tmp, len);
-            LOG("read len=%d l=%d at %d / %x %x %x %x\n", (int)len, l, ptr, tmp[0], tmp[1], tmp[2],
+            LOGV("read len=%d l=%d at %d / %x %x %x %x\n", (int)len, l, ptr, tmp[0], tmp[1], tmp[2],
                 tmp[3]);
             f->debugDump();
             assert(l == (int)len);
@@ -170,7 +170,7 @@ void simpleTest(const char *fn, int len, int rep = 1)
     if (fn == NULL)
         fn = getFileName(++fileSeqNo);
 
-    LOG("\n\n* %s\n", fn);
+    LOGV("\n\n* %s\n", fn);
 
     auto fc = lookupFile(fn);
 
@@ -193,7 +193,7 @@ void simpleTest(const char *fn, int len, int rep = 1)
     fc->validate(f);
     delete f;
 
-    LOG("\nAgain.\n");
+    LOGV("\nAgain.\n");
 
     f = mk(fn);
     fc->validate(f);
