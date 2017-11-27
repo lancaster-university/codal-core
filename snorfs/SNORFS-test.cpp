@@ -221,7 +221,7 @@ void simpleTest(const char *fn, int len, int rep = 1)
     delete f;
 }
 
-void multiTest(int nfiles, int blockSize, int reps)
+void multiTest(int nfiles, int blockSize, int reps, bool over = false)
 {
     auto fs = new File *[nfiles];
     auto fcs = new FileCache *[nfiles];
@@ -236,7 +236,15 @@ void multiTest(int nfiles, int blockSize, int reps)
         int i = rand() % nfiles;
         auto d = getRandomData();
         auto len = (rand() % blockSize) + 1;
-        fs[i]->append(d, len);
+        if (over)
+        {
+            fs[i]->overwrite(d, len);
+            fcs[i]->data.clear();
+        }
+        else
+        {
+            fs[i]->append(d, len);
+        }
         fcs[i]->append(d, len);
     }
     for (int i = 0; i < nfiles; ++i)
@@ -293,9 +301,14 @@ int main()
 
     multiTest(2, 1000, 100);
     multiTest(10, 1000, 100);
-    for (int i = 0; i < 10; ++i)
-        multiTest(10, 300, 100);
+    for (int i = 0; i < 20; ++i)
+        multiTest(10, 300, 200);
+    simpleTest(NULL, 1003, 300);
     testAll();
+
+    multiTest(10, 1000, 10000, true);
+    testAll();
+
     fs->dump();
 
     // re-mount

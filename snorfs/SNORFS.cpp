@@ -12,7 +12,11 @@ TODO:
 
 using namespace codal::snorfs;
 
+#ifdef SNORFS_TEST
+#define SNORFS_LEVELING_THRESHOLD 100
+#else
 #define SNORFS_LEVELING_THRESHOLD 1000
+#endif
 
 #define SNORFS_MAGIC 0x3576348e // Random
 struct BlockHeader
@@ -52,12 +56,19 @@ void FS::feedRandom(uint32_t v)
     randomSeed ^= v * 0x1000193;
 }
 
+// we need a deterministic PRNG - this one has period of 2^32
 uint32_t FS::random(uint32_t max)
 {
-    randomSeed *= 0x1000193; // TODO
-    if (randomSeed == 0)
-        randomSeed = 1;
-    return randomSeed % max;
+    uint32_t mask = 1;
+    while (mask <= max)
+        mask = (mask << 1) | 1;
+    while (true)
+    {
+        randomSeed = randomSeed * 1664525 + 1013904223;
+        auto v = randomSeed & mask;
+        if (v < max)
+            return v;
+    }
 }
 
 int FS::firstFree(uint16_t pageIdx)
@@ -214,9 +225,7 @@ void FS::swapRow(int row)
     for (int i = 2; i < SPIFLASH_PAGE_SIZE - 2; ++i)
     {
         if (skipmask[i / 32] & (1U << (i % 32)))
-        {
             continue;
-        }
 
         flash.readBytes(src + SPIFLASH_PAGE_SIZE * i, buf, SPIFLASH_PAGE_SIZE);
         flash.writeBytes(trg + SPIFLASH_PAGE_SIZE * i, buf, SPIFLASH_PAGE_SIZE);
@@ -698,7 +707,9 @@ void File::allocatePage()
             }
         }
         if (startPtr)
-            oops(); // TODO create new file entry
+        {
+            newMetaPage();
+        }
     }
     else
     {
@@ -741,8 +752,13 @@ void File::del()
 void File::overwrite(const void *data, uint32_t len)
 {
     int32_t sizeDiff = len - metaSize;
+    auto prevID = fileID();
     truncateCore();
+    metaSize = 0;
     appendCore(data, len);
+    // if the meta-page was reallocated, the size listed there is now zero
+    if (prevID != fileID())
+        sizeDiff = len;
     saveSizeDiff(sizeDiff);
 }
 
@@ -755,12 +771,17 @@ void FS::dump()
         mount();
     }
     LOG("row#: %d; remap: ", numRows);
-    for (int i = 0; i < numRows; ++i)
+
+    for (unsigned i = 0; i < numRows + 1; ++i)
     {
-        LOGV("%d->%d, ", i, rowRemapCache[i]);
+        BlockHeader hd;
+        auto addr = i * SPIFLASH_BIG_ROW_SIZE;
+        flash.readBytes(addr, &hd, sizeof(hd));
+        LOG("[%d: %d] ", (int16_t)hd.logicalBlockId, hd.eraseCount);
     }
-    LOG("free: %d, deleted: %d, total: %d", freePages, deletedPages,
-        fullPages + freePages + deletedPages);
+
+    LOG("free: %d/%d, (junk: %d)", freePages + deletedPages, fullPages + freePages + deletedPages,
+        deletedPages);
     LOG("\n");
 }
 
