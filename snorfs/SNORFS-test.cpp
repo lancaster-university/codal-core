@@ -240,7 +240,7 @@ int main()
         randomData[i] = rand();
     MemFlash flash(2 * 1024 * 1024 / SPIFLASH_PAGE_SIZE);
     fs = new codal::snorfs::FS(flash);
-    fs->debugDump();
+    fs->dump();
     simpleTest("hello.txt", 100);
     fs->debugDump();
     simpleTest(NULL, 1000);
@@ -256,6 +256,12 @@ int main()
 
     multiTest(2, 1000, 100);
     multiTest(10, 1000, 100);
+    testAll();
+    fs->dump();
+
+    // re-mount
+    fs = new codal::snorfs::FS(flash);
+    fs->dump();
     testAll();
 
     printf("OK\n");

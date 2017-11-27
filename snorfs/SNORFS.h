@@ -30,14 +30,16 @@ class FS
     uint16_t deletedPages;
     uint16_t freePages;
 
-
     uint32_t rowAddr(uint8_t rowIdx)
     {
         if (rowIdx >= numRows)
             oops();
         return rowRemapCache[rowIdx] * SPIFLASH_BIG_ROW_SIZE;
     }
-    uint32_t indexAddr(uint16_t ptr) { return rowAddr(ptr >> 8) + (ptr & 0xff); }
+    uint32_t indexAddr(uint16_t ptr)
+    {
+        return rowAddr(ptr >> 8) + SPIFLASH_PAGE_SIZE + (ptr & 0xff);
+    }
     uint32_t nextPtrAddr(uint16_t ptr)
     {
         return rowAddr(ptr >> 8) + SPIFLASH_BIG_ROW_SIZE - 2 * SPIFLASH_PAGE_SIZE +
@@ -56,14 +58,22 @@ class FS
     void format();
     uint16_t findMetaEntry(const char *filename);
     uint16_t createMetaPage(const char *filename);
+    bool readHeaders();
+    void gcCore(bool force, bool isData);
+    void swapRow(int row);
+    void markPage(uint16_t page, uint8_t flag);
 
 public:
     FS(SPIFlash &f);
     ~FS();
-    void debugDump();
     // returns NULL if file doesn't exists and create==false
     File *open(const char *filename, bool create = true);
     void progress();
+    void maybeGC() { gcCore(false, false); }
+#ifdef SNORFS_TEST
+    void debugDump();
+    void dump();
+#endif
 };
 
 class File
@@ -113,11 +123,13 @@ public:
     uint32_t size() { return metaSize; }
     uint32_t tell() { return readOffset; }
     uint32_t fileID() { return metaPage; }
-    void debugDump();
     bool isDeleted() { return writePage == 0xffff; }
     void overwrite(const void *data, uint32_t len);
     void del();
     void truncate() { overwrite(NULL, 0); }
+#ifdef SNORFS_TEST
+    void debugDump();
+#endif
 };
 }
 }
