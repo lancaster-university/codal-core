@@ -168,6 +168,8 @@ void FS::gcCore(bool force, bool isData)
             }
         }
 
+        LOGV("GC: row=%d del=%d\n", row, numDel);
+
         if (numDel > maxDelCnt)
         {
             maxDelCnt = numDel;
@@ -698,7 +700,7 @@ void File::truncateCore()
         return;
 
     rewind();
-    for (uint32_t off = 0; off < metaSize; off += SPIFLASH_PAGE_SIZE)
+    for (readOffset = 0; readOffset < metaSize; readOffset += SPIFLASH_PAGE_SIZE)
     {
         seekNextPage();
         fs.markPage(readPage, 0);

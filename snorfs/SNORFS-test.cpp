@@ -19,6 +19,7 @@ class FileCache
 {
 public:
     char name[64];
+    bool del;
     vector<uint8_t> data;
 
     void append(const void *buf, uint32_t len)
@@ -64,7 +65,7 @@ public:
 
             int l = f->read(tmp, len);
             LOGV("read len=%d l=%d at %d / %x %x %x %x\n", (int)len, l, ptr, tmp[0], tmp[1], tmp[2],
-                tmp[3]);
+                 tmp[3]);
             f->debugDump();
             assert(l == (int)len);
             for (unsigned i = 0; i < len; ++i)
@@ -121,7 +122,7 @@ public:
         uint8_t *ptr = (uint8_t *)buffer;
         for (uint32_t i = 0; i < len; ++i)
         {
-            assert(data[addr + i] == 0xff || *ptr == 0x00);
+            assert(data[addr + i] == 0xff || (data[addr + i] && *ptr == 0x00));
             data[addr + i] = *ptr++;
         }
         return 0;
@@ -222,15 +223,31 @@ void multiTest(int nfiles, int blockSize, int reps)
     {
         fcs[i]->validate(fs[i]);
     }
+    for (int i = 0; i < nfiles; ++i)
+    {
+        if (rand() % 5 != 0)
+        {
+            fs[i]->del();
+            fcs[i]->del = true;
+        }
+    }
 }
 
 void testAll()
 {
     for (auto fc : files)
     {
-        auto f = mk(fc->name);
-        fc->validate(f);
-        delete f;
+        if (fc->del)
+        {
+            assert(!fs->exists(fc->name));
+        }
+        else
+        {
+            auto f = fs->open(fc->name, false);
+            assert(!!f);
+            fc->validate(f);
+            delete f;
+        }
     }
 }
 

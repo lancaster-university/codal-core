@@ -68,6 +68,7 @@ public:
     ~FS();
     // returns NULL if file doesn't exists and create==false
     File *open(const char *filename, bool create = true);
+    bool exists(const char *filename) { return findMetaEntry(filename) != 0; }
     void progress();
     void maybeGC() { gcCore(false, false); }
 #ifdef SNORFS_TEST
