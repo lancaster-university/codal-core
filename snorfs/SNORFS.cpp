@@ -41,18 +41,10 @@ void FS::feedRandom(uint32_t v)
 
 uint32_t FS::random(uint32_t max)
 {
-    uint32_t mask = 1;
-    while (mask <= max)
-        mask = (mask << 1) | 1;
-    while (true)
-    {
-        randomSeed *= 0x1000193; // TODO
-        if (randomSeed == 0)
-            randomSeed = 1;
-        auto v = randomSeed & mask;
-        if (v < max)
-            return v;
-    }
+    randomSeed *= 0x1000193; // TODO
+    if (randomSeed == 0)
+        randomSeed = 1;
+    return randomSeed % max;
 }
 
 int FS::firstFree(uint16_t pageIdx)
