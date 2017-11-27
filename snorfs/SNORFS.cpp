@@ -7,6 +7,7 @@ TODO:
 - nuke caches in files on GC
 - implement file data GC
 - implement meta-data GC
+- try to keep data pages in one block - better for delete?
 */
 
 using namespace codal::snorfs;
@@ -33,16 +34,37 @@ FS::FS(SPIFlash &f) : flash(f)
     numRows = 0;
 }
 
-int FS::firstFree(uint32_t addr)
+void FS::feedRandom(uint32_t v)
 {
-    flash.readBytes(addr, buf, SPIFLASH_PAGE_SIZE);
-    uint8_t firstFree = 0;
+    randomSeed ^= v * 0x1000193;
+}
+
+uint32_t FS::random(uint32_t max)
+{
+    uint32_t mask = 1;
+    while (mask <= max)
+        mask = (mask << 1) | 1;
+    while (true)
+    {
+        randomSeed *= 0x1000193; // TODO
+        if (randomSeed == 0)
+            randomSeed = 1;
+        auto v = randomSeed & mask;
+        if (v < max)
+            return v;
+    }
+}
+
+int FS::firstFree(uint16_t pageIdx)
+{
+    flash.readBytes(indexAddr(pageIdx), buf, SPIFLASH_PAGE_SIZE);
+    uint8_t res = 0;
     for (int k = 1; k < SPIFLASH_PAGE_SIZE - 2; ++k)
     {
-        if (firstFree == 0)
+        if (res == 0)
         {
             if (buf[k] == 0xff)
-                firstFree = k;
+                res = k;
         }
         else
         {
@@ -50,7 +72,7 @@ int FS::firstFree(uint32_t addr)
                 oops();
         }
     }
-    return firstFree;
+    return res;
 }
 
 void FS::progress()
@@ -99,6 +121,12 @@ void FS::mount()
     numRows = (flash.numPages() / SPIFLASH_BIG_ROW_PAGES) - 1;
     rowRemapCache = new uint8_t[numRows];
 
+    // TODO
+    fullPages = 0;
+    deletedPages = 0;
+    freePages = 0;
+    randomSeed = 1;
+
     for (;;)
     {
         memset(rowRemapCache, 0xff, numRows);
@@ -142,21 +170,26 @@ void FS::mount()
     }
 }
 
-uint16_t FS::findFreeDataPage(int startRow)
+uint16_t FS::findFreePage(bool isData)
 {
     bool wrapped = false;
-    int ptr = max((int)numMetaRows, startRow);
+    uint16_t start = isData ? numMetaRows : 0;
+    uint16_t end = isData ? numRows : numMetaRows;
+    uint16_t ptr = random(end - start) + start;
+
     for (;;)
     {
-        int fr = firstFree(indexAddr(ptr << 8));
+        uint16_t fr = firstFree(ptr << 8);
         if (fr)
             return (ptr << 8) | fr;
-        ptr++;
-        if (ptr == numRows)
+        if (++ptr == end)
         {
             if (wrapped)
+            {
+                oops(); // TODO GC
                 return 0;
-            ptr = numMetaRows;
+            }
+            ptr = start;
             wrapped = true;
         }
     }
@@ -165,18 +198,6 @@ uint16_t FS::findFreeDataPage(int startRow)
 FS::~FS()
 {
     delete rowRemapCache;
-}
-
-uint16_t FS::findFreeMetaPage()
-{
-    for (int ptr = 0; ptr < numMetaRows; ++ptr)
-    {
-        int fr = firstFree(indexAddr(ptr << 8));
-        if (fr)
-            return (ptr << 8) | fr;
-    }
-    oops(); // out of meta space
-    return 0;
 }
 
 void File::newMetaPage()
@@ -195,7 +216,7 @@ void File::newMetaPage()
     if (metaSize != 0)
         oops();
 
-    metaPage = fs.findFreeMetaPage();
+    metaPage = fs.findFreePage(false);
 
     fs.flash.readBytes(prevAddr, fs.buf, fnlen + 2);
     fs.flash.writeBytes(metaPageAddr(), fs.buf, fnlen + 2);
@@ -356,9 +377,9 @@ uint16_t FS::findMetaEntry(const char *filename)
 
 uint16_t FS::createMetaPage(const char *filename)
 {
-    uint16_t page = findFreeMetaPage();
-
     uint8_t h = fnhash(filename);
+    feedRandom(h);
+    uint16_t page = findFreePage(false);
     uint16_t buflen = strlen(filename) + 2;
 
     memset(buf, 0xff, SPIFLASH_PAGE_SIZE);
@@ -479,10 +500,8 @@ void File::append(const void *data, uint32_t len)
 
 void File::allocatePage()
 {
-    int start = writePage ? (writePage >> 8) : (metaPage * 13) % fs.numRows;
-    uint16_t pageIdx = fs.findFreeDataPage(start);
-    if (pageIdx == 0)
-        oops(); // out of space
+    fs.feedRandom(fileID());
+    uint16_t pageIdx = fs.findFreePage(true);
     if (firstPage == 0)
     {
         firstPage = pageIdx;

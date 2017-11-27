@@ -23,7 +23,13 @@ class FS
     uint8_t numMetaRows;
     uint8_t freeRow;
 
-    int firstFree(uint32_t addr);
+    uint32_t randomSeed;
+
+    // this is for data pages only
+    uint16_t fullPages;
+    uint16_t deletedPages;
+    uint16_t freePages;
+
 
     uint32_t rowAddr(uint8_t rowIdx)
     {
@@ -42,12 +48,14 @@ class FS
         return rowAddr(ptr >> 8) + SPIFLASH_PAGE_SIZE * (ptr & 0xff);
     }
 
-    uint16_t findFreeDataPage(int startRow);
+    int firstFree(uint16_t pageIdx);
+    uint16_t findFreePage(bool isData);
+    uint32_t random(uint32_t max);
+    void feedRandom(uint32_t max);
     void mount();
     void format();
     uint16_t findMetaEntry(const char *filename);
     uint16_t createMetaPage(const char *filename);
-    uint16_t findFreeMetaPage();
 
 public:
     FS(SPIFlash &f);
