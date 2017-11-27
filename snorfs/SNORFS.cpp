@@ -143,17 +143,15 @@ void FS::gcCore(bool force, bool isData)
         for (int i = 2; i < SPIFLASH_PAGE_SIZE - 2; i++)
         {
             if (buf[i] == 0x00)
-            {
                 numDel++;
-                deletedPages++;
-            }
-            else if (buf[i] == 0xff)
+            if (!force)
             {
-                freePages++;
-            }
-            else
-            {
-                fullPages++;
+                if (buf[i] == 0x00)
+                    deletedPages++;
+                else if (buf[i] == 0xff)
+                    freePages++;
+                else
+                    fullPages++;
             }
         }
 
@@ -175,6 +173,8 @@ void FS::gcCore(bool force, bool isData)
         oops(); // really out of space!
     }
 
+    LOG("GC: ");
+
     // we do a GC when either one is true:
     //   * force is true (we desperately need space)
     //   * there's a row that's more than 50% deleted
@@ -182,16 +182,16 @@ void FS::gcCore(bool force, bool isData)
     if (force || maxDelCnt > SPIFLASH_PAGE_SIZE / 2 || (maxDelCnt * 5 > freePages))
     {
         swapRow(rowRemapCache[maxDelIdx]);
-        readHeaders(); // this will trigger levelling on the new free block
+        if (!readHeaders()) // this will trigger levelling on the new free block
+            oops();         // but it should never fail
     }
 
-    LOG("GC: ");
     dump();
 }
 
 void FS::swapRow(int row)
 {
-    LOG("swap row: %d\n", row);
+    LOG("[swap row: %d] ", row);
     if (freeRow == row || row > numRows)
         oops();
     uint32_t trg = freeRow * SPIFLASH_BIG_ROW_SIZE;
@@ -306,6 +306,11 @@ bool FS::readHeaders()
     if (minEraseCnt + SNORFS_LEVELING_THRESHOLD < freeEraseCnt)
     {
         swapRow(minEraseIdx);
+        LOG(" for level\n");
+    }
+    else
+    {
+        LOGV("[no level swap: free %d, min %d]", freeEraseCnt, minEraseCnt);
     }
 
     return true;
