@@ -37,6 +37,8 @@ public:
         f->seek(0);
         uint32_t ptr = 0;
 
+        assert(!del);
+
         while (ptr < data.size())
         {
             assert(ptr == f->tell());
@@ -80,6 +82,24 @@ public:
         }
         int l = f->read(tmp, 1);
         assert(l == 0);
+
+        // test reading random ranges
+        int ranges = 5;
+        while (ranges--)
+        {
+            int start = rand() % data.size();
+            size_t len = rand() % 512;
+            len = min(len, data.size() - start);
+            f->seek(start);
+            f->read(tmp, len);
+            for (unsigned i = 0; i < len; ++i)
+            {
+                if (tmp[i] != data[start + i])
+                {
+                    assert(false);
+                }
+            }
+        }
     }
 };
 
@@ -225,7 +245,7 @@ void multiTest(int nfiles, int blockSize, int reps)
     }
     for (int i = 0; i < nfiles; ++i)
     {
-        if (rand() % 5 != 0)
+        if (rand() % 10 != 0)
         {
             fs[i]->del();
             fcs[i]->del = true;
@@ -273,6 +293,8 @@ int main()
 
     multiTest(2, 1000, 100);
     multiTest(10, 1000, 100);
+    for (int i = 0; i < 10; ++i)
+        multiTest(10, 300, 100);
     testAll();
     fs->dump();
 
