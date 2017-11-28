@@ -379,34 +379,6 @@ void FS::markPage(uint16_t page, uint8_t flag)
     }
 }
 
-void File::newMetaPage()
-{
-    uint32_t prevPage = metaPage;
-    uint32_t prevSize = metaSize;
-
-    fs.flash.readBytes(fs.pageAddr(prevPage), fs.buf, 64);
-    fs.buf[64] = 0;
-    const char *fn = (const char *)fs.buf + 1;
-    int fnlen = strlen(fn);
-    memset(fs.buf + fnlen + 2, 0xff, SPIFLASH_PAGE_SIZE - (fnlen + 2));
-    readSize();
-    if (metaSize != 0)
-        oops();
-
-    metaPage = fs.findFreePage(false);
-
-    fs.flash.readBytes(fs.pageAddr(prevPage), fs.buf, fnlen + 2);
-    fs.flash.writeBytes(metaPageAddr(), fs.buf, fnlen + 2);
-    metaSize = prevSize;
-    saveSizeDiff(metaSize);
-    fs.flash.writeBytes(metaPageAddr() + SNORFS_END_SIZE, &firstPage, 2);
-
-    uint8_t zero = 0;
-    fs.flash.writeBytes(fs.pageAddr(prevPage), &zero, 1);
-    fs.markPage(prevPage, 0);
-    fs.markPage(metaPage, fnhash(fn));
-}
-
 uint8_t FS::dataPageSize()
 {
     int markedLen = 0;
@@ -425,18 +397,6 @@ uint8_t FS::dataPageSize()
     }
     i++;
     return max(i, markedLen);
-}
-
-void File::findFirstPage()
-{
-    firstPage = 0;
-    for (int i = 0; i < SNORFS_REP_START_BLOCK; ++i)
-    {
-        auto tmp = *(uint16_t *)&fs.buf[SNORFS_END_SIZE + i * 2];
-        if (tmp == 0xffff)
-            break;
-        firstPage = tmp;
-    }
 }
 
 void File::rewind()
@@ -521,8 +481,6 @@ File::File(FS &f, uint16_t existing) : fs(f)
 {
     metaPage = existing;
     writePage = 0;
-    readSize();
-    findFirstPage();
     rewind();
     next = fs.files;
     fs.files = this;
@@ -569,6 +527,7 @@ int File::metaStart()
             start++;
         start++;
     }
+    return start;
 }
 
 bool File::seekNextPage(uint16_t *cache)
@@ -640,7 +599,7 @@ int File::read(void *data, uint32_t len)
                 break;
         }
 
-        int n = min(len, readPageSize - readOffsetInPage);
+        int n = min((int)len, readPageSize - readOffsetInPage);
         if (data)
         {
             fs.flash.readBytes(fs.pageAddr(readPage) + readOffsetInPage, data, n);
@@ -678,18 +637,24 @@ void File::append(const void *data, uint32_t len)
 
     while (len > 0)
     {
-        int nwrite = min(len, SPIFLASH_PAGE_SIZE - (writeNumExplicitSizes + 1));
+        int nwrite = min((int)len, SPIFLASH_PAGE_SIZE - (writeNumExplicitSizes + 2));
         if (nwrite == 0)
         {
             allocatePage();
             continue;
+        }
+        writeOffsetInPage += nwrite;
+        if (((uint8_t *)data)[nwrite - 1] == 0xff)
+        {
+            fs.flash.writeBytes(fs.pageAddr(writePage) + SPIFLASH_PAGE_SIZE -
+                                    (writeNumExplicitSizes++ + 1),
+                                &writeOffsetInPage, 1);
         }
         LOGV("write: left=%d page=0x%x\n", len, writePage);
         fs.flash.writeBytes(fs.pageAddr(writePage) + writeOffsetInPage, data, nwrite);
         len -= nwrite;
         data = (uint8_t *)data + nwrite;
         metaSize += nwrite;
-        writeOffsetInPage += nwrite;
     }
 }
 
@@ -702,7 +667,7 @@ void File::allocatePage()
     int last = 0;
     for (int i = start + 2; i + 2 < SPIFLASH_PAGE_SIZE; i += 3)
     {
-        if (fs.buf[i] == 0xff && fs.buf[i + 1] = 0xff)
+        if (fs.buf[i] == 0xff && fs.buf[i + 1] == 0xff)
         {
             next = i;
             break;
@@ -738,6 +703,8 @@ void File::allocatePage()
     writePage = fs.findFreePage(true, writePage);
     fs.flash.writeBytes(fs.pageAddr(writeMetaPage) + next, &writePage, 2);
     fs.markPage(writePage, 1);
+    writeOffsetInPage = 0;
+    writeNumExplicitSizes = 0;
 }
 
 void File::del()
@@ -771,7 +738,7 @@ void File::overwrite(const void *data, uint32_t len)
     char tmp[65];
     fs.flash.readBytes(metaPageAddr() + 1, tmp, sizeof(tmp) - 1);
     tmp[64] = 0;
-    metaPage = createMetaPage(tmp);
+    metaPage = fs.createMetaPage(tmp);
     rewind();
     append(data, len);
 }
@@ -806,7 +773,6 @@ void FS::debugDump()
 
 void File::debugDump()
 {
-    LOGV("fileID: 0x%x/st:0x%x, rd: 0x%x/%d, wr: 0x%x/%d\n", fileID(), firstPage, readPage, tell(),
-         writePage, size());
+    LOGV("fileID: 0x%x, rd: 0x%x/%d, wr: 0x%x/%d\n", fileID(), readPage, tell(), writePage, size());
 }
 #endif

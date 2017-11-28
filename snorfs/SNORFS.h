@@ -59,6 +59,7 @@ class FS
     void gcCore(bool force, bool isData);
     void swapRow(int row);
     void markPage(uint16_t page, uint8_t flag);
+    uint8_t dataPageSize();
 
 public:
     FS(SPIFlash &f);
@@ -108,16 +109,15 @@ class File
 
     uint32_t metaPageAddr() { return fs.pageAddr(metaPage); }
 
-    void readSize();
-    void findFirstPage();
     void rewind();
-    void seekNextPage();
+    bool seekNextPage(uint16_t *cache);
     void allocatePage();
     void newMetaPage();
     void findFreeMetaPage();
     void computeWritePage();
     void saveSizeDiff(int32_t sizeDiff);
     void appendCore(const void *data, uint32_t len);
+    int metaStart();
     File(FS &f, uint16_t filePage);
     File(FS &f, const char *filename);
 
