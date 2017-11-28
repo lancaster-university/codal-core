@@ -251,7 +251,7 @@ void multiTest(int nfiles, int blockSize, int reps, bool over = false)
     }
     for (int i = 0; i < nfiles; ++i)
     {
-        if (rand() % 10 != 0)
+        if (over || rand() % 10 != 0)
         {
             fs[i]->del();
             fcs[i]->del = true;
@@ -305,7 +305,11 @@ int main()
     simpleTest(NULL, 1003, 300);
     testAll();
 
-    multiTest(10, 1000, 10000, true);
+    auto prevFree = fs->freeSize();
+    multiTest(3, 30000, 1000, true);
+    multiTest(30, 3000, 1000, true);
+    auto diff = prevFree - fs->freeSize();
+    printf("free: %d kb %d\n", fs->freeSize() / 1024, diff);
     testAll();
 
     fs->dump();

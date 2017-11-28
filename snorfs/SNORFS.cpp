@@ -5,11 +5,7 @@
 
 using namespace codal::snorfs;
 
-#ifdef SNORFS_TEST
 #define SNORFS_LEVELING_THRESHOLD 100
-#else
-#define SNORFS_LEVELING_THRESHOLD 1000
-#endif
 
 #define SNORFS_MAGIC 0x3576348e // Random
 struct BlockHeader
@@ -375,11 +371,12 @@ void FS::markPage(uint16_t page, uint8_t flag)
         fullPages++;
         freePages--;
     }
-    flash.writeBytes(indexAddr(page), &flag, 1);
+
     if (flag == 0 && (page >> 8) < numMetaRows)
     {
         flash.writeBytes(pageAddr(page), &flag, 1);
     }
+    flash.writeBytes(indexAddr(page), &flag, 1);
 }
 
 uint8_t FS::dataPageSize()
@@ -450,7 +447,7 @@ uint16_t FS::findMetaEntry(const char *filename)
                 uint16_t pageIdx = (i << 8) | j;
                 auto addr = pageAddr(pageIdx);
                 flash.readBytes(addr, tmp, buflen);
-                if (tmp[0] != 0 && memcmp(tmp + 1, filename, buflen - 1) == 0)
+                if (tmp[0] == 1 && memcmp(tmp + 1, filename, buflen - 1) == 0)
                 {
                     memcpy(buf, tmp, buflen);
                     flash.readBytes(addr + buflen, buf + buflen, SPIFLASH_PAGE_SIZE - buflen);
@@ -740,10 +737,10 @@ void File::del()
     {
         if (!seekNextPage(&cache))
             break;
-        if (writeMetaPage != prev)
+        if (readMetaPage != prev)
         {
-            fs.markPage(writeMetaPage, 0);
-            prev = writeMetaPage;
+            fs.markPage(readMetaPage, 0);
+            prev = readMetaPage;
         }
         fs.markPage(readPage, 0);
     }

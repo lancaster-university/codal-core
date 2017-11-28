@@ -70,6 +70,12 @@ public:
     // returns NULL if file doesn't exists and create==false
     File *open(const char *filename, bool create = true);
     bool exists(const char *filename) { return findMetaEntry(filename) != 0; }
+    uint32_t totalSize() {
+        return (fullPages + deletedPages + freePages) * SPIFLASH_PAGE_SIZE;
+    }
+    uint32_t freeSize() {
+        return (deletedPages + freePages) * SPIFLASH_PAGE_SIZE;
+    }
     void progress();
     void maybeGC() { gcCore(false, false); }
 #ifdef SNORFS_TEST
