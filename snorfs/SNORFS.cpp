@@ -700,34 +700,34 @@ void File::allocatePage()
     if (last && fs.buf[last + 2] != 0xff)
         oops();
 
-    auto prevMeta = writeMetaPage;
-    if (!next)
-    {
-        uint16_t newMeta = fs.findFreePage(false);
-        fs.flash.writeBytes(fs.pageAddr(writeMetaPage) + start, &newMeta, 2);
-        fs.markPage(newMeta, 0x02);
-        writeMetaPage = newMeta;
-        uint8_t hd[] = { 0x02, 0x00 };
-        fs.flash.writeBytes(fs.pageAddr(writeMetaPage), hd, 2);
-        next = 4;
-    }
-
     if (writePage && last)
     {
+#ifdef SNORFS_TEST
         fs.flash.readBytes(fs.pageAddr(writePage), fs.buf, SPIFLASH_PAGE_SIZE);
         uint8_t len = fs.dataPageSize();
         if (len != writeOffsetInPage)
             oops();
-
+#endif
         uint8_t v = writeOffsetInPage - 1;
-        fs.flash.writeBytes(fs.pageAddr(prevMeta) + last + 2, &v, 1);
+        fs.flash.writeBytes(fs.pageAddr(writeMetaPage) + last + 2, &v, 1);
+    }
+
+    if (!next)
+    {
+        uint16_t newMeta = fs.findFreePage(false);
+        fs.markPage(newMeta, 0x02);
+        uint8_t hd[] = {0x02, 0x00};
+        fs.flash.writeBytes(fs.pageAddr(newMeta), hd, 2);
+        fs.flash.writeBytes(fs.pageAddr(writeMetaPage) + start, &newMeta, 2);
+        writeMetaPage = newMeta;
+        next = 4;
     }
 
     // if writePage is set, try to keep the new page on the same row - this helps with delete
     // locality
     writePage = fs.findFreePage(true, writePage);
-    fs.flash.writeBytes(fs.pageAddr(writeMetaPage) + next, &writePage, 2);
     fs.markPage(writePage, 1);
+    fs.flash.writeBytes(fs.pageAddr(writeMetaPage) + next, &writePage, 2);
     writeOffsetInPage = 0;
     writeNumExplicitSizes = 0;
 }
@@ -752,7 +752,8 @@ void File::del()
         fs.markPage(readPage, 0);
     }
 
-    if (empty) {
+    if (empty)
+    {
         fs.markPage(metaPage, 0);
     }
 
