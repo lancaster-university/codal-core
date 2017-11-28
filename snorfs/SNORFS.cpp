@@ -373,7 +373,7 @@ void FS::markPage(uint16_t page, uint8_t flag)
         freePages--;
     }
     flash.writeBytes(indexAddr(page), &flag, 1);
-    if ((page >> 8) < numMetaRows)
+    if (flag == 0 && (page >> 8) < numMetaRows)
     {
         flash.writeBytes(pageAddr(page), &flag, 1);
     }
@@ -439,7 +439,7 @@ uint16_t FS::findMetaEntry(const char *filename)
     for (int i = 0; i < numMetaRows; ++i)
     {
         flash.readBytes(indexAddr(i << 8), buf, SPIFLASH_PAGE_SIZE);
-        for (int j = 1; j < SPIFLASH_PAGE_SIZE - 2; ++j)
+        for (int j = 1; j < SPIFLASH_PAGE_SIZE - 1; ++j)
         {
             if (buf[j] == h)
             {
@@ -552,6 +552,8 @@ bool File::seekNextPage(uint16_t *cache)
         uint16_t page = fs.buf[i] | (fs.buf[i + 1] << 8);
         if (isNext || readPage == 0)
         {
+            if (readPage == 0 && page == 0xffff)
+                return false;
             newReadPage = page;
             readPageSize = fs.buf[i + 2];
             break;
@@ -624,6 +626,15 @@ void File::computeWritePage()
     seek(0xffffffff);
     writePage = readPage;
     writeMetaPage = readMetaPage;
+    writeOffsetInPage = readOffsetInPage;
+    writeNumExplicitSizes = 0;
+    fs.flash.readBytes(fs.pageAddr(writePage), fs.buf, SPIFLASH_PAGE_SIZE);
+    for (int i = SPIFLASH_PAGE_SIZE - 1; i >= 0; --i)
+    {
+        if (fs.buf[i] == 0xff)
+            break;
+        writeNumExplicitSizes++;
+    }
     metaSize = readOffset;
     seek(prevOff);
 }

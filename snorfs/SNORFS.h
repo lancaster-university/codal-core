@@ -44,6 +44,9 @@ class FS
     }
     uint32_t pageAddr(uint16_t ptr)
     {
+        // page zero is index, shouldn't be accessed through this
+        if (!(ptr & 0xff))
+            oops();
         return rowAddr(ptr >> 8) + SPIFLASH_PAGE_SIZE * (ptr & 0xff);
     }
 

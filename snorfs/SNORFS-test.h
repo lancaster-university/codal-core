@@ -11,4 +11,5 @@ using namespace std;
 
 #define LOG printf
 //#define LOG(...) do{}while(0)
-#define LOGV(...) do{}while(0)
+//#define LOGV(...) do{}while(0)
+#define LOGV printf
