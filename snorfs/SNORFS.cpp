@@ -521,13 +521,9 @@ void File::seek(uint32_t pos)
 int File::metaStart()
 {
     int start = 1;
-    if (fs.buf[0] == 0x01)
-    {
-        while (start < 64 && fs.buf[start])
-            start++;
+    while (start < 64 && fs.buf[start])
         start++;
-    }
-    return start;
+    return ++start;
 }
 
 bool File::seekNextPage(uint16_t *cache)
@@ -591,7 +587,7 @@ int File::read(void *data, uint32_t len)
 {
     if (!len)
         return 0;
-    
+
     len = min(len, 0x7fffffffU);
 
     uint16_t seekCache = 0;
@@ -662,18 +658,24 @@ void File::append(const void *data, uint32_t len)
             allocatePage();
             continue;
         }
+
+        LOGV("write: left=%d page=0x%x nwr=%d off=%d\n", len, writePage, nwrite, writeOffsetInPage);
+
+        fs.flash.writeBytes(fs.pageAddr(writePage) + writeOffsetInPage, data, nwrite);
+
+        writeOffsetInPage += nwrite;
+
+        // if the last byte was 0xff, we need an end marker
         if (((uint8_t *)data)[nwrite - 1] == 0xff)
         {
-            uint8_t v = writeOffsetInPage + nwrite;
-            fs.flash.writeBytes(
-                fs.pageAddr(writePage) + SPIFLASH_PAGE_SIZE - (writeNumExplicitSizes++ + 1), &v, 1);
+            fs.flash.writeBytes(fs.pageAddr(writePage) + SPIFLASH_PAGE_SIZE -
+                                    (writeNumExplicitSizes++ + 1),
+                                &writeOffsetInPage, 1);
         }
-        LOGV("write: left=%d page=0x%x nwr=%d off=%d\n", len, writePage, nwrite, writeOffsetInPage);
-        fs.flash.writeBytes(fs.pageAddr(writePage) + writeOffsetInPage, data, nwrite);
+
         len -= nwrite;
         data = (uint8_t *)data + nwrite;
         metaSize += nwrite;
-        writeOffsetInPage += nwrite;
     }
 }
 
@@ -705,7 +707,9 @@ void File::allocatePage()
         fs.flash.writeBytes(fs.pageAddr(writeMetaPage) + start, &newMeta, 2);
         fs.markPage(newMeta, 0x02);
         writeMetaPage = newMeta;
-        next = 3;
+        uint8_t hd[] = { 0x02, 0x00 };
+        fs.flash.writeBytes(fs.pageAddr(writeMetaPage), hd, 2);
+        next = 4;
     }
 
     if (writePage && last)
@@ -732,11 +736,14 @@ void File::del()
 {
     rewind();
     uint16_t cache = 0;
-    uint16_t prev = metaPage;
+    uint16_t prev = 0;
+    bool empty = true;
+
     for (;;)
     {
         if (!seekNextPage(&cache))
             break;
+        empty = false;
         if (readMetaPage != prev)
         {
             fs.markPage(readMetaPage, 0);
@@ -745,7 +752,9 @@ void File::del()
         fs.markPage(readPage, 0);
     }
 
-    fs.markPage(metaPage, 0);
+    if (empty) {
+        fs.markPage(metaPage, 0);
+    }
 
     rewind();
     metaSize = 0;
@@ -794,6 +803,7 @@ void FS::debugDump()
 
 void File::debugDump()
 {
-    LOGV("fileID: 0x%x, rd: 0x%x/%d, wr: 0x%x/%d\n", fileID(), readPage, tell(), writePage, metaSize);
+    LOGV("fileID: 0x%x, rd: 0x%x/%d, wr: 0x%x/%d\n", fileID(), readPage, tell(), writePage,
+         metaSize);
 }
 #endif
