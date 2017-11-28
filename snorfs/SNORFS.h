@@ -40,12 +40,7 @@ class FS
     }
     uint32_t indexAddr(uint16_t ptr)
     {
-        return rowAddr(ptr >> 8) + SPIFLASH_PAGE_SIZE + (ptr & 0xff);
-    }
-    uint32_t nextPtrAddr(uint16_t ptr)
-    {
-        return rowAddr(ptr >> 8) + SPIFLASH_BIG_ROW_SIZE - 2 * SPIFLASH_PAGE_SIZE +
-               2 * (ptr & 0xff);
+        return rowAddr(ptr >> 8) + SPIFLASH_BIG_ROW_SIZE - SPIFLASH_PAGE_SIZE + (ptr & 0xff);
     }
     uint32_t pageAddr(uint16_t ptr)
     {
@@ -95,14 +90,21 @@ class File
     FS &fs;
     File *next;
     uint32_t metaSize;
-    uint16_t firstPage; // row idx : page idx
+
+    uint16_t metaPage; // the address of main meta entry
+
     // this is for reading
-    uint16_t readPage; // row idx : page idx
+    uint16_t readMetaPage;
+    uint16_t readPage;
+    uint8_t readOffsetInPage;
+    uint8_t readPageSize;
     uint32_t readOffset;
+
     // this is for writing (append)
+    uint16_t writeMetaPage;
     uint16_t writePage;
-    uint16_t metaPage;
-    uint8_t metaSizeOff;
+    uint8_t writeOffsetInPage;
+    uint8_t writeNumExplicitSizes;
 
     uint32_t metaPageAddr() { return fs.pageAddr(metaPage); }
 
@@ -115,7 +117,6 @@ class File
     void findFreeMetaPage();
     void computeWritePage();
     void saveSizeDiff(int32_t sizeDiff);
-    void truncateCore();
     void appendCore(const void *data, uint32_t len);
     File(FS &f, uint16_t filePage);
     File(FS &f, const char *filename);
@@ -124,7 +125,12 @@ public:
     int read(void *data, uint32_t len);
     void append(const void *data, uint32_t len);
     void seek(uint32_t pos);
-    uint32_t size() { return metaSize; }
+    uint32_t size()
+    {
+        if (metaSize == 0)
+            computeWritePage();
+        return metaSize;
+    }
     uint32_t tell() { return readOffset; }
     uint32_t fileID() { return metaPage; }
     bool isDeleted() { return writePage == 0xffff; }

@@ -26,14 +26,11 @@ Use 64k rows. There's 32 of them.
 ## Row
 
 Row structure:
+* 1 header page
+* 254 payload pages
 * 1 index page
-* 253 payload pages
-* 2 next-pointer pages
 
-Bytes in index correspond to pages in row. Byte 0 corresponds to index itself, and is therefore
-used otherwise - to store the row re-map ID, see below. The last two bytes correspond to 
-next-pointer pages, and are thus also used differently - in the first few physical rows they
-hold filesystem header.
+Bytes in index correspond to pages in row. The first and last byte are not meaningful.
 
 ## Meta-data rows
 
@@ -42,8 +39,6 @@ Index values:
 * 0x01-0xfe - hash of file name
 * 0xff - free metadata entry
 
-Next-pointers are currently not used.
-
 ## Data rows
 
 Index values:
@@ -51,29 +46,33 @@ Index values:
 * 0x01 - occupied
 * 0xff - free data page
 
-Next pointers hold two bytes each for every page in the row. Again, the first two bytes, and the last
-four are meaningless. The two bytes are page index and logical row index.
-
 ## Row re-map
 
-First byte of every physical row states which logical row it contains.
-The special value 0xff is used to indicate that this is a scratch physical row.
+The header of each row holds:
+* magic
+* a counter of how many times the physical row was erased
+* a logical block index; the special value 0xffff is used to indicate that this is 
+  a scratch physical row
+* version number
+* number of used meta rows
 
-### Meta pages
+## Meta pages
 
-These are in the first row, after indexes.
+These are in the first N rows.
 
 Each has:
-* flags (1 byte)
+* flags (1 byte) - 0x00 - deleted, 0x01 - OK, 0xff - free
 * file name (up to 63 bytes; NUL-terminated)
-* file size, encoded seq. (128+ bytes)
-* first page: row idx + page ID (16 bit); repeated 32 times
+* next pointer (2 bytes); 0xffff if none (yet)
+* 3 bytes per data page: page index plus the amount of data (minus one)
 
-#### File size encoding
+## Data pages
 
-* 0x80 - set file size to zero
-* 0x80|L0 - add L0 bytes, 1 <= L0 <= 126
-* 0x00|L0, 0x80|L1 = add signextend((L0<<7)|L1) bytes
-* 0x00|L0, 0x00|L1, 0x80|L2 = add signextend((L0<<14)|(L1<<7)|L1) bytes
+* data bytes (1+)
+* 0xff byte (1+)
+* length marks (0+)
 
-
+To get length:
+* scan backwards; find last length mark M (0 if none)
+* skip all 0xff, ending up at position N
+* length is max of M, N+1
