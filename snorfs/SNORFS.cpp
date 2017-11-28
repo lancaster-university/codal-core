@@ -1,3 +1,6 @@
+#ifdef SNORFS_TEST
+#include "SNORFS-test.h"
+#endif
 #include "SNORFS.h"
 
 using namespace codal::snorfs;
@@ -628,12 +631,15 @@ void File::computeWritePage()
     writeMetaPage = readMetaPage;
     writeOffsetInPage = readOffsetInPage;
     writeNumExplicitSizes = 0;
-    fs.flash.readBytes(fs.pageAddr(writePage), fs.buf, SPIFLASH_PAGE_SIZE);
-    for (int i = SPIFLASH_PAGE_SIZE - 1; i >= 0; --i)
+    if (writePage)
     {
-        if (fs.buf[i] == 0xff)
-            break;
-        writeNumExplicitSizes++;
+        fs.flash.readBytes(fs.pageAddr(writePage), fs.buf, SPIFLASH_PAGE_SIZE);
+        for (int i = SPIFLASH_PAGE_SIZE - 1; i >= 0; --i)
+        {
+            if (fs.buf[i] == 0xff)
+                break;
+            writeNumExplicitSizes++;
+        }
     }
     metaSize = readOffset;
     seek(prevOff);
@@ -649,11 +655,12 @@ void File::append(const void *data, uint32_t len)
     while (len > 0)
     {
         int nwrite = min((int)len, SPIFLASH_PAGE_SIZE - (writeNumExplicitSizes + 2));
-        if (nwrite == 0)
+        if (nwrite == 0 || writePage == 0)
         {
             allocatePage();
             continue;
         }
+        auto prevOff = writeOffsetInPage;
         writeOffsetInPage += nwrite;
         if (((uint8_t *)data)[nwrite - 1] == 0xff)
         {
@@ -662,7 +669,7 @@ void File::append(const void *data, uint32_t len)
                                 &writeOffsetInPage, 1);
         }
         LOGV("write: left=%d page=0x%x\n", len, writePage);
-        fs.flash.writeBytes(fs.pageAddr(writePage) + writeOffsetInPage, data, nwrite);
+        fs.flash.writeBytes(fs.pageAddr(writePage) + prevOff, data, nwrite);
         len -= nwrite;
         data = (uint8_t *)data + nwrite;
         metaSize += nwrite;
@@ -686,7 +693,7 @@ void File::allocatePage()
         last = i;
     }
 
-    if (fs.buf[last + 2] != 0xff)
+    if (last && fs.buf[last + 2] != 0xff)
         oops();
 
     auto prevMeta = writeMetaPage;

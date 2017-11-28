@@ -1,7 +1,5 @@
-#define SNORFS_TEST 1
-
 #include "SNORFS-test.h"
-#include "SNORFS.cpp"
+#include "SNORFS.h"
 
 #include <string.h>
 #include <stdio.h>
