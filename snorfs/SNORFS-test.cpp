@@ -64,9 +64,9 @@ public:
             memset(tmp, 0, sizeof(tmp));
 
             int l = f->read(tmp, len);
+            f->debugDump();
             LOGV("read len=%d l=%d at %d / %x %x %x %x\n", (int)len, l, ptr, tmp[0], tmp[1], tmp[2],
                  tmp[3]);
-            f->debugDump();
             assert(l == (int)len);
             for (unsigned i = 0; i < len; ++i)
             {
@@ -196,19 +196,17 @@ void simpleTest(const char *fn, int len, int rep = 1)
     auto fc = lookupFile(fn);
 
     auto f = mk(fn);
-    f->debugDump();
     while (rep--)
     {
         auto data = getRandomData();
         f->append(data, len);
-        f->debugDump();
         if (rep % 32 == 7)
         {
+            LOGV("reopen\n");
             delete f;
             f = mk(fn);
         }
         fc->append(data, len);
-        f->debugDump();
     }
 
     fc->validate(f);

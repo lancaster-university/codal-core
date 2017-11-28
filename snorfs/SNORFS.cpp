@@ -553,10 +553,10 @@ bool File::seekNextPage(uint16_t *cache)
     for (int i = start; i + 2 < SPIFLASH_PAGE_SIZE; i += 3)
     {
         uint16_t page = fs.buf[i] | (fs.buf[i + 1] << 8);
+        if (page == 0xffff)
+            return false;
         if (isNext || readPage == 0)
         {
-            if (readPage == 0 && page == 0xffff)
-                return false;
             newReadPage = page;
             readPageSize = fs.buf[i + 2];
             break;
@@ -572,6 +572,7 @@ bool File::seekNextPage(uint16_t *cache)
         if (nextPtr == 0xffff)
             return false;
         readMetaPage = nextPtr;
+        readPage = 0;
         return seekNextPage(cache);
     }
 
@@ -593,6 +594,8 @@ int File::read(void *data, uint32_t len)
 {
     if (!len)
         return 0;
+    
+    len = min(len, 0x7fffffffU);
 
     uint16_t seekCache = 0;
     int nread = 0;
@@ -654,25 +657,26 @@ void File::append(const void *data, uint32_t len)
 
     while (len > 0)
     {
-        int nwrite = min((int)len, SPIFLASH_PAGE_SIZE - (writeNumExplicitSizes + 2));
-        if (nwrite == 0 || writePage == 0)
+        debugDump();
+        int nwrite =
+            min((int)len, SPIFLASH_PAGE_SIZE - (writeNumExplicitSizes + 2) - writeOffsetInPage);
+        if (nwrite <= 0 || writePage == 0)
         {
             allocatePage();
             continue;
         }
-        auto prevOff = writeOffsetInPage;
-        writeOffsetInPage += nwrite;
         if (((uint8_t *)data)[nwrite - 1] == 0xff)
         {
-            fs.flash.writeBytes(fs.pageAddr(writePage) + SPIFLASH_PAGE_SIZE -
-                                    (writeNumExplicitSizes++ + 1),
-                                &writeOffsetInPage, 1);
+            uint8_t v = writeOffsetInPage + nwrite;
+            fs.flash.writeBytes(
+                fs.pageAddr(writePage) + SPIFLASH_PAGE_SIZE - (writeNumExplicitSizes++ + 1), &v, 1);
         }
-        LOGV("write: left=%d page=0x%x\n", len, writePage);
-        fs.flash.writeBytes(fs.pageAddr(writePage) + prevOff, data, nwrite);
+        LOGV("write: left=%d page=0x%x nwr=%d off=%d\n", len, writePage, nwrite, writeOffsetInPage);
+        fs.flash.writeBytes(fs.pageAddr(writePage) + writeOffsetInPage, data, nwrite);
         len -= nwrite;
         data = (uint8_t *)data + nwrite;
         metaSize += nwrite;
+        writeOffsetInPage += nwrite;
     }
 }
 
@@ -680,6 +684,7 @@ void File::allocatePage()
 {
     fs.feedRandom(fileID());
 
+    fs.flash.readBytes(fs.pageAddr(writeMetaPage), fs.buf, SPIFLASH_PAGE_SIZE);
     int start = metaStart();
     int next = 0;
     int last = 0;
@@ -713,7 +718,8 @@ void File::allocatePage()
         if (len != writeOffsetInPage)
             oops();
 
-        fs.flash.writeBytes(fs.pageAddr(prevMeta) + last + 2, &writeOffsetInPage, 1);
+        uint8_t v = writeOffsetInPage - 1;
+        fs.flash.writeBytes(fs.pageAddr(prevMeta) + last + 2, &v, 1);
     }
 
     // if writePage is set, try to keep the new page on the same row - this helps with delete
@@ -791,6 +797,6 @@ void FS::debugDump()
 
 void File::debugDump()
 {
-    LOGV("fileID: 0x%x, rd: 0x%x/%d, wr: 0x%x/%d\n", fileID(), readPage, tell(), writePage, size());
+    LOGV("fileID: 0x%x, rd: 0x%x/%d, wr: 0x%x/%d\n", fileID(), readPage, tell(), writePage, metaSize);
 }
 #endif

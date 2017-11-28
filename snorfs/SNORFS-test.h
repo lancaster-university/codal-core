@@ -9,7 +9,8 @@
 #include <algorithm>
 using namespace std;
 
-#define LOG printf
-//#define LOG(...) do{}while(0)
-//#define LOGV(...) do{}while(0)
-#define LOGV printf
+#define LOG(...) do{}while(0)
+//#define LOG printf
+
+#define LOGV(...) do{}while(0)
+//#define LOGV printf
