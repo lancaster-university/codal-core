@@ -1,15 +1,5 @@
 #include "SNORFS.h"
 
-/*
-TODO:
-- keep files in list in FS
-- enforce only one handle per file
-- nuke caches in files on GC
-- implement file data GC
-- implement meta-data GC
-- try to keep data pages in one block - better for delete?
-*/
-
 using namespace codal::snorfs;
 
 #ifdef SNORFS_TEST
@@ -49,6 +39,7 @@ FS::FS(SPIFlash &f) : flash(f)
 {
     numRows = 0;
     randomSeed = 1;
+    files = NULL;
 }
 
 void FS::feedRandom(uint32_t v)
@@ -537,6 +528,10 @@ File *FS::open(const char *filename, bool create)
         else
             return NULL;
     }
+    for (auto p = files; p; p = p->next) {
+        if (p->metaPage == page)
+            return NULL; // file already open
+    }
     return new File(*this, page);
 }
 
@@ -598,6 +593,31 @@ File::File(FS &f, uint16_t existing) : fs(f)
     readSize();
     findFirstPage();
     rewind();
+    next = fs.files;
+    fs.files = this;
+}
+
+File::~File()
+{
+    if (this == fs.files)
+    {
+        fs.files = next;
+    }
+    else
+    {
+        auto p = fs.files;
+        while (p)
+        {
+            if (p->next == this)
+            {
+                p->next = this->next;
+                break;
+            }
+            p = p->next;
+        }
+        if (p == NULL)
+            oops();
+    }
 }
 
 void File::seek(uint32_t pos)
@@ -700,7 +720,8 @@ void File::append(const void *data, uint32_t len)
 void File::allocatePage()
 {
     fs.feedRandom(fileID());
-    // if writePage is set, try to keep the new page on the same row - this helps with delete locality
+    // if writePage is set, try to keep the new page on the same row - this helps with delete
+    // locality
     uint16_t pageIdx = fs.findFreePage(true, writePage);
     if (firstPage == 0)
     {

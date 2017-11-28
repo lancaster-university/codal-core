@@ -18,6 +18,8 @@ class FS
     SPIFlash &flash;
     uint8_t buf[SPIFLASH_PAGE_SIZE];
 
+    File *files;
+
     uint8_t *rowRemapCache;
     uint8_t numRows;
     uint8_t numMetaRows;
@@ -91,8 +93,9 @@ class File
     friend class FS;
 
     FS &fs;
+    File *next;
     uint32_t metaSize;
-    uint16_t firstPage; // row idx : page ID
+    uint16_t firstPage; // row idx : page idx
     // this is for reading
     uint16_t readPage; // row idx : page idx
     uint32_t readOffset;
@@ -128,6 +131,7 @@ public:
     void overwrite(const void *data, uint32_t len);
     void del();
     void truncate() { overwrite(NULL, 0); }
+    ~File();
 #ifdef SNORFS_TEST
     void debugDump();
 #endif

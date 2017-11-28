@@ -154,7 +154,9 @@ public:
 
 File *mk(const char *fn)
 {
-    return fs->open(fn);
+    auto r = fs->open(fn);
+    assert(r != NULL);
+    return r;
 }
 
 uint8_t randomData[1024 * 1024 * 16];
@@ -258,6 +260,7 @@ void multiTest(int nfiles, int blockSize, int reps, bool over = false)
             fs[i]->del();
             fcs[i]->del = true;
         }
+        delete fs[i];
     }
 }
 
