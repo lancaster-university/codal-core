@@ -2,12 +2,17 @@
 #include "SNORFS-test.h"
 #endif
 #include "SNORFS.h"
+#include <stddef.h>
 
 using namespace codal::snorfs;
 
 #define SNORFS_LEVELING_THRESHOLD 100
 
-#define SNORFS_MAGIC 0x3576348e // Random
+// The values below were picked at random
+#define SNORFS_MAGIC 0x3576348e
+#define SNORFS_FREE_FLAG 0xd09ff063
+#define SNORFS_COPIED_FLAG 0x4601c6dc
+
 struct BlockHeader
 {
     uint32_t magic;
@@ -15,6 +20,8 @@ struct BlockHeader
     uint8_t numMetaRows;
     uint16_t logicalBlockId;
     uint32_t eraseCount;
+    uint32_t freeFlag;
+    uint32_t copiedFlag;
 };
 
 static uint8_t fnhash(const char *fn)
@@ -81,6 +88,8 @@ void FS::format()
     hd.version = 0;
     hd.numMetaRows = 2;
     hd.eraseCount = 0;
+    hd.freeFlag = 0;
+    hd.copiedFlag = SNORFS_COPIED_FLAG;
 
     for (uint32_t addr = 0; addr < end; addr += SPIFLASH_BIG_ROW_SIZE)
     {
@@ -99,9 +108,15 @@ void FS::format()
     flashMeta:
         // the last empty row?
         if (addr + SPIFLASH_BIG_ROW_SIZE >= end)
+        {
             hd.logicalBlockId = 0xffff;
+            hd.freeFlag = SNORFS_FREE_FLAG;
+            hd.copiedFlag = 0xffffffff;
+        }
         else
+        {
             hd.logicalBlockId = rowIdx;
+        }
         LOGV("format: %d\n", rowIdx);
         flash.writeBytes(addr, &hd, sizeof(hd));
         rowIdx++;
@@ -209,6 +224,15 @@ void FS::swapRow(int row)
             freePages++;
         }
     }
+
+#define setFlag(trg, flag, v)                                                                      \
+    {                                                                                              \
+        uint32_t flag = v;                                                                         \
+        flash.writeBytes(trg + offsetof(BlockHeader, flag), &flag, sizeof(flag));                  \
+    }
+
+    setFlag(trg, freeFlag, 0); // no longer free
+
     flash.writeBytes(trg + idxOff, buf, SPIFLASH_PAGE_SIZE);
     for (int i = 1; i < SPIFLASH_PAGE_SIZE - 1; ++i)
     {
@@ -218,18 +242,25 @@ void FS::swapRow(int row)
         flash.readBytes(src + SPIFLASH_PAGE_SIZE * i, buf, SPIFLASH_PAGE_SIZE);
         flash.writeBytes(trg + SPIFLASH_PAGE_SIZE * i, buf, SPIFLASH_PAGE_SIZE);
     }
+    
+    setFlag(trg, copiedFlag, SNORFS_COPIED_FLAG);
+    setFlag(src, copiedFlag, 0);
 
     flash.readBytes(src, buf, SPIFLASH_PAGE_SIZE);
     auto hd = (BlockHeader *)(void *)buf;
-    flash.writeBytes(trg + 6, &hd->logicalBlockId, 2);
+    flash.writeBytes(trg + offsetof(BlockHeader, logicalBlockId), &hd->logicalBlockId, 2);
     hd->logicalBlockId = 0xffff;
     hd->eraseCount++;
+    hd->freeFlag = 0xffffffff;
+    hd->copiedFlag = 0xffffffff; 
     flash.eraseBigRow(src);
     int last = 0;
     for (int i = 0; i < SPIFLASH_PAGE_SIZE; ++i)
         if (buf[i] != 0xff)
             last = i;
     flash.writeBytes(src, buf, last + 1);
+    // everything done, mark as fully OK free row
+    setFlag(src, freeFlag, SNORFS_FREE_FLAG);
 
     for (int i = 0; i < numRows; ++i)
     {
