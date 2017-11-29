@@ -122,6 +122,18 @@ public:
     {
         this->npages = npages;
         data = new uint8_t[chipSize()];
+        beforeErase = NULL;
+        snapshotBeforeErase = false;
+    }
+
+    bool snapshotBeforeErase;
+    uint8_t *beforeErase;
+
+    void useSnapshot()
+    {
+        delete data;
+        data = beforeErase;
+        beforeErase = NULL;
     }
 
     int numPages() { return npages; }
@@ -146,7 +158,16 @@ public:
         return 0;
     }
     int eraseSmallRow(uint32_t addr) { return erase(addr, SPIFLASH_SMALL_ROW_SIZE); }
-    int eraseBigRow(uint32_t addr) { return erase(addr, SPIFLASH_BIG_ROW_SIZE); }
+    int eraseBigRow(uint32_t addr)
+    {
+        if (snapshotBeforeErase)
+        {
+            snapshotBeforeErase = false;
+            beforeErase = new uint8_t[chipSize()];
+            memcpy(beforeErase, data, chipSize());
+        }
+        return erase(addr, SPIFLASH_BIG_ROW_SIZE);
+    }
     int eraseChip() { return erase(0, chipSize()); }
 };
 
@@ -306,8 +327,9 @@ int main()
     testAll();
 
     auto prevFree = fs->freeSize();
-    multiTest(3, 30000, 1000, true);
-    multiTest(30, 3000, 1000, true);
+    auto iters = 1000; // more for stress testing
+    multiTest(3, 30000, iters, true);
+    multiTest(30, 3000, iters, true);
     auto diff = prevFree - fs->freeSize();
     printf("free: %d kb %d\n", fs->freeSize() / 1024, diff);
     testAll();
@@ -315,8 +337,17 @@ int main()
     fs->dump();
 
     // re-mount
+    flash.snapshotBeforeErase = true;
     fs = new codal::snorfs::FS(flash);
     fs->dump();
+    testAll();
+
+    printf("recovery!\n");
+
+    flash.useSnapshot();
+    fs = new codal::snorfs::FS(flash);
+    fs->dump();
+    multiTest(30, 3000, iters, true);
     testAll();
 
     printf("OK\n");

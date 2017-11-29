@@ -76,6 +76,25 @@ void FS::progress()
     // blink LED or something
 }
 
+static void initBlockHeader(BlockHeader &hd, bool free)
+{
+    hd.magic = SNORFS_MAGIC;
+    hd.version = 0;
+    hd.numMetaRows = 2;
+    hd.eraseCount = 0;
+    if (free)
+    {
+        hd.logicalBlockId = 0xffff;
+        hd.freeFlag = SNORFS_FREE_FLAG;
+        hd.copiedFlag = 0xffffffff;
+    }
+    else
+    {
+        hd.freeFlag = 0;
+        hd.copiedFlag = SNORFS_COPIED_FLAG;
+    }
+}
+
 void FS::format()
 {
     if (files)
@@ -84,12 +103,7 @@ void FS::format()
     uint32_t end = flash.numPages() * SPIFLASH_PAGE_SIZE;
     uint16_t rowIdx = 0;
     BlockHeader hd;
-    hd.magic = SNORFS_MAGIC;
-    hd.version = 0;
-    hd.numMetaRows = 2;
-    hd.eraseCount = 0;
-    hd.freeFlag = 0;
-    hd.copiedFlag = SNORFS_COPIED_FLAG;
+    initBlockHeader(hd, false);
 
     for (uint32_t addr = 0; addr < end; addr += SPIFLASH_BIG_ROW_SIZE)
     {
@@ -109,9 +123,7 @@ void FS::format()
         // the last empty row?
         if (addr + SPIFLASH_BIG_ROW_SIZE >= end)
         {
-            hd.logicalBlockId = 0xffff;
-            hd.freeFlag = SNORFS_FREE_FLAG;
-            hd.copiedFlag = 0xffffffff;
+            initBlockHeader(hd, true);
         }
         else
         {
@@ -242,17 +254,17 @@ void FS::swapRow(int row)
         flash.readBytes(src + SPIFLASH_PAGE_SIZE * i, buf, SPIFLASH_PAGE_SIZE);
         flash.writeBytes(trg + SPIFLASH_PAGE_SIZE * i, buf, SPIFLASH_PAGE_SIZE);
     }
-    
-    setFlag(trg, copiedFlag, SNORFS_COPIED_FLAG);
-    setFlag(src, copiedFlag, 0);
 
     flash.readBytes(src, buf, SPIFLASH_PAGE_SIZE);
     auto hd = (BlockHeader *)(void *)buf;
     flash.writeBytes(trg + offsetof(BlockHeader, logicalBlockId), &hd->logicalBlockId, 2);
+    setFlag(trg, copiedFlag, SNORFS_COPIED_FLAG);
+    setFlag(src, copiedFlag, 0);
+
     hd->logicalBlockId = 0xffff;
     hd->eraseCount++;
     hd->freeFlag = 0xffffffff;
-    hd->copiedFlag = 0xffffffff; 
+    hd->copiedFlag = 0xffffffff;
     flash.eraseBigRow(src);
     int last = 0;
     for (int i = 0; i < SPIFLASH_PAGE_SIZE; ++i)
@@ -276,32 +288,45 @@ bool FS::readHeaders()
 
     BlockHeader hd;
     int freeRow = -1;
+    bool freeDirty = false;
+    bool freeRandom = false;
 
     int minEraseIdx = -1;
     uint32_t minEraseCnt = 0;
     uint32_t freeEraseCnt = 0;
+    uint32_t totalEraseCount = 0;
 
     for (unsigned i = 0; i < numRows + 1; ++i)
     {
         auto addr = i * SPIFLASH_BIG_ROW_SIZE;
         flash.readBytes(addr, &hd, sizeof(hd));
         if (hd.magic != SNORFS_MAGIC || hd.version != 0)
+        {
+            // likely, we got a power failure during row erase - it now contains random data
+            if (freeRow == -1)
+            {
+                freeDirty = true;
+                freeRandom = true;
+                freeRow = i;
+                continue;
+            }
             return false;
+        }
 
         numMetaRows = hd.numMetaRows;
 
-        if (hd.logicalBlockId == 0xffff)
-        {
-            if (freeRow == -1)
-                freeRow = i;
-            else
-                return false;
-            freeEraseCnt = hd.eraseCount;
-        }
+        totalEraseCount += hd.eraseCount;
+
+        if (hd.logicalBlockId == 0xffff || hd.copiedFlag != SNORFS_COPIED_FLAG)
+            goto isFree;
         else
         {
-            if (hd.logicalBlockId >= numRows || rowRemapCache[hd.logicalBlockId] != 0xff)
+            if (hd.logicalBlockId >= numRows)
                 return false;
+            // if this is the first duplicate, it is liekly a duplicate left over from unfinished
+            // swapRow
+            if (rowRemapCache[hd.logicalBlockId] != 0xff)
+                goto isFree;
             rowRemapCache[hd.logicalBlockId] = i;
             if (minEraseIdx < 0 || hd.eraseCount < minEraseCnt)
             {
@@ -309,14 +334,36 @@ bool FS::readHeaders()
                 minEraseIdx = i;
             }
         }
+        continue;
+
+    isFree:
+        if (freeRow == -1)
+        {
+            freeRow = i;
+            if (hd.freeFlag != SNORFS_FREE_FLAG)
+                freeDirty = true;
+        }
+        else
+            return false;
+        freeEraseCnt = hd.eraseCount;
     }
+
+    feedRandom(totalEraseCount);
 
     this->freeRow = freeRow;
 
     if (freeRow == -1 || !numMetaRows || numMetaRows > numRows / 2)
         return false;
 
-    if (minEraseCnt + SNORFS_LEVELING_THRESHOLD < freeEraseCnt)
+    if (freeDirty)
+    {
+        LOG("fixing free row: %d\n", freeRow);
+        initBlockHeader(hd, true);
+        hd.eraseCount = freeRandom ? totalEraseCount / numRows : freeEraseCnt;
+        flash.eraseBigRow(freeRow * SPIFLASH_BIG_ROW_SIZE);
+        flash.writeBytes(freeRow * SPIFLASH_BIG_ROW_SIZE, &hd, sizeof(hd));
+    }
+    else if (minEraseCnt + SNORFS_LEVELING_THRESHOLD < freeEraseCnt)
     {
         swapRow(minEraseIdx);
         LOG(" for level\n");
