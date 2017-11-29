@@ -10,6 +10,12 @@ namespace snorfs
 
 class File;
 
+struct DirEntry {
+    uint32_t size;
+    uint16_t flags;
+    char name[65];
+};
+
 // Supported flash size: 1-16MB
 class FS
 {
@@ -31,6 +37,8 @@ class FS
     uint16_t fullPages;
     uint16_t deletedPages;
     uint16_t freePages;
+
+    uint16_t dirptr;
 
     uint32_t rowAddr(uint8_t rowIdx)
     {
@@ -63,6 +71,9 @@ class FS
     void swapRow(int row);
     void markPage(uint16_t page, uint8_t flag);
     uint8_t dataPageSize();
+    uint16_t read16(int off);
+    int metaStart();
+    uint32_t fileSize(uint16_t metaPage);
 
 public:
     FS(SPIFlash &f);
@@ -78,6 +89,10 @@ public:
     }
     void progress();
     void maybeGC() { gcCore(false, false); }
+    
+    void dirRewind() { dirptr = 0; }
+    DirEntry *dirRead(); // data is only valid until next call to to any of File or FS function
+
 #ifdef SNORFS_TEST
     void debugDump();
     void dump();
@@ -126,7 +141,6 @@ class File
     void computeWritePage();
     void saveSizeDiff(int32_t sizeDiff);
     void appendCore(const void *data, uint32_t len);
-    int metaStart();
     File(FS &f, uint16_t filePage);
     File(FS &f, const char *filename);
 

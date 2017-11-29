@@ -18,6 +18,7 @@ class FileCache
 public:
     char name[64];
     bool del;
+    bool visited;
     vector<uint8_t> data;
 
     void append(const void *buf, uint32_t len)
@@ -189,16 +190,19 @@ const char *getFileName(uint32_t id)
     return namebuf;
 }
 
-FileCache *lookupFile(const char *fn)
+FileCache *lookupFile(const char *fn, bool creat = true)
 {
     for (auto f : files)
     {
         if (strcmp(f->name, fn) == 0)
             return f;
     }
+    if (!creat)
+        return NULL;
     auto r = new FileCache();
     files.push_back(r);
     strcpy(r->name, fn);
+    r->visited = false;
     return r;
 }
 
@@ -349,6 +353,24 @@ int main()
     fs->dump();
     multiTest(30, 3000, iters, true);
     testAll();
+
+    fs->dirRewind();
+    codal::snorfs::DirEntry *ent;
+    while ((ent = fs->dirRead()) != NULL)
+    {
+        auto fc = lookupFile(ent->name, false);
+        if (!fc)
+            oops();
+        if (fc->data.size() != ent->size)
+            oops();
+        fc->visited = true;
+        LOG("%8d %s\n", ent->size, ent->name);
+    }
+    for (auto f : files)
+    {
+        if (!f->visited && !f->del)
+            oops();
+    }
 
     printf("OK\n");
 
