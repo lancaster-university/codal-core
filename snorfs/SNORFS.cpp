@@ -527,11 +527,7 @@ uint16_t FS::findMetaEntry(const char *filename)
                 auto addr = pageAddr(pageIdx);
                 flash.readBytes(addr, tmp, buflen);
                 if (tmp[0] == 1 && memcmp(tmp + 1, filename, buflen - 1) == 0)
-                {
-                    memcpy(buf, tmp, buflen);
-                    flash.readBytes(addr + buflen, buf + buflen, SPIFLASH_PAGE_SIZE - buflen);
                     return pageIdx;
-                }
             }
         }
     }
@@ -687,7 +683,7 @@ DirEntry *FS::dirRead()
                 dirptr++;
                 if (buf[0] == 0x01)
                 {
-                    strcpy(tmp.name, (char*)buf + 1);
+                    strcpy(tmp.name, (char *)buf + 1);
                     memcpy(buf, &tmp, sizeof(tmp));
                     return (DirEntry *)(void *)buf;
                 }
