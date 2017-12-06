@@ -45,7 +45,7 @@ FS::FS(SPIFlash &f) : flash(f)
 
 void FS::feedRandom(uint32_t v)
 {
-    randomSeed ^= v * 0x1000193;
+    randomSeed ^= (v + 1) * 0x1000193;
 }
 
 // we need a deterministic PRNG - this one has period of 2^32

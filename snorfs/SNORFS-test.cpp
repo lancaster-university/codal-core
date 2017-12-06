@@ -203,9 +203,10 @@ uint32_t fileSeqNo;
 
 const char *getFileName(uint32_t id)
 {
-    static char namebuf[40];
+    static char namebuf[60];
     id *= 0x811c9dc5;
-    snprintf(namebuf, sizeof(namebuf), "%x.dat", id);
+    const char *padding = "ABCDEFGHIJKLMNOPQR";
+    snprintf(namebuf, sizeof(namebuf), "%x.%s.dat", id, padding + (id & 0xf));
     return namebuf;
 }
 
