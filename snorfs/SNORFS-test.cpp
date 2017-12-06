@@ -171,7 +171,8 @@ public:
         ticks += len * 3 + 50;
         return 0;
     }
-    int eraseSmallRow(uint32_t addr) {
+    int eraseSmallRow(uint32_t addr)
+    {
         assert(false);
         return erase(addr, SPIFLASH_SMALL_ROW_SIZE);
     }
@@ -303,6 +304,28 @@ void multiTest(int nfiles, int blockSize, int reps, bool over = false)
     }
 }
 
+void testBuf()
+{
+    auto f = mk("buffer.dat");
+    int readP = 0;
+    int writeP = 0;
+    while (writeP < 1024 * 1024)
+    {
+        int len = rand() % 2000 + 100;
+        f->append(randomData + writeP, len);
+        writeP += len;
+        int len2 = rand() % 2000 + 100;
+        char buf[len2];
+        int rdlen = f->read(buf, len2);
+        if (memcmp(randomData + readP, buf, rdlen))
+            assert(false);
+        readP += rdlen;
+        assert(readP == writeP || rdlen == len2);
+    }
+    f->del();
+    delete f;
+}
+
 void testAll()
 {
     for (auto fc : files)
@@ -333,6 +356,7 @@ int main()
     simpleTest(NULL, 1000);
     simpleTest(NULL, 256);
     simpleTest(NULL, 10000);
+    testBuf();
     simpleTest(NULL, 400000);
     simpleTest(NULL, 100, 20);
     simpleTest(NULL, 128, 20);
@@ -390,8 +414,8 @@ int main()
             oops();
     }
 
-    printf("%dk written in %d writes. %d erases; %d s.\n", flash.bytesWritten / 1024, flash.numWrites,
-           flash.numErases, (int)(flash.ticks*7/10000000));
+    printf("%dk written in %d writes. %d erases; %d s.\n", flash.bytesWritten / 1024,
+           flash.numWrites, flash.numErases, (int)(flash.ticks * 7 / 10000000));
     printf("OK\n");
 
     return 0;

@@ -838,6 +838,9 @@ void File::append(const void *data, uint32_t len)
 
         writeOffsetInPage += nwrite;
 
+        if (writePage == readPage)
+            readPageSize = writeOffsetInPage;
+
         // if the last byte was 0xff, we need an end marker
         if (((uint8_t *)data)[nwrite - 1] == 0xff)
         {
