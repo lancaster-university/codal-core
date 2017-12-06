@@ -141,17 +141,13 @@ class File
     void delCore(bool delMeta);
     File(FS &f, uint16_t filePage);
     File(FS &f, const char *filename);
+    File *primary();
 
 public:
     int read(void *data, uint32_t len);
     void append(const void *data, uint32_t len);
     void seek(uint32_t pos);
-    uint32_t size()
-    {
-        if (metaSize == 0)
-            computeWritePage();
-        return metaSize;
-    }
+    uint32_t size();
     uint32_t tell() { return readOffset; }
     uint32_t fileID() { return metaPage; }
     bool isDeleted() { return writePage == 0xffff; }

@@ -307,24 +307,30 @@ void multiTest(int nfiles, int blockSize, int reps, bool over = false)
 
 void testBuf()
 {
-    auto f = mk("buffer.dat");
-    int readP = 0;
+    File *fs[] = {mk("buffer.dat"), mk("buffer.dat"), mk("buffer.dat")};
+    int readP[] = {0, 0, 0};
     int writeP = 0;
     while (writeP < 1024 * 1024)
     {
+        auto f = fs[rand() % 3];
+        assert((int)f->size() == writeP);
         int len = rand() % 2000 + 100;
         f->append(randomData + writeP, len);
         writeP += len;
-        int len2 = rand() % 2000 + 100;
-        char buf[len2];
-        int rdlen = f->read(buf, len2);
-        if (memcmp(randomData + readP, buf, rdlen))
-            assert(false);
-        readP += rdlen;
-        assert(readP == writeP || rdlen == len2);
+
+        for (int i = 0; i < 3; ++i)
+        {
+            int len2 = rand() % 2000 + 100;
+            char buf[len2];
+            f = fs[i];
+            int rdlen = f->read(buf, len2);
+            if (memcmp(randomData + readP[i], buf, rdlen))
+                assert(false);
+            readP[i] += rdlen;
+            assert(readP[i] == writeP || rdlen == len2);
+        }
     }
-    f->del();
-    delete f;
+    fs[0]->del();
 }
 
 void testAll()
@@ -357,8 +363,12 @@ int main()
     simpleTest(NULL, 1000);
     simpleTest(NULL, 256);
     simpleTest(NULL, 10000);
+
+    auto bufFree = fs->freeSize();
     testBuf();
-    simpleTest(NULL, 400000);
+    assert(bufFree == fs->freeSize());
+
+    simpleTest(NULL, 300000);
     simpleTest(NULL, 100, 20);
     simpleTest(NULL, 128, 20);
     simpleTest(NULL, 128, 2000);

@@ -497,11 +497,6 @@ File *FS::open(const char *filename, bool create)
         else
             return NULL;
     }
-    for (auto p = files; p; p = p->next)
-    {
-        if (p->metaPage == page)
-            return NULL; // file already open
-    }
     return new File(*this, page);
 }
 
@@ -756,6 +751,21 @@ bool File::seekNextPage(uint16_t *cache)
     return true;
 }
 
+uint32_t File::size()
+{
+    primary()->computeWritePage();
+    return metaSize;
+}
+
+File *File::primary()
+{
+    for (auto p = fs.files; p; p = p->next)
+        if (p->metaPage == metaPage)
+            return p;
+    oops();
+    return NULL;
+}
+
 int File::read(void *data, uint32_t len)
 {
     if (!len)
@@ -810,7 +820,9 @@ void File::computeWritePage()
             writeNumExplicitSizes++;
         }
     }
-    metaSize = readOffset;
+    for (auto p = fs.files; p; p = p->next)
+        if (p->metaPage == metaPage)
+            p->metaSize = readOffset;
     seek(prevOff);
 }
 
@@ -818,6 +830,13 @@ void File::append(const void *data, uint32_t len)
 {
     if (len == 0)
         return;
+
+    auto prim = primary();
+    if (prim != this)
+    {
+        prim->append(data, len);
+        return;
+    }
 
     computeWritePage();
 
@@ -838,9 +857,6 @@ void File::append(const void *data, uint32_t len)
 
         writeOffsetInPage += nwrite;
 
-        if (writePage == readPage)
-            readPageSize = writeOffsetInPage;
-
         // if the last byte was 0xff, we need an end marker
         if (((uint8_t *)data)[nwrite - 1] == 0xff)
         {
@@ -851,7 +867,14 @@ void File::append(const void *data, uint32_t len)
 
         len -= nwrite;
         data = (uint8_t *)data + nwrite;
-        metaSize += nwrite;
+
+        for (auto p = fs.files; p; p = p->next)
+            if (p->metaPage == metaPage)
+            {
+                if (writePage == p->readPage)
+                    p->readPageSize = writeOffsetInPage;
+                p->metaSize += nwrite;
+            }
     }
 }
 
@@ -937,13 +960,25 @@ void File::delCore(bool delMeta)
     if (!delMeta && readMetaPage != metaPage)
         oops();
 
-    rewind();
-    metaSize = 0;
-    writePage = 0xffff;
+    for (auto p = fs.files; p; p = p->next)
+        if (p->metaPage == metaPage)
+        {
+            p->rewind();
+            p->metaSize = 0;
+            p->writePage = 0xffff;
+        }
 }
 
 void File::overwrite(const void *data, uint32_t len)
 {
+
+    auto prim = primary();
+    if (prim != this)
+    {
+        prim->overwrite(data, len);
+        return;
+    }
+
     fs.flash.readBytes(metaPageAddr(), fs.buf, SPIFLASH_PAGE_SIZE);
     int freePtr = 0;
     for (int i = fs.metaStart(); i + 2 + 6 < SPIFLASH_PAGE_SIZE; i += 3)
