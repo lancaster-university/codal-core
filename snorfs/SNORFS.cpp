@@ -593,12 +593,21 @@ void File::seek(uint32_t pos)
     read(NULL, pos - readOffset);
 }
 
-int FS::metaStart()
+int FS::metaStart(uint16_t *nextPtr, uint16_t *nextPtrPtr)
 {
     int start = 1;
     while (start < 64 && buf[start])
         start++;
-    return ++start;
+    start++;
+    if (nextPtr)
+        *nextPtr = read16(start);
+    if (nextPtrPtr)
+        *nextPtrPtr = start;
+    start += 2;
+    for (int i = start; i + 2 < SPIFLASH_PAGE_SIZE; i += 3)
+        if (buf[i] == 0x00 && buf[i + 1] == 0x00 && buf[i + 2] == 0x00)
+            start = i + 3;
+    return start;
 }
 
 uint32_t FS::fileSize(uint16_t metaPage)
@@ -611,9 +620,8 @@ uint32_t FS::fileSize(uint16_t metaPage)
         flash.readBytes(pageAddr(currPage), buf, SPIFLASH_PAGE_SIZE);
         if (buf[0] == 0x00)
             return 0; // deleted
-        int start = metaStart();
-        uint16_t nextPtr = read16(start);
-        for (int i = start + 2; i + 2 < SPIFLASH_PAGE_SIZE; i += 3)
+        uint16_t nextPtr;
+        for (int i = metaStart(&nextPtr); i + 2 < SPIFLASH_PAGE_SIZE; i += 3)
         {
             uint16_t page = read16(i);
             if (page == 0xffff)
@@ -704,13 +712,11 @@ bool File::seekNextPage(uint16_t *cache)
         *cache = readMetaPage;
     }
 
-    int start = fs.metaStart();
-    uint16_t nextPtr = fs.read16(start);
-    start += 2;
+    uint16_t nextPtr;
     bool isNext = false;
     uint16_t newReadPage = 0;
 
-    for (int i = start; i + 2 < SPIFLASH_PAGE_SIZE; i += 3)
+    for (int i = fs.metaStart(&nextPtr); i + 2 < SPIFLASH_PAGE_SIZE; i += 3)
     {
         uint16_t page = fs.read16(i);
         if (page == 0xffff)
@@ -851,10 +857,10 @@ void File::allocatePage()
     fs.feedRandom(fileID());
 
     fs.flash.readBytes(fs.pageAddr(writeMetaPage), fs.buf, SPIFLASH_PAGE_SIZE);
-    int start = fs.metaStart();
     int next = 0;
     int last = 0;
-    for (int i = start + 2; i + 2 < SPIFLASH_PAGE_SIZE; i += 3)
+    uint16_t nextPP;
+    for (int i = fs.metaStart(NULL, &nextPP); i + 2 < SPIFLASH_PAGE_SIZE; i += 3)
     {
         if (fs.buf[i] == 0xff && fs.buf[i + 1] == 0xff)
         {
@@ -885,7 +891,7 @@ void File::allocatePage()
         fs.markPage(newMeta, 0x02);
         uint8_t hd[] = {0x02, 0x00};
         fs.flash.writeBytes(fs.pageAddr(newMeta), hd, 2);
-        fs.flash.writeBytes(fs.pageAddr(writeMetaPage) + start, &newMeta, 2);
+        fs.flash.writeBytes(fs.pageAddr(writeMetaPage) + nextPP, &newMeta, 2);
         writeMetaPage = newMeta;
         next = 4;
     }
@@ -899,7 +905,7 @@ void File::allocatePage()
     writeNumExplicitSizes = 0;
 }
 
-void File::del()
+void File::delCore(bool delMeta)
 {
     rewind();
     uint16_t cache = 0;
@@ -913,16 +919,20 @@ void File::del()
         empty = false;
         if (readMetaPage != prev)
         {
-            fs.markPage(readMetaPage, 0);
+            if (delMeta)
+                fs.markPage(readMetaPage, 0);
             prev = readMetaPage;
         }
         fs.markPage(readPage, 0);
     }
 
-    if (empty)
+    if (delMeta && empty)
     {
         fs.markPage(metaPage, 0);
     }
+
+    if (!delMeta && readMetaPage != metaPage)
+        oops();
 
     rewind();
     metaSize = 0;
@@ -931,12 +941,32 @@ void File::del()
 
 void File::overwrite(const void *data, uint32_t len)
 {
-    del();
+    fs.flash.readBytes(metaPageAddr(), fs.buf, SPIFLASH_PAGE_SIZE);
+    int freePtr = 0;
+    for (int i = fs.metaStart(); i + 2 + 6 < SPIFLASH_PAGE_SIZE; i += 3)
+    {
+        if (fs.buf[i] == 0xff && fs.buf[i + 1] == 0xff)
+        {
+            freePtr = i;
+            break;
+        }
+    }
+
+    if (freePtr)
+    {
+        uint8_t clearMark[] = {0, 0, 0};
+        delCore(false);
+        fs.flash.writeBytes(metaPageAddr() + freePtr, clearMark, 3);
+    }
+    else
+    {
+        int len = strlen((char *)fs.buf + 1);
+        char tmp[len];
+        strcpy(tmp, (char *)fs.buf + 1);
+        del();
+        metaPage = fs.createMetaPage(tmp);
+    }
     writePage = 0;
-    char tmp[65];
-    fs.flash.readBytes(metaPageAddr() + 1, tmp, sizeof(tmp) - 1);
-    tmp[64] = 0;
-    metaPage = fs.createMetaPage(tmp);
     rewind();
     append(data, len);
 }

@@ -10,7 +10,8 @@ namespace snorfs
 
 class File;
 
-struct DirEntry {
+struct DirEntry
+{
     uint32_t size;
     uint16_t flags;
     char name[65];
@@ -72,7 +73,7 @@ class FS
     void markPage(uint16_t page, uint8_t flag);
     uint8_t dataPageSize();
     uint16_t read16(int off);
-    int metaStart();
+    int metaStart(uint16_t *nextPtr = NULL, uint16_t *nextPtrPtr = NULL);
     uint32_t fileSize(uint16_t metaPage);
 
 public:
@@ -81,15 +82,11 @@ public:
     // returns NULL if file doesn't exists and create==false
     File *open(const char *filename, bool create = true);
     bool exists(const char *filename) { return findMetaEntry(filename) != 0; }
-    uint32_t totalSize() {
-        return (fullPages + deletedPages + freePages) * SPIFLASH_PAGE_SIZE;
-    }
-    uint32_t freeSize() {
-        return (deletedPages + freePages) * SPIFLASH_PAGE_SIZE;
-    }
+    uint32_t totalSize() { return (fullPages + deletedPages + freePages) * SPIFLASH_PAGE_SIZE; }
+    uint32_t freeSize() { return (deletedPages + freePages) * SPIFLASH_PAGE_SIZE; }
     void progress();
     void maybeGC() { gcCore(false, false); }
-    
+
     void dirRewind() { dirptr = 0; }
     DirEntry *dirRead(); // data is only valid until next call to to any of File or FS function
 
@@ -141,6 +138,7 @@ class File
     void computeWritePage();
     void saveSizeDiff(int32_t sizeDiff);
     void appendCore(const void *data, uint32_t len);
+    void delCore(bool delMeta);
     File(FS &f, uint16_t filePage);
     File(FS &f, const char *filename);
 
@@ -158,7 +156,7 @@ public:
     uint32_t fileID() { return metaPage; }
     bool isDeleted() { return writePage == 0xffff; }
     void overwrite(const void *data, uint32_t len);
-    void del();
+    void del() { delCore(true); }
     void truncate() { overwrite(NULL, 0); }
     ~File();
 #ifdef SNORFS_TEST

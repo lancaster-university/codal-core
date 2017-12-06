@@ -125,10 +125,19 @@ public:
         data = new uint8_t[chipSize()];
         beforeErase = NULL;
         snapshotBeforeErase = false;
+
+        bytesWritten = 0;
+        numWrites = 0;
+        numErases = 0;
+        ticks = 0;
     }
 
     bool snapshotBeforeErase;
     uint8_t *beforeErase;
+    int bytesWritten;
+    int numWrites;
+    int numErases;
+    uint64_t ticks;
 
     void useSnapshot()
     {
@@ -143,6 +152,7 @@ public:
         assert(addr + len <= chipSize());
         assert(len <= SPIFLASH_PAGE_SIZE); // needed?
         memcpy(buffer, data + addr, len);
+        ticks += 5 + len;
         return 0;
     }
     int writeBytes(uint32_t addr, const void *buffer, uint32_t len)
@@ -150,23 +160,31 @@ public:
         assert(len <= SPIFLASH_PAGE_SIZE);
         assert(addr / SPIFLASH_PAGE_SIZE == (addr + len - 1) / SPIFLASH_PAGE_SIZE);
         assert(addr + len <= chipSize());
+        bytesWritten += len;
+        numWrites++;
         uint8_t *ptr = (uint8_t *)buffer;
         for (uint32_t i = 0; i < len; ++i)
         {
             assert(data[addr + i] == 0xff || (data[addr + i] && *ptr == 0x00));
             data[addr + i] = *ptr++;
         }
+        ticks += len * 3 + 50;
         return 0;
     }
-    int eraseSmallRow(uint32_t addr) { return erase(addr, SPIFLASH_SMALL_ROW_SIZE); }
+    int eraseSmallRow(uint32_t addr) {
+        assert(false);
+        return erase(addr, SPIFLASH_SMALL_ROW_SIZE);
+    }
     int eraseBigRow(uint32_t addr)
     {
+        numErases++;
         if (snapshotBeforeErase)
         {
             snapshotBeforeErase = false;
             beforeErase = new uint8_t[chipSize()];
             memcpy(beforeErase, data, chipSize());
         }
+        ticks += 400000;
         return erase(addr, SPIFLASH_BIG_ROW_SIZE);
     }
     int eraseChip() { return erase(0, chipSize()); }
@@ -372,6 +390,8 @@ int main()
             oops();
     }
 
+    printf("%dk written in %d writes. %d erases; %d s.\n", flash.bytesWritten / 1024, flash.numWrites,
+           flash.numErases, (int)(flash.ticks*7/10000000));
     printf("OK\n");
 
     return 0;
