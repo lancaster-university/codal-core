@@ -199,7 +199,7 @@ void FS::gcCore(bool force, bool isData)
         oops(); // really out of space!
     }
 
-    LOG("GC: ");
+    LOGV("GC: ");
 
     // we do a GC when either one is true:
     //   * force is true (we desperately need space)
@@ -212,12 +212,12 @@ void FS::gcCore(bool force, bool isData)
             oops();         // but it should never fail
     }
 
-    dump();
+    debugDump();
 }
 
 void FS::swapRow(int row)
 {
-    LOG("[swap row: %d] ", row);
+    LOGV("[swap row: %d] ", row);
     if (freeRow == row || row > numRows)
         oops();
     uint32_t trg = freeRow * SPIFLASH_BIG_ROW_SIZE;
@@ -367,7 +367,7 @@ bool FS::readHeaders()
     else if (minEraseCnt + SNORFS_LEVELING_THRESHOLD < freeEraseCnt)
     {
         swapRow(minEraseIdx);
-        LOG(" for level\n");
+        LOGV(" for level\n");
     }
     else
     {
