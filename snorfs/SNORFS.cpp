@@ -12,6 +12,7 @@ using namespace codal::snorfs;
 #define SNORFS_MAGIC 0x3576348e
 #define SNORFS_FREE_FLAG 0xd09ff063
 #define SNORFS_COPIED_FLAG 0x4601c6dc
+#define SNORFS_COMPUTING_WRITE_PAGE 0x00ff
 
 struct BlockHeader
 {
@@ -41,6 +42,7 @@ FS::FS(SPIFlash &f) : flash(f)
     randomSeed = 1;
     dirptr = 0;
     files = NULL;
+    locked = false;
 }
 
 void FS::feedRandom(uint32_t v)
@@ -489,6 +491,7 @@ void File::rewind()
 
 File *FS::open(const char *filename, bool create)
 {
+    lock();
     auto page = findMetaEntry(filename);
     if (page == 0)
     {
@@ -497,7 +500,38 @@ File *FS::open(const char *filename, bool create)
         else
             return NULL;
     }
-    return new File(*this, page);
+    auto r = new File(*this, page);
+    unlock();
+    return r;
+}
+
+bool FS::exists(const char *filename)
+{
+    lock();
+    auto r = findMetaEntry(filename) != 0;
+    unlock();
+    return r;
+}
+
+void FS::lock()
+{
+    if (locked)
+        oops(); // TODO
+    locked = true;
+}
+
+void FS::unlock()
+{
+    if (!locked)
+        oops();
+    locked = false;
+}
+
+void FS::maybeGC()
+{
+    lock();
+    gcCore(false, false);
+    unlock();
 }
 
 uint16_t FS::findMetaEntry(const char *filename)
@@ -666,10 +700,14 @@ uint16_t FS::read16(int off)
 #define DIRCHUNK 32
 DirEntry *FS::dirRead()
 {
+    lock();
     for (;;)
     {
         if ((dirptr >> 8) >= numMetaRows)
+        {
+            unlock();
             return NULL;
+        }
         int off = dirptr & 0xff;
         int len = min(DIRCHUNK, SPIFLASH_PAGE_SIZE - off);
         flash.readBytes(indexAddr(dirptr), buf, len);
@@ -688,6 +726,7 @@ DirEntry *FS::dirRead()
                 {
                     strcpy(tmp.name, (char *)buf + 1);
                     memcpy(buf, &tmp, sizeof(tmp));
+                    unlock();
                     return (DirEntry *)(void *)buf;
                 }
             }
@@ -771,6 +810,9 @@ int File::read(void *data, uint32_t len)
     if (!len)
         return 0;
 
+    if (writePage != SNORFS_COMPUTING_WRITE_PAGE)
+        fs.lock();
+
     len = min(len, 0x7fffffffU);
 
     uint16_t seekCache = 0;
@@ -795,6 +837,9 @@ int File::read(void *data, uint32_t len)
         readOffsetInPage += n;
     }
 
+    if (writePage != SNORFS_COMPUTING_WRITE_PAGE)
+        fs.unlock();
+
     return nread;
 }
 
@@ -805,8 +850,9 @@ void File::computeWritePage()
     if (writePage)
         return;
     auto prevOff = readOffset;
+    writePage = SNORFS_COMPUTING_WRITE_PAGE;
     seek(0xffffffff);
-    writePage = readPage;
+    auto newWritePage = readPage;
     writeMetaPage = readMetaPage;
     writeOffsetInPage = readOffsetInPage;
     writeNumExplicitSizes = 0;
@@ -824,6 +870,7 @@ void File::computeWritePage()
         if (p->metaPage == metaPage)
             p->metaSize = readOffset;
     seek(prevOff);
+    writePage = newWritePage;
 }
 
 void File::append(const void *data, uint32_t len)
@@ -837,6 +884,8 @@ void File::append(const void *data, uint32_t len)
         prim->append(data, len);
         return;
     }
+
+    fs.lock();
 
     computeWritePage();
 
@@ -876,6 +925,8 @@ void File::append(const void *data, uint32_t len)
                 p->metaSize += nwrite;
             }
     }
+
+    fs.unlock();
 }
 
 void File::allocatePage()
@@ -969,6 +1020,13 @@ void File::delCore(bool delMeta)
         }
 }
 
+void File::del()
+{
+    fs.lock();
+    primary()->delCore(true);
+    fs.unlock();
+}
+
 void File::overwrite(const void *data, uint32_t len)
 {
 
@@ -978,6 +1036,8 @@ void File::overwrite(const void *data, uint32_t len)
         prim->overwrite(data, len);
         return;
     }
+
+    fs.lock();
 
     fs.flash.readBytes(metaPageAddr(), fs.buf, SPIFLASH_PAGE_SIZE);
     int freePtr = 0;
@@ -1001,11 +1061,13 @@ void File::overwrite(const void *data, uint32_t len)
         int len = strlen((char *)fs.buf + 1);
         char tmp[len];
         strcpy(tmp, (char *)fs.buf + 1);
-        del();
+        delCore(true);
         metaPage = fs.createMetaPage(tmp);
     }
     writePage = 0;
     rewind();
+    fs.unlock();
+
     append(data, len);
 }
 

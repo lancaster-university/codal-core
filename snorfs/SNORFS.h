@@ -31,6 +31,7 @@ class FS
     uint8_t numRows;
     uint8_t numMetaRows;
     uint8_t freeRow;
+    bool locked;
 
     uint32_t randomSeed;
 
@@ -75,17 +76,19 @@ class FS
     uint16_t read16(int off);
     int metaStart(uint16_t *nextPtr = NULL, uint16_t *nextPtrPtr = NULL);
     uint32_t fileSize(uint16_t metaPage);
+    void lock();
+    void unlock();
 
 public:
     FS(SPIFlash &f);
     ~FS();
     // returns NULL if file doesn't exists and create==false
     File *open(const char *filename, bool create = true);
-    bool exists(const char *filename) { return findMetaEntry(filename) != 0; }
+    bool exists(const char *filename);
     uint32_t totalSize() { return (fullPages + deletedPages + freePages) * SPIFLASH_PAGE_SIZE; }
     uint32_t freeSize() { return (deletedPages + freePages) * SPIFLASH_PAGE_SIZE; }
     void progress();
-    void maybeGC() { gcCore(false, false); }
+    void maybeGC();
 
     void dirRewind() { dirptr = 0; }
     DirEntry *dirRead(); // data is only valid until next call to to any of File or FS function
@@ -152,7 +155,7 @@ public:
     uint32_t fileID() { return metaPage; }
     bool isDeleted() { return writePage == 0xffff; }
     void overwrite(const void *data, uint32_t len);
-    void del() { delCore(true); }
+    void del();
     void truncate() { overwrite(NULL, 0); }
     ~File();
 #ifdef SNORFS_TEST
