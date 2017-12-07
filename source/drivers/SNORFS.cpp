@@ -26,9 +26,9 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalDmesg.h"
 #include <stddef.h>
 
+#define oops() target_panic(DEVICE_FLASH_ERROR)
 
 #ifndef SNORFS_TEST
-#define oops() target_panic(DEVICE_FLASH_ERROR)
 #define LOG DMESG
 #define LOGV(...)                                                                                  \
     do                                                                                             \

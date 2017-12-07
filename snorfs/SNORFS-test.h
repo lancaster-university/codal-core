@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#define oops() assert(false)
 
 // min/max
 #include <algorithm>
@@ -14,3 +13,5 @@ using namespace std;
 
 #define LOGV(...) do{}while(0)
 //#define LOGV printf
+
+#define target_panic(...) assert(false)
