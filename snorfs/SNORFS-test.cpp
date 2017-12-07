@@ -1,4 +1,3 @@
-#include "SNORFS-test.h"
 #include "SNORFS.h"
 
 #include <string.h>

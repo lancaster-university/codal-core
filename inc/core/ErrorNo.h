@@ -87,5 +87,8 @@ enum PanicCode{
 
     // Non-recoverable error in USB driver
     DEVICE_USB_ERROR = 50,
+
+    // Non-recoverable error in flash handling or file system
+    DEVICE_FLASH_ERROR = 60,
 };
 #endif
