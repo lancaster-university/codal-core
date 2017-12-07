@@ -19,9 +19,9 @@ Sizes (num. pages in row * page size)
 
 All number are little endian.
 
-This is specific to the 2M flash part.
-
-Use 64k rows. There's 32 of them.
+It seems all SPI Flash parts have 256 byte pages and 64k erase. They also
+have 4k erase and sometimes 32k erase. We only use the 64k erase, since it's
+the fastest. The basic SPI interface also seems the same.
 
 ## Row
 
@@ -61,9 +61,9 @@ The header of each row holds:
 These are in the first N rows.
 
 Each has:
-* flags (1 byte) - 0x00 - deleted, 0x01 - OK, 0xff - free
+* flags (1 byte) - 0x00 - deleted, 0x01 - OK, 0x02 - continuation meta page, 0xff - free
 * file name (up to 63 bytes; NUL-terminated)
-* next pointer (2 bytes); 0xffff if none (yet)
+* next pointer (2 bytes); 0xffff if none (yet); this leads to page of similar structure with 0x02 as the header and empty filename (i.e., one 0x00 byte)
 * 3 bytes per data page: page index plus the amount of data (minus one)
 
 ## Data pages
