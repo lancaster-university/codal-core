@@ -29,16 +29,6 @@ namespace codal
 {
 
 /**
- * Set SSEL pin for transfer(). It doesn't affect write().
- */
-void SPI::setSSEL(Pin &pin)
-{
-    ssel = &pin;
-    if (ssel)
-        ssel->setDigitalValue(1);
-}
-
-/**
  * Writes a given command to SPI bus, and afterwards reads the response.
  *
  * Note that bytes recieved while sending command are ignored.
@@ -46,26 +36,18 @@ void SPI::setSSEL(Pin &pin)
 int SPI::transfer(const uint8_t *command, uint32_t commandSize, uint8_t *response,
                   uint32_t responseSize)
 {
-    if (ssel)
-        ssel->setDigitalValue(0);
     for (uint32_t i = 0; i < commandSize; ++i)
     {
         if (write(command[i]) < 0)
-            goto fail;
+            return DEVICE_SPI_ERROR;
     }
     for (uint32_t i = 0; i < responseSize; ++i)
     {
         int c = write(0);
         if (c < 0)
-            goto fail;
+            return DEVICE_SPI_ERROR;
         response[i] = c;
     }
-    if (ssel)
-        ssel->setDigitalValue(1);
     return DEVICE_OK;
-fail:
-    if (ssel)
-        ssel->setDigitalValue(1);
-    return DEVICE_SPI_ERROR;
 }
 }

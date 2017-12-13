@@ -36,9 +36,6 @@ namespace codal
  */
 class SPI
 {
-protected:
-    Pin *ssel;
-
 public:
     /** Set the frequency of the SPI interface
      *
@@ -71,11 +68,6 @@ public:
      * @return Response from the SPI slave or DEVICE_SPI_ERROR if the the write request failed.
      */
     virtual int write(int data) = 0;
-
-    /**
-     * Set SSEL pin for transfer(). It doesn't affect write().
-     */
-    virtual void setSSEL(Pin &pin);
 
     /**
      * Writes a given command to SPI bus, and afterwards reads the response.
