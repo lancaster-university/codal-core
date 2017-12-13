@@ -170,10 +170,11 @@ public:
       * @param reg The 8bit register address of the to read.
       * @param data A pointer to a memory location to store the result of the read operation
       * @param length The number of mytes to read
+      * @param repeated Use a repeated START/START/STOP transaction if true, or independent START/STOP/START/STOP transactions if fasle. Default: true
       *
       * @return DEVICE_OK or DEVICE_I2C_ERROR if the the read request failed.
       */
-    int readRegister(uint16_t address, uint8_t reg, uint8_t *data, int length);
+    int readRegister(uint16_t address, uint8_t reg, uint8_t *data, int length, bool repeated = true);
 };
 }
 
