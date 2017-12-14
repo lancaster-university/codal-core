@@ -106,7 +106,7 @@ int FS::firstFree(uint16_t pageIdx)
     return 0;
 }
 
-void FS::busy(bool isBusy)
+void FS::busy(bool)
 {
     // blink LED or something
 }
@@ -432,7 +432,7 @@ void FS::mount()
         if (!readHeaders())
             oops();
     }
-    maybeGC();
+    gcCore(false, false);
 }
 
 uint16_t FS::findFreePage(bool isData, uint16_t hint)
@@ -557,6 +557,7 @@ void FS::lock()
     if (locked)
         oops(); // TODO
     locked = true;
+    mount();
 }
 
 void FS::unlock()
@@ -575,8 +576,6 @@ void FS::maybeGC()
 
 uint16_t FS::findMetaEntry(const char *filename)
 {
-    mount();
-
     uint8_t h = fnhash(filename);
     uint16_t buflen = strlen(filename) + 2;
 
@@ -851,8 +850,9 @@ int File::read(void *data, uint32_t len)
 
     if (writePage != SNORFS_COMPUTING_WRITE_PAGE)
         fs.lock();
-
-    len = min(len, 0x7fffffffU);
+    
+    if (len > 0x7fffffffU)
+        len = 0x7fffffffU;
 
     uint16_t seekCache = 0;
     int nread = 0;

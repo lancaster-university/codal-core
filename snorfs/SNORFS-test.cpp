@@ -357,7 +357,12 @@ int main()
     MemFlash flash(2 * 1024 * 1024 / SPIFLASH_PAGE_SIZE);
     fs = new codal::snorfs::FS(flash);
     fs->dump();
-    simpleTest("hello.txt", 100);
+    for (int i = 0; i < 5; ++i) {
+        simpleTest("data.txt", 2);
+        fs = new codal::snorfs::FS(flash);
+        testAll();
+    }
+    
     fs->debugDump();
     simpleTest(NULL, 1000);
     simpleTest(NULL, 256);
