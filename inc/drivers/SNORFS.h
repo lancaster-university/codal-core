@@ -111,7 +111,7 @@ public:
     bool exists(const char *filename);
     uint32_t totalSize() { return (fullPages + deletedPages + freePages) * SPIFLASH_PAGE_SIZE; }
     uint32_t freeSize() { return (deletedPages + freePages) * SPIFLASH_PAGE_SIZE; }
-    void progress();
+    void busy(bool isBusy = true);
     void maybeGC();
 
     void dirRewind() { dirptr = 0; }

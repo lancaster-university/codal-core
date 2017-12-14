@@ -106,7 +106,7 @@ int FS::firstFree(uint16_t pageIdx)
     return 0;
 }
 
-void FS::progress()
+void FS::busy(bool isBusy)
 {
     // blink LED or something
 }
@@ -142,7 +142,7 @@ void FS::format()
 
     for (uint32_t addr = 0; addr < end; addr += SPIFLASH_BIG_ROW_SIZE)
     {
-        progress();
+        busy();
         for (uint32_t off = 0; off < SPIFLASH_BIG_ROW_SIZE; off += SPIFLASH_PAGE_SIZE)
         {
             flash.readBytes(addr + off, buf, SPIFLASH_PAGE_SIZE);
@@ -152,7 +152,7 @@ void FS::format()
         }
         goto flashMeta;
     clearRow:
-        progress();
+        busy();
         flash.eraseBigRow(addr);
     flashMeta:
         // the last empty row?
@@ -168,7 +168,7 @@ void FS::format()
         flash.writeBytes(addr, &hd, sizeof(hd));
         rowIdx++;
     }
-    progress();
+    busy(false);
 }
 
 void FS::gcCore(bool force, bool isData)
@@ -251,6 +251,7 @@ void FS::gcCore(bool force, bool isData)
 
 void FS::swapRow(int row)
 {
+    busy();
     LOGV("[swap row: %d] ", row);
     if (freeRow == row || row > numRows)
         oops();
@@ -288,6 +289,7 @@ void FS::swapRow(int row)
 
         flash.readBytes(src + SPIFLASH_PAGE_SIZE * i, buf, SPIFLASH_PAGE_SIZE);
         flash.writeBytes(trg + SPIFLASH_PAGE_SIZE * i, buf, SPIFLASH_PAGE_SIZE);
+        busy();
     }
 
     flash.readBytes(src, buf, SPIFLASH_PAGE_SIZE);
@@ -301,6 +303,7 @@ void FS::swapRow(int row)
     hd->freeFlag = 0xffffffff;
     hd->copiedFlag = 0xffffffff;
     flash.eraseBigRow(src);
+    busy();
     int last = 0;
     for (int i = 0; i < SPIFLASH_PAGE_SIZE; ++i)
         if (buf[i] != 0xff)
@@ -315,6 +318,7 @@ void FS::swapRow(int row)
             rowRemapCache[i] = freeRow;
     }
     freeRow = row; // new free row
+    busy(false);
 }
 
 bool FS::readHeaders()
@@ -393,10 +397,13 @@ bool FS::readHeaders()
     if (freeDirty)
     {
         LOG("fixing free row: %d\n", freeRow);
+        busy();
         initBlockHeader(hd, true);
         hd.eraseCount = freeRandom ? totalEraseCount / numRows : freeEraseCnt;
         flash.eraseBigRow(freeRow * SPIFLASH_BIG_ROW_SIZE);
+        busy();
         flash.writeBytes(freeRow * SPIFLASH_BIG_ROW_SIZE, &hd, sizeof(hd));
+        busy(false);
     }
     else if (minEraseCnt + SNORFS_LEVELING_THRESHOLD < freeEraseCnt)
     {
