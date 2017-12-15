@@ -65,7 +65,10 @@ enum ErrorCode{
     DEVICE_NO_DATA = -1012,
 
     // function is not implemented.
-    DEVICE_NOT_IMPLEMENTED = -1013
+    DEVICE_NOT_IMPLEMENTED = -1013,
+
+    // SPI Communication error occured
+    DEVICE_SPI_ERROR = -1014,
 };
 
 /**
