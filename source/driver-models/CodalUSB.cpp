@@ -357,9 +357,9 @@ void CodalUSB::setupRequest(USBSetup &setup)
                 {
                     tmp = list_entry(iter, InterfaceList, list);
                     if (tmp->interface->in && tmp->interface->in->ep == (setup.wIndex & 0x7f))
-                        tmp->interface->in->reset();
+                        tmp->interface->in->clearStall();
                     else if (tmp->interface->out && tmp->interface->out->ep == (setup.wIndex & 0x7f))
-                        tmp->interface->out->reset();
+                        tmp->interface->out->clearStall();
                 }    
             }
             sendzlp();
