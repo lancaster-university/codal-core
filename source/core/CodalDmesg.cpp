@@ -36,11 +36,13 @@ static void logwrite(const char *msg);
 
 static void logwriten(const char *msg, int l)
 {
-    const int jump = sizeof(codalLogStore.buffer) / 4;
-    if (codalLogStore.ptr >= sizeof(codalLogStore.buffer) - jump)
+    if (codalLogStore.ptr + l >= sizeof(codalLogStore.buffer))
     {
+        const int jump = sizeof(codalLogStore.buffer) / 4;
         codalLogStore.ptr -= jump;
         memmove(codalLogStore.buffer, codalLogStore.buffer + jump, codalLogStore.ptr);
+        // zero-out the rest so it looks OK in the debugger
+        memset(codalLogStore.buffer + codalLogStore.ptr, 0, sizeof(codalLogStore.buffer) - codalLogStore.ptr);
     }
     if (l + codalLogStore.ptr >= sizeof(codalLogStore.buffer))
     {
