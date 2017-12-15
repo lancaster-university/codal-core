@@ -40,7 +40,7 @@ class USBMSC : public CodalUSBInterface
     bool failed;
     bool inreset;
 
-    bool writePadded(const void *ptr, int dataSize, int allocSize);
+    bool writePadded(const void *ptr, int dataSize, int allocSize = -1);
 
     int handeSCSICommand();
     int sendResponse(bool ok);
@@ -51,7 +51,8 @@ class USBMSC : public CodalUSBInterface
     bool cmdRead_Capacity_10();
     bool cmdSend_Diagnostic();
     void cmdReadWrite_10(bool isRead);
-    bool cmdModeSense_6();
+    bool cmdModeSense(bool is10);
+    bool cmdReadFormatCapacity();
 
 public:
     USBMSC();

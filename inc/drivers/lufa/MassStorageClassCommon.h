@@ -117,6 +117,8 @@
 		#define SCSI_CMD_MODE_SENSE_10                         0x5A
 		//@}
 
+		#define SCSI_CMD_READ_FORMAT_CAPACITY                  0x23
+
 		/** \name SCSI Sense Key Values */
 		//@{
 		/** SCSI Sense Code to indicate no error has occurred. */

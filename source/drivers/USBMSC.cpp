@@ -61,6 +61,8 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalDmesg.h"
 #define LOG DMESG
 
+#define STRICT 0
+
 #include "lufa/MassStorageClassCommon.h"
 
 #define CPU_TO_LE32(x) (x)
@@ -128,7 +130,7 @@ int USBMSC::classRequest(UsbEndpointIn &ctrl, USBSetup &setup)
         inreset = true;
         in->reset();
         out->reset();
-        // ctrl.write(&tmp, 0);
+        ctrl.write(&tmp, 0);
         return DEVICE_OK;
     case MS_REQ_GetMaxLUN:
         LOG("get max lun");
@@ -202,6 +204,8 @@ int USBMSC::sendResponse(bool ok)
     state->CommandStatus.Tag = state->CommandBlock.Tag;
     state->CommandStatus.DataTransferResidue = state->CommandBlock.DataTransferLength;
 
+
+#if STRICT
     if (!ok && (le32_to_cpu(state->CommandStatus.DataTransferResidue)))
     {
         if (state->CommandBlock.Flags & MS_COMMAND_DIR_DATA_IN)
@@ -210,9 +214,9 @@ int USBMSC::sendResponse(bool ok)
             out->stall();
         return 0;
     }
+#endif
 
-    if (!writePadded(&state->CommandStatus, sizeof(state->CommandStatus),
-                     sizeof(state->CommandStatus)))
+    if (!writePadded(&state->CommandStatus, sizeof(state->CommandStatus)))
         return -1;
     return 0;
 }
@@ -221,7 +225,9 @@ int USBMSC::handeSCSICommand()
 {
     bool ok = false;
 
-    LOG("SCSI CMD %x", state->CommandBlock.SCSICommandData[0]);
+    LOG("SCSI CMD %x %x:%x", state->CommandBlock.SCSICommandData[0], 
+        state->CommandBlock.SCSICommandData[1],
+        state->CommandBlock.SCSICommandData[2]);
 
     /* Run the appropriate SCSI command hander function based on the passed command */
     switch (state->CommandBlock.SCSICommandData[0])
@@ -245,7 +251,13 @@ int USBMSC::handeSCSICommand()
         cmdReadWrite_10(true);
         return 0; // ditto
     case SCSI_CMD_MODE_SENSE_6:
-        ok = cmdModeSense_6();
+        ok = cmdModeSense(false);
+        break;
+    case SCSI_CMD_MODE_SENSE_10:
+        ok = cmdModeSense(true);
+        break;
+    case SCSI_CMD_READ_FORMAT_CAPACITY:
+        ok = cmdReadFormatCapacity();
         break;
     case SCSI_CMD_START_STOP_UNIT:
     case SCSI_CMD_TEST_UNIT_READY:
@@ -275,7 +287,7 @@ void USBMSC::readBulk(void *ptr, int dataSize)
     }
     for (int i = 0; i < dataSize;)
     {
-        int len = out->read(ptr + i, dataSize - i);
+        int len = out->read((uint8_t*)ptr + i, dataSize - i);
         if (len < 0)
         {
             fail();
@@ -304,6 +316,8 @@ void USBMSC::writeBulk(const void *ptr, int dataSize)
 
 bool USBMSC::writePadded(const void *ptr, int dataSize, int allocSize)
 {
+    if (allocSize == -1) allocSize = dataSize;
+
     in->flags &= ~USB_EP_FLAG_NO_AUTO_ZLP; // enable AUTO-ZLP
 
     if (dataSize >= allocSize)
@@ -341,6 +355,7 @@ bool USBMSC::cmdInquiry()
     //.ProductID           = "Dataflash Disk",
     memcpy(InquiryData.RevisionID, "1.00", 4);
 
+#if STRICT
     /* Only the standard INQUIRY data is supported, check if any optional INQUIRY bits set */
     if ((state->CommandBlock.SCSICommandData[1] & ((1 << 0) | (1 << 1))) ||
         state->CommandBlock.SCSICommandData[2])
@@ -351,6 +366,7 @@ bool USBMSC::cmdInquiry()
 
         return false;
     }
+#endif
 
     return writePadded(&InquiryData, sizeof(InquiryData), alloc);
 }
@@ -366,7 +382,7 @@ bool USBMSC::cmdRead_Capacity_10()
     uint32_t info[] = {CPU_TO_BE32(getCapacity() - 1), // final address
                        CPU_TO_BE32(512)};
 
-    return writePadded(&info, sizeof(info), 8);
+    return writePadded(&info, sizeof(info));
 }
 
 bool USBMSC::cmdSend_Diagnostic()
@@ -439,11 +455,34 @@ void USBMSC::cmdReadWrite_10(bool isRead)
         writeBlocks(BlockAddress, TotalBlocks);
 }
 
-bool USBMSC::cmdModeSense_6()
+bool USBMSC::cmdModeSense(bool is10)
 {
     uint8_t ro = isReadOnly() ? 0x80 : 0x00;
-    uint8_t resp[] = {0, 0, ro, 0};
-    return writePadded(resp, sizeof(resp), 4);
+    if (is10) {
+        uint8_t resp[] = {0, 0, 0, ro, 0, 0, 0, 0};
+        return writePadded(resp, sizeof(resp));
+    } else {
+        uint8_t resp[] = {0, 0, ro, 0};
+        return writePadded(resp, sizeof(resp));
+    }
+}
+
+bool USBMSC::cmdReadFormatCapacity()
+{
+    uint32_t cap = getCapacity();
+    uint8_t buf[12] = {0,
+                       0,
+                       0,
+                       8, // length
+                       (uint8_t)(cap >> 24),
+                       (uint8_t)(cap >> 16),
+                       (uint8_t)(cap >> 8),
+                       (uint8_t)(cap >> 0),
+                       2, // Descriptor Code: Formatted Media
+                       0,
+                       (512 >> 8),
+                       0};
+    return writePadded(buf, sizeof(buf));
 }
 
 int USBMSC::currLUN()
