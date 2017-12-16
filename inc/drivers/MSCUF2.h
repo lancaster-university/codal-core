@@ -52,11 +52,11 @@ protected:
     UF2FileEntry *files;
 
     virtual void readFileBlock(uint16_t id, int blockAddr, char *dst);
-    virtual void addFiles();
 
 public:
     MSCUF2();
 
+    virtual void addFiles();
     virtual uint32_t getCapacity();
     virtual void readBlocks(int blockAddr, int numBlocks);
     virtual void writeBlocks(int blockAddr, int numBlocks);

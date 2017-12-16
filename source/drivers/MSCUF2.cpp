@@ -9,7 +9,7 @@
 #include "CodalCompat.h"
 #include "CodalDmesg.h"
 
-#define NUM_FAT_BLOCKS 65500
+#define NUM_FAT_BLOCKS 65000
 
 #define UF2_SIZE (flashSize() * 2)
 #define UF2_SECTORS (UF2_SIZE / 512)
@@ -64,7 +64,10 @@ static const char *copyVFatName(const char *ptr, void *dest, int len)
         }
         else
         {
-            *dst++ = *ptr;
+            char c = *ptr;
+            if (c && strchr("/?<>\\:*|^", c))
+                c = '_';
+            *dst++ = c;
             *dst++ = 0;
             if (*ptr)
                 ptr++;
@@ -74,6 +77,39 @@ static const char *copyVFatName(const char *ptr, void *dest, int len)
     }
 
     return ptr;
+}
+
+static int filechar(int c)
+{
+    if (!c)
+        return 0;
+    return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') ||
+           strchr("_-", c);
+}
+
+static void copyFsChars(char *dst, const char *src, int len)
+{
+    for (int i = 0; i < len; ++i)
+    {
+        if (filechar(*src))
+        {
+            char c = *src++;
+            if ('a' <= c && c <= 'z')
+                c -= 32;
+            dst[i] = c;
+        }
+        else
+        {
+            if (*src == '.')
+                src = "";
+            if (*src == 0)
+                dst[i] = ' ';
+            else
+                dst[i] = '_';
+            while (*src && !filechar(*src))
+                src++;
+        }
+    }
 }
 
 void MSCUF2::readDirData(uint8_t *dest, UF2FileEntry *dirdata, int blkno)
@@ -93,20 +129,23 @@ void MSCUF2::readDirData(uint8_t *dest, UF2FileEntry *dirdata, int blkno)
         if (idx >= 16)
             break;
 
-        char fatname[8 + 3 + 1];
+        char fatname[12];
 
-        paddedMemcpy(fatname, e->filename, 8);
-        auto dot = strchr(e->filename, '.');
-        if (dot)
-            paddedMemcpy(fatname + 8, dot + 1, 3);
+        copyFsChars(fatname, e->filename, 8);
+        const char *dot = strchr(e->filename, '.');
+        if (!dot)
+            dot = ".";
+        copyFsChars(fatname + 8, dot + 1, 3);
 
         {
-            char buf[20];
-            itoa(e->id, buf);
+            char buf[10];
+            itoa(e->id, buf + 1);
+            buf[0] = '~';
             int idlen = strlen(buf);
-            fatname[8 - idlen - 1] = '~';
             memcpy(fatname + 8 - idlen, buf, idlen);
         }
+
+        fatname[11] = 0;
 
         LOG("list: %s [%s] sz:%d st:%d", e->filename, fatname, e->size, e->startCluster);
 
@@ -117,10 +156,10 @@ void MSCUF2::readDirData(uint8_t *dest, UF2FileEntry *dirdata, int blkno)
             {
                 if (i == numdirentries - 1)
                 {
-                    memcpy(d->name, fatname, sizeof(d->name));
+                    memcpy(d->name, fatname, 11);
                     d->attrs = e->attrs;
                     d->size = e->size;
-                    d->startCluster = e->startCluster;
+                    d->startCluster = e->startCluster + 2;
                     // timeToFat(e->mtime, &d->updateDate, &d->updateTime);
                     // timeToFat(e->ctime, &d->createDate, &d->createTime);
                 }
@@ -270,7 +309,7 @@ static const char *index_htm = "<HTML>";
 void MSCUF2::addFiles()
 {
     addFile(1, "info_uf2.txt", strlen(uf2_info()));
-    addFile(2, "index.htm", strlen(index_htm));
+    addFile(2, "index.html", strlen(index_htm));
     addFile(3, "current.uf2", UF2_SIZE);
 #if DEVICE_DMESG_BUFFER_SIZE > 0
     addFile(4, "dmesg.txt", DEVICE_DMESG_BUFFER_SIZE);
