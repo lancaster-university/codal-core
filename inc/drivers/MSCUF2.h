@@ -32,23 +32,39 @@ DEALINGS IN THE SOFTWARE.
 namespace codal
 {
 
+struct UF2FileEntry
+{
+    UF2FileEntry *next;
+    uint32_t size;
+    uint16_t id;
+    uint16_t startCluster;
+    uint8_t attrs;
+    uint8_t flags;
+    char filename[0];
+};
+
 class MSCUF2 : public USBMSC
 {
     void buildBlock(uint32_t block_no, uint8_t *data);
+    void readDirData(uint8_t *dest, UF2FileEntry *dirdata, int blkno);
+
+protected:
+    UF2FileEntry *files;
+
+    virtual void readFileBlock(uint16_t id, int blockAddr, char *dst);
+    virtual void addFiles();
 
 public:
     MSCUF2();
 
-    virtual uint32_t flashSize() { return 256 * 1024; }
-    virtual const char *volumeLabel() { return "UF2BOOT"; }
-
-    virtual uint32_t numTextFiles() { return 2; }
-    virtual const char *textFileName(int id);
-    virtual const char *textFileContent(int id); // up to 512 bytes!
-
     virtual uint32_t getCapacity();
     virtual void readBlocks(int blockAddr, int numBlocks);
     virtual void writeBlocks(int blockAddr, int numBlocks);
+
+    virtual uint32_t flashSize() { return 256 * 1024; } // for current.uf2
+    virtual const char *volumeLabel() { return "UF2BOOT"; }
+
+    void addFile(uint16_t id, const char *filename, uint32_t size);
 };
 }
 

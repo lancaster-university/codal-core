@@ -27,14 +27,22 @@ static const FAT_BootBlock BootBlock = {
     {'F', 'A', 'T', '1', '6', ' ', ' ', ' '}, // FilesystemIdentifier
 };
 
-static void paddedMemcpy(char *dst, const char *src, int len)
+void paddedMemcpy(char *dst, const char *src, int len)
 {
     for (int i = 0; i < len; ++i)
     {
-        if (*src)
-            *dst = *src++;
+        char c = *src;
+        if (c)
+        {
+            src++;
+            if ('a' <= c && c <= 'z')
+                c -= 32;
+            *dst = c;
+        }
         else
+        {
             *dst = ' ';
+        }
         dst++;
     }
 }
@@ -55,7 +63,16 @@ void fillFATDirEntry(DirEntry *d, const char *filename, int size, int startClust
 {
     d->size = size;
     d->startCluster = startCluster;
-    paddedMemcpy(d->name, filename, 11);
+    auto dot = strchr(filename, '.');
+    if (dot)
+    {
+        paddedMemcpy(d->name, filename, 8);
+        paddedMemcpy(d->name + 8, dot + 1, 3);
+    }
+    else
+    {
+        paddedMemcpy(d->name, filename, 11);
+    }
 }
 
 void buildEmptyFAT(uint8_t *data, uint32_t blockNo, const char *volumeLabel, uint16_t numFsBlocks)
