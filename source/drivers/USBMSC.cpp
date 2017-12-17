@@ -63,7 +63,7 @@ DEALINGS IN THE SOFTWARE.
 
 #define STRICT 0
 
-#include "lufa/MassStorageClassCommon.h"
+#include "USBMassStorageClass.h"
 
 #define CPU_TO_LE32(x) (x)
 #define le32_to_cpu(x) (x)
