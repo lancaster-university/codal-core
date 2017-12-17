@@ -229,7 +229,9 @@ public:
     int reset();
     int clearStall();
     int read(void *buf, int maxlength); // up to packet size
-    // int readBlocking(const void *buf, int length);
+    // when IRQ disabled, endpointRequest() callback will not be called
+    int disableIRQ();
+    int enableIRQ();
 
     UsbEndpointOut(uint8_t idx, uint8_t type, uint8_t size = USB_MAX_PKT_SIZE);
 };

@@ -63,7 +63,11 @@ DEALINGS IN THE SOFTWARE.
 
 #define STRICT 0
 
+#define DEVICE_MSC_EVT_START_READ 1
+#define DEVICE_MSC_EVT_START_WRITE 2
+
 #include "USBMassStorageClass.h"
+#include "EventModel.h"
 
 #define CPU_TO_LE32(x) (x)
 #define le32_to_cpu(x) (x)
@@ -130,6 +134,7 @@ int USBMSC::classRequest(UsbEndpointIn &ctrl, USBSetup &setup)
         in->reset();
         out->reset();
         ctrl.write(&tmp, 0);
+        out->enableIRQ();
         return DEVICE_OK;
     case MS_REQ_GetMaxLUN:
         LOG("get max lun");
@@ -183,6 +188,7 @@ USBMSC::USBMSC() : CodalUSBInterface()
     state->SenseData.ResponseCode = 0x70;
     state->SenseData.AdditionalLength = 0x0A;
     failed = false;
+    listen = false;
 }
 
 int USBMSC::sendResponse(bool ok)
@@ -201,7 +207,6 @@ int USBMSC::sendResponse(bool ok)
     state->CommandStatus.Signature = CPU_TO_LE32(MS_CSW_SIGNATURE);
     state->CommandStatus.Tag = state->CommandBlock.Tag;
     state->CommandStatus.DataTransferResidue = state->CommandBlock.DataTransferLength;
-
 
 #if STRICT
     if (!ok && (le32_to_cpu(state->CommandStatus.DataTransferResidue)))
@@ -223,9 +228,8 @@ int USBMSC::handeSCSICommand()
 {
     bool ok = false;
 
-    LOG("SCSI CMD %x %x:%x", state->CommandBlock.SCSICommandData[0], 
-        state->CommandBlock.SCSICommandData[1],
-        state->CommandBlock.SCSICommandData[2]);
+    LOG("SCSI CMD %x %x:%x", state->CommandBlock.SCSICommandData[0],
+        state->CommandBlock.SCSICommandData[1], state->CommandBlock.SCSICommandData[2]);
 
     /* Run the appropriate SCSI command hander function based on the passed command */
     switch (state->CommandBlock.SCSICommandData[0])
@@ -285,7 +289,7 @@ void USBMSC::readBulk(void *ptr, int dataSize)
     }
     for (int i = 0; i < dataSize;)
     {
-        int len = out->read((uint8_t*)ptr + i, dataSize - i);
+        int len = out->read((uint8_t *)ptr + i, dataSize - i);
         if (len < 0)
         {
             fail();
@@ -299,6 +303,7 @@ void USBMSC::readBulk(void *ptr, int dataSize)
 void USBMSC::fail()
 {
     failed = true;
+    out->enableIRQ();
 }
 
 void USBMSC::writeBulk(const void *ptr, int dataSize)
@@ -314,7 +319,8 @@ void USBMSC::writeBulk(const void *ptr, int dataSize)
 
 bool USBMSC::writePadded(const void *ptr, int dataSize, int allocSize)
 {
-    if (allocSize == -1) allocSize = dataSize;
+    if (allocSize == -1)
+        allocSize = dataSize;
 
     in->flags &= ~USB_EP_FLAG_NO_AUTO_ZLP; // enable AUTO-ZLP
 
@@ -415,14 +421,12 @@ void USBMSC::finishReadWrite()
 {
     bool ok = !failed;
     failed = false;
+    out->enableIRQ();
     sendResponse(ok);
 }
 
 void USBMSC::cmdReadWrite_10(bool isRead)
 {
-    uint32_t BlockAddress;
-    uint16_t TotalBlocks;
-
     /* Check if the disk is write protected or not */
     if (!isRead && isReadOnly())
     {
@@ -433,11 +437,11 @@ void USBMSC::cmdReadWrite_10(bool isRead)
         return;
     }
 
-    BlockAddress = read32(&state->CommandBlock.SCSICommandData[2]);
-    TotalBlocks = read16(&state->CommandBlock.SCSICommandData[7]);
+    blockAddr = read32(&state->CommandBlock.SCSICommandData[2]);
+    blockCount = read16(&state->CommandBlock.SCSICommandData[7]);
 
     /* Check if the block address is outside the maximum allowable value for the LUN */
-    if (BlockAddress >= getCapacity())
+    if (blockAddr >= getCapacity())
     {
         /* Block address is invalid, update SENSE key and return command fail */
         SCSI_SET_SENSE(SCSI_SENSE_KEY_ILLEGAL_REQUEST,
@@ -447,19 +451,41 @@ void USBMSC::cmdReadWrite_10(bool isRead)
     }
 
     failed = false;
-    if (isRead)
-        readBlocks(BlockAddress, TotalBlocks);
-    else
-        writeBlocks(BlockAddress, TotalBlocks);
+
+    if (!listen)
+    {
+        listen = true;
+        EventModel::defaultEventBus->listen(DEVICE_ID_MSC, DEVICE_MSC_EVT_START_READ, this,
+                                            &USBMSC::readHandler);
+        EventModel::defaultEventBus->listen(DEVICE_ID_MSC, DEVICE_MSC_EVT_START_WRITE, this,
+                                            &USBMSC::writeHandler);
+    }
+
+    out->disableIRQ();
+    // fire up event, to make sure transfers happen outside of IRQ context
+    Event e(DEVICE_ID_MSC, isRead ? DEVICE_MSC_EVT_START_READ : DEVICE_MSC_EVT_START_WRITE);
+}
+
+void USBMSC::readHandler(Event)
+{
+    readBlocks(blockAddr, blockCount);
+}
+
+void USBMSC::writeHandler(Event)
+{
+    writeBlocks(blockAddr, blockCount);
 }
 
 bool USBMSC::cmdModeSense(bool is10)
 {
     uint8_t ro = isReadOnly() ? 0x80 : 0x00;
-    if (is10) {
+    if (is10)
+    {
         uint8_t resp[] = {0, 0, 0, ro, 0, 0, 0, 0};
         return writePadded(resp, sizeof(resp));
-    } else {
+    }
+    else
+    {
         uint8_t resp[] = {0, 0, ro, 0};
         return writePadded(resp, sizeof(resp));
     }

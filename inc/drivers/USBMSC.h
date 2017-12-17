@@ -26,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_USBMSC_H
 
 #include "CodalUSB.h"
+#include "Event.h"
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
@@ -37,9 +38,14 @@ struct MSCState;
 class USBMSC : public CodalUSBInterface
 {
     struct MSCState *state;
+    uint32_t blockAddr;
+    uint16_t blockCount;
     bool failed;
+    bool listen;
 
     bool writePadded(const void *ptr, int dataSize, int allocSize = -1);
+    void writeHandler(Event);
+    void readHandler(Event);
 
     int handeSCSICommand();
     int sendResponse(bool ok);
