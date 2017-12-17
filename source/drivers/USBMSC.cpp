@@ -127,7 +127,6 @@ int USBMSC::classRequest(UsbEndpointIn &ctrl, USBSetup &setup)
     {
     case MS_REQ_MassStorageReset:
         LOG("MSC reset");
-        inreset = true;
         in->reset();
         out->reset();
         ctrl.write(&tmp, 0);
@@ -184,7 +183,6 @@ USBMSC::USBMSC() : CodalUSBInterface()
     state->SenseData.ResponseCode = 0x70;
     state->SenseData.AdditionalLength = 0x0A;
     failed = false;
-    inreset = false;
 }
 
 int USBMSC::sendResponse(bool ok)

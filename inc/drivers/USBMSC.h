@@ -38,7 +38,6 @@ class USBMSC : public CodalUSBInterface
 {
     struct MSCState *state;
     bool failed;
-    bool inreset;
 
     bool writePadded(const void *ptr, int dataSize, int allocSize = -1);
 
