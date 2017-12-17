@@ -12,11 +12,6 @@
 
 #define NUM_FAT_BLOCKS 65000
 
-#define UF2_SIZE (flashSize() * 2)
-#define UF2_SECTORS (UF2_SIZE / 512)
-#define UF2_FIRST_SECTOR (numTextFiles() + 2)
-#define UF2_LAST_SECTOR (UF2_FIRST_SECTOR + UF2_SECTORS - 1)
-
 #define SECTORS_PER_FAT FAT_SECTORS_PER_FAT(NUM_FAT_BLOCKS)
 #define START_FAT0 FAT_START_FAT0(NUM_FAT_BLOCKS)
 #define START_FAT1 FAT_START_FAT1(NUM_FAT_BLOCKS)
@@ -27,6 +22,29 @@
 
 namespace codal
 {
+
+static const FAT_BootBlock BootBlock = {
+    {0xeb, 0x3c, 0x90},                       // JumpInstruction
+    {'C', 'O', 'D', 'A', 'L', ' ', '0', '0'}, // OEMInfo
+    512,                                      // SectorSize
+    1,                                        // SectorsPerCluster
+    FAT_RESERVED_SECTORS,                     // ReservedSectors
+    2,                                        // FATCopies
+    (FAT_ROOT_DIR_SECTORS * 512 / 32),        // RootDirectoryEntries
+    NUM_FAT_BLOCKS - 2,                       // TotalSectors16
+    0xF8,                                     // MediaDescriptor
+    FAT_SECTORS_PER_FAT(NUM_FAT_BLOCKS),      // SectorsPerFAT
+    1,                                        // SectorsPerTrack
+    1,                                        // Heads
+    0,                                        // HiddenSectors
+    0,                                        // TotalSectors32
+    0,                                        // PhysicalDriveNum
+    0,                                        // Reserved
+    0x29,                                     // ExtendedBootSig
+    0x00420042,                               // VolumeSerialNumber
+    "",                                       // VolumeLabel
+    {'F', 'A', 'T', '1', '6', ' ', ' ', ' '}, // FilesystemIdentifier
+};
 
 uint32_t MSCUF2::getCapacity()
 {
@@ -208,7 +226,11 @@ void MSCUF2::buildBlock(uint32_t block_no, uint8_t *data)
 
     if (block_no == 0)
     {
-        buildFATBootBlock(data, volumeLabel(), NUM_FAT_BLOCKS);
+        memcpy(data, &BootBlock, sizeof(BootBlock));
+        FAT_BootBlock *bb = (FAT_BootBlock *)data;
+        copyFsChars(bb->VolumeLabel, volumeLabel(), 11);
+        data[510] = 0x55;
+        data[511] = 0xaa;
     }
     else if (block_no < START_ROOTDIR)
     {
@@ -382,7 +404,7 @@ void MSCUF2::addFiles()
 {
     addFile(1, "info_uf2.txt", strlen(uf2_info()));
     addFile(2, "index.html", strlen(indexHTML()));
-    addFile(3, "current.uf2", UF2_SIZE);
+    addFile(3, "current.uf2", flashSize() * 2);
 #if DEVICE_DMESG_BUFFER_SIZE > 0
     addFile(4, "dmesg.txt", DEVICE_DMESG_BUFFER_SIZE);
 #endif

@@ -92,11 +92,6 @@ typedef struct {
     uint16_t name2[2];
 } __attribute__((packed)) VFatEntry;
 
-void buildFATBootBlock(uint8_t *data, const char *volumeLabel, uint16_t numFsBlocks);
-void fillFATDirEntry(DirEntry *d, const char *filename, int size, int startCluster);
-void buildEmptyFAT(uint8_t *data, uint32_t blockNo, const char *volumeLabel, uint16_t numFsBlocks);
-void paddedMemcpy(char *dst, const char *src, int len);
-
 }
 
 #endif
