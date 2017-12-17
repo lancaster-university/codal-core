@@ -134,6 +134,7 @@ int USBMSC::classRequest(UsbEndpointIn &ctrl, USBSetup &setup)
         in->reset();
         out->reset();
         ctrl.write(&tmp, 0);
+        disableIRQ = false;
         out->enableIRQ();
         return DEVICE_OK;
     case MS_REQ_GetMaxLUN:
@@ -153,6 +154,9 @@ const InterfaceInfo *USBMSC::getInterfaceInfo()
 
 int USBMSC::endpointRequest()
 {
+    if (disableIRQ)
+        return DEVICE_OK;
+        
     int len = out->read(&state->CommandBlock, sizeof(state->CommandBlock));
 
     if (len == 0)
@@ -189,6 +193,7 @@ USBMSC::USBMSC() : CodalUSBInterface()
     state->SenseData.AdditionalLength = 0x0A;
     failed = false;
     listen = false;
+    disableIRQ = false;
 }
 
 int USBMSC::sendResponse(bool ok)
@@ -303,6 +308,7 @@ void USBMSC::readBulk(void *ptr, int dataSize)
 void USBMSC::fail()
 {
     failed = true;
+    disableIRQ = false;
     out->enableIRQ();
 }
 
@@ -421,6 +427,7 @@ void USBMSC::finishReadWrite()
 {
     bool ok = !failed;
     failed = false;
+    disableIRQ = false;
     out->enableIRQ();
     sendResponse(ok);
 }
@@ -462,6 +469,7 @@ void USBMSC::cmdReadWrite_10(bool isRead)
     }
 
     out->disableIRQ();
+    disableIRQ = true;
     // fire up event, to make sure transfers happen outside of IRQ context
     Event e(DEVICE_ID_MSC, isRead ? DEVICE_MSC_EVT_START_READ : DEVICE_MSC_EVT_START_WRITE);
 }

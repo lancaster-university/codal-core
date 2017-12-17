@@ -42,6 +42,7 @@ class USBMSC : public CodalUSBInterface
     uint16_t blockCount;
     bool failed;
     bool listen;
+    bool disableIRQ;
 
     bool writePadded(const void *ptr, int dataSize, int allocSize = -1);
     void writeHandler(Event);

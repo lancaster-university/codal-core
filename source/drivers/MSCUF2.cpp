@@ -169,8 +169,8 @@ void MSCUF2::readDirData(uint8_t *dest, int blkno, uint8_t dirid)
 
         fatname[11] = 0;
 
-        LOG("list: %s [%s] sz:%d st:%d dir:%d", e->filename, fatname, e->size, e->startCluster,
-            e->dirid);
+       // LOG("list: %s [%s] sz:%d st:%d dir:%d", e->filename, fatname, e->size, e->startCluster,
+       //     e->dirid);
 
         int numdirentries = numDirEntries(e);
         for (int i = 0; i < numdirentries; ++i, ++idx)

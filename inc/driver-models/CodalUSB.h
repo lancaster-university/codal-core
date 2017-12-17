@@ -229,7 +229,7 @@ public:
     int reset();
     int clearStall();
     int read(void *buf, int maxlength); // up to packet size
-    // when IRQ disabled, endpointRequest() callback will not be called
+    // when IRQ disabled, endpointRequest() callback will not be called (generally)
     int disableIRQ();
     int enableIRQ();
 
