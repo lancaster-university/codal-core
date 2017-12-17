@@ -25,6 +25,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalDmesg.h"
 #if DEVICE_DMESG_BUFFER_SIZE > 0
 
+#include "CodalDevice.h"
 #include "CodalCompat.h"
 
 CodalLogStore codalLogStore;
@@ -124,6 +125,7 @@ void codal_vdmesg(const char *format, va_list ap)
 {
     const char *end = format;
 
+    target_disable_irq();
     while (*end)
     {
         if (*end++ == '%')
@@ -160,6 +162,7 @@ void codal_vdmesg(const char *format, va_list ap)
     }
     logwriten(format, end - format);
     logwrite("\r\n");
+    target_enable_irq();
 }
 
 #endif
