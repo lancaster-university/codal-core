@@ -4,6 +4,7 @@
 #include <stdio.h>
 
 #include <vector>
+using namespace std;
 
 #define oops() assert(false)
 

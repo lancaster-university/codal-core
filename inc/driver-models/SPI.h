@@ -31,6 +31,8 @@ DEALINGS IN THE SOFTWARE.
 
 namespace codal
 {
+    // TODO there should be some locking mechanism here
+
 /**
  * Class definition for an SPI interface.
  */

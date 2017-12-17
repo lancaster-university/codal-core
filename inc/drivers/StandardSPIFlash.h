@@ -41,7 +41,7 @@ protected:
     void setCommand(uint8_t command, int addr);
     int sendCommand(uint8_t command, int addr = -1, void *resp = 0, int respSize = 0);
     int eraseCore(uint8_t cmd, uint32_t addr);
-    int waitBusy();
+    int waitBusy(int waitMS);
     void writeEnable();
 
 public:

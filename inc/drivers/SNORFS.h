@@ -113,6 +113,8 @@ public:
     uint32_t freeSize() { return (deletedPages + freePages) * SPIFLASH_PAGE_SIZE; }
     void busy(bool isBusy = true);
     void maybeGC();
+    // this allow raw r/o access; will lock the instance as needed
+    int readFlashBytes(uint32_t addr, void *buffer, uint32_t len);
 
     void dirRewind() { dirptr = 0; }
     DirEntry *dirRead(); // data is only valid until next call to to any of File or FS function

@@ -24,6 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "SNORFS.h"
 #include "CodalDmesg.h"
+#include "NotifyEvents.h"
 #include <stddef.h>
 
 #define oops() target_panic(DEVICE_FLASH_ERROR)
@@ -554,8 +555,8 @@ bool FS::exists(const char *filename)
 
 void FS::lock()
 {
-    if (locked)
-        oops(); // TODO
+    while (locked)
+        fiber_wait_for_event(DEVICE_ID_NOTIFY, SNORFS_UNLOCKED);
     locked = true;
     mount();
 }
@@ -565,6 +566,9 @@ void FS::unlock()
     if (!locked)
         oops();
     locked = false;
+#ifndef SNORFS_TEST
+    Event(DEVICE_ID_NOTIFY, SNORFS_UNLOCKED);
+#endif
 }
 
 void FS::maybeGC()
@@ -850,7 +854,7 @@ int File::read(void *data, uint32_t len)
 
     if (writePage != SNORFS_COMPUTING_WRITE_PAGE)
         fs.lock();
-    
+
     if (len > 0x7fffffffU)
         len = 0x7fffffffU;
 
@@ -1107,6 +1111,14 @@ void File::overwrite(const void *data, uint32_t len)
     fs.unlock();
 
     append(data, len);
+}
+
+int FS::readFlashBytes(uint32_t addr, void *buffer, uint32_t len)
+{
+    lock();
+    int r = flash.readBytes(addr, buffer, len);
+    unlock();
+    return r;
 }
 
 #ifdef SNORFS_TEST

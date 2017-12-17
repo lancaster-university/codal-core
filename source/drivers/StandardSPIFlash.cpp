@@ -61,7 +61,7 @@ void StandardSPIFlash::writeEnable()
     sendCommand(0x06);
 }
 
-int StandardSPIFlash::waitBusy()
+int StandardSPIFlash::waitBusy(int waitMS)
 {
     uint8_t status;
 
@@ -70,6 +70,8 @@ int StandardSPIFlash::waitBusy()
         int r = sendCommand(0x05, -1, &status, 1);
         if (r < 0)
             return r;
+        if (waitMS)
+            fiber_sleep(waitMS);
     } while (status & 0x01);
 
     return DEVICE_OK;
@@ -106,7 +108,8 @@ int StandardSPIFlash::writeBytes(uint32_t addr, const void *buffer, uint32_t len
             goto fail;
     ssel.setDigitalValue(1);
 
-    return waitBusy();
+    // the typical write time is under 1ms, so we don't bother with fiber_sleep()
+    return waitBusy(0);
 
 fail:
     ssel.setDigitalValue(1);
@@ -119,7 +122,7 @@ int StandardSPIFlash::eraseCore(uint8_t cmd, uint32_t addr)
     int r = sendCommand(cmd, addr);
     if (r < 0)
         return r;
-    return waitBusy();
+    return waitBusy(10);
 }
 
 int StandardSPIFlash::eraseSmallRow(uint32_t addr)
