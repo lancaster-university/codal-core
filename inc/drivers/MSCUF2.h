@@ -68,8 +68,8 @@ public:
     // these are typically overridden in a derived class
     virtual void addFiles();
     virtual void readFileBlock(uint16_t id, int blockAddr, char *dst);
-    virtual uint32_t flashSize() { return 256 * 1024; } // for current.uf2
-    virtual const char *volumeLabel() { return "UF2BOOT"; }
+    virtual uint32_t internalFlashSize() { return 256 * 1024; } // for current.uf2
+    virtual const char *volumeLabel() { return "CODAL"; }
     virtual const char *indexHTML() { return "<HTML>"; }
 };
 }

@@ -404,7 +404,7 @@ void MSCUF2::addFiles()
 {
     addFile(1, "info_uf2.txt", strlen(uf2_info()));
     addFile(2, "index.html", strlen(indexHTML()));
-    addFile(3, "current.uf2", flashSize() * 2);
+    addFile(3, "current.uf2", internalFlashSize() * 2);
 #if DEVICE_DMESG_BUFFER_SIZE > 0
     addFile(4, "dmesg.txt", DEVICE_DMESG_BUFFER_SIZE);
 #endif
@@ -424,14 +424,14 @@ void MSCUF2::readFileBlock(uint16_t id, int blockAddr, char *dst)
         break;
     case 3:
         addr = blockAddr * 256;
-        if (addr < flashSize())
+        if (addr < internalFlashSize())
         {
             UF2_Block *bl = (UF2_Block *)dst;
             bl->magicStart0 = UF2_MAGIC_START0;
             bl->magicStart1 = UF2_MAGIC_START1;
             bl->magicEnd = UF2_MAGIC_END;
             bl->blockNo = blockAddr;
-            bl->numBlocks = flashSize() / 256;
+            bl->numBlocks = internalFlashSize() / 256;
             bl->targetAddr = addr;
             bl->payloadSize = 256;
             memcpy(bl->data, (void *)addr, bl->payloadSize);
