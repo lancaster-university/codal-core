@@ -529,6 +529,14 @@ void File::rewind()
     readPageSize = 0;
 }
 
+File *FS::open(uint16_t fileID)
+{
+    lock();
+    auto r = new File(*this, fileID);
+    unlock();
+    return r;
+}
+
 File *FS::open(const char *filename, bool create)
 {
     lock();
@@ -762,6 +770,7 @@ DirEntry *FS::dirRead()
                 dirptr += i;
                 DirEntry tmp;
                 tmp.flags = 0;
+                tmp.fileID = dirptr;
                 tmp.size = fileSize(dirptr);
                 dirptr++;
                 if (buf[0] == 0x01)

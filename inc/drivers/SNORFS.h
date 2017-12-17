@@ -38,6 +38,7 @@ struct DirEntry
 {
     uint32_t size;
     uint16_t flags;
+    uint16_t fileID;
     char name[65];
 };
 
@@ -108,7 +109,9 @@ public:
     ~FS();
     // returns NULL if file doesn't exists and create==false
     File *open(const char *filename, bool create = true);
+    File *open(uint16_t fileID);
     bool exists(const char *filename);
+    uint32_t rawSize() { return flash.numPages() * SPIFLASH_PAGE_SIZE; }
     uint32_t totalSize() { return (fullPages + deletedPages + freePages) * SPIFLASH_PAGE_SIZE; }
     uint32_t freeSize() { return (deletedPages + freePages) * SPIFLASH_PAGE_SIZE; }
     void busy(bool isBusy = true);
