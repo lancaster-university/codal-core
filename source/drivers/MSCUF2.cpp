@@ -8,6 +8,7 @@
 
 #include "CodalCompat.h"
 #include "CodalDmesg.h"
+#include "CodalDevice.h"
 
 #define NUM_FAT_BLOCKS 65000
 
@@ -34,7 +35,8 @@ uint32_t MSCUF2::getCapacity()
 
 static int numClusters(UF2FileEntry *p)
 {
-    return (int)(p->size + 511) / 512;
+    // at least one cluster!
+    return (int)(p->size + 512) / 512;
 }
 
 static int numDirEntries(UF2FileEntry *p)
@@ -112,20 +114,22 @@ static void copyFsChars(char *dst, const char *src, int len)
     }
 }
 
-void MSCUF2::readDirData(uint8_t *dest, UF2FileEntry *dirdata, int blkno)
+void MSCUF2::readDirData(uint8_t *dest, int blkno, uint8_t dirid)
 {
     DirEntry *d = (DirEntry *)dest;
     int idx = blkno * -16;
 
-    if (idx++ == 0)
+    if (dirid == 0 && idx++ == 0)
     {
-        paddedMemcpy(d->name, volumeLabel(), 11);
+        copyFsChars(d->name, volumeLabel(), 11);
         d->attrs = 0x28;
         d++;
     }
 
-    for (auto e = dirdata; e; e = e->next)
+    for (auto e = files; e; e = e->next)
     {
+        if (e->dirid != dirid)
+            continue;
         if (idx >= 16)
             break;
 
@@ -147,7 +151,8 @@ void MSCUF2::readDirData(uint8_t *dest, UF2FileEntry *dirdata, int blkno)
 
         fatname[11] = 0;
 
-        LOG("list: %s [%s] sz:%d st:%d", e->filename, fatname, e->size, e->startCluster);
+        LOG("list: %s [%s] sz:%d st:%d dir:%d", e->filename, fatname, e->size, e->startCluster,
+            e->dirid);
 
         int numdirentries = numDirEntries(e);
         for (int i = 0; i < numdirentries; ++i, ++idx)
@@ -229,7 +234,7 @@ void MSCUF2::buildBlock(uint32_t block_no, uint8_t *data)
     else if (block_no < START_CLUSTERS)
     {
         sectionIdx -= START_ROOTDIR;
-        readDirData(data, files, sectionIdx);
+        readDirData(data, sectionIdx, 0);
     }
     else
     {
@@ -238,7 +243,11 @@ void MSCUF2::buildBlock(uint32_t block_no, uint8_t *data)
         {
             if (p->startCluster <= sectionIdx && (int)sectionIdx < p->startCluster + numClusters(p))
             {
-                readFileBlock(p->id, sectionIdx - p->startCluster, (char *)data);
+                sectionIdx -= p->startCluster;
+                if (p->attrs & 0x10)
+                    readDirData(data, sectionIdx, p->id);
+                else
+                    readFileBlock(p->id, sectionIdx, (char *)data);
                 break;
             }
         }
@@ -248,6 +257,8 @@ void MSCUF2::buildBlock(uint32_t block_no, uint8_t *data)
 void MSCUF2::readBlocks(int blockAddr, int numBlocks)
 {
     uint8_t buf[512];
+
+    finalizeFiles();
 
     while (numBlocks--)
     {
@@ -285,31 +296,92 @@ MSCUF2::MSCUF2()
     files = NULL;
 }
 
-void MSCUF2::addFile(uint16_t id, const char *filename, uint32_t size)
+bool MSCUF2::filesFinalized()
 {
+    return files && files->startCluster != 0xffff;
+}
+
+void MSCUF2::finalizeFiles()
+{
+    if (files == NULL || filesFinalized())
+        return;
+
+    UF2FileEntry *regFiles = NULL, *dirs = NULL;
+
+    while (files)
+    {
+        auto n = files->next;
+        if (files->attrs & 0x10)
+        {
+            files->next = dirs;
+            dirs = files;
+        }
+        else
+        {
+            files->next = regFiles;
+            regFiles = files;
+        }
+        files = n;
+    }
+
+    files = regFiles;
+
+    int cl = 0;
+    for (auto p = files; p; p = p->next)
+    {
+        p->startCluster = cl;
+        cl += numClusters(p);
+        if (p->dirid)
+        {
+            for (auto d = dirs; d; d = d->next)
+            {
+                if (d->id == p->dirid)
+                {
+                    d->size += sizeof(DirEntry) * numDirEntries(p);
+                    break;
+                }
+            }
+        }
+        if (p->next == NULL)
+        {
+            p->next = dirs;
+            dirs = NULL;
+        }
+    }
+}
+
+UF2FileEntry *MSCUF2::addFileCore(uint16_t id, const char *filename, uint32_t size)
+{
+    if (filesFinalized())
+        target_panic(DEVICE_USB_ERROR);
+
     auto f = (UF2FileEntry *)malloc(sizeof(UF2FileEntry) + strlen(filename) + 1);
     memset(f, 0, sizeof(UF2FileEntry));
     strcpy(f->filename, filename);
     f->size = size;
     f->id = id;
-    if (files == NULL)
-        files = f;
-    else
-    {
-        auto p = files;
-        while (p->next)
-            p = p->next;
-        p->next = f;
-        f->startCluster = p->startCluster + numClusters(p);
-    }
+    f->next = files;
+    f->startCluster = 0xffff;
+    files = f;
+    return f;
 }
 
-static const char *index_htm = "<HTML>";
+void MSCUF2::addFile(uint16_t id, const char *filename, uint32_t size, uint8_t dirid)
+{
+    auto f = addFileCore(id, filename, size);
+    f->dirid = dirid;
+}
+
+void MSCUF2::addDirectory(uint8_t id, const char *dirname)
+{
+    auto f = addFileCore(id, dirname, 0);
+    f->attrs = 0x10;
+}
 
 void MSCUF2::addFiles()
 {
     addFile(1, "info_uf2.txt", strlen(uf2_info()));
-    addFile(2, "index.html", strlen(index_htm));
+    addFile(2, "index.html", strlen(indexHTML()));
     addFile(3, "current.uf2", UF2_SIZE);
 #if DEVICE_DMESG_BUFFER_SIZE > 0
     addFile(4, "dmesg.txt", DEVICE_DMESG_BUFFER_SIZE);
@@ -326,7 +398,7 @@ void MSCUF2::readFileBlock(uint16_t id, int blockAddr, char *dst)
         strcpy(dst, uf2_info());
         break;
     case 2:
-        strcpy(dst, index_htm);
+        strcpy(dst, indexHTML());
         break;
     case 3:
         addr = blockAddr * 256;
