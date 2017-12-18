@@ -296,10 +296,19 @@ void MSCUF2::writeBlocks(int blockAddr, int numBlocks)
 {
     uint8_t buf[512];
 
+    bool handoverSupported = false;
+    const char *p0 = uf2_info(), *p = p0;
+    while (*p && *p != '\n') p++;
+    while (p > p0) {
+        if (*p == ' ') break;
+        if (*p == 'O') handoverSupported = true;
+        p--;
+    }
+
     while (numBlocks--)
     {
         readBulk(buf, sizeof(buf));
-        if (is_uf2_block(buf))
+        if (handoverSupported && is_uf2_block(buf))
         {
             UF2_Block *b = (UF2_Block *)buf;
             if (!(b->flags & UF2_FLAG_NOFLASH))
