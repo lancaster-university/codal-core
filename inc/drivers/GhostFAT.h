@@ -32,13 +32,16 @@ DEALINGS IN THE SOFTWARE.
 namespace codal
 {
 
-typedef void (*GFATReadCallback)(void *userdata, int blockAddr, char *dst);
+struct GFATEntry;
+
+typedef void (*GFATReadCallback)(GFATEntry *ent, unsigned blockAddr, char *dst);
 
 struct GFATEntry
 {
     GFATEntry *next;
     uint32_t size;
-    uint16_t id;
+    GFATReadCallback read;
+    void *userdata;
     uint16_t startCluster;
     uint8_t attrs;
     uint8_t flags;
@@ -55,7 +58,6 @@ class GhostFAT : public USBMSC
 
 protected:
     GFATEntry *files;
-    GFATEntry *addFileCore(uint16_t id, const char *filename, uint32_t size);
     void finalizeFiles();
 
 public:
@@ -65,16 +67,15 @@ public:
     virtual void readBlocks(int blockAddr, int numBlocks);
     virtual void writeBlocks(int blockAddr, int numBlocks);
 
-    void addFile(uint16_t id, const char *filename, uint32_t size, uint8_t dirid = 0);
+    GFATEntry *addFile(GFATReadCallback read, void *userdata, const char *filename, uint32_t size, uint8_t dirid = 0);
+    GFATEntry *addStringFile(const char *data, const char *filename, uint8_t dirid = 0);
     void addDirectory(uint8_t id, const char *dirname);
     bool filesFinalized();
 
     // these are typically overridden in a derived class
     virtual void addFiles();
-    virtual void readFileBlock(uint16_t id, int blockAddr, char *dst);
     virtual uint32_t internalFlashSize() { return 256 * 1024; } // for current.uf2
     virtual const char *volumeLabel() { return "CODAL"; }
-    virtual const char *indexHTML() { return "<HTML>"; }
 };
 }
 

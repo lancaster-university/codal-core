@@ -38,10 +38,14 @@ class GhostSNORFS : public GhostFAT
 protected:
     snorfs::FS &fs;
     snorfs::File *currFile;
+    GFATEntry *currEntry;
+
+    static void readFlash(GFATEntry *ent, unsigned blockAddr, char *dst);
+    static void readFile(GFATEntry *ent, unsigned blockAddr, char *dst);
+
 public:
     GhostSNORFS(snorfs::FS &fs);
     virtual void addFiles();
-    virtual void readFileBlock(uint16_t id, int blockAddr, char *dst);
 };
 
 }
