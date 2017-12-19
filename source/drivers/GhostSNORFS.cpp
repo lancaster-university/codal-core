@@ -1,4 +1,4 @@
-#include "MSCSNORFS.h"
+#include "GhostSNORFS.h"
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
@@ -8,16 +8,18 @@
 
 #define LOG DMESG
 
-namespace codal::snorfs {
+using namespace codal::snorfs;
 
-MSC::MSC(FS &fs) : fs(fs)
+namespace codal {
+
+GhostSNORFS::GhostSNORFS(FS &fs) : fs(fs)
 {
     currFile = NULL;
 }
 
-void MSC::addFiles()
+void GhostSNORFS::addFiles()
 {
-    MSCUF2::addFiles();
+    GhostFAT::addFiles();
 
     addFile(10, "spiflash.bin", fs.rawSize());
     addDirectory(20, "SPIFLASH");
@@ -31,7 +33,7 @@ void MSC::addFiles()
     }
 }
 
-void MSC::readFileBlock(uint16_t id, int blockAddr, char *dst)
+void GhostSNORFS::readFileBlock(uint16_t id, int blockAddr, char *dst)
 {
     if (id & 0xff00)
     {
@@ -60,7 +62,7 @@ void MSC::readFileBlock(uint16_t id, int blockAddr, char *dst)
         fs.readFlashBytes(blockAddr * 512, dst, 512);
         break;
     default:
-        MSCUF2::readFileBlock(id, blockAddr, dst);
+        GhostFAT::readFileBlock(id, blockAddr, dst);
         break;
     }
 }

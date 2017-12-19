@@ -22,31 +22,60 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef DEVICE_MSCSNORFS_H
-#define DEVICE_MSCSNORFS_H
+#ifndef DEVICE_GHOSTFAT_H
+#define DEVICE_GHOSTFAT_H
 
-#include "MSCUF2.h"
-#include "SNORFS.h"
+#include "USBMSC.h"
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
 namespace codal
 {
-namespace snorfs
-{
 
-class MSC : public MSCUF2
+typedef void (*GFATReadCallback)(void *userdata, int blockAddr, char *dst);
+
+struct GFATEntry
 {
+    GFATEntry *next;
+    uint32_t size;
+    uint16_t id;
+    uint16_t startCluster;
+    uint8_t attrs;
+    uint8_t flags;
+    uint8_t dirid;
+    char filename[0];
+};
+
+// VirtualFAT would be more fitting, but it's unfortunately already taken.
+
+class GhostFAT : public USBMSC
+{
+    void buildBlock(uint32_t block_no, uint8_t *data);
+    void readDirData(uint8_t *dest, int blkno, uint8_t dirid);
+
 protected:
-    FS &fs;
-    File *currFile;
-public:
-    MSC(FS &fs);
+    GFATEntry *files;
+    GFATEntry *addFileCore(uint16_t id, const char *filename, uint32_t size);
+    void finalizeFiles();
 
+public:
+    GhostFAT();
+
+    virtual uint32_t getCapacity();
+    virtual void readBlocks(int blockAddr, int numBlocks);
+    virtual void writeBlocks(int blockAddr, int numBlocks);
+
+    void addFile(uint16_t id, const char *filename, uint32_t size, uint8_t dirid = 0);
+    void addDirectory(uint8_t id, const char *dirname);
+    bool filesFinalized();
+
+    // these are typically overridden in a derived class
     virtual void addFiles();
     virtual void readFileBlock(uint16_t id, int blockAddr, char *dst);
+    virtual uint32_t internalFlashSize() { return 256 * 1024; } // for current.uf2
+    virtual const char *volumeLabel() { return "CODAL"; }
+    virtual const char *indexHTML() { return "<HTML>"; }
 };
-}
 }
 
 #endif

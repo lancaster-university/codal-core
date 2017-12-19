@@ -1,4 +1,4 @@
-#include "MSCUF2.h"
+#include "GhostFAT.h"
 #include "FAT.h"
 
 #if CONFIG_ENABLED(DEVICE_USB)
@@ -46,18 +46,18 @@ static const FAT_BootBlock BootBlock = {
     {'F', 'A', 'T', '1', '6', ' ', ' ', ' '}, // FilesystemIdentifier
 };
 
-uint32_t MSCUF2::getCapacity()
+uint32_t GhostFAT::getCapacity()
 {
     return NUM_FAT_BLOCKS;
 }
 
-static int numClusters(UF2FileEntry *p)
+static int numClusters(GFATEntry *p)
 {
     // at least one cluster!
     return (int)(p->size + 512) / 512;
 }
 
-static int numDirEntries(UF2FileEntry *p)
+static int numDirEntries(GFATEntry *p)
 {
     return 1 + (strlen(p->filename) + 1 + 12) / 13;
 }
@@ -132,7 +132,7 @@ static void copyFsChars(char *dst, const char *src, int len)
     }
 }
 
-void MSCUF2::readDirData(uint8_t *dest, int blkno, uint8_t dirid)
+void GhostFAT::readDirData(uint8_t *dest, int blkno, uint8_t dirid)
 {
     DirEntry *d = (DirEntry *)dest;
     int idx = blkno * -16;
@@ -219,7 +219,7 @@ void MSCUF2::readDirData(uint8_t *dest, int blkno, uint8_t dirid)
         cl++;                                                                                      \
     } while (0)
 
-void MSCUF2::buildBlock(uint32_t block_no, uint8_t *data)
+void GhostFAT::buildBlock(uint32_t block_no, uint8_t *data)
 {
     memset(data, 0, 512);
     uint32_t sectionIdx = block_no;
@@ -276,7 +276,7 @@ void MSCUF2::buildBlock(uint32_t block_no, uint8_t *data)
     }
 }
 
-void MSCUF2::readBlocks(int blockAddr, int numBlocks)
+void GhostFAT::readBlocks(int blockAddr, int numBlocks)
 {
     uint8_t buf[512];
 
@@ -292,7 +292,7 @@ void MSCUF2::readBlocks(int blockAddr, int numBlocks)
     finishReadWrite();
 }
 
-void MSCUF2::writeBlocks(int blockAddr, int numBlocks)
+void GhostFAT::writeBlocks(int blockAddr, int numBlocks)
 {
     uint8_t buf[512];
 
@@ -322,22 +322,22 @@ void MSCUF2::writeBlocks(int blockAddr, int numBlocks)
     finishReadWrite();
 }
 
-MSCUF2::MSCUF2()
+GhostFAT::GhostFAT()
 {
     files = NULL;
 }
 
-bool MSCUF2::filesFinalized()
+bool GhostFAT::filesFinalized()
 {
     return files && files->startCluster != 0xffff;
 }
 
-void MSCUF2::finalizeFiles()
+void GhostFAT::finalizeFiles()
 {
     if (files == NULL || filesFinalized())
         return;
 
-    UF2FileEntry *regFiles = NULL, *dirs = NULL;
+    GFATEntry *regFiles = NULL, *dirs = NULL;
 
     while (files)
     {
@@ -381,13 +381,13 @@ void MSCUF2::finalizeFiles()
     }
 }
 
-UF2FileEntry *MSCUF2::addFileCore(uint16_t id, const char *filename, uint32_t size)
+GFATEntry *GhostFAT::addFileCore(uint16_t id, const char *filename, uint32_t size)
 {
     if (filesFinalized())
         target_panic(DEVICE_USB_ERROR);
 
-    auto f = (UF2FileEntry *)malloc(sizeof(UF2FileEntry) + strlen(filename) + 1);
-    memset(f, 0, sizeof(UF2FileEntry));
+    auto f = (GFATEntry *)malloc(sizeof(GFATEntry) + strlen(filename) + 1);
+    memset(f, 0, sizeof(GFATEntry));
     strcpy(f->filename, filename);
     f->size = size;
     f->id = id;
@@ -397,19 +397,19 @@ UF2FileEntry *MSCUF2::addFileCore(uint16_t id, const char *filename, uint32_t si
     return f;
 }
 
-void MSCUF2::addFile(uint16_t id, const char *filename, uint32_t size, uint8_t dirid)
+void GhostFAT::addFile(uint16_t id, const char *filename, uint32_t size, uint8_t dirid)
 {
     auto f = addFileCore(id, filename, size);
     f->dirid = dirid;
 }
 
-void MSCUF2::addDirectory(uint8_t id, const char *dirname)
+void GhostFAT::addDirectory(uint8_t id, const char *dirname)
 {
     auto f = addFileCore(id, dirname, 0);
     f->attrs = 0x10;
 }
 
-void MSCUF2::addFiles()
+void GhostFAT::addFiles()
 {
     addFile(1, "info_uf2.txt", strlen(uf2_info()));
     addFile(2, "index.html", strlen(indexHTML()));
@@ -419,7 +419,7 @@ void MSCUF2::addFiles()
 #endif
 }
 
-void MSCUF2::readFileBlock(uint16_t id, int blockAddr, char *dst)
+void GhostFAT::readFileBlock(uint16_t id, int blockAddr, char *dst)
 {
     uint32_t addr;
 
