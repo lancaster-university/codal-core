@@ -56,7 +56,7 @@ class FS
     uint8_t numRows;
     uint8_t numMetaRows;
     uint8_t freeRow;
-    bool locked;
+    volatile bool locked;
 
     uint32_t randomSeed;
 
@@ -103,6 +103,8 @@ class FS
     uint32_t fileSize(uint16_t metaPage);
     void lock();
     void unlock();
+    bool pageErased(uint32_t addr);
+    bool rowErased(uint32_t addr, bool checkFull);
 
 public:
     FS(SPIFlash &f);
@@ -118,6 +120,7 @@ public:
     void maybeGC();
     // this allow raw r/o access; will lock the instance as needed
     int readFlashBytes(uint32_t addr, void *buffer, uint32_t len);
+    bool tryMount();
 
     void dirRewind() { dirptr = 0; }
     DirEntry *dirRead(); // data is only valid until next call to to any of File or FS function

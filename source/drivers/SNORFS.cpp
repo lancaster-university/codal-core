@@ -46,6 +46,7 @@ using namespace codal::snorfs;
 #define SNORFS_FREE_FLAG 0xd09ff063
 #define SNORFS_COPIED_FLAG 0x4601c6dc
 #define SNORFS_COMPUTING_WRITE_PAGE 0x00ff
+#define SNORFS_TRY_MOUNT 0xfff0
 
 struct BlockHeader
 {
@@ -131,6 +132,28 @@ static void initBlockHeader(BlockHeader &hd, bool free)
     }
 }
 
+bool FS::pageErased(uint32_t addr)
+{
+    flash.readBytes(addr, buf, SPIFLASH_PAGE_SIZE);
+    for (int i = 0; i < SPIFLASH_PAGE_SIZE; ++i)
+        if (buf[i] != 0xff)
+            return false;
+    return true;
+}
+
+bool FS::rowErased(uint32_t addr, bool checkFull)
+{
+    if (!checkFull)
+        return pageErased(addr) && pageErased(addr + 512) && pageErased(addr + 1024);
+
+    for (uint32_t off = 0; off < SPIFLASH_BIG_ROW_SIZE; off += SPIFLASH_PAGE_SIZE)
+    {
+        if (!pageErased(addr + off))
+            return false;
+    }
+    return true;
+}
+
 void FS::format()
 {
     if (files)
@@ -140,22 +163,19 @@ void FS::format()
     uint16_t rowIdx = 0;
     BlockHeader hd;
     initBlockHeader(hd, false);
+    bool didErase = false;
 
     for (uint32_t addr = 0; addr < end; addr += SPIFLASH_BIG_ROW_SIZE)
     {
         busy();
-        for (uint32_t off = 0; off < SPIFLASH_BIG_ROW_SIZE; off += SPIFLASH_PAGE_SIZE)
+        // in case we didn't need to do any erase yet, do a quick "likely" erasure test
+        if (dirptr != SNORFS_TRY_MOUNT && !rowErased(addr, didErase))
         {
-            flash.readBytes(addr + off, buf, SPIFLASH_PAGE_SIZE);
-            for (int i = 0; i < SPIFLASH_PAGE_SIZE; ++i)
-                if (buf[i] != 0xff)
-                    goto clearRow;
+            didErase = true;
+            flash.eraseBigRow(addr);
+            busy();
         }
-        goto flashMeta;
-    clearRow:
-        busy();
-        flash.eraseBigRow(addr);
-    flashMeta:
+
         // the last empty row?
         if (addr + SPIFLASH_BIG_ROW_SIZE >= end)
         {
@@ -419,6 +439,19 @@ bool FS::readHeaders()
     return true;
 }
 
+bool FS::tryMount()
+{
+    if (numRows == 0)
+    {
+        // we abuse dirptr as a flag
+        dirptr = SNORFS_TRY_MOUNT;
+        lock();
+        unlock();
+        dirptr = 0;
+    }
+    return numRows > 0;
+}
+
 void FS::mount()
 {
     if (numRows > 0)
@@ -429,6 +462,21 @@ void FS::mount()
 
     if (!readHeaders())
     {
+        if (dirptr == SNORFS_TRY_MOUNT)
+        {
+            uint32_t end = flash.numPages() * SPIFLASH_PAGE_SIZE;
+            for (uint32_t addr = 0; addr < end; addr += SPIFLASH_BIG_ROW_SIZE)
+            {
+                if (!rowErased(addr, false))
+                {
+                    numRows = 0;
+                    delete rowRemapCache;
+                    rowRemapCache = NULL;
+                    return;
+                }
+            }
+        }
+
         format();
         if (!readHeaders())
             oops();
@@ -1024,8 +1072,8 @@ void File::allocatePage()
         next = 4;
     }
 
-    // if writePage is set, try to keep the new page on the same row - this helps with delete
-    // locality
+    // if writePage is set, try to keep the new page on the same row - this helps with
+    // delete locality
     writePage = fs.findFreePage(true, writePage);
     fs.markPage(writePage, 1);
     fs.flash.writeBytes(fs.pageAddr(writeMetaPage) + next, &writePage, 2);

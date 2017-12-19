@@ -357,7 +357,9 @@ int main()
         randomData[i] = rand();
     MemFlash flash(2 * 1024 * 1024 / SPIFLASH_PAGE_SIZE);
     fs = new codal::snorfs::FS(flash);
-    fs->dump();
+    assert(!fs->tryMount());
+    flash.eraseChip();
+    assert(fs->tryMount());
     for (int i = 0; i < 5; ++i) {
         simpleTest("data.txt", 2);
         fs = new codal::snorfs::FS(flash);
