@@ -290,9 +290,9 @@ int CodalUSB::interfaceRequest(USBSetup &setup, bool isClass)
     int ifaceIdx = -1;
     int epIdx = -1;
 
-    if ((setup.bmRequestType & REQUEST_DESTINATION) == REQUEST_INTERFACE)
+    if ((setup.bmRequestType & USB_REQ_DESTINATION) == USB_REQ_INTERFACE)
         ifaceIdx = setup.wIndex & 0xff;
-    else if ((setup.bmRequestType & REQUEST_DESTINATION) == REQUEST_ENDPOINT)
+    else if ((setup.bmRequestType & USB_REQ_DESTINATION) == USB_REQ_ENDPOINT)
         epIdx = setup.wIndex & 0x7f;
 
     LOG("iface req: ifaceIdx=%d epIdx=%d", ifaceIdx, epIdx);
@@ -332,24 +332,24 @@ void CodalUSB::setupRequest(USBSetup &setup)
 
     ctrlIn->wLength = setup.wLength;
 
-    if ((request_type & REQUEST_TYPE) == REQUEST_STANDARD)
+    if ((request_type & USB_REQ_TYPE) == USB_REQ_STANDARD)
     {
         switch (setup.bRequest)
         {
-        case REQUEST_GET_STATUS:
-            if (request_type == (REQUEST_DEVICETOHOST | REQUEST_STANDARD | REQUEST_DEVICE))
+        case USB_REQ_GET_STATUS:
+            if (request_type == (USB_REQ_DEVICETOHOST | USB_REQ_STANDARD | USB_REQ_DEVICE))
             {
                 wStatus = usb_status;
             }
             send(&wStatus, sizeof(wStatus));
             break;
 
-        case REQUEST_CLEAR_FEATURE:
-            if ((request_type == (REQUEST_HOSTTODEVICE | REQUEST_STANDARD | REQUEST_DEVICE)) &&
-                (wValue == DEVICE_REMOTE_WAKEUP))
-                usb_status &= ~FEATURE_REMOTE_WAKEUP_ENABLED;
+        case USB_REQ_CLEAR_FEATURE:
+            if ((request_type == (USB_REQ_HOSTTODEVICE | USB_REQ_STANDARD | USB_REQ_DEVICE)) &&
+                (wValue == USB_DEVICE_REMOTE_WAKEUP))
+                usb_status &= ~USB_FEATURE_REMOTE_WAKEUP_ENABLED;
 
-            if (request_type == (REQUEST_HOSTTODEVICE | REQUEST_STANDARD | REQUEST_ENDPOINT)) {
+            if (request_type == (USB_REQ_HOSTTODEVICE | USB_REQ_STANDARD | USB_REQ_ENDPOINT)) {
                 InterfaceList *tmp = NULL;
                 struct list_head *iter, *q = NULL;
 
@@ -364,29 +364,29 @@ void CodalUSB::setupRequest(USBSetup &setup)
             }
             sendzlp();
             break;
-        case REQUEST_SET_FEATURE:
-            if ((request_type == (REQUEST_HOSTTODEVICE | REQUEST_STANDARD | REQUEST_DEVICE)) &&
-                (wValue == DEVICE_REMOTE_WAKEUP))
-                usb_status |= FEATURE_REMOTE_WAKEUP_ENABLED;
+        case USB_REQ_SET_FEATURE:
+            if ((request_type == (USB_REQ_HOSTTODEVICE | USB_REQ_STANDARD | USB_REQ_DEVICE)) &&
+                (wValue == USB_DEVICE_REMOTE_WAKEUP))
+                usb_status |= USB_FEATURE_REMOTE_WAKEUP_ENABLED;
             sendzlp();
             break;
-        case REQUEST_SET_ADDRESS:
+        case USB_REQ_SET_ADDRESS:
             sendzlp();
             usb_set_address(wValue);
             break;
-        case REQUEST_GET_DESCRIPTOR:
+        case USB_REQ_GET_DESCRIPTOR:
             status = sendDescriptors(setup);
             break;
-        case REQUEST_SET_DESCRIPTOR:
+        case USB_REQ_SET_DESCRIPTOR:
             stall();
             break;
-        case REQUEST_GET_CONFIGURATION:
+        case USB_REQ_GET_CONFIGURATION:
             wStatus = 1;
             send(&wStatus, 1);
             break;
 
-        case REQUEST_SET_CONFIGURATION:
-            if (REQUEST_DEVICE == (request_type & REQUEST_DESTINATION))
+        case USB_REQ_SET_CONFIGURATION:
+            if (USB_REQ_DEVICE == (request_type & USB_REQ_DESTINATION))
             {
                 usb_initialised = setup.wValueL;
                 sendzlp();
