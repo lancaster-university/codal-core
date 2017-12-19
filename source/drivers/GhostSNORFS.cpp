@@ -44,6 +44,9 @@ void GhostSNORFS::readFile(GFATEntry *ent, unsigned blockAddr, char *dst)
 
 void GhostSNORFS::addFiles()
 {
+    // reading SPI directory can take some time, so we delay USB start
+    CodalUSB::usbInstance->delayStart();
+
     GhostFAT::addFiles();
 
     addFile(readFlash, this, "spiflash.bin", fs.rawSize());
@@ -56,6 +59,8 @@ void GhostSNORFS::addFiles()
         addFile(readFile, this, d->name, d->size, 20);
         d = fs.dirRead();
     }
+
+    CodalUSB::usbInstance->start();
 }
 
 }

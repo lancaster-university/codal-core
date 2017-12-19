@@ -84,6 +84,7 @@ CodalUSB::CodalUSB()
     numStringDescriptors = sizeof(default_strings) / sizeof(default_strings[0]);
     stringDescriptors = default_strings;
     deviceDescriptor = &default_device_desc;
+    startDelayCount = 1;
 }
 
 void CodalUSBInterface::fillInterfaceInfo(InterfaceDescriptor *descp)
@@ -455,6 +456,11 @@ void CodalUSB::initEndpoints()
 
 int CodalUSB::start()
 {
+    if (--startDelayCount > 0) {
+        DMESG("USB start delayed");
+        return DEVICE_OK;
+    }
+
     DMESG("USB start");
 
     if (DEVICE_USB_ENDPOINTS == 0)

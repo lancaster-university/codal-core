@@ -254,6 +254,7 @@ public:
 class CodalUSB
 {
     uint8_t endpointsUsed;
+    uint8_t startDelayCount;
 
     int sendConfig();
     int sendDescriptors(USBSetup &setup);
@@ -279,6 +280,8 @@ public:
     CodalUSB *getInstance();
 
     int start();
+    // an interface can call it and, at some later point, call start()
+    void delayStart() { startDelayCount++; }
 
     // Called from USB.cpp
     void setupRequest(USBSetup &setup);
