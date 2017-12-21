@@ -34,6 +34,7 @@ static char hidKeyboardDescriptor[] = {
     0x05, 0x01,                         // Usage Page (Generic Desktop)
     0x09, 0x06,                         // Usage (Keyboard)
     0xA1, 0x01,                         // Collection (Application)
+    0x85, 0x01,                         //   Report ID (1)
     0x05, 0x07,                         //     Usage Page (Key Codes)
     0x19, 0xe0,                         //     Usage Minimum (224)
     0x29, 0xe7,                         //     Usage Maximum (231)
@@ -74,7 +75,35 @@ static char hidKeyboardDescriptor[] = {
     0x95, 0x02,                         //     Report Size (8 bit)
     0xB1, 0x02,                         //     Feature (Data, Variable, Absolute)
 
-    0xC0                                // End Collection (Application)
+    0xC0,                                // End Collection (Application)
+
+    0x05, 0x0c,                         // Usage Page (Consumer Devices)
+    0x09, 0x01,                         // Usage (Consumer Control)
+    0xa1, 0x01,                         // Collection (Application)
+    0x85, 0x02,                         // Report ID (2)
+    0x15, 0x00,                         // Logical Minimum (0)
+    0x25, 0x01,                         // Logical Maximum (1)
+    0x75, 0x01,                         // Report Size (1)
+    0x95, 0x10,                         // Report Count (16)
+    0x09, 0xe2,                         // Usage (Mute) 0x01
+    0x09, 0xe9,                         // Usage (Volume Up) 0x02
+    0x09, 0xea,                         // Usage (Volume Down) 0x03
+    0x09, 0xcd,                         // Usage (Play/Pause) 0x04
+    0x09, 0xb7,                         // Usage (Stop) 0x05
+    0x09, 0xb6,                         // Usage (Scan Previous Track) 0x06
+    0x09, 0xb5,                         // Usage (Scan Next Track) 0x07
+    0x0a, 0x8a, 0x01,                   // Usage (Mail) 0x08
+    0x0a, 0x92, 0x01,                   // Usage (Calculator) 0x09
+    0x0a, 0x21, 0x02,                   // Usage (www search) 0x0a
+    0x0a, 0x23, 0x02,                   // Usage (www home) 0x0b
+    0x0a, 0x2a, 0x02,                   // Usage (www favorites) 0x0c
+    0x0a, 0x27, 0x02,                   // Usage (www refresh) 0x0d
+    0x0a, 0x26, 0x02,                   // Usage (www stop) 0x0e
+    0x0a, 0x25, 0x02,                   // Usage (www forward) 0x0f
+    0x0a, 0x24, 0x02,                   // Usage (www back) 0x10
+    0x81, 0x62,                         // Input (Data,Var,Abs,NPrf,Null)
+    0xc0,                               // End Collection
+
 };
 
 static const HIDReportDescriptor reportDesc = {
