@@ -29,6 +29,12 @@ DEALINGS IN THE SOFTWARE.
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
+#define HID_KEYBOARD_REPORT_GENERIC 0x01
+#define HID_KEYBOARD_REPORT_CONSUMER 0x02
+#define HID_KEYBOARD_KEYSTATE_SIZE_GENERIC 0x08
+#define HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER 0x16
+#define HID_KEYBOARD_MODIFIER_OFFSET 2
+
 namespace codal
 {
     class USBHIDKeyboard : public USBHID
@@ -36,8 +42,16 @@ namespace codal
         public:
         USBHIDKeyboard();
 
-        int keyPress(uint8_t key);
-        int keyUp();
+        int modifierKeyDown(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
+        int modifierKeyUp(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
+        int keyDown(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
+        int keyUp(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
+
+        uint8_t keyStateGeneric[HID_KEYBOARD_KEYSTATE_SIZE_GENERIC];
+        uint8_t keyPressedCountGeneric;
+
+        uint8_t keyStateConsumer[HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER];
+        uint8_t keyPressedCountConsumer;
 
         virtual int stdRequest(UsbEndpointIn &ctrl, USBSetup& setup);
         virtual const InterfaceInfo *getInterfaceInfo();
