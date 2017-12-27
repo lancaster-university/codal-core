@@ -151,29 +151,15 @@ int USBHIDJoystick::buttonUp(uint8_t b)
 	}
 }
 
-int USBHIDJoystick::moveX(int8_t num, int8_t x)
+int USBHIDJoystick::move(int8_t num, int8_t x, int8_t y)
 {
 	switch(num){
 		case 0:
 			joystickState.x0 = x;
-			break;
-		case 1:
-			joystickState.x1 = x;
-			break;
-		default:
-			return DEVICE_INVALID_PARAMETER;
-			break;
-	}
-	return sendReport();
-}
-
-int USBHIDJoystick::moveY(int8_t num, int8_t y)
-{
-	switch(num){
-		case 0:
 			joystickState.y0 = y;
 			break;
 		case 1:
+			joystickState.x1 = x;
 			joystickState.y1 = y;
 			break;
 		default:

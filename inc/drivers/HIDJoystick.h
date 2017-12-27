@@ -56,8 +56,7 @@ public:
         int buttonDown(uint8_t b);
         int buttonUp(uint8_t b);
 
-        int moveX(int8_t num, int8_t x);
-        int moveY(int8_t num, int8_t y);
+        int move(int8_t num, int8_t x, int8_t y);
 
         int setThrottle(uint8_t num, uint8_t val);
 

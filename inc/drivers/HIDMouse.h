@@ -68,8 +68,7 @@ public:
         int buttonDown(USBHIDMouseButton b);
         int buttonUp(USBHIDMouseButton b);
 
-        int moveX(int8_t x);
-        int moveY(int8_t y);
+        int move(int8_t x, int8_t y);
         int moveWheel(int8_t w);
 
 private:

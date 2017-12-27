@@ -138,14 +138,9 @@ int USBHIDMouse::buttonUp(USBHIDMouseButton b)
 	}
 }
 
-int USBHIDMouse::moveX(int8_t x)
+int USBHIDMouse::move(int8_t x, int8_t y)
 {
 	mouseState.xMovement = x;
-	return sendReport();
-}
-
-int USBHIDMouse::moveY(int8_t y)
-{
 	mouseState.yMovement = y;
 	return sendReport();
 }
