@@ -134,7 +134,7 @@ static const InterfaceInfo ifaceInfo = {
     {USB_EP_TYPE_INTERRUPT, 1},
 };
 
-USBHIDKeyboard::USBHIDKeyboard() : USBHID()
+USBHIDKeyboard::USBHIDKeyboard(const keySequence *m, uint16_t mapLen, void (*delayfn)(int)) : USBHID()
 {
     for(int i=0; i<HID_KEYBOARD_KEYSTATE_SIZE_GENERIC; i++)
         keyStateGeneric[i] = HID_KEYBOARD_KEY_OFF;
@@ -142,6 +142,9 @@ USBHIDKeyboard::USBHIDKeyboard() : USBHID()
     for(int i=0; i<HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER; i++)
         keyStateConsumer[i] = HID_KEYBOARD_KEY_OFF;
 
+    _map = m;
+    _mapLen = mapLen;
+    _delay = delayfn;
     keyPressedCountGeneric = 0;
     keyPressedCountConsumer = 0;
 }
@@ -404,6 +407,32 @@ int USBHIDKeyboard::modifierKeyUp(uint8_t key, uint8_t reportID)
     }
 
     return status;
+}
+
+int USBHIDKeyboard::type(const char str[], uint8_t reportID)
+{
+    char c = *str++;
+    keySequence *seq;;
+    while(c){
+        if((uint8_t)c < _mapLen){
+            seq = (keySequence *)&_map[(uint8_t)c];
+            for(int i=0; i<seq->length; i++){
+                key k = seq->seq[i];
+                
+                if(k.bit.isModifier){
+                    if(k.bit.isKeyDown) modifierKeyDown(k.bit.code, reportID);
+                    else modifierKeyUp(k.bit.code, reportID);
+                }
+                else{
+                    if(k.bit.isKeyDown) keyDown(k.bit.code, reportID);
+                    else keyUp(k.bit.code, reportID);
+                }
+                _delay(HID_KEYBOARD_DELAY_DEFAULT);
+            }
+            c = *str++;
+        }
+        else return DEVICE_INVALID_PARAMETER;
+    }
 }
 
 #endif

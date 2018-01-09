@@ -26,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_HID_KEYBOARD_H
 
 #include "HID.h"
+#include "Keymap.h"
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
@@ -35,12 +36,14 @@ DEALINGS IN THE SOFTWARE.
 #define HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER 0x16
 #define HID_KEYBOARD_MODIFIER_OFFSET 2
 
+#define HID_KEYBOARD_DELAY_DEFAULT 10
+
 namespace codal
 {
     class USBHIDKeyboard : public USBHID
     {
-        public:
-        USBHIDKeyboard();
+    public:
+        USBHIDKeyboard(const keySequence *m, uint16_t mapLen, void (*delayfn)(int));
 
         int modifierKeyDown(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
         int modifierKeyUp(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
@@ -55,6 +58,16 @@ namespace codal
 
         virtual int stdRequest(UsbEndpointIn &ctrl, USBSetup& setup);
         virtual const InterfaceInfo *getInterfaceInfo();
+
+        int type(const char *str, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
+
+        // type is a sequence of presses
+        int type(uint16_t* c);
+
+    private:
+        const keySequence *_map;
+        uint16_t _mapLen;
+        void (*_delay)(int ms);
     };
 }
 
