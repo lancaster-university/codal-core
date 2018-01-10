@@ -157,6 +157,14 @@ USBHIDKeyboard::USBHIDKeyboard(const keySequence *m, uint16_t mapLen, void (*del
     _delay = delayfn;
 }
 
+int USBHIDKeyboard::setKeyMap(keySequence *m, uint16_t len)
+{
+    _map = m;
+    _mapLen = len;
+
+    return DEVICE_OK;
+}
+
 int USBHIDKeyboard::stdRequest(UsbEndpointIn &ctrl, USBSetup &setup)
 {
     if (setup.bRequest == GET_DESCRIPTOR)

@@ -56,6 +56,8 @@ namespace codal
         USBHIDKeyboard();
         USBHIDKeyboard(const keySequence *m, uint16_t mapLen, void (*delayfn)(int));
 
+        int setKeyMap(keySequence *m, uint16_t len);
+
         int modifierKeyDown(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
         int modifierKeyUp(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
         int keyDown(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
