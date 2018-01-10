@@ -136,17 +136,22 @@ static const InterfaceInfo ifaceInfo = {
 
 USBHIDKeyboard::USBHIDKeyboard(const keySequence *m, uint16_t mapLen, void (*delayfn)(int)) : USBHID()
 {
-    for(int i=0; i<HID_KEYBOARD_KEYSTATE_SIZE_GENERIC; i++)
-        keyStateGeneric[i] = HID_KEYBOARD_KEY_OFF;
-    
-    for(int i=0; i<HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER; i++)
-        keyStateConsumer[i] = HID_KEYBOARD_KEY_OFF;
+    reports[HID_KEYBOARD_REPORT_GENERIC].reportID = HID_KEYBOARD_REPORT_GENERIC;
+    reports[HID_KEYBOARD_REPORT_GENERIC].keyState = keyStateGeneric;
+    reports[HID_KEYBOARD_REPORT_GENERIC].reportSize = HID_KEYBOARD_KEYSTATE_SIZE_GENERIC;
+    reports[HID_KEYBOARD_REPORT_GENERIC].keyPressedCount = 0;
+
+    reports[HID_KEYBOARD_REPORT_CONSUMER].reportID = HID_KEYBOARD_REPORT_CONSUMER;
+    reports[HID_KEYBOARD_REPORT_CONSUMER].keyState = keyStateConsumer;
+    reports[HID_KEYBOARD_REPORT_CONSUMER].reportSize = HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER;
+    reports[HID_KEYBOARD_REPORT_CONSUMER].keyPressedCount = 0;
+
+    memset(keyStateGeneric, 0, HID_KEYBOARD_KEYSTATE_SIZE_GENERIC);
+    memset(keyStateConsumer, 0, HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER);
 
     _map = m;
     _mapLen = mapLen;
     _delay = delayfn;
-    keyPressedCountGeneric = 0;
-    keyPressedCountConsumer = 0;
 }
 
 int USBHIDKeyboard::stdRequest(UsbEndpointIn &ctrl, USBSetup &setup)
@@ -175,59 +180,27 @@ const InterfaceInfo *USBHIDKeyboard::getInterfaceInfo()
 int USBHIDKeyboard::keyDown(uint8_t key, uint8_t reportID)
 {
     int status, newIndex;
+    HIDKeyboardReport *report = &reports[reportID];
 
-    switch(reportID){
-        case HID_KEYBOARD_REPORT_GENERIC:{
-            if(keyPressedCountGeneric == HID_KEYBOARD_KEYSTATE_SIZE_GENERIC)
-                return DEVICE_NO_RESOURCES;
+    if(report->keyPressedCount == report->reportSize)
+        return DEVICE_NO_RESOURCES;
 
-            for(int i=HID_KEYBOARD_MODIFIER_OFFSET; i<HID_KEYBOARD_KEYSTATE_SIZE_GENERIC; i++){
-                if(keyStateGeneric[i] == HID_KEYBOARD_KEY_OFF){
-                    keyStateGeneric[i] = key;
-                    newIndex = i;
-                    break;
-                }
-            }
-
-            uint8_t report[HID_KEYBOARD_KEYSTATE_SIZE_GENERIC + 1] = {reportID};
-            memcpy(report + 1, keyStateGeneric, HID_KEYBOARD_KEYSTATE_SIZE_GENERIC);
-            status = in->write(report, sizeof(report));
-
-            if(status == DEVICE_OK)
-                keyPressedCountGeneric++;
-            else
-                keyStateGeneric[newIndex] = HID_KEYBOARD_KEY_OFF; //we could not make the change
-
+    for(int i=HID_KEYBOARD_MODIFIER_OFFSET; i<report->reportSize; i++){
+        if(report->keyState[i] == HID_KEYBOARD_KEY_OFF){
+            report->keyState[i] = key;
+            newIndex = i;
             break;
         }
-        case HID_KEYBOARD_REPORT_CONSUMER:{
-            if(keyPressedCountConsumer == HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER)
-                return DEVICE_NO_RESOURCES;
-
-            for(int i=HID_KEYBOARD_MODIFIER_OFFSET; i<HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER; i++){
-                if(keyStateConsumer[i] == HID_KEYBOARD_KEY_OFF){
-                    keyStateConsumer[i] = key;
-                    newIndex = i;
-                    break;
-                }
-            }
-
-            uint8_t report[HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER + 1] = {reportID};
-            memcpy(report + 1, keyStateConsumer, HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER);
-            status = in->write(report, sizeof(report));
-
-            if(status == DEVICE_OK)
-                keyPressedCountConsumer++;
-            else
-                keyStateConsumer[newIndex] = HID_KEYBOARD_KEY_OFF; //we could not make the change
-
-            break;
-
-        }
-        default:
-            //unknown report
-            status = DEVICE_INVALID_PARAMETER;
     }
+
+    uint8_t reportBuf[report->reportSize + 1] = {reportID};
+    memcpy(reportBuf + 1, report->keyState, report->reportSize);
+    status = in->write(reportBuf, sizeof(reportBuf));
+
+    if(status == DEVICE_OK)
+        report->keyPressedCount++;
+    else
+        report->keyState[newIndex] = HID_KEYBOARD_KEY_OFF; //we could not make the change
 
     return status;
 }
@@ -237,72 +210,33 @@ int USBHIDKeyboard::keyUp(uint8_t key, uint8_t reportID)
     int status;
     int newIndex = -1;
 
-    switch(reportID){
-        case HID_KEYBOARD_REPORT_GENERIC: {
+    HIDKeyboardReport *report = &reports[reportID];
+    // ?? hmm no keys are pressed ??
+    if(report->keyPressedCount == 0)
+        return DEVICE_INVALID_PARAMETER;
 
-            // ?? hmm no keys are pressed ??
-            if(keyPressedCountGeneric == 0)
-                return DEVICE_INVALID_PARAMETER;
-
-            // try to find the passed key
-            for(int i=HID_KEYBOARD_MODIFIER_OFFSET; i<HID_KEYBOARD_KEYSTATE_SIZE_GENERIC; i++){
-                if(keyStateGeneric[i] == key){
-                    keyStateGeneric[i] = HID_KEYBOARD_KEY_OFF;
-                    newIndex = i;
-                    break;
-                }
-            }
-
-            // the passed key is not pressed
-            if(newIndex == -1)
-                return DEVICE_INVALID_PARAMETER;
-
-            //write to the host
-            uint8_t report[HID_KEYBOARD_KEYSTATE_SIZE_GENERIC + 1] = {reportID};
-            memcpy(report + 1, keyStateGeneric, HID_KEYBOARD_KEYSTATE_SIZE_GENERIC);
-            status = in->write(report, sizeof(report));
-
-            if(status == DEVICE_OK)
-                keyPressedCountGeneric--;
-            else
-                keyStateGeneric[newIndex] = key; //we could not make the change. Revert
+    // try to find the passed key
+    for(int i=HID_KEYBOARD_MODIFIER_OFFSET; i<report->reportSize; i++){
+        if(report->keyState[i] == key){
+            report->keyState[i] = HID_KEYBOARD_KEY_OFF;
+            newIndex = i;
             break;
         }
-        case HID_KEYBOARD_REPORT_CONSUMER: {
-
-            // ?? hmm no keys are pressed ??
-            if(keyPressedCountConsumer == 0)
-                return DEVICE_INVALID_PARAMETER;
-
-            // try to find the passed key
-            for(int i=HID_KEYBOARD_MODIFIER_OFFSET; i<HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER; i++){
-                if(keyStateConsumer[i] == key){
-                    keyStateConsumer[i] = HID_KEYBOARD_KEY_OFF;
-                    newIndex = i;
-                    break;
-                }
-            }
-
-            // the passed key is not pressed
-            if(newIndex == -1)
-                return DEVICE_INVALID_PARAMETER;
-
-            //write to the host
-            uint8_t report[HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER + 1] = {reportID};
-            memcpy(report + 1, keyStateConsumer, HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER);
-            status = in->write(report, sizeof(report));
-
-            if(status == DEVICE_OK)
-                keyPressedCountConsumer--;
-            else
-                keyStateConsumer[newIndex] = key; //we could not make the change. Revert
-            break;
-        }
-        default:
-            //unknown report
-            status = DEVICE_INVALID_PARAMETER;
-
     }
+
+    // the passed key is not pressed
+    if(newIndex == -1)
+        return DEVICE_INVALID_PARAMETER;
+
+    //write to the host
+    uint8_t reportBuf[report->reportSize + 1] = {reportID};
+    memcpy(reportBuf + 1, report->keyState, report->reportSize);
+    status = in->write(reportBuf, sizeof(reportBuf));
+
+    if(status == DEVICE_OK)
+        report->keyPressedCount--;
+    else
+        report->keyState[newIndex] = key; //we could not make the change. Revert
 
     return status;
 }
@@ -312,47 +246,22 @@ int USBHIDKeyboard::modifierKeyDown(uint8_t key, uint8_t reportID)
     int status;
     uint8_t currentModifier;
 
-    switch(reportID){
-        case HID_KEYBOARD_REPORT_GENERIC:{
-            currentModifier = *keyStateGeneric;
+    HIDKeyboardReport *report = &reports[reportID];
 
-            if(currentModifier & key) 
-                return DEVICE_INVALID_PARAMETER; // the passed modifier flag is already set
+    currentModifier = *report->keyState;
 
-            *keyStateGeneric = currentModifier | key;
+    if(currentModifier & key) 
+        return DEVICE_INVALID_PARAMETER; // the passed modifier flag is already set
 
-            //write to the host
-            uint8_t report[HID_KEYBOARD_KEYSTATE_SIZE_GENERIC + 1] = {reportID};
-            memcpy(report + 1, keyStateGeneric, HID_KEYBOARD_KEYSTATE_SIZE_GENERIC);
-            status = in->write(report, sizeof(report));
+    *report->keyState = currentModifier | key;
 
-            if(status != DEVICE_OK)
-                *keyStateGeneric = currentModifier; //we could not make the change. Revert
+    //write to the host
+    uint8_t reportBuf[report->reportSize + 1] = {reportID};
+    memcpy(reportBuf + 1, report->keyState, report->reportSize);
+    status = in->write(reportBuf, sizeof(reportBuf));
 
-            break;
-        }
-        case HID_KEYBOARD_REPORT_CONSUMER:{
-            currentModifier = *keyStateConsumer;
-            if(currentModifier & key) 
-                return DEVICE_INVALID_PARAMETER; // the passed modifier flag is already set
-
-            *keyStateConsumer = currentModifier | key;
-
-            //write to the host
-            uint8_t report[HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER + 1] = {reportID};
-            memcpy(report + 1, keyStateConsumer, HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER);
-            status = in->write(report, sizeof(report));
-
-            if(status != DEVICE_OK)
-                *keyStateConsumer = currentModifier; //we could not make the change. Revert
-
-            break;
-
-        }
-        default:
-            //unknown report
-            status = DEVICE_INVALID_PARAMETER;
-    }
+    if(status != DEVICE_OK)
+        *report->keyState = currentModifier; //we could not make the change. Revert
 
     return status;
 }
@@ -362,49 +271,39 @@ int USBHIDKeyboard::modifierKeyUp(uint8_t key, uint8_t reportID)
     int status;
     uint8_t currentModifier;
 
-    switch(reportID){
-        case HID_KEYBOARD_REPORT_GENERIC:{
-            currentModifier = *keyStateGeneric;
+    HIDKeyboardReport *report = &reports[reportID];
 
-            if( !(currentModifier & key) ) 
-                return DEVICE_INVALID_PARAMETER; //The passed modifier key is not pressed
+    currentModifier = *report->keyState;
 
-            //Clear the flag of the passed modifier
-            *keyStateGeneric = currentModifier & ~(key);
+    if( !(currentModifier & key) ) 
+        return DEVICE_INVALID_PARAMETER; //The passed modifier key is not pressed
 
-            //write to the host
-            uint8_t report[HID_KEYBOARD_KEYSTATE_SIZE_GENERIC + 1] = {reportID};
-            memcpy(report + 1, keyStateGeneric, HID_KEYBOARD_KEYSTATE_SIZE_GENERIC);
-            status = in->write(report, sizeof(report));
+    //Clear the flag of the passed modifier
+    *report->keyState = currentModifier | key;
 
-            if(status != DEVICE_OK)
-                *keyStateGeneric = currentModifier; //we could not make the change. Revert
+    //write to the host
+    uint8_t reportBuf[report->reportSize + 1] = {reportID};
+    memcpy(reportBuf + 1, report->keyState, report->reportSize);
+    status = in->write(reportBuf, sizeof(reportBuf));
 
-            break;
-        }
-        case HID_KEYBOARD_REPORT_CONSUMER:{
-            currentModifier = *keyStateConsumer;
-            if( !(currentModifier & key) ) 
-                return DEVICE_INVALID_PARAMETER; //The passed modifier key is not pressed
+    if(status != DEVICE_OK)
+        *report->keyState = currentModifier; //we could not make the change. Revert
 
-            //Clear the flag of the passed modifier
-            *keyStateConsumer = currentModifier & ~(key);
+    return status;
+}
 
-            //write to the host
-            uint8_t report[HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER + 1] = {reportID};
-            memcpy(report + 1, keyStateConsumer, HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER);
-            status = in->write(report, sizeof(report));
+int USBHIDKeyboard::flush(uint8_t reportID)
+{
+    int status;
 
-            if(status != DEVICE_OK)
-                *keyStateConsumer = currentModifier; //we could not make the change. Revert
+    HIDKeyboardReport *report = &reports[reportID];
+    memset(report->keyState, 0, report->reportSize);
 
-            break;
+    uint8_t reportBuf[report->reportSize + 1] = {reportID};
+    memcpy(reportBuf + 1, report->keyState, report->reportSize);
 
-        }
-        default:
-            //unknown report
-            status = DEVICE_INVALID_PARAMETER;
-    }
+    status = in->write(reportBuf, sizeof(reportBuf));
+    report->keyPressedCount = 0;
 
     return status;
 }
@@ -418,8 +317,10 @@ int USBHIDKeyboard::type(const char str[], uint8_t reportID)
             seq = (keySequence *)&_map[(uint8_t)c];
             for(int i=0; i<seq->length; i++){
                 key k = seq->seq[i];
-                
-                if(k.bit.isModifier){
+                if(k.bit.allKeysUp){
+                    flush(reportID);
+                }
+                else if(k.bit.isModifier){
                     if(k.bit.isKeyDown) modifierKeyDown(k.bit.code, reportID);
                     else modifierKeyUp(k.bit.code, reportID);
                 }
@@ -433,6 +334,7 @@ int USBHIDKeyboard::type(const char str[], uint8_t reportID)
         }
         else return DEVICE_INVALID_PARAMETER;
     }
+    return DEVICE_OK;
 }
 
 #endif

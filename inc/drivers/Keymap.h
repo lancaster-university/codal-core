@@ -3,6 +3,11 @@
 
 #include <stdint.h>
 
+#define KEYMAP_ALL_KEYS_UP_Val 1
+#define KEYMAP_ALL_KEYS_UP_POS 13
+#define KEYMAP_ALL_KEYS_UP_MASK(x) ((uint16_t)x << KEYMAP_ALL_KEYS_UP_POS)
+#define KEYMAP_ALL_KEYS_UP KEYMAP_ALL_KEYS_UP_MASK(KEYMAP_ALL_KEYS_UP_Val)
+
 #define KEYMAP_NORMAL_KEY_Val 0
 #define KEYMAP_MODIFIER_KEY_Val 1
 #define KEYMAP_MODIFIER_POS 14
@@ -19,7 +24,8 @@
 typedef union {
     struct {
         uint8_t code:8;
-        uint8_t reserved:6;
+        uint8_t reserved:5;
+        bool allKeysUp:1;
         bool isModifier:1;
         bool isKeyDown:1;
     } bit;
@@ -30,16 +36,6 @@ typedef struct {
 	const key *seq;
 	uint8_t length;
 } keySequence;
-
-class Keymap {
-public:
-	Keymap(const keySequence *seq, uint16_t length);
-	int lookup(uint16_t c, keySequence *seq);
-
-private:
-	const keySequence *table;
-	uint16_t tableLen;
-};
 
 extern const keySequence US_ASCII[];
 

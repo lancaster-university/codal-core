@@ -30,6 +30,9 @@ DEALINGS IN THE SOFTWARE.
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
+//report 0 is empty
+#define HID_KEYBOARD_NUM_REPORTS 3
+
 #define HID_KEYBOARD_REPORT_GENERIC 0x01
 #define HID_KEYBOARD_REPORT_CONSUMER 0x02
 #define HID_KEYBOARD_KEYSTATE_SIZE_GENERIC 0x08
@@ -40,6 +43,13 @@ DEALINGS IN THE SOFTWARE.
 
 namespace codal
 {
+    typedef struct {
+        uint8_t reportID;
+        uint8_t *keyState;
+        uint8_t reportSize;
+        uint8_t keyPressedCount;
+    } HIDKeyboardReport;
+
     class USBHIDKeyboard : public USBHID
     {
     public:
@@ -50,11 +60,9 @@ namespace codal
         int keyDown(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
         int keyUp(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
 
-        uint8_t keyStateGeneric[HID_KEYBOARD_KEYSTATE_SIZE_GENERIC];
-        uint8_t keyPressedCountGeneric;
+        int flush(uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
 
-        uint8_t keyStateConsumer[HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER];
-        uint8_t keyPressedCountConsumer;
+        HIDKeyboardReport reports[HID_KEYBOARD_NUM_REPORTS];
 
         virtual int stdRequest(UsbEndpointIn &ctrl, USBSetup& setup);
         virtual const InterfaceInfo *getInterfaceInfo();
@@ -68,6 +76,9 @@ namespace codal
         const keySequence *_map;
         uint16_t _mapLen;
         void (*_delay)(int ms);
+
+        uint8_t keyStateGeneric[HID_KEYBOARD_KEYSTATE_SIZE_GENERIC];
+        uint8_t keyStateConsumer[HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER];
     };
 }
 
