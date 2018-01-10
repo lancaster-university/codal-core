@@ -311,6 +311,32 @@ int USBHIDKeyboard::flush(uint8_t reportID)
     return status;
 }
 
+int USBHIDKeyboard::write(keySequence *seq, uint8_t reportID)
+{
+    //send each keystroke in the sequence
+    for(int i=0; i<seq->length; i++){
+        key k = seq->seq[i];
+        if(k.bit.allKeysUp){
+            flush(reportID);
+        }
+        else if(k.bit.isModifier){
+            if(k.bit.isKeyDown) modifierKeyDown(k.bit.code, reportID);
+            else modifierKeyUp(k.bit.code, reportID);
+        }
+        else{
+            if(k.bit.isKeyDown) keyDown(k.bit.code, reportID);
+            else keyUp(k.bit.code, reportID);
+        }
+        _delay(HID_KEYBOARD_DELAY_DEFAULT);
+    }
+
+    //all keys up is implicit at the end of each sequence
+    flush(reportID);
+    _delay(HID_KEYBOARD_DELAY_DEFAULT);
+
+    return DEVICE_OK;
+}
+
 int USBHIDKeyboard::type(const char str[], uint8_t reportID)
 {
     char c = *str++;
@@ -321,26 +347,7 @@ int USBHIDKeyboard::type(const char str[], uint8_t reportID)
             //get the keySequence that corresponds to the current character
             seq = (keySequence *)&_map[(uint8_t)c];
 
-            //send each keystroke in the sequence
-            for(int i=0; i<seq->length; i++){
-                key k = seq->seq[i];
-                if(k.bit.allKeysUp){
-                    flush(reportID);
-                }
-                else if(k.bit.isModifier){
-                    if(k.bit.isKeyDown) modifierKeyDown(k.bit.code, reportID);
-                    else modifierKeyUp(k.bit.code, reportID);
-                }
-                else{
-                    if(k.bit.isKeyDown) keyDown(k.bit.code, reportID);
-                    else keyUp(k.bit.code, reportID);
-                }
-                _delay(HID_KEYBOARD_DELAY_DEFAULT);
-            }
-
-            //all keys up is implicit at the end of each sequence
-            flush(reportID);
-            _delay(HID_KEYBOARD_DELAY_DEFAULT);
+            this->write(seq, reportID);
 
             c = *str++;
         }

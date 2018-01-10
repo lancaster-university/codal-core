@@ -70,8 +70,7 @@ namespace codal
 
         int type(const char *str, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
 
-        // type is a sequence of presses
-        int type(uint16_t* c);
+        int write(keySequence *seq, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
 
     private:
         const keySequence *_map;
