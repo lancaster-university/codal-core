@@ -21,6 +21,8 @@
 #define KEYMAP_KEY_DOWN KEYMAP_KEY_DOWN_MASK(KEYMAP_KEY_DOWN_Val)
 #define KEYMAP_KEY_UP KEYMAP_KEY_DOWN_MASK(KEYMAP_KEY_UP_Val)
 
+#define KEYMAP_REGISTER(x) { .seq = x, .length = sizeof(x)/sizeof(key) }
+
 typedef union {
     struct {
         uint8_t code:8;
@@ -37,6 +39,7 @@ typedef struct {
 	uint8_t length;
 } keySequence;
 
-extern const keySequence US_ASCII[];
+#define KEYMAP_ASCII_LENGTH
+extern const keySequence keymap_ascii[];
 
 #endif

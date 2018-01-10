@@ -53,6 +53,7 @@ namespace codal
     class USBHIDKeyboard : public USBHID
     {
     public:
+        USBHIDKeyboard();
         USBHIDKeyboard(const keySequence *m, uint16_t mapLen, void (*delayfn)(int));
 
         int modifierKeyDown(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);

@@ -134,7 +134,7 @@ static const InterfaceInfo ifaceInfo = {
     {USB_EP_TYPE_INTERRUPT, 1},
 };
 
-USBHIDKeyboard::USBHIDKeyboard(const keySequence *m, uint16_t mapLen, void (*delayfn)(int)) : USBHID()
+USBHIDKeyboard::USBHIDKeyboard() : USBHID()
 {
     reports[HID_KEYBOARD_REPORT_GENERIC].reportID = HID_KEYBOARD_REPORT_GENERIC;
     reports[HID_KEYBOARD_REPORT_GENERIC].keyState = keyStateGeneric;
@@ -148,7 +148,10 @@ USBHIDKeyboard::USBHIDKeyboard(const keySequence *m, uint16_t mapLen, void (*del
 
     memset(keyStateGeneric, 0, HID_KEYBOARD_KEYSTATE_SIZE_GENERIC);
     memset(keyStateConsumer, 0, HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER);
+}
 
+USBHIDKeyboard::USBHIDKeyboard(const keySequence *m, uint16_t mapLen, void (*delayfn)(int)) : USBHIDKeyboard()
+{
     _map = m;
     _mapLen = mapLen;
     _delay = delayfn;
@@ -179,7 +182,7 @@ const InterfaceInfo *USBHIDKeyboard::getInterfaceInfo()
 
 int USBHIDKeyboard::keyDown(uint8_t key, uint8_t reportID)
 {
-    int status, newIndex;
+    int status, newIndex = -1;
     HIDKeyboardReport *report = &reports[reportID];
 
     if(report->keyPressedCount == report->reportSize)
@@ -311,10 +314,14 @@ int USBHIDKeyboard::flush(uint8_t reportID)
 int USBHIDKeyboard::type(const char str[], uint8_t reportID)
 {
     char c = *str++;
-    keySequence *seq;;
+    keySequence *seq;
     while(c){
         if((uint8_t)c < _mapLen){
+
+            //get the keySequence that corresponds to the current character
             seq = (keySequence *)&_map[(uint8_t)c];
+
+            //send each keystroke in the sequence
             for(int i=0; i<seq->length; i++){
                 key k = seq->seq[i];
                 if(k.bit.allKeysUp){
@@ -330,6 +337,11 @@ int USBHIDKeyboard::type(const char str[], uint8_t reportID)
                 }
                 _delay(HID_KEYBOARD_DELAY_DEFAULT);
             }
+
+            //all keys up is implicit at the end of each sequence
+            flush(reportID);
+            _delay(HID_KEYBOARD_DELAY_DEFAULT);
+
             c = *str++;
         }
         else return DEVICE_INVALID_PARAMETER;
