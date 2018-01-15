@@ -26,7 +26,8 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_HID_KEYBOARD_H
 
 #include "HID.h"
-#include "Keymap.h"
+#include "KeyMap.h"
+#include "ManagedString.h"
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
@@ -36,13 +37,19 @@ DEALINGS IN THE SOFTWARE.
 #define HID_KEYBOARD_REPORT_GENERIC 0x01
 #define HID_KEYBOARD_REPORT_CONSUMER 0x02
 #define HID_KEYBOARD_KEYSTATE_SIZE_GENERIC 0x08
-#define HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER 0x16
+#define HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER 0x02
 #define HID_KEYBOARD_MODIFIER_OFFSET 2
 
 #define HID_KEYBOARD_DELAY_DEFAULT 10
 
 namespace codal
 {
+    enum KeyActionType
+    {
+        PressKey,
+        ReleaseKey
+    };
+
     typedef struct {
         uint8_t reportID;
         uint8_t *keyState;
@@ -52,35 +59,219 @@ namespace codal
 
     class USBHIDKeyboard : public USBHID
     {
+        uint8_t keyStateGeneric[HID_KEYBOARD_KEYSTATE_SIZE_GENERIC];
+        uint8_t keyStateConsumer[HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER];
+
+        /**
+          * Writes the given report out over USB.
+          *
+          * @param report A pointer to the report to copy to USB
+          */
+        int updateReport(HIDKeyboardReport* report);
+
+        /**
+          * sets the media key buffer to the given Key, without affecting the state of other media keys.
+          *
+          * @param k a valid media key
+          *
+          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if an incorrect key is passed.
+          */
+        int mediaKeyPress(Key k, KeyActionType action);
+
+        /**
+          * sets the keyboard modifier buffer to the given Key, without affecting the state of other keys.
+          *
+          * @param k a valid modifier key
+          *
+          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if an incorrect key is passed.
+          */
+        int modifierKeyPress(Key k, KeyActionType action);
+
+        /**
+          * sets one keyboard key buffer slot to the given Key.
+          *
+          * @param k a valid modifier key
+          *
+          * @return DEVICE_OK on success
+          */
+        int standardKeyPress(Key k, KeyActionType action);
+
+        /**
+          * initialises the report arrays for this USBHID instance.
+          */
+        void initReports();
+
     public:
+
+        /**
+          * Default constructor for a USBHIDKeyboard instance, sets the KeyMap to an ASCII default .
+          */
         USBHIDKeyboard();
-        USBHIDKeyboard(const keySequence *m, uint16_t mapLen, void (*delayfn)(int));
 
-        int setKeyMap(keySequence *m, uint16_t len);
+        /**
+          * Constructor for a USBHIDKeyboard instance, sets the KeyMap to the given keymap.
+          *
+          * @param k The KeyMap to use.
+          */
+        USBHIDKeyboard(KeyMap& k);
 
-        int modifierKeyDown(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
-        int modifierKeyUp(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
-        int keyDown(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
-        int keyUp(uint8_t key, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
+        /**
+          * Sets the KeyMap for this USBHIDKeyboard instance
+          *
+          * @param map The KeyMap to use.
+          *
+          * @return DEVICE_OK on success.
+          */
+        int setKeyMap(KeyMap& map);
 
-        int flush(uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
+        /**
+          * Releases the given Key.
+          *
+          * @param k A valid Key
+          *
+          * @return DEVICE_OK on success.
+          */
+        int keyUp(Key k);
+
+        /**
+          * Releases the given Key.
+          *
+          * @param k A valid MediaKey
+          *
+          * @return DEVICE_OK on success.
+          */
+        int keyUp(MediaKey k);
+
+        /**
+          * Releases the given Key.
+          *
+          * @param k A valid FunctionKey
+          *
+          * @return DEVICE_OK on success.
+          */
+        int keyUp(FunctionKey k);
+
+        /**
+          * Release the key corresponding to the given character.
+          *
+          * @param c A valid character
+          *
+          * @return DEVICE_OK on success.
+          */
+        int keyUp(uint16_t c);
+
+        /**
+          * Press the given Key.
+          *
+          * @param k A valid Key
+          *
+          * @return DEVICE_OK on success.
+          */
+        int keyDown(Key k);
+
+        /**
+          * Press the given Key.
+          *
+          * @param k A valid MediaKey
+          *
+          * @return DEVICE_OK on success.
+          */
+        int keyDown(MediaKey k);
+
+        /**
+          * Press the given Key.
+          *
+          * @param k A valid FunctionKey
+          *
+          * @return DEVICE_OK on success.
+          */
+        int keyDown(FunctionKey k);
+
+        /**
+          * Press the key corresponding to the given character.
+          *
+          * @param c A valid character
+          *
+          * @return DEVICE_OK on success.
+          */
+        int keyDown(uint16_t c);
+
+        /**
+          * Presses and releases the given Key.
+          *
+          * @param k A valid Key
+          *
+          * @return DEVICE_OK on success.
+          */
+        int press(Key k);
+
+        /**
+          * Press and releases the given Key.
+          *
+          * @param k A valid MediaKey
+          *
+          * @return DEVICE_OK on success.
+          */
+        int press(MediaKey k);
+
+        /**
+          * Press and releases the given Key.
+          *
+          * @param k A valid FunctionKey
+          *
+          * @return DEVICE_OK on success.
+          */
+        int press(FunctionKey k);
+
+        /**
+          * Press and releases the Key corresponding to the given character.
+          *
+          * @param k A valid character
+          *
+          * @return DEVICE_OK on success.
+          */
+        int press(uint16_t c);
+
+        /**
+          * Releases ALL keys on the keyboard (including Media keys)
+          *
+          * @return DEVICE_OK on success.
+          */
+        int flush();
+
+        /**
+          * Type a sequence of keys
+          *
+          * @param seq A valid pointer to a KeySequence containing multiple keys. See ASCIIKeyMap.cpp for example usage.
+          *
+          * @return DEVICE_OK on success.
+          */
+        int type(const KeySequence *seq);
+
+        /**
+          * Type a sequence of characters
+          *
+          * @param s A valid pointer to a char array
+          *
+          * @param len The length of s.
+          *
+          * @return DEVICE_OK on success.
+          */
+        int type(const char* s, uint32_t len);
+
+        /**
+          * Type a sequence of characters
+          *
+          * @param s A ManagedString instance containing the characters to type.
+          *
+          * @return DEVICE_OK on success.
+          */
+        int type(ManagedString s);
 
         HIDKeyboardReport reports[HID_KEYBOARD_NUM_REPORTS];
 
         virtual int stdRequest(UsbEndpointIn &ctrl, USBSetup& setup);
         virtual const InterfaceInfo *getInterfaceInfo();
-
-        int type(const char *str, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
-
-        int write(keySequence *seq, uint8_t reportID=HID_KEYBOARD_REPORT_GENERIC);
-
-    private:
-        const keySequence *_map;
-        uint16_t _mapLen;
-        void (*_delay)(int ms);
-
-        uint8_t keyStateGeneric[HID_KEYBOARD_KEYSTATE_SIZE_GENERIC];
-        uint8_t keyStateConsumer[HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER];
     };
 }
 

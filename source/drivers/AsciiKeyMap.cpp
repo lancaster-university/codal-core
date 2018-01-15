@@ -1,456 +1,458 @@
-#include "Keymap.h"
+#include "AsciiKeyMap.h"
 #include "USB_HID_Keys.h"
 
-//define all key sequences to be used
-static const key seq_backspace[] = { 
+using namespace codal;
+
+//define all Key sequences to be used
+static const Key seq_backspace[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_BACKSPACE },
 };
 
-static const key seq_tab[] = { 
+static const Key seq_tab[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_TAB },
 };
 
-static const key seq_newline[] = { 
+static const Key seq_newline[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_ENTER },
 };
 
-static const key seq_space[] = { 
+static const Key seq_space[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_SPACE },
 };
 
-static const key seq_exclamation_point[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_exclamation_point[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_1 },
 };
 
-static const key seq_quote[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_quote[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_1 },
 };
 
-static const key seq_pound[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_pound[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_3 },
 };
 
-static const key seq_dollar[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_dollar[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_4 },
 };
 
-static const key seq_percent[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_percent[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_5 },
 };
 
-static const key seq_amp[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_amp[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_7 },
 };
 
-static const key seq_apostrophe[] = { 
+static const Key seq_apostrophe[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_APOSTROPHE },
 };
 
-static const key seq_left_paren[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_left_paren[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_9 },
 };
 
-static const key seq_right_paren[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_right_paren[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_0 },
 };
 
-static const key seq_ast[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_ast[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_8 },
 };
 
-static const key seq_plus[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_plus[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_EQUAL },
 };
 
-static const key seq_comma[] = { 
+static const Key seq_comma[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_COMMA },
 };
 
-static const key seq_minus[] = { 
+static const Key seq_minus[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_MINUS },
 };
 
-static const key seq_dot[] = { 
+static const Key seq_dot[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_DOT },
 };
 
-static const key seq_slash[] = { 
+static const Key seq_slash[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_SLASH },
 };
 
-static const key seq_0[] = { 
+static const Key seq_0[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_0 },
 };
 
-static const key seq_1[] = { 
+static const Key seq_1[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_1 },
 };
 
-static const key seq_2[] = { 
+static const Key seq_2[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_2 },
 };
 
-static const key seq_3[] = { 
+static const Key seq_3[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_3 },
 };
 
-static const key seq_4[] = { 
+static const Key seq_4[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_4 },
 };
 
-static const key seq_5[] = { 
+static const Key seq_5[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_5 },
 };
 
-static const key seq_6[] = { 
+static const Key seq_6[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_6 },
 };
 
-static const key seq_7[] = { 
+static const Key seq_7[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_7 },
 };
 
-static const key seq_8[] = { 
+static const Key seq_8[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_8 },
 };
 
-static const key seq_9[] = { 
+static const Key seq_9[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_9 },
 };
 
-static const key seq_colon[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_colon[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_SEMICOLON },
 };
 
-static const key seq_semicolon[] = { 
+static const Key seq_semicolon[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_SEMICOLON },
 };
 
-static const key seq_angle_left[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_angle_left[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_COMMA },
 };
 
-static const key seq_equal[] = { 
+static const Key seq_equal[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_EQUAL },
 };
 
-static const key seq_angle_right[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_angle_right[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_DOT },
 };
 
-static const key seq_question[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_question[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_SLASH },
 };
 
-static const key seq_at[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_at[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_2 },
 };
 
-static const key seq_A[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_A[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_A },
 };
 
-static const key seq_B[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_B[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_B },
 };
 
-static const key seq_C[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_C[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_C },
 };
 
-static const key seq_D[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_D[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_D },
 };
 
-static const key seq_E[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_E[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_E },
 };
 
-static const key seq_F[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_F[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_F },
 };
 
-static const key seq_G[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_G[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_G },
 };
 
-static const key seq_H[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_H[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_H },
 };
 
-static const key seq_I[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_I[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_I },
 };
 
-static const key seq_J[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_J[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_J },
 };
 
-static const key seq_K[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_K[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_K },
 };
 
-static const key seq_L[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_L[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_L },
 };
 
-static const key seq_M[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_M[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_M },
 };
 
-static const key seq_N[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_N[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_N },
 };
 
-static const key seq_O[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_O[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_O },
 };
 
-static const key seq_P[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_P[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_P },
 };
 
-static const key seq_Q[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_Q[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_Q },
 };
 
-static const key seq_R[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_R[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_R },
 };
 
-static const key seq_S[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_S[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_S },
 };
 
-static const key seq_T[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_T[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_T },
 };
 
-static const key seq_U[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_U[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_U },
 };
 
-static const key seq_V[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_V[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_V },
 };
 
-static const key seq_W[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_W[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_W },
 };
 
-static const key seq_X[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_X[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_X },
 };
 
-static const key seq_Y[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_Y[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_Y },
 };
 
-static const key seq_Z[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_Z[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_Z },
 };
 
-static const key seq_brace_left[] = { 
+static const Key seq_brace_left[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_LEFTBRACE },
 };
 
-static const key seq_backslash[] = { 
+static const Key seq_backslash[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_BACKSLASH },
 };
 
-static const key seq_brace_right[] = { 
+static const Key seq_brace_right[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_RIGHTBRACE },
 };
 
-static const key seq_hat[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_hat[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_6 },
 };
 
-static const key seq_underscore[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_underscore[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_MINUS },
 };
 
-static const key seq_grave[] = { 
+static const Key seq_grave[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_GRAVE },
 };
 
-static const key seq_a[] = { 
+static const Key seq_a[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_A },
 };
 
-static const key seq_b[] = { 
+static const Key seq_b[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_B },
 };
 
-static const key seq_c[] = { 
+static const Key seq_c[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_C },
 };
 
-static const key seq_d[] = { 
+static const Key seq_d[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_D },
 };
 
-static const key seq_e[] = { 
+static const Key seq_e[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_E },
 };
 
-static const key seq_f[] = { 
+static const Key seq_f[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_F },
 };
 
-static const key seq_g[] = { 
+static const Key seq_g[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_G },
 };
 
-static const key seq_h[] = { 
+static const Key seq_h[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_H },
 };
 
-static const key seq_i[] = { 
+static const Key seq_i[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_I },
 };
 
-static const key seq_j[] = { 
+static const Key seq_j[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_J },
 };
 
-static const key seq_k[] = { 
+static const Key seq_k[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_K },
 };
 
-static const key seq_l[] = { 
+static const Key seq_l[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_L },
 };
 
-static const key seq_m[] = { 
+static const Key seq_m[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_M },
 };
 
-static const key seq_n[] = { 
+static const Key seq_n[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_N },
 };
 
-static const key seq_o[] = { 
+static const Key seq_o[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_O },
 };
 
-static const key seq_p[] = { 
+static const Key seq_p[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_P },
 };
 
-static const key seq_q[] = { 
+static const Key seq_q[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_Q },
 };
 
-static const key seq_r[] = { 
+static const Key seq_r[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_R },
 };
 
-static const key seq_s[] = { 
+static const Key seq_s[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_S },
 };
 
-static const key seq_t[] = { 
+static const Key seq_t[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_T },
 };
 
-static const key seq_u[] = { 
+static const Key seq_u[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_U },
 };
 
-static const key seq_v[] = { 
+static const Key seq_v[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_V },
 };
 
-static const key seq_w[] = { 
+static const Key seq_w[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_W },
 };
 
-static const key seq_x[] = { 
+static const Key seq_x[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_X },
 };
 
-static const key seq_y[] = { 
+static const Key seq_y[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_Y },
 };
 
-static const key seq_z[] = { 
+static const Key seq_z[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_Z },
 };
 
-static const key seq_curly_left[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_curly_left[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_LEFTBRACE },
 };
 
-static const key seq_pipe[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_pipe[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_BACKSLASH },
 };
 
-static const key seq_curly_right[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_curly_right[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_RIGHTBRACE},
 };
 
-static const key seq_tilda[] = { 
-		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT }, 
+static const Key seq_tilda[] = {
+		{ .reg = KEYMAP_KEY_DOWN | KEYMAP_MODIFIER_KEY | KEY_MOD_LSHIFT },
 		{ .reg = KEYMAP_KEY_DOWN | KEY_GRAVE },
 };
 
-static const key seq_del[] = { 
+static const Key seq_del[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_BACKSPACE },
 };
 
 //define the keymap
-const keySequence keymap_ascii[] = {
+const KeySequence ascii_keymap[] = {
 	{}, {}, {}, {}, {}, {}, {}, {}, //0 - 7
-	KEYMAP_REGISTER(seq_backspace), 
-	KEYMAP_REGISTER(seq_tab), 
-	KEYMAP_REGISTER(seq_newline), 
+	KEYMAP_REGISTER(seq_backspace),
+	KEYMAP_REGISTER(seq_tab),
+	KEYMAP_REGISTER(seq_newline),
 	{}, {}, {}, {}, {},
 	{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, //16 - 31
 	KEYMAP_REGISTER(seq_space),								//32 space
@@ -550,3 +552,5 @@ const keySequence keymap_ascii[] = {
 	KEYMAP_REGISTER(seq_tilda),
 	KEYMAP_REGISTER(seq_del),
 };
+
+AsciiKeyMap asciiKeyMap(ascii_keymap, 128);

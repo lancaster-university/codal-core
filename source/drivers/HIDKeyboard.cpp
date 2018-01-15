@@ -24,6 +24,8 @@ DEALINGS IN THE SOFTWARE.
 
 #include "HIDKeyboard.h"
 #include "HID.h"
+#include "AsciiKeyMap.h"
+#include "CodalDmesg.h"
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
@@ -134,7 +136,15 @@ static const InterfaceInfo ifaceInfo = {
     {USB_EP_TYPE_INTERRUPT, 1},
 };
 
-USBHIDKeyboard::USBHIDKeyboard() : USBHID()
+static KeyMap* currentMap = NULL;
+
+extern AsciiKeyMap asciiKeyMap;
+
+
+/**
+  * initialises the report arrays for this USBHID instance.
+  */
+void USBHIDKeyboard::initReports()
 {
     reports[HID_KEYBOARD_REPORT_GENERIC].reportID = HID_KEYBOARD_REPORT_GENERIC;
     reports[HID_KEYBOARD_REPORT_GENERIC].keyState = keyStateGeneric;
@@ -150,19 +160,480 @@ USBHIDKeyboard::USBHIDKeyboard() : USBHID()
     memset(keyStateConsumer, 0, HID_KEYBOARD_KEYSTATE_SIZE_CONSUMER);
 }
 
-USBHIDKeyboard::USBHIDKeyboard(const keySequence *m, uint16_t mapLen, void (*delayfn)(int)) : USBHIDKeyboard()
+/**
+  * Default constructor for a USBHIDKeyboard instance, sets the KeyMap to an ASCII default .
+  */
+USBHIDKeyboard::USBHIDKeyboard()
 {
-    _map = m;
-    _mapLen = mapLen;
-    _delay = delayfn;
+    initReports();
+    setKeyMap(asciiKeyMap);
 }
 
-int USBHIDKeyboard::setKeyMap(keySequence *m, uint16_t len)
+/**
+  * Constructor for a USBHIDKeyboard instance, sets the KeyMap to the given keymap.
+  *
+  * @param k The KeyMap to use.
+  */
+USBHIDKeyboard::USBHIDKeyboard(KeyMap& m)
 {
-    _map = m;
-    _mapLen = len;
+    initReports();
+    setKeyMap(m);
+}
+
+/**
+  * Sets the KeyMap for this USBHIDKeyboard instance
+  *
+  * @param map The KeyMap to use.
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::setKeyMap(KeyMap& m)
+{
+    currentMap = &m;
+    return DEVICE_OK;
+}
+
+/**
+  * Writes the given report out over USB.
+  *
+  * @param report A pointer to the report to copy to USB
+  */
+int USBHIDKeyboard::updateReport(HIDKeyboardReport* report)
+{
+    if(report == NULL)
+        return DEVICE_INVALID_PARAMETER;
+
+    uint8_t reportBuf[report->reportSize + 1] = {report->reportID};
+    memcpy(reportBuf + 1, report->keyState, report->reportSize);
+
+    return in->write(reportBuf, sizeof(reportBuf));
+}
+
+
+/**
+  * sets the media key buffer to the given Key, without affecting the state of other media keys.
+  *
+  * @param k a valid media key
+  *
+  * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if an incorrect key is passed.
+  */
+int USBHIDKeyboard::mediaKeyPress(Key k, KeyActionType action)
+{
+    int status = DEVICE_OK;
+    HIDKeyboardReport *report = &reports[HID_KEYBOARD_REPORT_CONSUMER];
+
+    uint16_t* keyState = (uint16_t *)report->keyState;
+    uint16_t currentModifier = *keyState;
+
+    if (action == ReleaseKey)
+        *keyState &= ~k.bit.code;
+    else
+         *keyState |= k.bit.code;
+
+    // update only when required.
+    if(*keyState != currentModifier)
+        status = updateReport(report);
+
+     //we could not make the change. Revert
+    if(status != DEVICE_OK)
+    {
+        *keyState = currentModifier;
+        return status;
+    }
+
+    return status;
+}
+
+/**
+  * sets the keyboard modifier buffer to the given Key, without affecting the state of other keys.
+  *
+  * @param k a valid modifier key
+  *
+  * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if an incorrect key is passed.
+  */
+int USBHIDKeyboard::modifierKeyPress(Key k, KeyActionType action)
+{
+    int status = DEVICE_OK;
+    uint8_t currentModifier;
+
+    HIDKeyboardReport *report = &reports[HID_KEYBOARD_REPORT_GENERIC];
+    currentModifier = *report->keyState;
+
+    if (action == ReleaseKey)
+        *report->keyState &= ~k.bit.code;
+    else
+        *report->keyState = currentModifier | k.bit.code;
+
+    // update only when required.
+    if(*report->keyState != currentModifier)
+        status = updateReport(report);
+
+     //we could not make the change. Revert
+    if(status != DEVICE_OK)
+    {
+        *report->keyState = currentModifier;
+        return status;
+    }
 
     return DEVICE_OK;
+}
+
+
+/**
+  * sets one keyboard key buffer slot to the given Key.
+  *
+  * @param k a valid modifier key
+  *
+  * @return DEVICE_OK on success
+  */
+int USBHIDKeyboard::standardKeyPress(Key k, KeyActionType action)
+{
+    int status = DEVICE_OK;
+    HIDKeyboardReport *report = &reports[HID_KEYBOARD_REPORT_GENERIC];
+
+    if(report->keyPressedCount == 0 && action == ReleaseKey)
+        return DEVICE_INVALID_PARAMETER;
+
+    if(report->keyPressedCount == report->reportSize && action == PressKey)
+        return DEVICE_NO_RESOURCES;
+
+    // firstly iterate through the array to determine if we are raising a key
+    int existingIndex = -1;
+    int firstSpareSlot = -1;
+
+    for(int i = HID_KEYBOARD_MODIFIER_OFFSET; i < report->reportSize; i++)
+    {
+        // we can break here, we don't need a spare slot, we are raising...
+        if(report->keyState[i] == k.bit.code)
+        {
+            existingIndex = i;
+            break;
+        }
+
+        if(report->keyState[i] == HID_KEYBOARD_KEY_OFF && firstSpareSlot == -1)
+            firstSpareSlot = i;
+    }
+
+    // if found and correct action requested, perform action
+    if(existingIndex > -1 && action == ReleaseKey)
+        report->keyState[existingIndex] = HID_KEYBOARD_KEY_OFF;
+    else if(firstSpareSlot > -1 && action == PressKey)
+        report->keyState[firstSpareSlot] = k.bit.code;
+
+    status = updateReport(report);
+
+    // update counts...
+    if(status == DEVICE_OK)
+    {
+        if(action == ReleaseKey)
+            report->keyPressedCount--;
+        else if(action == PressKey)
+            report->keyPressedCount++;
+    }
+    else
+        // revert we could not make the change
+        report->keyState[firstSpareSlot] = HID_KEYBOARD_KEY_OFF;
+
+    return status;
+}
+
+/**
+  * Releases the given Key.
+  *
+  * @param k A valid Key
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::keyUp(Key k)
+{
+    int status = DEVICE_OK;
+
+    if(k.bit.isModifier)
+        status = modifierKeyPress(k, ReleaseKey);
+    else if(k.bit.isMedia)
+        status = mediaKeyPress(k, ReleaseKey);
+    else
+        status = standardKeyPress(k, ReleaseKey);
+
+    fiber_sleep(HID_KEYBOARD_DELAY_DEFAULT);
+
+    return status;
+}
+
+/**
+  * Press the given Key.
+  *
+  * @param k A valid Key
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::keyDown(Key k)
+{
+    int status = DEVICE_OK;
+
+    if(k.bit.isModifier)
+        status = modifierKeyPress(k, PressKey);
+    else if(k.bit.isMedia)
+        status = mediaKeyPress(k, PressKey);
+    else
+        status = standardKeyPress(k, PressKey);
+
+    fiber_sleep(HID_KEYBOARD_DELAY_DEFAULT);
+
+    return status;
+}
+
+/**
+  * Releases the given Key.
+  *
+  * @param k A valid MediaKey
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::keyUp(MediaKey k)
+{
+    return keyUp(currentMap->getMediaKey(k));
+}
+
+/**
+  * Press the given Key.
+  *
+  * @param k A valid MediaKey
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::keyDown(MediaKey k)
+{
+    return keyDown(currentMap->getMediaKey(k));
+}
+
+/**
+  * Releases the given Key.
+  *
+  * @param k A valid FunctionKey
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::keyUp(FunctionKey k)
+{
+    return keyUp(currentMap->getFunctionKey(k));
+}
+
+/**
+  * Press the given Key.
+  *
+  * @param k A valid FunctionKey
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::keyDown(FunctionKey k)
+{
+    return keyDown(currentMap->getFunctionKey(k));
+}
+
+/**
+  * Release the key corresponding to the given character.
+  *
+  * @param c A valid character
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::keyUp(uint16_t c)
+{
+    const KeySequence* seq =  currentMap->mapCharacter(c);
+    int status = DEVICE_OK;
+
+    if(seq == NULL)
+        return DEVICE_INVALID_PARAMETER;
+
+    for(int i = 0; i < seq->length; i++)
+    {
+        Key k = seq->seq[i];
+        status = keyUp(k);
+
+        if(status != DEVICE_OK)
+            break;
+    }
+
+    return status;
+}
+
+/**
+  * Press the key corresponding to the given character.
+  *
+  * @param c A valid character
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::keyDown(uint16_t c)
+{
+    const KeySequence* seq =  currentMap->mapCharacter(c);
+    int status = DEVICE_OK;
+
+    if(seq == NULL)
+        return DEVICE_INVALID_PARAMETER;
+
+    for(int i = 0; i < seq->length; i++)
+    {
+        Key k = seq->seq[i];
+        status = keyDown(k);
+
+        if(status != DEVICE_OK)
+            break;
+    }
+
+    return status;
+}
+
+/**
+  * Presses and releases the given Key.
+  *
+  * @param k A valid Key
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::press(Key k)
+{
+    keyDown(k);
+    keyUp(k);
+    return DEVICE_OK;
+}
+
+/**
+  * Press and releases the given Key.
+  *
+  * @param k A valid MediaKey
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::press(MediaKey k)
+{
+    return press(currentMap->getMediaKey(k));
+}
+
+/**
+  * Press and releases the given Key.
+  *
+  * @param k A valid FunctionKey
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::press(FunctionKey k)
+{
+    return press(currentMap->getFunctionKey(k));
+}
+
+/**
+  * Press and releases the Key corresponding to the given character.
+  *
+  * @param k A valid character
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::press(uint16_t c)
+{
+    int status = DEVICE_OK;
+
+    // status doesn't really matter here - if one fails the other likely will.
+    status = keyDown(c);
+    status = keyDown(c);
+
+    return status;
+}
+
+/**
+  * Releases ALL keys on the keyboard (including Media keys)
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::flush()
+{
+    int status = DEVICE_OK;
+
+    HIDKeyboardReport *report = &reports[HID_KEYBOARD_REPORT_GENERIC];
+    memset(report->keyState, 0, report->reportSize);
+    status = updateReport(report);
+
+    report->keyPressedCount = 0;
+
+    if(status != DEVICE_OK)
+        return status;
+
+    report = &reports[HID_KEYBOARD_REPORT_CONSUMER];
+    memset(report->keyState, 0, report->reportSize);
+    status = updateReport(report);
+
+    report->keyPressedCount = 0;
+
+
+    return status;
+}
+
+/**
+  * Type a sequence of keys
+  *
+  * @param seq A valid pointer to a KeySequence containing multiple keys. See ASCIIKeyMap.cpp for example usage.
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::type(const KeySequence *seq)
+{
+    if(seq == NULL)
+        return DEVICE_INVALID_PARAMETER;
+
+    //send each keystroke in the sequence
+    for(int i = 0; i < seq->length; i++)
+    {
+        Key k = seq->seq[i];
+
+        if(k.bit.allKeysUp)
+            flush();
+
+        if(k.bit.isKeyDown)
+            keyDown(k);
+        else
+            keyUp(k);
+    }
+
+    //all keys up is implicit at the end of each sequence
+    flush();
+    fiber_sleep(HID_KEYBOARD_DELAY_DEFAULT);
+
+    return DEVICE_OK;
+}
+
+/**
+  * Type a sequence of characters
+  *
+  * @param s A valid pointer to a char array
+  *
+  * @param len The length of s.
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::type(const char* s, uint32_t len)
+{
+    int status;
+
+    for(uint32_t i = 0; i < len; i++)
+    {
+        if((status = type(currentMap->mapCharacter(s[i]))) != DEVICE_OK)
+           return status;
+    }
+
+    return DEVICE_OK;
+}
+
+/**
+  * Type a sequence of characters
+  *
+  * @param s A ManagedString instance containing the characters to type.
+  *
+  * @return DEVICE_OK on success.
+  */
+int USBHIDKeyboard::type(ManagedString s)
+{
+    return type(s.toCharArray(), s.length());
 }
 
 int USBHIDKeyboard::stdRequest(UsbEndpointIn &ctrl, USBSetup &setup)
@@ -188,180 +659,5 @@ const InterfaceInfo *USBHIDKeyboard::getInterfaceInfo()
     return &ifaceInfo;
 }
 
-int USBHIDKeyboard::keyDown(uint8_t key, uint8_t reportID)
-{
-    int status, newIndex = -1;
-    HIDKeyboardReport *report = &reports[reportID];
-
-    if(report->keyPressedCount == report->reportSize)
-        return DEVICE_NO_RESOURCES;
-
-    for(int i=HID_KEYBOARD_MODIFIER_OFFSET; i<report->reportSize; i++){
-        if(report->keyState[i] == HID_KEYBOARD_KEY_OFF){
-            report->keyState[i] = key;
-            newIndex = i;
-            break;
-        }
-    }
-
-    uint8_t reportBuf[report->reportSize + 1] = {reportID};
-    memcpy(reportBuf + 1, report->keyState, report->reportSize);
-    status = in->write(reportBuf, sizeof(reportBuf));
-
-    if(status == DEVICE_OK)
-        report->keyPressedCount++;
-    else
-        report->keyState[newIndex] = HID_KEYBOARD_KEY_OFF; //we could not make the change
-
-    return status;
-}
-
-int USBHIDKeyboard::keyUp(uint8_t key, uint8_t reportID)
-{
-    int status;
-    int newIndex = -1;
-
-    HIDKeyboardReport *report = &reports[reportID];
-    // ?? hmm no keys are pressed ??
-    if(report->keyPressedCount == 0)
-        return DEVICE_INVALID_PARAMETER;
-
-    // try to find the passed key
-    for(int i=HID_KEYBOARD_MODIFIER_OFFSET; i<report->reportSize; i++){
-        if(report->keyState[i] == key){
-            report->keyState[i] = HID_KEYBOARD_KEY_OFF;
-            newIndex = i;
-            break;
-        }
-    }
-
-    // the passed key is not pressed
-    if(newIndex == -1)
-        return DEVICE_INVALID_PARAMETER;
-
-    //write to the host
-    uint8_t reportBuf[report->reportSize + 1] = {reportID};
-    memcpy(reportBuf + 1, report->keyState, report->reportSize);
-    status = in->write(reportBuf, sizeof(reportBuf));
-
-    if(status == DEVICE_OK)
-        report->keyPressedCount--;
-    else
-        report->keyState[newIndex] = key; //we could not make the change. Revert
-
-    return status;
-}
-
-int USBHIDKeyboard::modifierKeyDown(uint8_t key, uint8_t reportID)
-{
-    int status;
-    uint8_t currentModifier;
-
-    HIDKeyboardReport *report = &reports[reportID];
-
-    currentModifier = *report->keyState;
-
-    if(currentModifier & key) 
-        return DEVICE_INVALID_PARAMETER; // the passed modifier flag is already set
-
-    *report->keyState = currentModifier | key;
-
-    //write to the host
-    uint8_t reportBuf[report->reportSize + 1] = {reportID};
-    memcpy(reportBuf + 1, report->keyState, report->reportSize);
-    status = in->write(reportBuf, sizeof(reportBuf));
-
-    if(status != DEVICE_OK)
-        *report->keyState = currentModifier; //we could not make the change. Revert
-
-    return status;
-}
-
-int USBHIDKeyboard::modifierKeyUp(uint8_t key, uint8_t reportID)
-{
-    int status;
-    uint8_t currentModifier;
-
-    HIDKeyboardReport *report = &reports[reportID];
-
-    currentModifier = *report->keyState;
-
-    if( !(currentModifier & key) ) 
-        return DEVICE_INVALID_PARAMETER; //The passed modifier key is not pressed
-
-    //Clear the flag of the passed modifier
-    *report->keyState = currentModifier | key;
-
-    //write to the host
-    uint8_t reportBuf[report->reportSize + 1] = {reportID};
-    memcpy(reportBuf + 1, report->keyState, report->reportSize);
-    status = in->write(reportBuf, sizeof(reportBuf));
-
-    if(status != DEVICE_OK)
-        *report->keyState = currentModifier; //we could not make the change. Revert
-
-    return status;
-}
-
-int USBHIDKeyboard::flush(uint8_t reportID)
-{
-    int status;
-
-    HIDKeyboardReport *report = &reports[reportID];
-    memset(report->keyState, 0, report->reportSize);
-
-    uint8_t reportBuf[report->reportSize + 1] = {reportID};
-    memcpy(reportBuf + 1, report->keyState, report->reportSize);
-
-    status = in->write(reportBuf, sizeof(reportBuf));
-    report->keyPressedCount = 0;
-
-    return status;
-}
-
-int USBHIDKeyboard::write(keySequence *seq, uint8_t reportID)
-{
-    //send each keystroke in the sequence
-    for(int i=0; i<seq->length; i++){
-        key k = seq->seq[i];
-        if(k.bit.allKeysUp){
-            flush(reportID);
-        }
-        else if(k.bit.isModifier){
-            if(k.bit.isKeyDown) modifierKeyDown(k.bit.code, reportID);
-            else modifierKeyUp(k.bit.code, reportID);
-        }
-        else{
-            if(k.bit.isKeyDown) keyDown(k.bit.code, reportID);
-            else keyUp(k.bit.code, reportID);
-        }
-        _delay(HID_KEYBOARD_DELAY_DEFAULT);
-    }
-
-    //all keys up is implicit at the end of each sequence
-    flush(reportID);
-    _delay(HID_KEYBOARD_DELAY_DEFAULT);
-
-    return DEVICE_OK;
-}
-
-int USBHIDKeyboard::type(const char str[], uint8_t reportID)
-{
-    char c = *str++;
-    keySequence *seq;
-    while(c){
-        if((uint8_t)c < _mapLen){
-
-            //get the keySequence that corresponds to the current character
-            seq = (keySequence *)&_map[(uint8_t)c];
-
-            this->write(seq, reportID);
-
-            c = *str++;
-        }
-        else return DEVICE_INVALID_PARAMETER;
-    }
-    return DEVICE_OK;
-}
 
 #endif
