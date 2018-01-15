@@ -130,7 +130,7 @@ static const InterfaceInfo ifaceInfo = {
         0x01, // subclass (boot interface)
         0x01, // protocol (keyboard)
         0x00, //
-        0x01, //
+        0x00, //
     },
     {USB_EP_TYPE_INTERRUPT, 1},
     {USB_EP_TYPE_INTERRUPT, 1},
