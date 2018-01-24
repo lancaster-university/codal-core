@@ -447,14 +447,19 @@ static const Key seq_del[] = {
 		{ .reg = KEYMAP_KEY_DOWN | KEY_BACKSPACE },
 };
 
+static const KeySequence unmapped =	{
+	NULL,
+	0
+};
+
 //define the keymap
 const KeySequence ascii_keymap[] = {
-	{}, {}, {}, {}, {}, {}, {}, {}, //0 - 7
+	unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, //0 - 7
 	KEYMAP_REGISTER(seq_backspace),
 	KEYMAP_REGISTER(seq_tab),
 	KEYMAP_REGISTER(seq_newline),
-	{}, {}, {}, {}, {},
-	{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, //16 - 31
+	unmapped, unmapped, unmapped, unmapped, unmapped,
+	unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, unmapped, //16 - 31
 	KEYMAP_REGISTER(seq_space),								//32 space
 	KEYMAP_REGISTER(seq_exclamation_point),					//33 !
 	KEYMAP_REGISTER(seq_quote),								//34 "
