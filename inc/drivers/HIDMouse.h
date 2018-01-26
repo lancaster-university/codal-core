@@ -33,8 +33,8 @@ namespace codal
 {
     typedef enum {
         HID_MOUSE_RIGHT = 0x01,
-        HID_MOUSE_MIDDLE = 0x02,
-        HID_MOUSE_LEFT = 0x04,
+        HID_MOUSE_MIDDLE = 0x04,
+        HID_MOUSE_LEFT = 0x02,
     } USBHIDMouseButton;
 
     typedef union {

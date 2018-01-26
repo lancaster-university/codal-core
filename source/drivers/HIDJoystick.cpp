@@ -192,12 +192,6 @@ int USBHIDJoystick::sendReport()
 	uint8_t report[sizeof(HIDJoystickState)];
 	memcpy(report, &joystickState, sizeof(HIDJoystickState));
 
-	//movements are relative
-	joystickState.x0 = 0;
-	joystickState.y0 = 0;
-	joystickState.x1 = 0;
-	joystickState.y1 = 0;
-
 	return in->write(report, sizeof(report));
 }
 
