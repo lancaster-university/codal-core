@@ -428,6 +428,12 @@ void CodalUSB::initEndpoints()
     InterfaceList *tmp = NULL;
     struct list_head *iter, *q = NULL;
 
+    if (ctrlIn)
+    {
+        delete ctrlIn;
+        delete ctrlOut;
+    }
+
     ctrlIn = new UsbEndpointIn(0, USB_EP_TYPE_CONTROL);
     ctrlOut = new UsbEndpointOut(0, USB_EP_TYPE_CONTROL);
 
@@ -440,6 +446,13 @@ void CodalUSB::initEndpoints()
         usb_assert(1 <= info->allocateEndpoints && info->allocateEndpoints <= 2);
         usb_assert(info->allocateEndpoints <= info->iface.numEndpoints &&
                    info->iface.numEndpoints <= 2);
+                
+        if (tmp->interface->in) delete tmp->interface->in;
+        if (tmp->interface->out)
+        {
+            delete tmp->interface->out;
+            tmp->interface->out = NULL;
+        }
 
         tmp->interface->in = new UsbEndpointIn(endpointCount, info->epIn.attr);
         if (info->iface.numEndpoints > 1)
