@@ -49,7 +49,7 @@ struct GFATEntry
     char filename[0];
 };
 
-// VirtualFAT would be more fitting, but it's unfortunately already taken.
+// the name VirtualFAT would be more fitting, but it's unfortunately already taken.
 
 class GhostFAT : public USBMSC
 {
