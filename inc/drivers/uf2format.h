@@ -16,7 +16,8 @@
 // If set, the block is "comment" and should not be flashed to the device
 #define UF2_FLAG_NOFLASH 0x00000001
 
-typedef struct {
+typedef struct
+{
     // 32 byte header
     uint32_t magicStart0;
     uint32_t magicStart1;
@@ -34,7 +35,8 @@ typedef struct {
     uint32_t magicEnd;
 } UF2_Block;
 
-typedef struct {
+typedef struct
+{
     uint8_t version;
     uint8_t ep_in;
     uint8_t ep_out;
@@ -48,7 +50,8 @@ typedef void (*UF2_MSC_Handover_Handler)(UF2_HandoverArgs *handover);
 typedef void (*UF2_HID_Handover_Handler)(int ep);
 
 // this is required to be exactly 16 bytes long by the linker script
-typedef struct {
+typedef struct
+{
     void *reserved0;
     UF2_HID_Handover_Handler handoverHID;
     UF2_MSC_Handover_Handler handoverMSC;
@@ -57,36 +60,42 @@ typedef struct {
 
 #define UF2_BINFO ((UF2_BInfo *)(APP_START_ADDRESS - sizeof(UF2_BInfo)))
 
-static inline bool is_uf2_block(void *data) {
+static inline bool is_uf2_block(void *data)
+{
     UF2_Block *bl = (UF2_Block *)data;
     return bl->magicStart0 == UF2_MAGIC_START0 && bl->magicStart1 == UF2_MAGIC_START1 &&
            bl->magicEnd == UF2_MAGIC_END;
 }
 
-static inline bool in_uf2_bootloader_space(const void *addr) {
+static inline bool in_uf2_bootloader_space(const void *addr)
+{
     return 0xb4 <= (uint32_t)addr && (uint32_t)addr < APP_START_ADDRESS;
 }
 
-static inline const char *uf2_info(void) {
+static inline const char *uf2_info(void)
+{
     if (in_uf2_bootloader_space(UF2_BINFO->info_uf2))
         return UF2_BINFO->info_uf2;
     return "N/A";
 }
 
 #ifdef UF2_DEFINE_HANDOVER
-static inline void hf2_handover(uint8_t ep) {
+static inline void hf2_handover(uint8_t ep)
+{
     const char *board_info = UF2_BINFO->info_uf2;
     UF2_HID_Handover_Handler fn = UF2_BINFO->handoverHID;
 
     if (in_uf2_bootloader_space(board_info) && in_uf2_bootloader_space((const void *)fn) &&
-        ((uint32_t)fn & 1)) {
+        ((uint32_t)fn & 1))
+    {
         // Pass control to bootloader; never returns
         fn(ep & 0xf);
     }
 }
 
 static inline void check_uf2_handover(uint8_t *buffer, uint32_t blocks_remaining, uint8_t ep_in,
-                                      uint8_t ep_out, uint32_t cbw_tag) {
+                                      uint8_t ep_out, uint32_t cbw_tag)
+{
     if (!is_uf2_block(buffer))
         return;
 
@@ -94,7 +103,8 @@ static inline void check_uf2_handover(uint8_t *buffer, uint32_t blocks_remaining
     UF2_MSC_Handover_Handler fn = UF2_BINFO->handoverMSC;
 
     if (in_uf2_bootloader_space(board_info) && in_uf2_bootloader_space((const void *)fn) &&
-        ((uint32_t)fn & 1)) {
+        ((uint32_t)fn & 1))
+    {
         UF2_HandoverArgs hand = {
             1, ep_in, ep_out, 0, cbw_tag, blocks_remaining, buffer,
         };

@@ -81,7 +81,8 @@ typedef struct
     uint32_t size;
 } __attribute__((packed)) DirEntry;
 
-typedef struct {
+typedef struct
+{
     uint8_t seqno;
     uint16_t name0[5];
     uint8_t attrs;
@@ -91,7 +92,6 @@ typedef struct {
     uint16_t startCluster;
     uint16_t name2[2];
 } __attribute__((packed)) VFatEntry;
-
 }
 
 #endif

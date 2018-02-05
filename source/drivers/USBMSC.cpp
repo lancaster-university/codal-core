@@ -156,7 +156,7 @@ int USBMSC::endpointRequest()
 {
     if (disableIRQ)
         return DEVICE_OK;
-        
+
     int len = out->read(&state->CommandBlock, sizeof(state->CommandBlock));
 
     if (len == 0)

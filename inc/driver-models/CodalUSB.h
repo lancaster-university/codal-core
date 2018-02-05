@@ -228,7 +228,6 @@ public:
 void usb_configure(uint8_t numEndpoints);
 void usb_set_address(uint16_t wValue);
 
-
 class CodalUSBInterface
 {
 public:

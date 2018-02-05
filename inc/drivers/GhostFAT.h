@@ -67,7 +67,8 @@ public:
     virtual void readBlocks(int blockAddr, int numBlocks);
     virtual void writeBlocks(int blockAddr, int numBlocks);
 
-    GFATEntry *addFile(GFATReadCallback read, void *userdata, const char *filename, uint32_t size, uint8_t dirid = 0);
+    GFATEntry *addFile(GFATReadCallback read, void *userdata, const char *filename, uint32_t size,
+                       uint8_t dirid = 0);
     GFATEntry *addStringFile(const char *data, const char *filename, uint8_t dirid = 0);
     void addDirectory(uint8_t id, const char *dirname);
     bool filesFinalized();
