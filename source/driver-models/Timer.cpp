@@ -225,7 +225,6 @@ int Timer::eventEveryUs(CODAL_TIMESTAMP period, uint16_t id, uint16_t value)
  */
 void Timer::sync(CODAL_TIMESTAMP t)
 {
-    if (t > 3600000000LL) for(;;);
     // First, update our timestamps.
     currentTimeUs += t;
     overflow += t;
