@@ -145,7 +145,7 @@ void GhostFAT::readDirData(uint8_t *dest, int blkno, uint8_t dirid)
         d++;
     }
 
-    for (auto e = files; e; e = e->next)
+    for (GFATEntry *e = files; e; e = e->next)
     {
         if (e->dirid != dirid)
             continue;
@@ -243,11 +243,11 @@ void GhostFAT::buildBlock(uint32_t block_no, uint8_t *data)
 
         int cl = 0;
         int skip = -(sectionIdx * 256);
-        auto dest = (uint16_t *)data;
+        uint16_t *dest = (uint16_t *)data;
 
         WRITE_ENT(0xfff0);
         WRITE_ENT(0xffff);
-        for (auto p = files; p; p = p->next)
+        for (GFATEntry *p = files; p; p = p->next)
         {
             int n = numClusters(p) - 1;
             for (int i = 0; i < n; i++)
@@ -263,7 +263,7 @@ void GhostFAT::buildBlock(uint32_t block_no, uint8_t *data)
     else
     {
         sectionIdx -= START_CLUSTERS;
-        for (auto p = files; p; p = p->next)
+        for (GFATEntry *p = files; p; p = p->next)
         {
             if (p->startCluster <= sectionIdx && (int)sectionIdx < p->startCluster + numClusters(p))
             {
@@ -347,7 +347,7 @@ void GhostFAT::finalizeFiles()
 
     while (files)
     {
-        auto n = files->next;
+        GFATEntry *n = files->next;
         if (files->attrs & 0x10)
         {
             files->next = dirs;
@@ -364,13 +364,13 @@ void GhostFAT::finalizeFiles()
     files = regFiles;
 
     int cl = 0;
-    for (auto p = files; p; p = p->next)
+    for (GFATEntry *p = files; p; p = p->next)
     {
         p->startCluster = cl;
         cl += numClusters(p);
         if (p->dirid)
         {
-            for (auto d = dirs; d; d = d->next)
+            for (GFATEntry *d = dirs; d; d = d->next)
             {
                 if ((uint32_t)d->userdata == p->dirid)
                 {
@@ -393,7 +393,7 @@ GFATEntry *GhostFAT::addFile(GFATReadCallback read, void *userdata, const char *
     if (filesFinalized())
         target_panic(DEVICE_USB_ERROR);
 
-    auto f = (GFATEntry *)malloc(sizeof(GFATEntry) + strlen(filename) + 1);
+    GFATEntry *f = (GFATEntry *)malloc(sizeof(GFATEntry) + strlen(filename) + 1);
     memset(f, 0, sizeof(GFATEntry));
     strcpy(f->filename, filename);
     f->size = size;
@@ -411,7 +411,7 @@ static void readString(GFATEntry *ent, unsigned blockAddr, char *dst)
     blockAddr *= 512;
     if (blockAddr >= ent->size)
         return;
-    auto f = (const char *)ent->userdata;
+    const char *f = (const char *)ent->userdata;
     for (int i = 0; i < 512; ++i)
     {
         dst[i] = *f;
@@ -427,14 +427,14 @@ GFATEntry *GhostFAT::addStringFile(const char *file, const char *filename, uint8
 
 void GhostFAT::addDirectory(uint8_t id, const char *dirname)
 {
-    auto f = addFile(NULL, (void *)(uint32_t)id, dirname, 0);
+    GFATEntry *f = addFile(NULL, (void *)(uint32_t)id, dirname, 0);
     f->attrs = 0x10;
 }
 
 static void readCurrentUF2(GFATEntry *ent, unsigned blockAddr, char *dst)
 {
-    auto addr = blockAddr * 256;
-    auto th = (GhostFAT *)ent->userdata;
+    uint32_t addr = blockAddr * 256;
+    GhostFAT *th = (GhostFAT *)ent->userdata;
     if (addr < th->internalFlashSize())
     {
         UF2_Block *bl = (UF2_Block *)dst;
@@ -452,7 +452,7 @@ static void readCurrentUF2(GFATEntry *ent, unsigned blockAddr, char *dst)
 #if DEVICE_DMESG_BUFFER_SIZE > 0
 static void readDMesg(GFATEntry *ent, unsigned blockAddr, char *dst)
 {
-    auto addr = blockAddr * 512;
+    uint32_t addr = blockAddr * 512;
     for (uint32_t i = 0; i < 512; ++i)
     {
         if (addr < codalLogStore.ptr)
