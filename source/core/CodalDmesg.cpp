@@ -25,6 +25,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalDmesg.h"
 #if DEVICE_DMESG_BUFFER_SIZE > 0
 
+#include "CodalDevice.h"
 #include "CodalCompat.h"
 
 CodalLogStore codalLogStore;
@@ -36,11 +37,13 @@ static void logwrite(const char *msg);
 
 static void logwriten(const char *msg, int l)
 {
-    const int jump = sizeof(codalLogStore.buffer) / 4;
-    if (codalLogStore.ptr >= sizeof(codalLogStore.buffer) - jump)
+    if (codalLogStore.ptr + l >= sizeof(codalLogStore.buffer))
     {
+        const int jump = sizeof(codalLogStore.buffer) / 4;
         codalLogStore.ptr -= jump;
         memmove(codalLogStore.buffer, codalLogStore.buffer + jump, codalLogStore.ptr);
+        // zero-out the rest so it looks OK in the debugger
+        memset(codalLogStore.buffer + codalLogStore.ptr, 0, sizeof(codalLogStore.buffer) - codalLogStore.ptr);
     }
     if (l + codalLogStore.ptr >= sizeof(codalLogStore.buffer))
     {
@@ -122,6 +125,7 @@ void codal_vdmesg(const char *format, va_list ap)
 {
     const char *end = format;
 
+    target_disable_irq();
     while (*end)
     {
         if (*end++ == '%')
@@ -158,6 +162,7 @@ void codal_vdmesg(const char *format, va_list ap)
     }
     logwriten(format, end - format);
     logwrite("\r\n");
+    target_enable_irq();
 }
 
 #endif
