@@ -235,16 +235,18 @@ public:
     uint8_t interfaceIdx;
     UsbEndpointIn *in;
     UsbEndpointOut *out;
+    CodalUSBInterface *next;
 
     CodalUSBInterface()
     {
         in = 0;
         out = 0;
         interfaceIdx = 0;
+        next = NULL;
     }
 
     virtual int classRequest(UsbEndpointIn &ctrl, USBSetup &setup) { return DEVICE_NOT_SUPPORTED; }
-    // standard request to interface (eg GET_DESCRIPTOR)
+    // standard request to interface (eg USB_REQ_GET_DESCRIPTOR)
     virtual int stdRequest(UsbEndpointIn &ctrl, USBSetup &setup) { return DEVICE_NOT_SUPPORTED; }
     virtual int endpointRequest() { return DEVICE_NOT_SUPPORTED; }
     virtual const InterfaceInfo *getInterfaceInfo() { return NULL; }
@@ -262,6 +264,7 @@ class CodalUSB
 
 public:
     static CodalUSB *usbInstance;
+    CodalUSBInterface *interfaces;
 
     // initialized by constructor, can be overriden before start()
     uint8_t numStringDescriptors;
