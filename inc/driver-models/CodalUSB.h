@@ -42,6 +42,7 @@ DEALINGS IN THE SOFTWARE.
 #define USB_STRING_DESCRIPTOR_TYPE 3
 #define USB_INTERFACE_DESCRIPTOR_TYPE 4
 #define USB_ENDPOINT_DESCRIPTOR_TYPE 5
+#define USB_BOS_DESCRIPTOR_TYPE 15
 
 #define USB_REQ_HOSTTODEVICE 0x00
 #define USB_REQ_DEVICETOHOST 0x80
@@ -250,12 +251,15 @@ public:
     virtual int endpointRequest() { return DEVICE_NOT_SUPPORTED; }
     virtual const InterfaceInfo *getInterfaceInfo() { return NULL; }
     void fillInterfaceInfo(InterfaceDescriptor *desc);
+    // if non-NULL, enable WebUSB for this interface
+    virtual const char *webUSBLandingPage() { return NULL; }
 };
 
 class CodalUSB
 {
     uint8_t endpointsUsed;
     uint8_t startDelayCount;
+    uint8_t firstWebUSBInterfaceIdx;
 
     int sendConfig();
     int sendDescriptors(USBSetup &setup);
