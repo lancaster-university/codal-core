@@ -53,9 +53,16 @@ static const DeviceDescriptor default_device_desc = {
 #else
     0x0200,          // bcdUSBL
 #endif
+
+#if 0
+    // This should be only used if we implement USB Serial (CDC) with IAD descriptors
     0xEF,            // bDeviceClass:    Misc
     0x02,            // bDeviceSubclass:
     0x01,            // bDeviceProtocol:
+#else
+    // Class etc specified per-interface
+    0x00, 0x00, 0x00,
+#endif
     0x40,            // bMaxPacketSize0
     USB_DEFAULT_VID, //
     USB_DEFAULT_PID, //
