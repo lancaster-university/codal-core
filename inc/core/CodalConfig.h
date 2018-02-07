@@ -169,6 +169,11 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_USB                            0
 #endif
 
+// If USB enabled, also enable WebUSB by default
+#ifndef DEVICE_WEBUSB
+#define DEVICE_WEBUSB                         1
+#endif
+
 //
 // Helper macro used by the codal device runtime to determine if a boolean configuration option is set.
 //
