@@ -343,7 +343,6 @@ int CodalUSB::add(CodalUSBInterface &interface)
 
     for (iface = interfaces; iface; iface = iface->next)
     {
-        interface.interfaceIdx++;
         if (!iface->next)
             break;
 #if CONFIG_ENABLED(DEVICE_WEBUSB)
