@@ -509,9 +509,7 @@ void CodalUSB::setupRequest(USBSetup &setup)
     }
 
     if (status < 0)
-    {
         stall();
-    }
 
     // sending response clears this - make sure we did
     usb_assert(ctrlIn->wLength == 0);
