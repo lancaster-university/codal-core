@@ -46,12 +46,12 @@ static uint8_t usb_configured = 0;
 static const ConfigDescriptor static_config = {9, 2, 0, 0, 1, 0, USB_CONFIG_BUS_POWERED, 250};
 
 static const DeviceDescriptor default_device_desc = {
-    0x12,            // bLength
-    0x01,            // bDescriptorType
+    0x12, // bLength
+    0x01, // bDescriptorType
 #if CONFIG_ENABLED(DEVICE_WEBUSB)
-    0x0210,          // bcdUSBL
+    0x0210, // bcdUSBL
 #else
-    0x0200,          // bcdUSBL
+    0x0200, // bcdUSBL
 #endif
 
 #if 0
@@ -99,7 +99,7 @@ static const uint8_t bosDescriptor[] = {
     0x8B, 0xFD, 0xA0, 0x76, 0x88, 0x15, 0xB6, 0x65, // WebUSB GUID
     0x00, 0x01,                                     // Version 1.0
     VENDOR_WEBUSB,                                  // Vendor request code
-    0x01,                                           // landing page
+    0x00,                                           // landing page
 
     0x1C,                                           // Length
     0x10,                                           // Device Capability descriptor
@@ -348,7 +348,8 @@ int CodalUSB::add(CodalUSBInterface &interface)
             break;
 #if CONFIG_ENABLED(DEVICE_WEBUSB)
         // adding a non-web interface - it comes before all web interfaces
-        if (!interface.webUSBLandingPage() && iface->next->webUSBLandingPage()) {
+        if (!interface.enableWebUSB() && iface->next->enableWebUSB())
+        {
             interface.next = iface->next;
             break;
         }
@@ -482,36 +483,24 @@ void CodalUSB::setupRequest(USBSetup &setup)
         switch (setup.bRequest)
         {
         case VENDOR_MS20:
-        {
             if (firstWebUSBInterfaceIdx == 0xff)
-                goto fail;
-            uint8_t buf[sizeof(msOS20Descriptor)];
-            memcpy(buf, msOS20Descriptor, sizeof(buf));
-            usb_assert(buf[14] == 0xff);
-            buf[14] = firstWebUSBInterfaceIdx;
-            send(buf, sizeof(buf));
-            return;
-        }
+            {
+                status = DEVICE_NOT_SUPPORTED;
+            }
+            else
+            {
+                uint8_t buf[sizeof(msOS20Descriptor)];
+                memcpy(buf, msOS20Descriptor, sizeof(buf));
+                usb_assert(buf[14] == 0xff);
+                buf[14] = firstWebUSBInterfaceIdx;
+                send(buf, sizeof(buf));
+            }
+            break;
 
         case VENDOR_WEBUSB:
-            if (setup.wIndex == 0x02 && setup.wValueL == 0x01)
-            {
-                for (CodalUSBInterface *iface = interfaces; iface; iface = iface->next)
-                {
-                    const char *landing = iface->webUSBLandingPage();
-                    if (!landing)
-                        continue;
-                    uint8_t len = strlen(landing) + 3;
-                    uint8_t buf[len];
-                    buf[0] = len;
-                    buf[1] = 3; // type
-                    buf[2] = 1; // https://
-                    memcpy(buf + 3, landing, len - 3);
-                    send(buf, len);
-                    return;
-                }
-                goto fail;
-            }
+            // this is the place for the WebUSB landing page, if we ever want to do that
+            status = DEVICE_NOT_IMPLEMENTED;
+            break;
         }
     }
 #endif
@@ -522,7 +511,6 @@ void CodalUSB::setupRequest(USBSetup &setup)
 
     if (status < 0)
     {
-    fail:
         stall();
     }
 
@@ -559,7 +547,7 @@ void CodalUSB::initEndpoints()
         iface->interfaceIdx = ifaceCount++;
 
 #if CONFIG_ENABLED(DEVICE_WEBUSB)
-        if (firstWebUSBInterfaceIdx == 0xff && iface->webUSBLandingPage())
+        if (firstWebUSBInterfaceIdx == 0xff && iface->enableWebUSB())
             firstWebUSBInterfaceIdx = iface->interfaceIdx;
 #endif
 

@@ -251,8 +251,7 @@ public:
     virtual int endpointRequest() { return DEVICE_NOT_SUPPORTED; }
     virtual const InterfaceInfo *getInterfaceInfo() { return NULL; }
     void fillInterfaceInfo(InterfaceDescriptor *desc);
-    // if non-NULL, enable WebUSB for this interface
-    virtual const char *webUSBLandingPage() { return NULL; }
+    virtual bool enableWebUSB() { return false; }
 };
 
 class CodalUSB
