@@ -31,15 +31,14 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
-LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id) : upstream(source)
+LevelDetector::LevelDetector(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id) : upstream(source)
 {
     this->id = id;
     this->level = 0;
-    this->sigma = 0;
-    this->windowPosition = 0;
     this->windowSize = LEVEL_DETECTOR_DEFAULT_WINDOW_SIZE;
     this->lowThreshold = lowThreshold;
     this->highThreshold = highThreshold;
+    this->gain = gain;
     this->status |= LEVEL_DETECTOR_INITIALISED;
 
     // Register with our upstream component
@@ -56,36 +55,67 @@ int LevelDetector::pullRequest()
 
     int samples = b.length() / 2;
 
-    for (int i=0; i < samples; i++)
-    {
-        sigma += abs(*data);
-        windowPosition++;
+    while(samples){
 
-        if (windowPosition == windowSize)
-        {
-            level = sigma / windowSize;
-            sigma = 0;
-            windowPosition = 0;
+        //ensure we use at least windowSize number of samples
+        int16_t *end, *ptr;
+        if(samples < windowSize)
+        break;
 
-            if ((!(status & LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
-            {
-                Event(id, LEVEL_THRESHOLD_HIGH);
-                status |=  LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED;
-                status &= ~LEVEL_DETECTOR_LOW_THRESHOLD_PASSED;
-            }
+        end = data + windowSize;
 
-            if ((!(status & LEVEL_DETECTOR_LOW_THRESHOLD_PASSED)) && level < lowThreshold)
-            {
-                Event(id, LEVEL_THRESHOLD_LOW);
-                status |=  LEVEL_DETECTOR_LOW_THRESHOLD_PASSED;
-                status &= ~LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED;
-            }
+        float pref = 0.00002;
+
+        /*******************************
+        *   REMOVE DC OFFSET
+        ******************************/
+        int32_t avg = 0;
+        ptr = data;
+        while(ptr < end) avg += *ptr++;
+        avg = avg/windowSize;
+
+        ptr = data;
+        while(ptr < end) *ptr++ -= avg;
+
+        /*******************************
+        *   GET MAX VALUE
+        ******************************/
+
+        int16_t maxVal = 0;
+        ptr = data;
+        while(ptr < end){
+         int32_t v = abs(*ptr++);
+         if(v > maxVal) maxVal = v;
         }
 
-        data++;
-    }
+        float conv = ((float)maxVal)/((1 << 15)-1) * gain;
 
-    return DEVICE_OK;
+        /*******************************
+        *   CALCULATE SPL
+        ******************************/
+        conv = 20 * log10(conv/pref);
+
+        if(isfinite(conv)) level = conv;
+        else level = minValue;
+
+        samples -= windowSize;
+
+        if ((!(status & LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
+        {
+            Event(id, LEVEL_THRESHOLD_HIGH);
+            status |=  LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED;
+            status &= ~LEVEL_DETECTOR_LOW_THRESHOLD_PASSED;
+        }
+
+        if ((!(status & LEVEL_DETECTOR_LOW_THRESHOLD_PASSED)) && level < lowThreshold)
+        {
+            Event(id, LEVEL_THRESHOLD_LOW);
+            status |=  LEVEL_DETECTOR_LOW_THRESHOLD_PASSED;
+            status &= ~LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED;
+        }
+   }
+
+   return DEVICE_OK;
 }
 
 /*
@@ -93,7 +123,7 @@ int LevelDetector::pullRequest()
  *
  * @return The current value of the sensor.
  */
-int LevelDetector::getValue()
+float LevelDetector::getValue()
 {
     return level;
 }
@@ -106,7 +136,7 @@ int LevelDetector::getValue()
  *
  * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
  */
-int LevelDetector::setLowThreshold(int value)
+int LevelDetector::setLowThreshold(float value)
 {
     // Protect against churn if the same threshold is set repeatedly.
     if (lowThreshold == value)
@@ -132,7 +162,7 @@ int LevelDetector::setLowThreshold(int value)
  *
  * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
  */
-int LevelDetector::setHighThreshold(int value)
+int LevelDetector::setHighThreshold(float value)
 {
     // Protect against churn if the same threshold is set repeatedly.
     if (highThreshold == value)
@@ -156,7 +186,7 @@ int LevelDetector::setHighThreshold(int value)
  *
  * @return The current low threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
  */
-int LevelDetector::getLowThreshold()
+float LevelDetector::getLowThreshold()
 {
     return lowThreshold;
 }
@@ -166,7 +196,7 @@ int LevelDetector::getLowThreshold()
  *
  * @return The current high threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
  */
-int LevelDetector::getHighThreshold()
+float LevelDetector::getHighThreshold()
 {
     return highThreshold;
 }
@@ -186,6 +216,12 @@ int LevelDetector::setWindowSize(int size)
         return DEVICE_INVALID_PARAMETER;
 
     this->windowSize = size;
+    return DEVICE_OK;
+}
+
+int LevelDetector::setGain(float gain)
+{
+    this->gain = gain;
     return DEVICE_OK;
 }
 
