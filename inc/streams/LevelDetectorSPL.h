@@ -25,52 +25,55 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "DataStream.h"
 
-#ifndef LEVEL_DETECTOR_H
-#define LEVEL_DETECTOR_H
+#ifndef LEVEL_DETECTOR_SPL_H
+#define LEVEL_DETECTOR_SPL_H
 
 
 /**
   * Sensor events
   */
-#define LEVEL_THRESHOLD_LOW                           1
-#define LEVEL_THRESHOLD_HIGH                          2
+#define SPL_LEVEL_THRESHOLD_LOW                           1
+#define SPL_LEVEL_THRESHOLD_HIGH                          2
 
 /**
  * Status values
  */
-#define LEVEL_DETECTOR_INITIALISED                       0x01
-#define LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED             0x02
-#define LEVEL_DETECTOR_LOW_THRESHOLD_PASSED              0x04
+#define LEVEL_DETECTOR_SPL_INITIALISED                       0x01
+#define LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED             0x02
+#define LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED              0x04
 
 /**
  * Default configuration values
  */
-#define LEVEL_DETECTOR_DEFAULT_WINDOW_SIZE              128
+#define LEVEL_DETECTOR_SPL_DEFAULT_WINDOW_SIZE              128
 
 namespace codal{
-    class LevelDetector : public CodalComponent, public DataSink
+    class LevelDetectorSPL : public CodalComponent, public DataSink
     {
     public:
 
         // The stream component that is serving our data
         DataSource      &upstream;          // The component producing data to process
-        int             highThreshold;      // threshold at which a HIGH event is generated
-        int             lowThreshold;       // threshold at which a LOW event is generated
+        float           highThreshold;      // threshold at which a HIGH event is generated
+        float           lowThreshold;       // threshold at which a LOW event is generated
         int             windowSize;         // The number of samples the make up a level detection window.
-        int             windowPosition;     // The number of samples used so far in the calculation of a window.
-        int             level;              // The current, instantaneous level.
+        float           level;              // The current, instantaneous level.
         int             sigma;              // Running total of the samples in the current window.
+        float           gain;
+        float           minValue;
 
 
         /**
           * Creates a component capable of measuring and thresholding stream data
           *
           * @param source a DataSource to measure the level of.
-          * @param highThreshold the HIGH threshold at which a LEVEL_THRESHOLD_HIGH event will be generated
-          * @param lowThreshold the HIGH threshold at which a LEVEL_THRESHOLD_LOW event will be generated
+          * @param highThreshold the HIGH threshold at which a SPL_LEVEL_THRESHOLD_HIGH event will be generated
+          * @param lowThreshold the HIGH threshold at which a SPL_LEVEL_THRESHOLD_LOW event will be generated
           * @param id The id to use for the message bus when transmitting events.
           */
-        LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR);
+        LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain,
+            float minValue = 52,
+            uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL);
 
         /**
          * Callback provided when data is ready.
@@ -82,7 +85,7 @@ namespace codal{
          *
          * @return The current value of the sensor.
          */
-        int getValue();
+        float getValue();
 
         /**
          * Set threshold to the given value. Events will be generated when these thresholds are crossed.
@@ -91,7 +94,7 @@ namespace codal{
          *
          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
          */
-        int setLowThreshold(int value);
+        int setLowThreshold(float value);
 
         /**
          * Set threshold to the given value. Events will be generated when these thresholds are crossed.
@@ -100,21 +103,21 @@ namespace codal{
          *
          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
          */
-        int setHighThreshold(int value);
+        int setHighThreshold(float value);
 
         /**
          * Determines the currently defined low threshold.
          *
          * @return The current low threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
          */
-        int getLowThreshold();
+        float getLowThreshold();
 
         /**
          * Determines the currently defined high threshold.
          *
          * @return The current high threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
          */
-        int getHighThreshold();
+        float getHighThreshold();
 
         /**
          * Set the window size to the given value. The window size defines the number of samples used to determine a sound level.
@@ -127,10 +130,12 @@ namespace codal{
          */
         int setWindowSize(int size);
 
+        int setGain(float gain);
+
         /**
          * Destructor.
          */
-        ~LevelDetector();
+        ~LevelDetectorSPL();
 
     };
 }
