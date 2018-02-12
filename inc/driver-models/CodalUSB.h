@@ -32,24 +32,6 @@ DEALINGS IN THE SOFTWARE.
 #include <stdint.h>
 #include "ErrorNo.h"
 
-#define GET_STATUS 0
-#define CLEAR_FEATURE 1
-// Reserved for future use    2
-#define SET_FEATURE 3
-// Reserved for future use    4
-#define SET_ADDRESS 5
-#define GET_DESCRIPTOR 6
-#define SET_DESCRIPTOR 7
-#define GET_CONFIGURATION 8
-#define SET_CONFIGURATION 9
-#define GET_INTERFACE 10
-#define SET_INTERFACE 11
-#define SYNCH_FRAME 12
-
-#define DIRECTION (1 << 7)
-#define DIRECTION_OUT 0
-#define DIRECTION_IN 1
-
 #define USB_CONFIG_POWERED_MASK 0x40
 #define USB_CONFIG_BUS_POWERED 0x80
 #define USB_CONFIG_SELF_POWERED 0xC0
@@ -60,30 +42,38 @@ DEALINGS IN THE SOFTWARE.
 #define USB_STRING_DESCRIPTOR_TYPE 3
 #define USB_INTERFACE_DESCRIPTOR_TYPE 4
 #define USB_ENDPOINT_DESCRIPTOR_TYPE 5
+#define USB_BOS_DESCRIPTOR_TYPE 15
 
-#define REQUEST_HOSTTODEVICE 0x00
-#define REQUEST_DEVICETOHOST 0x80
-#define REQUEST_DIRECTION 0x80
+#define USB_REQ_HOSTTODEVICE 0x00
+#define USB_REQ_DEVICETOHOST 0x80
+#define USB_REQ_DIRECTION 0x80
 
-#define REQUEST_STANDARD 0x00
-#define REQUEST_CLASS 0x20
-#define REQUEST_VENDOR 0x40
-#define REQUEST_TYPE 0x60
+#define USB_REQ_STANDARD 0x00
+#define USB_REQ_CLASS 0x20
+#define USB_REQ_VENDOR 0x40
+#define USB_REQ_TYPE 0x60
 
-#define REQUEST_DESTINATION 0x1F
-#define REQUEST_DEVICE 0x00
-#define REQUEST_INTERFACE 0x01
-#define REQUEST_ENDPOINT 0x02
-#define REQUEST_OTHER 0x03
+#define USB_REQ_DESTINATION 0x1F
+#define USB_REQ_DEVICE 0x00
+#define USB_REQ_INTERFACE 0x01
+#define USB_REQ_ENDPOINT 0x02
+#define USB_REQ_OTHER 0x03
 
-#define REQUEST_GET_STATUS 0x00
-#define REQUEST_CLEAR_FEATURE 0x01
-#define REQUEST_SET_FEATURE 0x03
-#define REQUEST_SYNCH_FRAME 0x12
+#define USB_REQ_GET_STATUS 0x00
+#define USB_REQ_CLEAR_FEATURE 0x01
+#define USB_REQ_SET_FEATURE 0x03
+#define USB_REQ_SET_ADDRESS 5
+#define USB_REQ_GET_DESCRIPTOR 6
+#define USB_REQ_SET_DESCRIPTOR 7
+#define USB_REQ_GET_CONFIGURATION 8
+#define USB_REQ_SET_CONFIGURATION 9
+#define USB_REQ_GET_INTERFACE 10
+#define USB_REQ_SET_INTERFACE 11
+#define USB_REQ_SYNCH_FRAME 12
 
-#define DEVICE_REMOTE_WAKEUP 1
-#define FEATURE_SELFPOWERED_ENABLED (1 << 0)
-#define FEATURE_REMOTE_WAKEUP_ENABLED (1 << 1)
+#define USB_DEVICE_REMOTE_WAKEUP 1
+#define USB_FEATURE_SELFPOWERED_ENABLED (1 << 0)
+#define USB_FEATURE_REMOTE_WAKEUP_ENABLED (1 << 1)
 
 enum usb_ep_type
 {
@@ -211,6 +201,7 @@ public:
     uint8_t flags;
     uint16_t wLength;
     int stall();
+    int clearStall();
     int reset();
     int write(const void *buf, int length);
 
@@ -226,9 +217,11 @@ public:
     uint8_t ep;
     int stall();
     int reset();
-
+    int clearStall();
     int read(void *buf, int maxlength); // up to packet size
-    // int readBlocking(const void *buf, int length);
+    // when IRQ disabled, endpointRequest() callback will not be called (generally)
+    int disableIRQ();
+    int enableIRQ();
 
     UsbEndpointOut(uint8_t idx, uint8_t type, uint8_t size = USB_MAX_PKT_SIZE);
 };
@@ -236,32 +229,36 @@ public:
 void usb_configure(uint8_t numEndpoints);
 void usb_set_address(uint16_t wValue);
 
-
 class CodalUSBInterface
 {
 public:
     uint8_t interfaceIdx;
     UsbEndpointIn *in;
     UsbEndpointOut *out;
+    CodalUSBInterface *next;
 
     CodalUSBInterface()
     {
         in = 0;
         out = 0;
         interfaceIdx = 0;
+        next = NULL;
     }
 
     virtual int classRequest(UsbEndpointIn &ctrl, USBSetup &setup) { return DEVICE_NOT_SUPPORTED; }
-    // standard request to interface (eg GET_DESCRIPTOR)
+    // standard request to interface (eg USB_REQ_GET_DESCRIPTOR)
     virtual int stdRequest(UsbEndpointIn &ctrl, USBSetup &setup) { return DEVICE_NOT_SUPPORTED; }
     virtual int endpointRequest() { return DEVICE_NOT_SUPPORTED; }
     virtual const InterfaceInfo *getInterfaceInfo() { return NULL; }
     void fillInterfaceInfo(InterfaceDescriptor *desc);
+    virtual bool enableWebUSB() { return false; }
 };
 
 class CodalUSB
 {
     uint8_t endpointsUsed;
+    uint8_t startDelayCount;
+    uint8_t firstWebUSBInterfaceIdx;
 
     int sendConfig();
     int sendDescriptors(USBSetup &setup);
@@ -269,6 +266,7 @@ class CodalUSB
 
 public:
     static CodalUSB *usbInstance;
+    CodalUSBInterface *interfaces;
 
     // initialized by constructor, can be overriden before start()
     uint8_t numStringDescriptors;
@@ -287,6 +285,8 @@ public:
     CodalUSB *getInstance();
 
     int start();
+    // an interface can call it and, at some later point, call start()
+    void delayStart() { startDelayCount++; }
 
     // Called from USB.cpp
     void setupRequest(USBSetup &setup);
