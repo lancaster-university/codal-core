@@ -40,6 +40,7 @@ enum AcknowledgeType {ACK, NACK};
 class I2C
 {
 public:
+    I2C(PinName sda, PinName scl);
     I2C(Pin &sda, Pin &scl);
 
     /** Set the frequency of the I2C interface
