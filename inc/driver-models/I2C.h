@@ -25,10 +25,10 @@ DEALINGS IN THE SOFTWARE.
 #ifndef CODAL_I2C_H
 #define CODAL_I2C_H
 
+#include "mbed.h"
 #include "CodalConfig.h"
 #include "ErrorNo.h"
 #include "Pin.h"
-#include "PinNames.h"
 
 namespace codal
 {
