@@ -30,7 +30,7 @@ namespace codal
 /**
   * Constructor.
   */
-I2C::I2C(codal::PinName sda, codal::PinName scl)
+I2C::I2C(::PinName sda, ::PinName scl)
 {
 }
 /**
