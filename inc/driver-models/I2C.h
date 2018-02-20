@@ -25,7 +25,6 @@ DEALINGS IN THE SOFTWARE.
 #ifndef CODAL_I2C_H
 #define CODAL_I2C_H
 
-#include <mbed.h>
 #include "CodalConfig.h"
 #include "ErrorNo.h"
 #include "Pin.h"
@@ -41,7 +40,9 @@ enum AcknowledgeType {ACK, NACK};
 class I2C
 {
 public:
-    I2C(PinName sda, PinName scl);
+    I2C(PinName sda, PinName scl)
+    {
+    }
 
     I2C(Pin &sda, Pin &scl);
 
