@@ -28,13 +28,6 @@ DEALINGS IN THE SOFTWARE.
 namespace codal
 {
 /**
-  * Constructor.
-  */
-I2C::I2C(Pin &sda, Pin &scl)
-{
-}
-
-/**
   * Set the frequency of the I2C interface
   *
   * @param frequency The bus frequency in hertz
