@@ -30,7 +30,7 @@ namespace codal
 /**
   * Constructor.
   */
-I2C::I2C(const Pin &sda, const Pin &scl)
+I2C::I2C(Pin &sda, Pin &scl)
 {
 }
 
