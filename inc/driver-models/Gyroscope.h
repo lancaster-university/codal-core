@@ -159,13 +159,13 @@ namespace codal
           * Reads the last gyroscope value stored, and provides it in the coordinate system requested.
           *
           * @param coordinateSpace The coordinate system to use.
-          * @return The force measured in each axis, in milli-g.
+          * @return The force measured in each axis, in dps.
           */
         Sample3D getSample(CoordinateSystem coordinateSystem);
 
         /**
           * Reads the last gyroscope value stored, and in the coordinate system defined in the constructor.
-          * @return The force measured in each axis, in milli-g.
+          * @return The force measured in each axis, in dps.
           */
         Sample3D getSample();
 
