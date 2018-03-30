@@ -83,15 +83,6 @@ namespace codal
         Sample3D        sampleENU;          // The last sample read, in raw ENU format (stored in case requests are made for data in other coordinate spaces)
         CoordinateSpace &coordinateSpace;   // The coordinate space transform (if any) to apply to the raw data from the hardware.
 
-        float           pitch;              // Pitch of the device, in radians.
-        float           roll;               // Roll of the device, in radians.
-
-        uint8_t         sigma;              // the number of ticks that the instantaneous gesture has been stable.
-        uint8_t         impulseSigma;       // the number of ticks since an impulse event has been generated.
-        uint16_t        lastGesture;        // the last, stable gesture recorded.
-        uint16_t        currentGesture;     // the instantaneous, unfiltered gesture detected.
-        ShakeHistory    shake;              // State information needed to detect shake events.
-
         public:
 
         /**

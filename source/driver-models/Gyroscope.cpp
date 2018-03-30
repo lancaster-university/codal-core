@@ -71,13 +71,13 @@ int Gyroscope::update(Sample3D s)
     sample = coordinateSpace.transform(s);
 
     // Indicate that pitch and roll data is now stale, and needs to be recalculated if needed.
-    status &= ~ACCELEROMETER_IMU_DATA_VALID;
+    status &= ~GYROSCOPE_IMU_DATA_VALID;
 
     // Update gesture tracking
     updateGesture();
 
     // Indicate that a new sample is available
-    Event e(id, ACCELEROMETER_EVT_DATA_UPDATE);
+    Event e(id, GYROSCOPE_EVT_DATA_UPDATE);
 
     return DEVICE_OK;
 };
