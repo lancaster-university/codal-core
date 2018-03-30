@@ -23,8 +23,8 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef CODAL_GYROSCOPE_H
-#define CODAL_GYROSCOPE_H
+#ifndef CODAL_TEMPERATURE_H
+#define CODAL_TEMPERATURE_H
 
 #include "CodalConfig.h"
 #include "CodalComponent.h"
@@ -35,43 +35,41 @@ DEALINGS IN THE SOFTWARE.
 /**
   * Status flags
   */
-#define GYROSCOPE_IMU_DATA_VALID               0x02
+#define TEMPERATURE_IMU_DATA_VALID               0x02
 
 /**
-  * Gyroscope events
+  * Temperature events
   */
-#define GYROSCOPE_EVT_DATA_UPDATE              1
+#define TEMPERATURE_EVT_DATA_UPDATE              1
 
 namespace codal
 {
 
     /**
-     * Class definition for Gyroscope.
+     * Class definition for Temperature.
      */
-    class Gyroscope : public CodalComponent
+    class Temperature : public CodalComponent
     {
         protected:
 
         uint16_t        samplePeriod;       // The time between samples, in milliseconds.
-        uint8_t         sampleRange;        // The sample range of the gyroscope in g.
-        Sample3D        sample;             // The last sample read, in the coordinate system specified by the coordinateSpace variable.
-        Sample3D        sampleENU;          // The last sample read, in raw ENU format (stored in case requests are made for data in other coordinate spaces)
-        CoordinateSpace &coordinateSpace;   // The coordinate space transform (if any) to apply to the raw data from the hardware.
+        uint8_t         sampleRange;        // The sample range of the temperature in g.
+        uint16_t        sample;             // The last sample read, in the coordinate system specified by the coordinateSpace variable.
 
         public:
 
         /**
           * Constructor.
-          * Create a software abstraction of an gyroscope.
+          * Create a software abstraction of an temperature.
           *
           * @param coordinateSpace the orientation of the sensor. Defaults to: SIMPLE_CARTESIAN
-          * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_GYROSCOPE
+          * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_TEMPERATURE
           *
          */
-        Gyroscope(CoordinateSpace &coordinateSpace, uint16_t id = DEVICE_ID_GYROSCOPE);
+        Temperature(uint16_t id = DEVICE_ID_TEMPERATURE);
 
         /**
-          * Attempts to set the sample rate of the gyroscope to the specified value (in ms).
+          * Attempts to set the sample rate of the temperature to the specified value (in ms).
           *
           * @param period the requested time between samples, in milliseconds.
           * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
@@ -79,19 +77,19 @@ namespace codal
           * @note The requested rate may not be possible on the hardware. In this case, the
           * nearest lower rate is chosen.
           *
-          * @note This method should be overriden (if supported) by specific gyroscope device drivers.
+          * @note This method should be overriden (if supported) by specific temperature device drivers.
           */
         virtual int setPeriod(int period);
 
         /**
-          * Reads the currently configured sample rate of the gyroscope.
+          * Reads the currently configured sample rate of the temperature.
           *
           * @return The time between samples, in milliseconds.
           */
         virtual int getPeriod();
 
         /**
-          * Attempts to set the sample range of the gyroscope to the specified value (in dps).
+          * Attempts to set the sample range of the temperature to the specified value (in dps).
           *
           * @param range The requested sample range of samples, in dps.
           *
@@ -100,24 +98,24 @@ namespace codal
           * @note The requested range may not be possible on the hardware. In this case, the
           * nearest lower range is chosen.
           *
-          * @note This method should be overriden (if supported) by specific gyroscope device drivers.
+          * @note This method should be overriden (if supported) by specific temperature device drivers.
           */
         virtual int setRange(int range);
 
         /**
-          * Reads the currently configured sample range of the gyroscope.
+          * Reads the currently configured sample range of the temperature.
           *
           * @return The sample range, in g.
           */
         virtual int getRange();
 
         /**
-         * Configures the gyroscope for dps range and sample rate defined
+         * Configures the temperature for dps range and sample rate defined
          * in this object. The nearest values are chosen to those defined
          * that are supported by the hardware. The instance variables are then
          * updated to reflect reality.
          *
-         * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the gyroscope could not be configured.
+         * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the temperature could not be configured.
          *
          * @note This method should be overidden by the hardware driver to implement the requested
          * changes in hardware.
@@ -138,7 +136,7 @@ namespace codal
         virtual int requestUpdate();
 
         /**
-         * Stores data from the gyroscope sensor in our buffer, and perform gesture tracking.
+         * Stores data from the temperature sensor in our buffer, and perform gesture tracking.
          *
          * On first use, this member function will attempt to add this component to the
          * list of fiber components in order to constantly update the values stored
@@ -152,60 +150,17 @@ namespace codal
         virtual int update(Sample3D s);
 
         /**
-          * Reads the last gyroscope value stored, and provides it in the coordinate system requested.
-          *
-          * @param coordinateSpace The coordinate system to use.
+          * Reads the last temperature value stored, and in the coordinate system defined in the constructor.
           * @return The force measured in each axis, in dps.
           */
-        Sample3D getSample(CoordinateSystem coordinateSystem);
-
-        /**
-          * Reads the last gyroscope value stored, and in the coordinate system defined in the constructor.
-          * @return The force measured in each axis, in dps.
-          */
-        Sample3D getSample();
-
-        /**
-          * reads the value of the x axis from the latest update retrieved from the gyroscope,
-          * using the default coordinate system as specified in the constructor.
-          *
-          * @return the force measured in the x axis, in dps.
-          */
-        int getX();
-
-        /**
-          * reads the value of the y axis from the latest update retrieved from the gyroscope,
-          * using the default coordinate system as specified in the constructor.
-          *
-          * @return the force measured in the y axis, in dps.
-          */
-        int getY();
-
-        /**
-          * reads the value of the z axis from the latest update retrieved from the gyroscope,
-          * using the default coordinate system as specified in the constructor.
-          *
-          * @return the force measured in the z axis, in dps.
-          */
-        int getZ();
+        uint16_t getSample();
 
         /**
           * Destructor.
           */
-        ~Gyroscope();
+        ~Temperature();
 
         private:
-
-        /**
-          * A service function.
-          * It calculates the current angular velocity of the device (x^2 + y^2 + z^2).
-          * It does not, however, square root the result, as this is a relatively high cost operation.
-          *
-          * This is left to application code should it be needed.
-          *
-          * @return the sum of the square of the angular velocity of the device across all axes.
-          */
-        uint32_t instantaneousAccelerationSquared();
 
     };
 }
