@@ -73,9 +73,6 @@ int Gyroscope::update(Sample3D s)
     // Indicate that pitch and roll data is now stale, and needs to be recalculated if needed.
     status &= ~GYROSCOPE_IMU_DATA_VALID;
 
-    // Update gesture tracking
-    updateGesture();
-
     // Indicate that a new sample is available
     Event e(id, GYROSCOPE_EVT_DATA_UPDATE);
 
