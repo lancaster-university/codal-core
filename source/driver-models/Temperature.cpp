@@ -66,15 +66,11 @@ Temperature::Temperature(uint16_t id) : sample()
   */
 int Temperature::update(Sample3D s)
 {
-    // Store the new data, after performing any necessary coordinate transformations.
-    sampleENU = s;
-    sample = coordinateSpace.transform(s);
-
     // Indicate that pitch and roll data is now stale, and needs to be recalculated if needed.
-    status &= ~GYROSCOPE_IMU_DATA_VALID;
+    status &= ~TEMPERATURE_IMU_DATA_VALID;
 
     // Indicate that a new sample is available
-    Event e(id, GYROSCOPE_EVT_DATA_UPDATE);
+    Event e(id, TEMPERATURE_EVT_DATA_UPDATE);
 
     return DEVICE_OK;
 };

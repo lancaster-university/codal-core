@@ -66,7 +66,7 @@ namespace codal
           * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_TEMPERATURE
           *
          */
-        Temperature(uint16_t id = DEVICE_ID_TEMPERATURE);
+        Temperature(uint16_t id = DEVICE_ID_THERMOMETER);
 
         /**
           * Attempts to set the sample rate of the temperature to the specified value (in ms).

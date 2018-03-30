@@ -54,7 +54,8 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL 22
 #define DEVICE_ID_MSC 23
 #define DEVICE_ID_GYROSCOPE           24
->>>>>>> commit for compile
+#define DEVICE_ID_HUMIDITY            25
+#define DEVICE_ID_PRESSURE            26
 
 #define DEVICE_ID_IO_P0               100                       // IDs 100-227 are reserved for I/O Pin IDs.
 
