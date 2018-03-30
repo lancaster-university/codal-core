@@ -2,6 +2,7 @@
 The MIT License (MIT)
 
 Copyright (c) 2017 Lancaster University.
+Copyright (c) 2018 Paul ADAM, Europe.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -22,8 +23,8 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef CODAL_ACCELEROMETER_H
-#define CODAL_ACCELEROMETER_H
+#ifndef CODAL_GYROSCOPE_H
+#define CODAL_GYROSCOPE_H
 
 #include "CodalConfig.h"
 #include "CodalComponent.h"
@@ -34,71 +35,45 @@ DEALINGS IN THE SOFTWARE.
 /**
   * Status flags
   */
-#define ACCELEROMETER_IMU_DATA_VALID               0x02
+#define GYROSCOPE_IMU_DATA_VALID               0x02
 
 /**
-  * Accelerometer events
+  * Gyroscope events
   */
-#define ACCELEROMETER_EVT_DATA_UPDATE              1
+#define GYROSCOPE_EVT_DATA_UPDATE              1
 
 /**
   * Gesture events
   */
-#define ACCELEROMETER_EVT_NONE                     0
-#define ACCELEROMETER_EVT_TILT_UP                  1
-#define ACCELEROMETER_EVT_TILT_DOWN                2
-#define ACCELEROMETER_EVT_TILT_LEFT                3
-#define ACCELEROMETER_EVT_TILT_RIGHT               4
-#define ACCELEROMETER_EVT_FACE_UP                  5
-#define ACCELEROMETER_EVT_FACE_DOWN                6
-#define ACCELEROMETER_EVT_FREEFALL                 7
-#define ACCELEROMETER_EVT_3G                       8
-#define ACCELEROMETER_EVT_6G                       9
-#define ACCELEROMETER_EVT_8G                       10
-#define ACCELEROMETER_EVT_SHAKE                    11
 
 /**
   * Gesture recogniser constants
   */
-#define ACCELEROMETER_REST_TOLERANCE               200
-#define ACCELEROMETER_TILT_TOLERANCE               200
-#define ACCELEROMETER_FREEFALL_TOLERANCE           400
-#define ACCELEROMETER_SHAKE_TOLERANCE              400
-#define ACCELEROMETER_3G_TOLERANCE                 3072
-#define ACCELEROMETER_6G_TOLERANCE                 6144
-#define ACCELEROMETER_8G_TOLERANCE                 8192
-#define ACCELEROMETER_GESTURE_DAMPING              5
-#define ACCELEROMETER_SHAKE_DAMPING                10
-#define ACCELEROMETER_SHAKE_RTX                    30
+#define GYROSCOPE_REST_TOLERANCE               200
+#define GYROSCOPE_TILT_TOLERANCE               200
+#define GYROSCOPE_FREEFALL_TOLERANCE           400
+#define GYROSCOPE_SHAKE_TOLERANCE              400
+#define GYROSCOPE_3G_TOLERANCE                 3072
+#define GYROSCOPE_6G_TOLERANCE                 6144
+#define GYROSCOPE_8G_TOLERANCE                 8192
+#define GYROSCOPE_GESTURE_DAMPING              5
+#define GYROSCOPE_SHAKE_DAMPING                10
+#define GYROSCOPE_SHAKE_RTX                    30
 
-#define ACCELEROMETER_REST_THRESHOLD               (ACCELEROMETER_REST_TOLERANCE * ACCELEROMETER_REST_TOLERANCE)
-#define ACCELEROMETER_FREEFALL_THRESHOLD           ((uint32_t)ACCELEROMETER_FREEFALL_TOLERANCE * (uint32_t)ACCELEROMETER_FREEFALL_TOLERANCE)
-#define ACCELEROMETER_3G_THRESHOLD                 ((uint32_t)ACCELEROMETER_3G_TOLERANCE * (uint32_t)ACCELEROMETER_3G_TOLERANCE)
-#define ACCELEROMETER_6G_THRESHOLD                 ((uint32_t)ACCELEROMETER_6G_TOLERANCE * (uint32_t)ACCELEROMETER_6G_TOLERANCE)
-#define ACCELEROMETER_8G_THRESHOLD                 ((uint32_t)ACCELEROMETER_8G_TOLERANCE * (uint32_t)ACCELEROMETER_8G_TOLERANCE)
-#define ACCELEROMETER_SHAKE_COUNT_THRESHOLD        4
+#define GYROSCOPE_REST_THRESHOLD               (GYROSCOPE_REST_TOLERANCE * GYROSCOPE_REST_TOLERANCE)
+#define GYROSCOPE_FREEFALL_THRESHOLD           ((uint32_t)GYROSCOPE_FREEFALL_TOLERANCE * (uint32_t)GYROSCOPE_FREEFALL_TOLERANCE)
+#define GYROSCOPE_3G_THRESHOLD                 ((uint32_t)GYROSCOPE_3G_TOLERANCE * (uint32_t)GYROSCOPE_3G_TOLERANCE)
+#define GYROSCOPE_6G_THRESHOLD                 ((uint32_t)GYROSCOPE_6G_TOLERANCE * (uint32_t)GYROSCOPE_6G_TOLERANCE)
+#define GYROSCOPE_8G_THRESHOLD                 ((uint32_t)GYROSCOPE_8G_TOLERANCE * (uint32_t)GYROSCOPE_8G_TOLERANCE)
+#define GYROSCOPE_SHAKE_COUNT_THRESHOLD        4
 
 namespace codal
 {
-    struct ShakeHistory
-    {
-        uint16_t    shaken:1,
-                    x:1,
-                    y:1,
-                    z:1,
-                    unused,
-                    impulse_3,
-                    impulse_6,
-                    impulse_8,
-                    count:8;
-
-        uint16_t    timer;
-    };
 
     /**
-     * Class definition for Accelerometer.
+     * Class definition for Gyroscope.
      */
-    class Accelerometer : public CodalComponent
+    class Gyroscope : public CodalComponent
     {
         protected:
 
@@ -124,10 +99,10 @@ namespace codal
           * Create a software abstraction of an accelerometer.
           *
           * @param coordinateSpace the orientation of the sensor. Defaults to: SIMPLE_CARTESIAN
-          * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
+          * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_GYROSCOPE
           *
          */
-        Accelerometer(CoordinateSpace &coordinateSpace, uint16_t id = DEVICE_ID_ACCELEROMETER);
+        Gyroscope(CoordinateSpace &coordinateSpace, uint16_t id = DEVICE_ID_GYROSCOPE);
 
         /**
           * Attempts to set the sample rate of the accelerometer to the specified value (in ms).
@@ -249,83 +224,11 @@ namespace codal
         int getZ();
 
         /**
-          * Provides a rotation compensated pitch of the device, based on the latest update retrieved from the accelerometer.
-          *
-          * @return The pitch of the device, in degrees.
-          *
-          * @code
-          * accelerometer.getPitch();
-          * @endcode
-          */
-        int getPitch();
-
-        /**
-          * Provides a rotation compensated pitch of the device, based on the latest update retrieved from the accelerometer.
-          *
-          * @return The pitch of the device, in radians.
-          *
-          * @code
-          * accelerometer.getPitchRadians();
-          * @endcode
-          */
-        float getPitchRadians();
-
-        /**
-          * Provides a rotation compensated roll of the device, based on the latest update retrieved from the accelerometer.
-          *
-          * @return The roll of the device, in degrees.
-          *
-          * @code
-          * accelerometer.getRoll();
-          * @endcode
-          */
-        int getRoll();
-
-        /**
-          * Provides a rotation compensated roll of the device, based on the latest update retrieved from the accelerometer.
-          *
-          * @return The roll of the device, in radians.
-          *
-          * @code
-          * accelerometer.getRollRadians();
-          * @endcode
-          */
-        float getRollRadians();
-
-        /**
-          * Retrieves the last recorded gesture.
-          *
-          * @return The last gesture that was detected.
-          *
-          * Example:
-          * @code
-          *
-          * if (accelerometer.getGesture() == SHAKE)
-          *     display.scroll("SHAKE!");
-          * @endcode
-          */
-        uint16_t getGesture();
-
-        /**
           * Destructor.
           */
-        ~Accelerometer();
+        ~Gyroscope();
 
         private:
-
-        /**
-          * Recalculate roll and pitch values for the current sample.
-          *
-          * @note We only do this at most once per sample, as the necessary trigonemteric functions are rather
-          *       heavyweight for a CPU without a floating point unit.
-          */
-        void recalculatePitchRoll();
-
-        /**
-          * Updates the basic gesture recognizer. This performs instantaneous pose recognition, and also some low pass filtering to promote
-          * stability.
-          */
-        void updateGesture();
 
         /**
           * A service function.
@@ -338,15 +241,6 @@ namespace codal
           */
         uint32_t instantaneousAccelerationSquared();
 
-        /**
-         * Service function.
-         * Determines a 'best guess' posture of the device based on instantaneous data.
-         *
-         * This makes no use of historic data, and forms this input to the filter implemented in updateGesture().
-         *
-         * @return A 'best guess' of the current posture of the device, based on instanataneous data.
-         */
-        uint16_t instantaneousPosture();
     };
 }
 
