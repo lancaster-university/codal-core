@@ -46,27 +46,6 @@ DEALINGS IN THE SOFTWARE.
   * Gesture events
   */
 
-/**
-  * Gesture recogniser constants
-  */
-#define GYROSCOPE_REST_TOLERANCE               200
-#define GYROSCOPE_TILT_TOLERANCE               200
-#define GYROSCOPE_FREEFALL_TOLERANCE           400
-#define GYROSCOPE_SHAKE_TOLERANCE              400
-#define GYROSCOPE_3G_TOLERANCE                 3072
-#define GYROSCOPE_6G_TOLERANCE                 6144
-#define GYROSCOPE_8G_TOLERANCE                 8192
-#define GYROSCOPE_GESTURE_DAMPING              5
-#define GYROSCOPE_SHAKE_DAMPING                10
-#define GYROSCOPE_SHAKE_RTX                    30
-
-#define GYROSCOPE_REST_THRESHOLD               (GYROSCOPE_REST_TOLERANCE * GYROSCOPE_REST_TOLERANCE)
-#define GYROSCOPE_FREEFALL_THRESHOLD           ((uint32_t)GYROSCOPE_FREEFALL_TOLERANCE * (uint32_t)GYROSCOPE_FREEFALL_TOLERANCE)
-#define GYROSCOPE_3G_THRESHOLD                 ((uint32_t)GYROSCOPE_3G_TOLERANCE * (uint32_t)GYROSCOPE_3G_TOLERANCE)
-#define GYROSCOPE_6G_THRESHOLD                 ((uint32_t)GYROSCOPE_6G_TOLERANCE * (uint32_t)GYROSCOPE_6G_TOLERANCE)
-#define GYROSCOPE_8G_THRESHOLD                 ((uint32_t)GYROSCOPE_8G_TOLERANCE * (uint32_t)GYROSCOPE_8G_TOLERANCE)
-#define GYROSCOPE_SHAKE_COUNT_THRESHOLD        4
-
 namespace codal
 {
 
