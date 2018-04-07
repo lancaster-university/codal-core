@@ -47,6 +47,16 @@
 #define ST7735_GMCTRP1 0xE0
 #define ST7735_GMCTRN1 0xE1
 
+#define MADCTL_MY  0x80
+#define MADCTL_MX  0x40
+#define MADCTL_MV  0x20
+#define MADCTL_ML  0x10
+#define MADCTL_RGB 0x00
+#define MADCTL_BGR 0x08
+#define MADCTL_MH  0x04
+
+
+
 namespace codal
 {
 
@@ -112,7 +122,7 @@ static const uint8_t initCmds[] = {
       10,                     //     10 ms delay
     ST7735_DISPON ,    DELAY, //  4: Main screen turn on, no args w/delay
       10,
-
+    ST7735_MADCTL, 1,  MADCTL_MX | MADCTL_MY | MADCTL_BGR,
     0, 0 // END
 };
 // clang-format on
@@ -163,9 +173,21 @@ void ST7735::setAddrWindow(int x, int y, int w, int h)
 
 void ST7735::sendColors(const void *colors, int byteSize)
 {
+    cmdBuf[0] = ST7735_RAMWR;
+    sendCmd(cmdBuf, 1);
+    
     dc.setDigitalValue(1);
     cs.setDigitalValue(0);
-    spi.transfer((const uint8_t *)colors, byteSize, NULL, 0);
+    const uint8_t *ptr = (const uint8_t *)colors;
+    while (byteSize)
+    {
+        int len = 254;
+        if (byteSize < len)
+            len = byteSize;
+        spi.transfer(ptr, len, NULL, 0);
+        ptr += len;
+        byteSize -= len;
+    }
     cs.setDigitalValue(1);
 }
 
