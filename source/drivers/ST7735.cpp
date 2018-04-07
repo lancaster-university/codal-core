@@ -120,9 +120,13 @@ static const uint8_t initCmds[] = {
 // we don't modify *buf, but it cannot be in flash, so no const as a hint
 void ST7735::sendCmd(uint8_t *buf, int len)
 {
+    // make sure cmd isn't on stack
+    if (buf != cmdBuf)
+        memcpy(cmdBuf, buf, len);
+    buf = cmdBuf;
     dc.setDigitalValue(0);
     cs.setDigitalValue(0);
-    spi.write(*buf);
+    spi.transfer(buf, 1, NULL, 0);
     dc.setDigitalValue(1);
     len--;
     buf++;
@@ -133,15 +137,14 @@ void ST7735::sendCmd(uint8_t *buf, int len)
 
 void ST7735::sendCmdSeq(const uint8_t *buf)
 {
-    uint8_t tmp[20];
     while (*buf)
     {
-        tmp[0] = *buf++;
+        cmdBuf[0] = *buf++;
         int v = *buf++;
         int len = v & ~DELAY;
         // note that we have to copy to RAM
-        memcpy(tmp + 1, buf, len);
-        sendCmd(tmp, len + 1);
+        memcpy(cmdBuf + 1, buf, len);
+        sendCmd(cmdBuf, len + 1);
         buf += len;
         if (v & DELAY)
         {
@@ -162,7 +165,7 @@ void ST7735::sendColors(const void *colors, int byteSize)
 {
     dc.setDigitalValue(1);
     cs.setDigitalValue(0);
-    spi.transfer((const uint8_t*)colors, byteSize, NULL, 0);
+    spi.transfer((const uint8_t *)colors, byteSize, NULL, 0);
     cs.setDigitalValue(1);
 }
 

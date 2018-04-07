@@ -36,6 +36,7 @@ class ST7735
     SPI &spi;
     Pin &cs;
     Pin &dc;
+    uint8_t cmdBuf[20];
 
     void sendCmd(uint8_t *buf, int len);
     void sendCmdSeq(const uint8_t *buf);
