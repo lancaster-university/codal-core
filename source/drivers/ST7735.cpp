@@ -127,6 +127,33 @@ static const uint8_t initCmds[] = {
 };
 // clang-format on
 
+// uint32_t tbl[256];
+
+static void setupPalette(uint16_t *palette, uint32_t *tbl) {
+    for (int i = 0; i < 256; ++i) {
+        uint16_t p0 = palette[i >> 4];
+        uint16_t p1 = palette[i & 0xf];
+        uint32_t p = ((p0 << 12) | p1) << 8; 
+        // __builtin_bswap32(p); 
+        tbl[i] = (p << 24) | ((p << 8) & 0xff0000) | ((p >> 8) & 0xff00) | (p >> 24);
+    }
+}
+
+static void convertTo12Bit(uint32_t *tbl, uint32_t *src, uint32_t *dst, int srclen4)
+{
+    while (srclen4--)
+    {
+        uint32_t s = *src++;
+        uint32_t o = tbl[s & 0xff];
+        uint32_t v = tbl[(s >> 8) & 0xff];
+        *dst++ = o | (v << 24);
+        o = tbl[(s >> 16) & 0xff];
+        *dst++ = (v >> 8) | (o << 16);
+        v = tbl[s >> 24];
+        *dst++ = (o >> 16) | (v << 8);
+    }
+}
+
 // we don't modify *buf, but it cannot be in flash, so no const as a hint
 void ST7735::sendCmd(uint8_t *buf, int len)
 {
