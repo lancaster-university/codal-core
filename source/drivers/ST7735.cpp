@@ -74,7 +74,8 @@ static const uint8_t initCmds[] = {
     ST7735_SLPOUT ,   DELAY,  //  2: Out of sleep mode, 0 args, w/delay
       120,                    //     500 ms delay
     ST7735_FRMCTR1, 3      ,  //  3: Frame rate ctrl - normal mode, 3 args:
-      0x01, 0x2C, 0x2D,       //     Rate = fosc/(1x2+40) * (LINE+2C+2D)
+      0x06, 0x2C, 0x2D,       //     Rate = fosc/(1x2+40) * (LINE+2C+2D)
+      #if 0
     ST7735_FRMCTR2, 3      ,  //  4: Frame rate control - idle mode, 3 args:
       0x01, 0x2C, 0x2D,       //     Rate = fosc/(1x2+40) * (LINE+2C+2D)
     ST7735_FRMCTR3, 6      ,  //  5: Frame rate ctrl - partial mode, 6 args:
@@ -98,18 +99,11 @@ static const uint8_t initCmds[] = {
       0x8A, 0xEE,
     ST7735_VMCTR1 , 1      ,  // 12: Power control, 1 arg, no delay:
       0x0E,
+      #endif
     ST7735_INVOFF , 0      ,  // 13: Don't invert display, no args, no delay
-    ST7735_MADCTL , 1      ,  // 14: Memory access control (directions), 1 arg:
-      0xC8,                   //     row addr/col addr, bottom to top refresh
     ST7735_COLMOD , 1      ,  // 15: set color mode, 1 arg, no delay:
       0x03,                  //     12-bit color
-
-    ST7735_CASET  , 4      ,  //  1: Column addr set, 4 args, no delay:
-      0x00, 0x00,             //     XSTART = 0
-      0x00, 0x7F,             //     XEND = 127
-    ST7735_RASET  , 4      ,  //  2: Row addr set, 4 args, no delay:
-      0x00, 0x00,             //     XSTART = 0
-      0x00, 0x7F,           //     XEND = 127 --XXX160
+    ST7735_MADCTL, 1,  MADCTL_MV | MADCTL_MY | MADCTL_BGR,
 
     ST7735_GMCTRP1, 16      , //  1: Magical unicorn dust, 16 args, no delay:
       0x02, 0x1c, 0x07, 0x12,
@@ -125,7 +119,6 @@ static const uint8_t initCmds[] = {
       10,                     //     10 ms delay
     ST7735_DISPON ,    DELAY, //  4: Main screen turn on, no args w/delay
       10,
-    ST7735_MADCTL, 1,  MADCTL_MX | MADCTL_MY | MADCTL_BGR,
     0, 0 // END
 };
 // clang-format on
@@ -303,6 +296,8 @@ void ST7735::sendCmdSeq(const uint8_t *buf)
 
 void ST7735::setAddrWindow(int x, int y, int w, int h)
 {
+    x += 3;
+    y += 2;
     uint8_t cmd0[] = {ST7735_CASET, 0, (uint8_t)x, 0, (uint8_t)(x + w - 1)};
     uint8_t cmd1[] = {ST7735_RASET, 0, (uint8_t)y, 0, (uint8_t)(y + h - 1)};
     sendCmd(cmd0, sizeof(cmd0));
