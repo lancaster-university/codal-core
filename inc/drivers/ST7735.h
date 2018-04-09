@@ -31,12 +31,15 @@ DEALINGS IN THE SOFTWARE.
 namespace codal
 {
 
+struct ST7735WorkBuffer;
+
 class ST7735
 {
     SPI &spi;
     Pin &cs;
     Pin &dc;
     uint8_t cmdBuf[20];
+    ST7735WorkBuffer *work;
 
     void sendCmd(uint8_t *buf, int len);
     void sendCmdSeq(const uint8_t *buf);

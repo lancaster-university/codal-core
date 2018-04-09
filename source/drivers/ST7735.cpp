@@ -47,20 +47,18 @@
 #define ST7735_GMCTRP1 0xE0
 #define ST7735_GMCTRN1 0xE1
 
-#define MADCTL_MY  0x80
-#define MADCTL_MX  0x40
-#define MADCTL_MV  0x20
-#define MADCTL_ML  0x10
+#define MADCTL_MY 0x80
+#define MADCTL_MX 0x40
+#define MADCTL_MV 0x20
+#define MADCTL_ML 0x10
 #define MADCTL_RGB 0x00
 #define MADCTL_BGR 0x08
-#define MADCTL_MH  0x04
-
-
+#define MADCTL_MH 0x04
 
 namespace codal
 {
 
-ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc) : spi(spi), cs(cs), dc(dc) {}
+ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc) : spi(spi), cs(cs), dc(dc), work(NULL) {}
 
 #define DELAY 0x80
 
@@ -127,21 +125,50 @@ static const uint8_t initCmds[] = {
 };
 // clang-format on
 
-// uint32_t tbl[256];
+struct ST7735WorkBuffer
+{
+    uint32_t paletteTable[256];
+    uint8_t dataBuf[255];
+    bool inProgress;
+    uint8_t *srcPtr;
+    unsigned srcLeft;
+};
 
-static void setupPalette(uint16_t *palette, uint32_t *tbl) {
-    for (int i = 0; i < 256; ++i) {
-        uint16_t p0 = palette[i >> 4];
-        uint16_t p1 = palette[i & 0xf];
-        uint32_t p = ((p0 << 12) | p1) << 8; 
-        // __builtin_bswap32(p); 
-        tbl[i] = (p << 24) | ((p << 8) & 0xff0000) | ((p >> 8) & 0xff00) | (p >> 24);
-    }
+void ST7735::startTransfer(unsigned size)
+{
+
+    spi.startTransfer(work->dataBuf, size, &ST7735::pushColorsStep, this);
 }
 
-static void convertTo12Bit(uint32_t *tbl, uint32_t *src, uint32_t *dst, int srclen4)
+void ST7735::sendBytes(unsigned num)
 {
-    while (srclen4--)
+    assert(num > 0);
+    if (num > work->srcLeft)
+        num = work->srcLeft;
+    work->srcLeft -= num;
+    uint8_t *dst = work->dataBuf;
+    while (num--)
+    {
+        uint32_t v = work->paletteTable[*work->srcPtr++];
+        *dst++ = v;
+        *dst++ = v >> 8;
+        *dst++ = v >> 16;
+    }
+    startWork(dst - work->dataBuf);
+}
+
+void ST7735::sendWords(unsigned numBytes)
+{
+    if (numBytes > work->srcLeft)
+        numBytes = work->srcLeft & ~3;
+    assert(numBytes > 0);
+    work->srcLeft -= numBytes;
+    uint32_t numWords = numBytes >> 2;
+    uint32_t *src = (uint32_t *)work->srcPtr;
+    uint32_t *tbl = work->paletteTable;
+    uint32_t *dst = (uint32_t *)work->dataBuf;
+
+    while (numWords--)
     {
         uint32_t s = *src++;
         uint32_t o = tbl[s & 0xff];
@@ -151,6 +178,95 @@ static void convertTo12Bit(uint32_t *tbl, uint32_t *src, uint32_t *dst, int srcl
         *dst++ = (v >> 8) | (o << 16);
         v = tbl[s >> 24];
         *dst++ = (o >> 16) | (v << 8);
+    }
+
+    work->srcPtr = (uint8_t *)src;
+    startWork((uint8_t *)dst - work->dataBuf);
+}
+
+void ST7735::pushColorsStep()
+{
+    unsigned align = (unsigned)work->srcPtr & 3;
+    if (align)
+    {
+        sendBytes(4 - align);
+    }
+    else if (work->srcLeft < 4)
+    {
+        if (work->srcLeft == 0)
+        {
+            cs.setDigitalValue(1);
+            Event(DEVICE_ID_DISPLAY, 100);
+        }
+        else
+        {
+            sendBytes(work->srcLeft);
+        }
+    }
+    else
+    {
+        sendWords((255 / 3 * 4) * 4);
+    }
+}
+
+void ST7735::pushDone()
+{
+    // this executes outside of interrupt context, so we don't get a race
+    // with waitForPushDone
+    work->inProgress = false;
+    Event(DEVICE_ID_DISPLAY, 101);
+}
+
+void ST7735::waitForPushDone()
+{
+    if (work->inProgress)
+        fiber_wait_for_event(DEVICE_ID_DISPLAY, 101);
+}
+
+#define PAL8TO4(p) (((p >> 4) & 0xf) | ((p >> 8) & 0xf0) | ((p >> 12) & 0xf00))
+int ST7735::pushIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *palette)
+{
+    if (!work)
+    {
+        work = new ST7735WorkBuffer;
+        memset(work, 0, sizeof(*work));
+        EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, 100, this, &ST7735::pushDone);
+    }
+    if (work->inProgress)
+    {
+        return DEVICE_BUSY;
+    }
+    work->inProgress = true;
+    uint32_t *tbl = work->paletteTable;
+    for (int i = 0; i < 256; ++i)
+    {
+        uint32_t p0 = palette[i >> 4];
+        uint32_t p1 = palette[i & 0xf];
+        p0 = PAL8TO4(p0);
+        p1 = PAL8TO4(p1);
+        uint32_t p = ((p0 << 12) | p1) << 8;
+        tbl[i] = (p << 24) | ((p << 8) & 0xff0000) | ((p >> 8) & 0xff00) | (p >> 24);
+    }
+    work->srcLen = numBytes;
+    work->srcPtr = src;
+
+    dc.setDigitalValue(1);
+    cs.setDigitalValue(0);
+
+    pushColorsStep();
+
+    return DEVICE_OK;
+}
+
+static void setupPalette(uint16_t *palette, uint32_t *tbl)
+{
+    for (int i = 0; i < 256; ++i)
+    {
+        uint16_t p0 = palette[i >> 4];
+        uint16_t p1 = palette[i & 0xf];
+        uint32_t p = ((p0 << 12) | p1) << 8;
+        // __builtin_bswap32(p);
+        tbl[i] = (p << 24) | ((p << 8) & 0xff0000) | ((p >> 8) & 0xff00) | (p >> 24);
     }
 }
 
@@ -202,7 +318,7 @@ void ST7735::sendColors(const void *colors, int byteSize)
 {
     cmdBuf[0] = ST7735_RAMWR;
     sendCmd(cmdBuf, 1);
-    
+
     dc.setDigitalValue(1);
     cs.setDigitalValue(0);
     const uint8_t *ptr = (const uint8_t *)colors;
