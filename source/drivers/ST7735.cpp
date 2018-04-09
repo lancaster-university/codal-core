@@ -1,6 +1,10 @@
 #include "ST7735.h"
 #include "CodalFiber.h"
 
+#define assert(cond)                                                                               \
+    if (!(cond))                                                                                   \
+    target_panic(909)
+
 #define ST7735_NOP 0x00
 #define ST7735_SWRESET 0x01
 #define ST7735_RDDID 0x04
@@ -130,14 +134,14 @@ struct ST7735WorkBuffer
     uint32_t paletteTable[256];
     uint8_t dataBuf[255];
     bool inProgress;
-    uint8_t *srcPtr;
+    const uint8_t *srcPtr;
     unsigned srcLeft;
 };
 
 void ST7735::startTransfer(unsigned size)
 {
-
-    spi.startTransfer(work->dataBuf, size, &ST7735::pushColorsStep, this);
+    spi.startTransfer(work->dataBuf, size, NULL, 0, (void (*)(void *)) & ST7735::sendColorsStep,
+                      this);
 }
 
 void ST7735::sendBytes(unsigned num)
@@ -154,7 +158,7 @@ void ST7735::sendBytes(unsigned num)
         *dst++ = v >> 8;
         *dst++ = v >> 16;
     }
-    startWork(dst - work->dataBuf);
+    startTransfer(dst - work->dataBuf);
 }
 
 void ST7735::sendWords(unsigned numBytes)
@@ -164,7 +168,7 @@ void ST7735::sendWords(unsigned numBytes)
     assert(numBytes > 0);
     work->srcLeft -= numBytes;
     uint32_t numWords = numBytes >> 2;
-    uint32_t *src = (uint32_t *)work->srcPtr;
+    const uint32_t *src = (const uint32_t *)work->srcPtr;
     uint32_t *tbl = work->paletteTable;
     uint32_t *dst = (uint32_t *)work->dataBuf;
 
@@ -181,61 +185,62 @@ void ST7735::sendWords(unsigned numBytes)
     }
 
     work->srcPtr = (uint8_t *)src;
-    startWork((uint8_t *)dst - work->dataBuf);
+    startTransfer((uint8_t *)dst - work->dataBuf);
 }
 
-void ST7735::pushColorsStep()
+void ST7735::sendColorsStep(ST7735 *st)
 {
+    ST7735WorkBuffer *work = st->work;
     unsigned align = (unsigned)work->srcPtr & 3;
     if (align)
     {
-        sendBytes(4 - align);
+        st->sendBytes(4 - align);
     }
     else if (work->srcLeft < 4)
     {
         if (work->srcLeft == 0)
         {
-            cs.setDigitalValue(1);
+            st->cs.setDigitalValue(1);
             Event(DEVICE_ID_DISPLAY, 100);
         }
         else
         {
-            sendBytes(work->srcLeft);
+            st->sendBytes(work->srcLeft);
         }
     }
     else
     {
-        sendWords((255 / 3 * 4) * 4);
+        st->sendWords((sizeof(work->dataBuf) / (3 * 4)) * 4);
     }
 }
 
-void ST7735::pushDone()
+void ST7735::sendDone(Event)
 {
     // this executes outside of interrupt context, so we don't get a race
-    // with waitForPushDone
+    // with waitForSendDone
     work->inProgress = false;
     Event(DEVICE_ID_DISPLAY, 101);
 }
 
-void ST7735::waitForPushDone()
+void ST7735::waitForSendDone()
 {
     if (work->inProgress)
         fiber_wait_for_event(DEVICE_ID_DISPLAY, 101);
 }
 
 #define PAL8TO4(p) (((p >> 4) & 0xf) | ((p >> 8) & 0xf0) | ((p >> 12) & 0xf00))
-int ST7735::pushIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *palette)
+int ST7735::sendIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *palette)
 {
     if (!work)
     {
         work = new ST7735WorkBuffer;
         memset(work, 0, sizeof(*work));
-        EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, 100, this, &ST7735::pushDone);
+        EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, 100, this, &ST7735::sendDone);
     }
+
     if (work->inProgress)
-    {
         return DEVICE_BUSY;
-    }
+
     work->inProgress = true;
     uint32_t *tbl = work->paletteTable;
     for (int i = 0; i < 256; ++i)
@@ -247,27 +252,15 @@ int ST7735::pushIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *pa
         uint32_t p = ((p0 << 12) | p1) << 8;
         tbl[i] = (p << 24) | ((p << 8) & 0xff0000) | ((p >> 8) & 0xff00) | (p >> 24);
     }
-    work->srcLen = numBytes;
+    work->srcLeft = numBytes;
     work->srcPtr = src;
 
     dc.setDigitalValue(1);
     cs.setDigitalValue(0);
 
-    pushColorsStep();
+    sendColorsStep(this);
 
     return DEVICE_OK;
-}
-
-static void setupPalette(uint16_t *palette, uint32_t *tbl)
-{
-    for (int i = 0; i < 256; ++i)
-    {
-        uint16_t p0 = palette[i >> 4];
-        uint16_t p1 = palette[i & 0xf];
-        uint32_t p = ((p0 << 12) | p1) << 8;
-        // __builtin_bswap32(p);
-        tbl[i] = (p << 24) | ((p << 8) & 0xff0000) | ((p >> 8) & 0xff00) | (p >> 24);
-    }
 }
 
 // we don't modify *buf, but it cannot be in flash, so no const as a hint

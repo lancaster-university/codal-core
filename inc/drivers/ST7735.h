@@ -27,6 +27,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "Pin.h"
 #include "SPI.h"
+#include "Event.h"
 
 namespace codal
 {
@@ -43,12 +44,20 @@ class ST7735
 
     void sendCmd(uint8_t *buf, int len);
     void sendCmdSeq(const uint8_t *buf);
+    void sendDone(Event);
+    void sendWords(unsigned numBytes);
+    void startTransfer(unsigned size);
+    void sendBytes(unsigned num);
+
+    static void sendColorsStep(ST7735 *st);
 
 public:
     ST7735(SPI &spi, Pin &cs, Pin &dc);
     void init();
     void sendColors(const void *colors, int byteSize);
     void setAddrWindow(int x, int y, int w, int h);
+    int sendIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *palette);
+    void waitForSendDone();
 };
 
 static inline uint16_t color565(uint8_t r, uint8_t g, uint8_t b)
