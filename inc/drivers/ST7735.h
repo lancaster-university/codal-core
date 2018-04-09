@@ -60,6 +60,7 @@ public:
     void waitForSendDone();
 };
 
+#if 0
 static inline uint16_t color565(uint8_t r, uint8_t g, uint8_t b)
 {
     return ((r & 0xF8) << 8) | ((g & 0xFC) << 3) | (b >> 3);
@@ -69,6 +70,18 @@ static inline uint16_t color565(uint32_t rgb)
 {
     return color565((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff);
 }
+#endif
+
+static inline uint16_t color444(uint8_t r, uint8_t g, uint8_t b)
+{
+    return ((r & 0xF0) << 4) | (g & 0xf0) | (b >> 4);
+}
+
+static inline uint16_t color444(uint32_t rgb)
+{
+    return color444((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff);
+}
+
 }
 
 #endif

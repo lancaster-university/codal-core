@@ -24,6 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "SPI.h"
 #include "ErrorNo.h"
+#include "CodalFiber.h"
 
 namespace codal
 {
@@ -61,7 +62,8 @@ int SPI::startTransfer(const uint8_t *command, uint32_t commandSize, uint8_t *re
                        uint32_t responseSize, void (*doneHandler)(void *), void *arg)
 {
     int r = transfer(command, commandSize, response, responseSize);
-    doneHandler(arg);
+    // it's important this doesn't get invoked recursievely, since that leads to stack overflow
+    create_fiber(doneHandler, arg);
     return r;
 }
 

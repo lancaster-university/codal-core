@@ -1,5 +1,6 @@
 #include "ST7735.h"
 #include "CodalFiber.h"
+#include "CodalDmesg.h"
 
 #define assert(cond)                                                                               \
     if (!(cond))                                                                                   \
@@ -101,7 +102,7 @@ static const uint8_t initCmds[] = {
     ST7735_MADCTL , 1      ,  // 14: Memory access control (directions), 1 arg:
       0xC8,                   //     row addr/col addr, bottom to top refresh
     ST7735_COLMOD , 1      ,  // 15: set color mode, 1 arg, no delay:
-      0x05,                  //     16-bit color
+      0x03,                  //     12-bit color
 
     ST7735_CASET  , 4      ,  //  1: Column addr set, 4 args, no delay:
       0x00, 0x00,             //     XSTART = 0
@@ -245,15 +246,16 @@ int ST7735::sendIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *pa
     uint32_t *tbl = work->paletteTable;
     for (int i = 0; i < 256; ++i)
     {
-        uint32_t p0 = palette[i >> 4];
-        uint32_t p1 = palette[i & 0xf];
-        p0 = PAL8TO4(p0);
-        p1 = PAL8TO4(p1);
+        uint32_t p0 = color444(palette[i >> 4]);
+        uint32_t p1 = color444(palette[i & 0xf]);
         uint32_t p = ((p0 << 12) | p1) << 8;
         tbl[i] = (p << 24) | ((p << 8) & 0xff0000) | ((p >> 8) & 0xff00) | (p >> 24);
     }
     work->srcLeft = numBytes;
     work->srcPtr = src;
+
+    cmdBuf[0] = ST7735_RAMWR;
+    sendCmd(cmdBuf, 1);
 
     dc.setDigitalValue(1);
     cs.setDigitalValue(0);
