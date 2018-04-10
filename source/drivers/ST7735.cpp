@@ -132,6 +132,63 @@ struct ST7735WorkBuffer
     unsigned srcLeft;
 };
 
+static void processLine(uint8_t *src, uint32_t *dst, int height, int srclen4, int high)
+{
+    uint32_t s, v;
+
+#define LD()                                                                                       \
+    v = 0x111 * (*src >> 4);                                                                       \
+    src += height
+#define A(sh)                                                                                      \
+    LD();                                                                                          \
+    s |= v << sh;
+
+    if (high)
+        while (srclen4--)
+        {
+            s = 0;
+            A(20);
+            A(8);
+            LD();
+            s |= v >> 4;
+            *dst++ = __builtin_bswap32(s);
+            s = v << 28;
+            A(16);
+            A(4);
+            LD();
+            s |= v >> 8;
+            *dst++ = __builtin_bswap32(s);
+            s = v << 24;
+            A(12);
+            A(0);
+            *dst++ = __builtin_bswap32(s);
+        }
+    else
+#undef LD
+#define LD()                                                                                       \
+    v = 0x111 * (*src & 0xf);                                                                      \
+    src += height
+        while (srclen4--)
+        {
+            s = 0;
+            A(20);
+            A(8);
+            LD();
+            s |= v >> 4;
+            *dst++ = __builtin_bswap32(s);
+            s = v << 28;
+            A(16);
+            A(4);
+            LD();
+            s |= v >> 8;
+            *dst++ = __builtin_bswap32(s);
+            s = v << 24;
+            A(12);
+            A(0);
+            *dst++ = __builtin_bswap32(s);
+        }
+}
+
 void ST7735::startTransfer(unsigned size)
 {
     spi.startTransfer(work->dataBuf, size, NULL, 0, (PVoidCallback)&ST7735::sendColorsStep, this);
