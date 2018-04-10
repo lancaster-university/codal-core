@@ -269,7 +269,7 @@ void ST7735::sendColorsStep(ST7735 *st)
 {
     ST7735WorkBuffer *work = st->work;
     unsigned align = (unsigned)work->srcPtr & 3;
-    if (align)
+    if (work->srcLeft && align)
     {
         st->sendBytes(4 - align);
     }
