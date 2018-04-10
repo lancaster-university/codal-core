@@ -48,6 +48,7 @@ class ST7735
     void sendWords(unsigned numBytes);
     void startTransfer(unsigned size);
     void sendBytes(unsigned num);
+    void startRAMWR(int cmd = 0);
 
     static void sendColorsStep(ST7735 *st);
 
@@ -58,7 +59,7 @@ public:
     void setAddrWindow(int x, int y, int w, int h);
     // src is 16 words, dst is 256 words
     void expandPalette(uint32_t *srcPalette, uint32_t *dstPalette);
-    int sendIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *expPalette);
+    int sendIndexedImage(const uint8_t *src, unsigned width, unsigned height, uint32_t *palette);
     void waitForSendDone();
 };
 
@@ -83,7 +84,6 @@ static inline uint16_t color444(uint32_t rgb)
 {
     return color444((rgb >> 16) & 0xff, (rgb >> 8) & 0xff, rgb & 0xff);
 }
-
 }
 
 #endif
