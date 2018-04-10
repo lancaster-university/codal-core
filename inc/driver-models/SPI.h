@@ -33,6 +33,9 @@ namespace codal
 {
 // TODO there should be some locking mechanism here
 
+typedef void (*PVoidCallback)(void *);
+
+
 /**
  * Class definition for an SPI interface.
  */

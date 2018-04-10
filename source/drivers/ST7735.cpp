@@ -74,7 +74,7 @@ static const uint8_t initCmds[] = {
     ST7735_SLPOUT ,   DELAY,  //  2: Out of sleep mode, 0 args, w/delay
       120,                    //     500 ms delay
     ST7735_FRMCTR1, 3      ,  //  3: Frame rate ctrl - normal mode, 3 args:
-      0x06, 0x2C, 0x2D,       //     Rate = fosc/(1x2+40) * (LINE+2C+2D)
+      0x08, 0x3B, 0x3B,       //     Rate = fosc/(1x2+40) * (LINE+2C+2D)
       #if 0
     ST7735_FRMCTR2, 3      ,  //  4: Frame rate control - idle mode, 3 args:
       0x01, 0x2C, 0x2D,       //     Rate = fosc/(1x2+40) * (LINE+2C+2D)
@@ -125,7 +125,7 @@ static const uint8_t initCmds[] = {
 
 struct ST7735WorkBuffer
 {
-    uint32_t paletteTable[256];
+    uint32_t *paletteTable;
     uint8_t dataBuf[255];
     bool inProgress;
     const uint8_t *srcPtr;
@@ -134,8 +134,7 @@ struct ST7735WorkBuffer
 
 void ST7735::startTransfer(unsigned size)
 {
-    spi.startTransfer(work->dataBuf, size, NULL, 0, (void (*)(void *)) & ST7735::sendColorsStep,
-                      this);
+    spi.startTransfer(work->dataBuf, size, NULL, 0, (PVoidCallback)&ST7735::sendColorsStep, this);
 }
 
 void ST7735::sendBytes(unsigned num)
@@ -222,8 +221,19 @@ void ST7735::waitForSendDone()
         fiber_wait_for_event(DEVICE_ID_DISPLAY, 101);
 }
 
+void ST7735::expandPalette(uint32_t *srcPalette, uint32_t *dstPalette)
+{
+    for (int i = 0; i < 256; ++i)
+    {
+        uint32_t p0 = color444(srcPalette[i >> 4]);
+        uint32_t p1 = color444(srcPalette[i & 0xf]);
+        uint32_t p = ((p0 << 12) | p1) << 8;
+        dstPalette[i] = (p << 24) | ((p << 8) & 0xff0000) | ((p >> 8) & 0xff00) | (p >> 24);
+    }
+}
+
 #define PAL8TO4(p) (((p >> 4) & 0xf) | ((p >> 8) & 0xf0) | ((p >> 12) & 0xf00))
-int ST7735::sendIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *palette)
+int ST7735::sendIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *expPalette)
 {
     if (!work)
     {
@@ -236,14 +246,7 @@ int ST7735::sendIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *pa
         return DEVICE_BUSY;
 
     work->inProgress = true;
-    uint32_t *tbl = work->paletteTable;
-    for (int i = 0; i < 256; ++i)
-    {
-        uint32_t p0 = color444(palette[i >> 4]);
-        uint32_t p1 = color444(palette[i & 0xf]);
-        uint32_t p = ((p0 << 12) | p1) << 8;
-        tbl[i] = (p << 24) | ((p << 8) & 0xff0000) | ((p >> 8) & 0xff00) | (p >> 24);
-    }
+    work->paletteTable = expPalette;
     work->srcLeft = numBytes;
     work->srcPtr = src;
 

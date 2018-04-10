@@ -56,7 +56,9 @@ public:
     void init();
     void sendColors(const void *colors, int byteSize);
     void setAddrWindow(int x, int y, int w, int h);
-    int sendIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *palette);
+    // src is 16 words, dst is 256 words
+    void expandPalette(uint32_t *srcPalette, uint32_t *dstPalette);
+    int sendIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *expPalette);
     void waitForSendDone();
 };
 
