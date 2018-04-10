@@ -2,6 +2,10 @@
 #include "CodalFiber.h"
 #include "CodalDmesg.h"
 
+#define SWAP 1
+
+
+
 #define assert(cond)                                                                               \
     if (!(cond))                                                                                   \
     target_panic(909)
@@ -125,13 +129,20 @@ static const uint8_t initCmds[] = {
 
 struct ST7735WorkBuffer
 {
-    uint32_t *paletteTable;
+    unsigned width;
+    unsigned height;
     uint8_t dataBuf[255];
-    bool inProgress;
     const uint8_t *srcPtr;
+#if SWAP
+    unsigned x;
+#else
+    uint32_t *paletteTable;
     unsigned srcLeft;
+#endif
+    bool inProgress;
 };
 
+#if SWAP
 static void processLine(uint8_t *src, uint32_t *dst, int height, int srclen4, int high)
 {
     uint32_t s, v;
@@ -189,11 +200,27 @@ static void processLine(uint8_t *src, uint32_t *dst, int height, int srclen4, in
         }
 }
 
-void ST7735::startTransfer(unsigned size)
+void ST7735::sendColorsStep(ST7735 *st)
 {
-    spi.startTransfer(work->dataBuf, size, NULL, 0, (PVoidCallback)&ST7735::sendColorsStep, this);
+    ST7735WorkBuffer *work = st->work;
+
+    if (work->x >= work->width) {
+        st->cs.setDigitalValue(1);
+        Event(DEVICE_ID_DISPLAY, 100);      
+    }
+
+    processLine(work->srcPtr + (work->x >> 1), work->dataBuf, (work->width + 1) >> 1,
+                work->height >> 2, !(x & 1));
+    
+    work->x++;
+    startTransfer((work->height * 12) / 8);
 }
 
+void ST7735::sendLut(uint32_t *palette) {
+  
+}
+
+#else
 void ST7735::sendBytes(unsigned num)
 {
     assert(num > 0);
@@ -264,6 +291,23 @@ void ST7735::sendColorsStep(ST7735 *st)
     }
 }
 
+void ST7735::expandPalette(uint32_t *srcPalette, uint32_t *dstPalette)
+{
+    for (int i = 0; i < 256; ++i)
+    {
+        uint32_t p0 = color444(srcPalette[i >> 4]);
+        uint32_t p1 = color444(srcPalette[i & 0xf]);
+        uint32_t p = ((p0 << 12) | p1) << 8;
+        dstPalette[i] = (p << 24) | ((p << 8) & 0xff0000) | ((p >> 8) & 0xff00) | (p >> 24);
+    }
+}
+#endif
+
+void ST7735::startTransfer(unsigned size)
+{
+    spi.startTransfer(work->dataBuf, size, NULL, 0, (PVoidCallback)&ST7735::sendColorsStep, this);
+}
+
 void ST7735::sendDone(Event)
 {
     // this executes outside of interrupt context, so we don't get a race
@@ -278,19 +322,7 @@ void ST7735::waitForSendDone()
         fiber_wait_for_event(DEVICE_ID_DISPLAY, 101);
 }
 
-void ST7735::expandPalette(uint32_t *srcPalette, uint32_t *dstPalette)
-{
-    for (int i = 0; i < 256; ++i)
-    {
-        uint32_t p0 = color444(srcPalette[i >> 4]);
-        uint32_t p1 = color444(srcPalette[i & 0xf]);
-        uint32_t p = ((p0 << 12) | p1) << 8;
-        dstPalette[i] = (p << 24) | ((p << 8) & 0xff0000) | ((p >> 8) & 0xff00) | (p >> 24);
-    }
-}
-
-#define PAL8TO4(p) (((p >> 4) & 0xf) | ((p >> 8) & 0xf0) | ((p >> 12) & 0xf00))
-int ST7735::sendIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *expPalette)
+int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height uint32_t *palette)
 {
     if (!work)
     {
@@ -302,10 +334,19 @@ int ST7735::sendIndexedImage(const uint8_t *src, unsigned numBytes, uint32_t *ex
     if (work->inProgress)
         return DEVICE_BUSY;
 
+#if SWAP
+    if (palette)
+        sendLut(palette);
+    work->x = 0;
+#else
+    work->paletteTable = palette;
+    work->srcLeft = ((width + 1) >> 1) * height;
+#endif
+
     work->inProgress = true;
-    work->paletteTable = expPalette;
-    work->srcLeft = numBytes;
     work->srcPtr = src;
+    work->width = width;
+    work->height = height;
 
     cmdBuf[0] = ST7735_RAMWR;
     sendCmd(cmdBuf, 1);
