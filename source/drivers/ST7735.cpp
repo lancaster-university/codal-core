@@ -105,7 +105,7 @@ static const uint8_t initCmds[] = {
     ST7735_INVOFF , 0      ,  // 13: Don't invert display, no args, no delay
     ST7735_COLMOD , 1      ,  // 15: set color mode, 1 arg, no delay:
       0x03,                  //     12-bit color
-    ST7735_MADCTL, 1,  MADCTL_MV | MADCTL_MY | MADCTL_BGR,
+    ST7735_MADCTL, 1,  MADCTL_MX | MADCTL_BGR,
 
     ST7735_GMCTRP1, 16      , //  1: Magical unicorn dust, 16 args, no delay:
       0x02, 0x1c, 0x07, 0x12,
@@ -417,8 +417,8 @@ void ST7735::sendCmdSeq(const uint8_t *buf)
 
 void ST7735::setAddrWindow(int x, int y, int w, int h)
 {
-    x += 3;
-    y += 2;
+    x += 2;
+    y += 1;
     uint8_t cmd0[] = {ST7735_CASET, 0, (uint8_t)x, 0, (uint8_t)(x + w - 1)};
     uint8_t cmd1[] = {ST7735_RASET, 0, (uint8_t)y, 0, (uint8_t)(y + h - 1)};
     sendCmd(cmd0, sizeof(cmd0));
