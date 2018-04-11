@@ -213,7 +213,7 @@ void ST7735::sendColorsStep(ST7735 *st)
         }
         st->startRAMWR(0x2D);
         st->spi.transfer(work->dataBuf, 128, NULL, 0);
-        st->cs.setDigitalValue(1);        
+        st->cs.setDigitalValue(1);
     }
 
     if (work->x == 0)
@@ -223,10 +223,11 @@ void ST7735::sendColorsStep(ST7735 *st)
     {
         st->cs.setDigitalValue(1);
         Event(DEVICE_ID_DISPLAY, 100);
+        return;
     }
 
-    processLine(work->srcPtr + (work->x >> 1), (uint32_t*)work->dataBuf, (work->width + 1) >> 1,
-                work->height >> 2, !(work->x & 1));
+    processLine(work->srcPtr + (work->x >> 1), (uint32_t *)work->dataBuf, (work->width + 1) >> 1,
+                work->height >> 3, !(work->x & 1));
 
     work->x++;
     st->startTransfer((work->height * 12) / 8);
@@ -283,7 +284,7 @@ void ST7735::sendColorsStep(ST7735 *st)
 
     if (work->x == 0)
     {
-        startRAMWR();
+        st->startRAMWR();
         work->x++;
     }
 
@@ -348,7 +349,7 @@ void ST7735::sendDone(Event)
 
 void ST7735::waitForSendDone()
 {
-    if (work->inProgress)
+    if (work && work->inProgress)
         fiber_wait_for_event(DEVICE_ID_DISPLAY, 101);
 }
 
