@@ -147,7 +147,7 @@ namespace codal
          *
          * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
          */
-        virtual int update(Sample3D s);
+        virtual int update(uint16_t s);
 
         /**
           * Reads the last temperature value stored, and in the coordinate system defined in the constructor.
