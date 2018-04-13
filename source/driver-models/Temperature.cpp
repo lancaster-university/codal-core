@@ -64,7 +64,7 @@ Temperature::Temperature(uint16_t id) : sample()
   *
   * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
   */
-int Temperature::update(Sample3D s)
+int Temperature::update(uint16_t s)
 {
     // Indicate that pitch and roll data is now stale, and needs to be recalculated if needed.
     status &= ~TEMPERATURE_IMU_DATA_VALID;
