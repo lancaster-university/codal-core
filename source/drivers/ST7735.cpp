@@ -2,7 +2,7 @@
 #include "CodalFiber.h"
 #include "CodalDmesg.h"
 
-#define SWAP 1
+#define SWAP 0
 
 #define assert(cond)                                                                               \
     if (!(cond))                                                                                   \
@@ -315,8 +315,8 @@ void ST7735::expandPalette(uint32_t *srcPalette, uint32_t *dstPalette)
 {
     for (int i = 0; i < 256; ++i)
     {
-        uint32_t p0 = color444(srcPalette[i >> 4]);
-        uint32_t p1 = color444(srcPalette[i & 0xf]);
+        uint32_t p0 = color444(srcPalette[i & 0xf]);
+        uint32_t p1 = color444(srcPalette[i >> 4]);
         uint32_t p = ((p0 << 12) | p1) << 8;
         dstPalette[i] = (p << 24) | ((p << 8) & 0xff0000) | ((p >> 8) & 0xff00) | (p >> 24);
     }
