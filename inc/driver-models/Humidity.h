@@ -37,7 +37,7 @@ DEALINGS IN THE SOFTWARE.
 #define HUMIDITY_IMU_DATA_VALID               0x02
 
 /**
-  * Temperature events
+  * Humidity events
   */
 #define HUMIDITY_EVT_DATA_UPDATE              1
 
@@ -45,9 +45,9 @@ namespace codal
 {
 
     /**
-     * Class definition for Temperature.
+     * Class definition for Humidity.
      */
-    class Temperature : public CodalComponent
+    class Humidity : public CodalComponent
     {
         protected:
 
@@ -64,7 +64,7 @@ namespace codal
            @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_HUMIDITY
           *
          */
-        Temperature(uint16_t id = DEVICE_ID_HUMIDITY);
+        Humidity(uint16_t id = DEVICE_ID_HUMIDITY);
 
         /**
           * Attempts to set the sample rate of the humidity to the specified value (in ms).
@@ -156,7 +156,7 @@ namespace codal
         /**
           * Destructor.
           */
-        ~Temperature();
+        ~Humidity();
 
         private:
 
