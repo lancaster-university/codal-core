@@ -23,7 +23,7 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#include "Temperature.h"
+#include "Humidity.h"
 #include "ErrorNo.h"
 #include "Event.h"
 #include "CodalCompat.h"
@@ -34,14 +34,14 @@ using namespace codal;
 
 /**
   * Constructor.
-  * Create a software abstraction of a temperature sensor
+  * Create a software abstraction of a humidity sensor
   *
   * @param _i2c an instance of I2C used to communicate with the device.
   *
-  * @param address the default I2C address of the temperature.
+  * @param address the default I2C address of the humidity.
   *
  */
-Temperature::Temperature(uint16_t id) : sample()
+Humidity::Humidity(uint16_t id) : sample()
 {
     // Store our identifiers.
     this->id = id;
@@ -53,7 +53,7 @@ Temperature::Temperature(uint16_t id) : sample()
 }
 
 /**
-  * Stores data from the temperature sensor in our buffer.
+  * Stores data from the humidity sensor in our buffer.
   *
   * On first use, this member function will attempt to add this component to the
   * list of fiber components in order to constantly update the values stored
@@ -64,7 +64,7 @@ Temperature::Temperature(uint16_t id) : sample()
   *
   * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
   */
-int Temperature::update(uint16_t s)
+int Humidity::update(uint16_t s)
 {
     // Indicate that pitch and roll data is now stale, and needs to be recalculated if needed.
     status &= ~TEMPERATURE_IMU_DATA_VALID;
@@ -76,7 +76,7 @@ int Temperature::update(uint16_t s)
 };
 
 /**
-  * Attempts to set the sample rate of the temperature to the specified value (in ms).
+  * Attempts to set the sample rate of the humidity to the specified value (in ms).
   *
   * @param period the requested time between samples, in milliseconds.
   *
@@ -84,13 +84,13 @@ int Temperature::update(uint16_t s)
   *
   * @code
   * // sample rate is now 20 ms.
-  * temperature.setPeriod(20);
+  * humidity.setPeriod(20);
   * @endcode
   *
   * @note The requested rate may not be possible on the hardware. In this case, the
   * nearest lower rate is chosen.
   */
-int Temperature::setPeriod(int period)
+int Humidity::setPeriod(int period)
 {
     int result;
 
@@ -103,31 +103,31 @@ int Temperature::setPeriod(int period)
 }
 
 /**
-  * Reads the currently configured sample rate of the temperature.
+  * Reads the currently configured sample rate of the humidity.
   *
   * @return The time between samples, in milliseconds.
   */
-int Temperature::getPeriod()
+int Humidity::getPeriod()
 {
     return (int)samplePeriod;
 }
 
 /**
-  * Attempts to set the sample range of the temperature to the specified value.
+  * Attempts to set the sample range of the humidity to the specified value.
   *
   * @param range The requested sample range of samples.
   *
   * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
   *
   * @code
-  * // the sample range of the temperature is now.
-  * temperature.setRange(8);
+  * // the sample range of the humidity is now.
+  * humidity.setRange(8);
   * @endcode
   *
   * @note The requested range may not be possible on the hardware. In this case, the
   * nearest lower range is chosen.
   */
-int Temperature::setRange(int range)
+int Humidity::setRange(int range)
 {
     int result;
 
@@ -139,27 +139,27 @@ int Temperature::setRange(int range)
 }
 
 /**
-  * Reads the currently configured sample range of the temperature.
+  * Reads the currently configured sample range of the humidity.
   *
   * @return The sample range.
   */
-int Temperature::getRange()
+int Humidity::getRange()
 {
     return (int)sampleRange;
 }
 
 /**
- * Configures the temperature and sample rate defined
+ * Configures the humidity and sample rate defined
  * in this object. The nearest values are chosen to those defined
  * that are supported by the hardware. The instance variables are then
  * updated to reflect reality.
  *
- * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the temperature could not be configured.
+ * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the humidity could not be configured.
  *
  * @note This method should be overidden by the hardware driver to implement the requested
  * changes in hardware.
  */
-int Temperature::configure()
+int Humidity::configure()
 {
     return DEVICE_NOT_SUPPORTED;
 }
@@ -175,16 +175,16 @@ int Temperature::configure()
  * @note This method should be overidden by the hardware driver to implement the requested
  * changes in hardware.
  */
-int Temperature::requestUpdate()
+int Humidity::requestUpdate()
 {
     return DEVICE_NOT_SUPPORTED;
 }
 
 /**
- * Reads the last temperature value stored.
- * @return The temperature measured.
+ * Reads the last humidity value stored.
+ * @return The humidity measured.
  */
-uint16_t Temperature::getSample()
+uint16_t Humidity::getSample()
 {
     requestUpdate();
     return sample;
@@ -193,7 +193,7 @@ uint16_t Temperature::getSample()
 /**
   * Destructor, where we deregister from the array of fiber components.
   */
-Temperature::~Temperature()
+Humidity::~Humidity()
 {
 }
 

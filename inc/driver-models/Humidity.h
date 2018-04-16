@@ -23,8 +23,8 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef CODAL_TEMPERATURE_H
-#define CODAL_TEMPERATURE_H
+#ifndef CODAL_HUMIDITY_H
+#define CODAL_HUMIDITY_H
 
 #include "CodalConfig.h"
 #include "CodalComponent.h"
@@ -34,12 +34,12 @@ DEALINGS IN THE SOFTWARE.
 /**
   * Status flags
   */
-#define TEMPERATURE_IMU_DATA_VALID               0x02
+#define HUMIDITY_IMU_DATA_VALID               0x02
 
 /**
   * Temperature events
   */
-#define TEMPERATURE_EVT_DATA_UPDATE              1
+#define HUMIDITY_EVT_DATA_UPDATE              1
 
 namespace codal
 {
@@ -59,15 +59,15 @@ namespace codal
 
         /**
           * Constructor.
-          * Create a software abstraction of an temperature.
+          * Create a software abstraction of an humidity.
           *
-          * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_TEMPERATURE
+           @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_HUMIDITY
           *
          */
-        Temperature(uint16_t id = DEVICE_ID_THERMOMETER);
+        Temperature(uint16_t id = DEVICE_ID_HUMIDITY);
 
         /**
-          * Attempts to set the sample rate of the temperature to the specified value (in ms).
+          * Attempts to set the sample rate of the humidity to the specified value (in ms).
           *
           * @param period the requested time between samples, in milliseconds.
           * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
@@ -75,19 +75,19 @@ namespace codal
           * @note The requested rate may not be possible on the hardware. In this case, the
           * nearest lower rate is chosen.
           *
-          * @note This method should be overriden (if supported) by specific temperature device drivers.
+          * @note This method should be overriden (if supported) by specific humidity device drivers.
           */
         virtual int setPeriod(int period);
 
         /**
-          * Reads the currently configured sample rate of the temperature.
+          * Reads the currently configured sample rate of the humidity.
           *
           * @return The time between samples, in milliseconds.
           */
         virtual int getPeriod();
 
         /**
-          * Attempts to set the sample range of the temperature to the specified value (in dps).
+          * Attempts to set the sample range of the humidity to the specified value (in dps).
           *
           * @param range The requested sample range of samples, in dps.
           *
@@ -96,24 +96,24 @@ namespace codal
           * @note The requested range may not be possible on the hardware. In this case, the
           * nearest lower range is chosen.
           *
-          * @note This method should be overriden (if supported) by specific temperature device drivers.
+          * @note This method should be overriden (if supported) by specific humidity device drivers.
           */
         virtual int setRange(int range);
 
         /**
-          * Reads the currently configured sample range of the temperature.
+          * Reads the currently configured sample range of the humidity.
           *
           * @return The sample range, in g.
           */
         virtual int getRange();
 
         /**
-         * Configures the temperature for dps range and sample rate defined
+         * Configures the humidity for dps range and sample rate defined
          * in this object. The nearest values are chosen to those defined
          * that are supported by the hardware. The instance variables are then
          * updated to reflect reality.
          *
-         * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the temperature could not be configured.
+         * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the humidity could not be configured.
          *
          * @note This method should be overidden by the hardware driver to implement the requested
          * changes in hardware.
@@ -134,7 +134,7 @@ namespace codal
         virtual int requestUpdate();
 
         /**
-         * Stores data from the temperature sensor in our buffer, and perform gesture tracking.
+         * Stores data from the humidity sensor in our buffer, and perform gesture tracking.
          *
          * On first use, this member function will attempt to add this component to the
          * list of fiber components in order to constantly update the values stored
@@ -148,7 +148,7 @@ namespace codal
         virtual int update(uint16_t s);
 
         /**
-          * Reads the last temperature value stored, and in the coordinate system defined in the constructor.
+          * Reads the last humidity value stored, and in the coordinate system defined in the constructor.
           * @return The force measured in each axis, in dps.
           */
         uint16_t getSample();
