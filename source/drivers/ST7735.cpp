@@ -135,105 +135,9 @@ struct ST7735WorkBuffer
     uint32_t *paletteTable;
     unsigned srcLeft;
     bool inProgress;
+    uint32_t expPalette[256];
 };
 
-#if SWAP
-static void processLine(const uint8_t *src, uint32_t *dst, int skip, int srclen4, int high)
-{
-    uint32_t s, v;
-
-#define LD()                                                                                       \
-    v = 0x111 * (*src >> 4);                                                                       \
-    src += skip
-#define A(sh)                                                                                      \
-    LD();                                                                                          \
-    s |= v << sh;
-
-    if (high)
-        while (srclen4--)
-        {
-            s = 0;
-            A(20);
-            A(8);
-            LD();
-            s |= v >> 4;
-            *dst++ = __builtin_bswap32(s);
-            s = v << 28;
-            A(16);
-            A(4);
-            LD();
-            s |= v >> 8;
-            *dst++ = __builtin_bswap32(s);
-            s = v << 24;
-            A(12);
-            A(0);
-            *dst++ = __builtin_bswap32(s);
-        }
-    else
-#undef LD
-#define LD()                                                                                       \
-    v = 0x111 * (*src & 0xf);                                                                      \
-    src += skip
-        while (srclen4--)
-        {
-            s = 0;
-            A(20);
-            A(8);
-            LD();
-            s |= v >> 4;
-            *dst++ = __builtin_bswap32(s);
-            s = v << 28;
-            A(16);
-            A(4);
-            LD();
-            s |= v >> 8;
-            *dst++ = __builtin_bswap32(s);
-            s = v << 24;
-            A(12);
-            A(0);
-            *dst++ = __builtin_bswap32(s);
-        }
-}
-
-void ST7735::sendColorsStep(ST7735 *st)
-{
-    ST7735WorkBuffer *work = st->work;
-
-    if (work->paletteTable)
-    {
-        auto palette = work->paletteTable;
-        work->paletteTable = NULL;
-        memset(work->dataBuf, 0, sizeof(work->dataBuf));
-        uint8_t *base = work->dataBuf;
-        for (int i = 0; i < 16; ++i)
-        {
-            base[i] = (palette[i] >> 18) & 0x3f;
-            base[i + 32] = (palette[i] >> 10) & 0x3f;
-            base[i + 32 + 64] = (palette[i] >> 2) & 0x3f;
-        }
-        st->startRAMWR(0x2D);
-        st->spi.transfer(work->dataBuf, 128, NULL, 0);
-        st->cs.setDigitalValue(1);
-    }
-
-    if (work->x == 0)
-        st->startRAMWR();
-
-    if (work->x >= work->width)
-    {
-        st->cs.setDigitalValue(1);
-        Event(DEVICE_ID_DISPLAY, 100);
-        return;
-    }
-
-    processLine(work->srcPtr + (work->x >> 1), (uint32_t *)work->dataBuf, (work->width + 1) >> 1,
-                work->height >> 3, !(work->x & 1));
-
-    work->x++;
-    st->startTransfer((work->height * 12) / 8);
-}
-
-#else
 void ST7735::sendBytes(unsigned num)
 {
     assert(num > 0);
@@ -243,7 +147,7 @@ void ST7735::sendBytes(unsigned num)
     uint8_t *dst = work->dataBuf;
     while (num--)
     {
-        uint32_t v = work->paletteTable[*work->srcPtr++];
+        uint32_t v = work->expPalette[*work->srcPtr++];
         *dst++ = v;
         *dst++ = v >> 8;
         *dst++ = v >> 16;
@@ -259,7 +163,7 @@ void ST7735::sendWords(unsigned numBytes)
     work->srcLeft -= numBytes;
     uint32_t numWords = numBytes >> 2;
     const uint32_t *src = (const uint32_t *)work->srcPtr;
-    uint32_t *tbl = work->paletteTable;
+    uint32_t *tbl = work->expPalette;
     uint32_t *dst = (uint32_t *)work->dataBuf;
 
     while (numWords--)
@@ -281,6 +185,22 @@ void ST7735::sendWords(unsigned numBytes)
 void ST7735::sendColorsStep(ST7735 *st)
 {
     ST7735WorkBuffer *work = st->work;
+
+    if (work->paletteTable) {
+        auto palette = work->paletteTable;
+        work->paletteTable = NULL;
+        memset(work->dataBuf, 0, sizeof(work->dataBuf));
+        uint8_t *base = work->dataBuf;
+        for (int i = 0; i < 16; ++i)
+        {
+            base[i] = (palette[i] >> 18) & 0x3f;
+            base[i + 32] = (palette[i] >> 10) & 0x3f;
+            base[i + 32 + 64] = (palette[i] >> 2) & 0x3f;
+        }
+        st->startRAMWR(0x2D);
+        st->spi.transfer(work->dataBuf, 128, NULL, 0);
+        st->cs.setDigitalValue(1);
+    }
 
     if (work->x == 0)
     {
@@ -313,15 +233,7 @@ void ST7735::sendColorsStep(ST7735 *st)
 
 void ST7735::expandPalette(uint32_t *srcPalette, uint32_t *dstPalette)
 {
-    for (int i = 0; i < 256; ++i)
-    {
-        uint32_t p0 = color444(srcPalette[i & 0xf]);
-        uint32_t p1 = color444(srcPalette[i >> 4]);
-        uint32_t p = ((p0 << 12) | p1) << 8;
-        dstPalette[i] = (p << 24) | ((p << 8) & 0xff0000) | ((p >> 8) & 0xff00) | (p >> 24);
-    }
 }
-#endif
 
 void ST7735::startTransfer(unsigned size)
 {
@@ -359,6 +271,8 @@ int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height
     {
         work = new ST7735WorkBuffer;
         memset(work, 0, sizeof(*work));
+        for (int i = 0; i < 256; ++i)
+            work->expPalette[i] = 0x111 * (i & 0xf) | (0x111 * (i>>4) << 12);
         EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, 100, this, &ST7735::sendDone);
     }
 
@@ -425,22 +339,6 @@ void ST7735::setAddrWindow(int x, int y, int w, int h)
     sendCmd(cmd1, sizeof(cmd1));
 }
 
-void ST7735::sendColors(const void *colors, int byteSize)
-{
-    startRAMWR();
-    const uint8_t *ptr = (const uint8_t *)colors;
-    while (byteSize)
-    {
-        int len = 254;
-        if (byteSize < len)
-            len = byteSize;
-        spi.transfer(ptr, len, NULL, 0);
-        ptr += len;
-        byteSize -= len;
-    }
-    cs.setDigitalValue(1);
-}
-
 void ST7735::init()
 {
     spi.setFrequency(8000000);
@@ -449,7 +347,7 @@ void ST7735::init()
     cs.setDigitalValue(1);
     dc.setDigitalValue(1);
 
-    fiber_sleep(10);
+    fiber_sleep(10); // TODO check if delay needed
     sendCmdSeq(initCmds);
 }
 }
