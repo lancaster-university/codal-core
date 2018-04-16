@@ -231,10 +231,6 @@ void ST7735::sendColorsStep(ST7735 *st)
     }
 }
 
-void ST7735::expandPalette(uint32_t *srcPalette, uint32_t *dstPalette)
-{
-}
-
 void ST7735::startTransfer(unsigned size)
 {
     spi.startTransfer(work->dataBuf, size, NULL, 0, (PVoidCallback)&ST7735::sendColorsStep, this);
