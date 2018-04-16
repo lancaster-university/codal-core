@@ -67,10 +67,10 @@ Humidity::Humidity(uint16_t id) : sample()
 int Humidity::update(uint16_t s)
 {
     // Indicate that pitch and roll data is now stale, and needs to be recalculated if needed.
-    status &= ~TEMPERATURE_IMU_DATA_VALID;
+    status &= ~HUMIDITY_IMU_DATA_VALID;
 
     // Indicate that a new sample is available
-    Event e(id, TEMPERATURE_EVT_DATA_UPDATE);
+    Event e(id, HUMIDITY_EVT_DATA_UPDATE);
 
     return DEVICE_OK;
 };
