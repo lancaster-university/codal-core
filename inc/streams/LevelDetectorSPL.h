@@ -28,13 +28,6 @@ DEALINGS IN THE SOFTWARE.
 #ifndef LEVEL_DETECTOR_SPL_H
 #define LEVEL_DETECTOR_SPL_H
 
-
-/**
-  * Sensor events
-  */
-#define SPL_LEVEL_THRESHOLD_LOW                           1
-#define SPL_LEVEL_THRESHOLD_HIGH                          2
-
 /**
  * Status values
  */

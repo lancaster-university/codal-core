@@ -26,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "CodalCompat.h"
 #include "Timer.h"
+#include "LevelDetector.h"
 #include "LevelDetectorSPL.h"
 #include "ErrorNo.h"
 
@@ -101,14 +102,14 @@ int LevelDetectorSPL::pullRequest()
         samples -= windowSize;
         if ((!(status & LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
         {
-            Event(id, SPL_LEVEL_THRESHOLD_HIGH);
+            Event(id, LEVEL_THRESHOLD_HIGH);
             status |=  LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED;
             status &= ~LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED;
         }
 
         if ((!(status & LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED)) && level < lowThreshold)
         {
-            Event(id, SPL_LEVEL_THRESHOLD_LOW);
+            Event(id, LEVEL_THRESHOLD_LOW);
             status |=  LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED;
             status &= ~LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED;
         }
@@ -131,7 +132,7 @@ float LevelDetectorSPL::getValue()
 /**
  * Set threshold to the given value. Events will be generated when these thresholds are crossed.
  *
- * @param value the LOW threshold at which a SPL_LEVEL_THRESHOLD_LOW will be generated.
+ * @param value the LOW threshold at which a LEVEL_THRESHOLD_LOW will be generated.
  *
  * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
  */
@@ -157,7 +158,7 @@ int LevelDetectorSPL::setLowThreshold(float value)
 /**
  * Set threshold to the given value. Events will be generated when these thresholds are crossed.
  *
- * @param value the HIGH threshold at which a SPL_LEVEL_THRESHOLD_HIGH will be generated.
+ * @param value the HIGH threshold at which a LEVEL_THRESHOLD_HIGH will be generated.
  *
  * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
  */
