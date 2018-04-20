@@ -105,7 +105,7 @@ void Sensor::checkThresholding()
 {
     if ((status & SENSOR_HIGH_THRESHOLD_ENABLED) && (!(status & SENSOR_HIGH_THRESHOLD_PASSED)) && (sensorValue >= highThreshold))
     {
-        Event(id, ANALOG_THRESHOLD_HIGH);
+        Event(id, SENSOR_THRESHOLD_HIGH);
         status |=  SENSOR_HIGH_THRESHOLD_PASSED;
         status &= ~SENSOR_LOW_THRESHOLD_PASSED;
     }
@@ -113,7 +113,7 @@ void Sensor::checkThresholding()
     if ((status & SENSOR_LOW_THRESHOLD_ENABLED) && (!(status & SENSOR_LOW_THRESHOLD_PASSED)) && (sensorValue <= lowThreshold))
 
     {
-        Event(id, ANALOG_THRESHOLD_LOW);
+        Event(id, SENSOR_THRESHOLD_LOW);
         status |=  SENSOR_LOW_THRESHOLD_PASSED;
         status &= ~SENSOR_HIGH_THRESHOLD_PASSED;
     }
@@ -161,7 +161,7 @@ int Sensor::getPeriod()
 /**
  * Set threshold to the given value. Events will be generated when these thresholds are crossed.
  *
- * @param value the LOW threshold at which a ANALOG_THRESHOLD_LOW will be generated.
+ * @param value the LOW threshold at which a SENSOR_THRESHOLD_LOW will be generated.
  *
  * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
  */
@@ -188,7 +188,7 @@ int Sensor::setLowThreshold(uint16_t value)
 /**
  * Set threshold to the given value. Events will be generated when these thresholds are crossed.
  *
- * @param value the HIGH threshold at which a ANALOG_THRESHOLD_HIGH will be generated.
+ * @param value the HIGH threshold at which a SENSOR_THRESHOLD_HIGH will be generated.
  *
  * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
  */
