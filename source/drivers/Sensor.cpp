@@ -56,7 +56,7 @@ Sensor::Sensor(uint16_t id)
         EventModel::defaultEventBus->listen(id, SENSOR_UPDATE_NEEDED, this, &Sensor::onSampleEvent, MESSAGE_BUS_LISTENER_IMMEDIATE);
 
     setPeriod(500);
-    updateSample();
+//    updateSample();
 }
 
 /*
