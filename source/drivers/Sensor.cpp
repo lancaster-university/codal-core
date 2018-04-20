@@ -56,7 +56,6 @@ Sensor::Sensor(uint16_t id)
         EventModel::defaultEventBus->listen(id, SENSOR_UPDATE_NEEDED, this, &Sensor::onSampleEvent, MESSAGE_BUS_LISTENER_IMMEDIATE);
 
     setPeriod(500);
-//    updateSample();
 }
 
 /*
@@ -78,7 +77,7 @@ int Sensor::getValue()
 }
 
 /**
- * Updates the internal reading of the sensor. Typically called periodicaly.
+ * Updates the internal reading of the sensor. Typically called periodically.
  */
 void Sensor::updateSample()
 {
@@ -89,6 +88,8 @@ void Sensor::updateSample()
     {
         sensorValue = (uint16_t)value;
         status |=  SENSOR_INITIALISED;
+        // set Period to default value
+        setPeriod(500);
     }
     else
     {
