@@ -29,23 +29,23 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalComponent.h"
 #include "Pin.h"
 #include "Event.h"
-
+#include "Sensor.h"
 
 /**
-  * Sensor events
+  * Sensor events deprecated, use SENSOR_* instead
   */
-#define ANALOG_THRESHOLD_LOW                           1
-#define ANALOG_THRESHOLD_HIGH                          2
-#define ANALOG_SENSOR_UPDATE_NEEDED                    3
+#define ANALOG_THRESHOLD_LOW                           SENSOR_THRESHOLD_LOW
+#define ANALOG_THRESHOLD_HIGH                          SENSOR_THRESHOLD_HIGH
+#define ANALOG_SENSOR_UPDATE_NEEDED                    SENSOR_UPDATE_NEEDED
 
 /**
- * Status values
+ * Status values deprecated, use SENSOR_* instead
  */
-#define ANALOG_SENSOR_INITIALISED                       0x01
-#define ANALOG_SENSOR_HIGH_THRESHOLD_PASSED             0x02
-#define ANALOG_SENSOR_LOW_THRESHOLD_PASSED              0x04
-#define ANALOG_SENSOR_LOW_THRESHOLD_ENABLED             0x08
-#define ANALOG_SENSOR_HIGH_THRESHOLD_ENABLED            0x10
+#define ANALOG_SENSOR_INITIALISED                       SENSOR_INITIALISED
+#define ANALOG_SENSOR_HIGH_THRESHOLD_PASSED             SENSOR_HIGH_THRESHOLD_PASSED
+#define ANALOG_SENSOR_LOW_THRESHOLD_PASSED              SENSOR_LOW_THRESHOLD_PASSED
+#define ANALOG_SENSOR_LOW_THRESHOLD_ENABLED             SENSOR_LOW_THRESHOLD_ENABLED
+#define ANALOG_SENSOR_HIGH_THRESHOLD_ENABLED            SENSOR_HIGH_THRESHOLD_ENABLED
 
 
 namespace codal
@@ -53,16 +53,11 @@ namespace codal
     /**
      * Class definition for a generic analog sensor, and performs periodic sampling, buffering and low pass filtering of the data.
      */
-    class AnalogSensor : public CodalComponent
+    class AnalogSensor : public Sensor
     {
         protected:
 
         Pin             &_pin;              // Pin where the sensor is connected.
-        uint16_t        samplePeriod;       // The time between samples, in milliseconds.
-        uint16_t        sensitivity;        // A value between 0..1023 used with a decay average to smooth the sample data.
-        uint16_t        highThreshold;      // threshold at which a HIGH event is generated
-        uint16_t        lowThreshold;       // threshold at which a LOW event is generated
-        uint16_t        sensorValue;        // Last sampled data.
 
         public:
 
@@ -76,81 +71,10 @@ namespace codal
          */
         AnalogSensor(Pin &pin, uint16_t id);
 
-        /*
-         * Event Handler for periodic sample timer
+        /**
+         * Read the value from pin.
          */
-        void onSampleEvent(Event);
-
-        /**
-         * Updates the internal reading of the sensor. Typically called periodicaly.
-         *
-         * @return DEVICE_OK on success.
-         */
-        virtual void updateSample();
-
-        /*
-         * Determines the instantaneous value of the sensor, in SI units, and returns it.
-         *
-         * @return The current value of the sensor.
-         */
-        int getValue();
-
-        /**
-          * Set the automatic sample period of the accelerometer to the specified value (in ms).
-          *
-          * @param period the requested time between samples, in milliseconds.
-          *
-          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
-          */
-        int setPeriod(int period);
-
-        /**
-          * Reads the currently configured sample period.
-          *
-          * @return The time between samples, in milliseconds.
-          */
-        int getPeriod();
-
-        /**
-          * Set threshold to the given value. Events will be generated when these thresholds are crossed.
-          *
-          * @param value the LOW threshold at which a ANALOG_THRESHOLD_LOW will be generated.
-          *
-          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
-          */
-        int setLowThreshold(uint16_t value);
-
-        /**
-          * Set threshold to the given value. Events will be generated when these thresholds are crossed.
-          *
-          * @param value the HIGH threshold at which a ANALOG_THRESHOLD_HIGH will be generated.
-          *
-          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
-          */
-        int setHighThreshold(uint16_t value);
-
-        /**
-          * Determines the currently defined low threshold.
-          *
-          * @return The current low threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
-          */
-        int getLowThreshold();
-
-        /**
-          * Determines the currently defined high threshold.
-          *
-          * @return The current high threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
-          */
-        int getHighThreshold();
-
-        /**
-          * Set smoothing value for the data. A decay average is taken of sampled data to smooth it into more accurate information.
-          *
-          * @param value A value between 0..1023 that detemrines the level of smoothing. Set to 1023 to disable smoothing. Default value is 868
-          *
-          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
-          */
-        int setSensitivity(uint16_t value);
+        virtual int readValue();
 
         /**
           * Destructor.
@@ -158,11 +82,8 @@ namespace codal
         ~AnalogSensor();
 
         protected:
-        /**
-         * Determine if any thresholding events need to be generated, and if so, raise them.
-         */
-        void checkThresholding();
-    };
+
+   };
 }
 
 #endif
