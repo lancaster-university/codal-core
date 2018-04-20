@@ -48,6 +48,7 @@ using namespace codal;
  */
 AnalogSensor::AnalogSensor(Pin &pin, uint16_t id) : Sensor( id), _pin(pin)
 {
+    updateSample();
 }
 
 /**
