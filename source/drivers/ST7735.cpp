@@ -207,6 +207,7 @@ void ST7735::sendColorsStep(ST7735 *st)
         work->x++;
     }
 
+    // with the current image format in PXT the sendBytes cases never happen
     unsigned align = (unsigned)work->srcPtr & 3;
     if (work->srcLeft && align)
     {
@@ -267,7 +268,7 @@ int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height
         work = new ST7735WorkBuffer;
         memset(work, 0, sizeof(*work));
         for (int i = 0; i < 256; ++i)
-            work->expPalette[i] = 0x111 * (i & 0xf) | (0x111 * (i>>4) << 12);
+            work->expPalette[i] = 0x1011 * (i & 0xf) | (0x110100 * (i>>4));
         EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, 100, this, &ST7735::sendDone);
     }
 
