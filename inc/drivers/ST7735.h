@@ -63,7 +63,14 @@ class ST7735
 public:
     ST7735(SPI &spi, Pin &cs, Pin &dc);
     void init();
-    void configure(uint8_t madctl);
+
+    /**
+     * Configure screen-specific parameters.
+     *
+     * @param madctl See MADCTL_* constants above
+     * @param frmctr1 defaults to 0x083b3b, 0x053a3a, 0x053c3c depending on screen size; 0x000605 was found to work well on 160x128 screen; big-endian
+     */
+    void configure(uint8_t madctl, uint32_t frmctr1);
     /**
      * Set rectangle where pixels sent by sendIndexedImage() will be stored.
      */

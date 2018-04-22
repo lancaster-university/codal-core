@@ -75,9 +75,9 @@ static const uint8_t initCmds[] = {
       120,                    //     150 ms delay
     ST7735_SLPOUT ,   DELAY,  //  2: Out of sleep mode, 0 args, w/delay
       120,                    //     500 ms delay
-    ST7735_FRMCTR1, 3      ,  //  3: Frame rate ctrl - normal mode, 3 args:
-      0x08, 0x3B, 0x3B,       //     Rate = fosc/(1x2+40) * (LINE+2C+2D)
       #if 0
+    ST7735_FRMCTR1, 3      ,  //  3: Frame rate ctrl - normal mode, 3 args:
+      0x02, 0x2c, 0x2d,       //     Rate = fosc/(1x2+40) * (LINE+2C+2D)
     ST7735_FRMCTR2, 3      ,  //  4: Frame rate control - idle mode, 3 args:
       0x01, 0x2C, 0x2D,       //     Rate = fosc/(1x2+40) * (LINE+2C+2D)
     ST7735_FRMCTR3, 6      ,  //  5: Frame rate ctrl - partial mode, 6 args:
@@ -345,9 +345,11 @@ void ST7735::init()
     sendCmdSeq(initCmds);
 }
 
-void ST7735::configure(uint8_t madctl) {
+void ST7735::configure(uint8_t madctl, uint32_t frmctr1) {
     uint8_t cmd0[] = {ST7735_MADCTL, madctl};
+    uint8_t cmd1[] = {ST7735_FRMCTR1, (uint8_t)(frmctr1 >> 16), (uint8_t)(frmctr1 >> 8), (uint8_t)frmctr1};
     sendCmd(cmd0, sizeof(cmd0));
+    sendCmd(cmd1, sizeof(cmd1));
 }
 
 }
