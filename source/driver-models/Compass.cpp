@@ -272,7 +272,7 @@ int Compass::getPeriod()
 
 /**
  * Poll to see if new data is available from the hardware. If so, update it.
- * n.b. it is not necessary to explicitly call this funciton to update data
+ * n.b. it is not necessary to explicitly call this function to update data
  * (it normally happens in the background when the scheduler is idle), but a check is performed
  * if the user explicitly requests up to date data.
  *

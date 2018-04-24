@@ -22,8 +22,8 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef CODAL_ACCELEROMTER_H
-#define CODAL_ACCELEROMTER_H
+#ifndef CODAL_ACCELEROMETER_H
+#define CODAL_ACCELEROMETER_H
 
 #include "CodalConfig.h"
 #include "CodalComponent.h"
@@ -185,7 +185,7 @@ namespace codal
 
         /**
          * Poll to see if new data is available from the hardware. If so, update it.
-         * n.b. it is not necessary to explicitly call this funciton to update data
+         * n.b. it is not necessary to explicitly call this function to update data
          * (it normally happens in the background when the scheduler is idle), but a check is performed
          * if the user explicitly requests up to date data.
          *
