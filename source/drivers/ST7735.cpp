@@ -335,9 +335,6 @@ void ST7735::setAddrWindow(int x, int y, int w, int h)
 
 void ST7735::init()
 {
-    spi.setFrequency(8000000);
-    spi.setMode(0);
-
     cs.setDigitalValue(1);
     dc.setDigitalValue(1);
 
