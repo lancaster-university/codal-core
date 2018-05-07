@@ -50,7 +50,9 @@ int StandardSPIFlash::sendCommand(uint8_t command, int addr, void *resp, int res
     setCommand(command, addr);
 
     ssel.setDigitalValue(0);
-    int r = spi.transfer(cmdBuf, addr == -1 ? 1 : 4, (uint8_t *)resp, respSize);
+    int r = spi.transfer(cmdBuf, addr == -1 ? 1 : 4, NULL, 0);
+    if (r == DEVICE_OK)
+        r = spi.transfer(NULL, 0, (uint8_t *)resp, respSize);
     ssel.setDigitalValue(1);
 
     return r;
