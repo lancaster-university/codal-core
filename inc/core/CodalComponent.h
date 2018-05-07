@@ -51,8 +51,9 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_ID_SYSTEM_DAC          19
 #define DEVICE_ID_SYSTEM_MICROPHONE   20
 #define DEVICE_ID_SYSTEM_LEVEL_DETECTOR 21
-#define DEVICE_ID_MSC 22
-#define DEVICE_ID_SPI 23
+#define DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL 22
+#define DEVICE_ID_MSC 23
+#define DEVICE_ID_SPI 24
 
 #define DEVICE_ID_IO_P0               100                       // IDs 100-227 are reserved for I/O Pin IDs.
 
