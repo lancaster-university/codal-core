@@ -33,12 +33,16 @@ DEALINGS IN THE SOFTWARE.
 #error "Too small DMESG buffer"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct CodalLogStore
 {
     uint32_t ptr;
     char buffer[DEVICE_DMESG_BUFFER_SIZE];
 };
-extern CodalLogStore codalLogStore;
+extern struct CodalLogStore codalLogStore;
 
 /**
   * Log formatted message to an internal buffer.
@@ -72,6 +76,10 @@ void codal_vdmesg(const char *format, va_list ap);
 
 #define DMESG  codal_dmesg
 #define DMESGF  codal_dmesgf
+
+#ifdef __cplusplus
+}
+#endif
 
 #else
 
