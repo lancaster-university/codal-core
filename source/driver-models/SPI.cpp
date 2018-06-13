@@ -24,30 +24,45 @@ DEALINGS IN THE SOFTWARE.
 
 #include "SPI.h"
 #include "ErrorNo.h"
+#include "CodalFiber.h"
 
 namespace codal
 {
 
 /**
- * Writes a given command to SPI bus, and afterwards reads the response.
+ * Writes and reads from the SPI bus concurrently. Waits (possibly un-scheduled) for transfer to
+ * finish.
  *
- * Note that bytes recieved while sending command are ignored.
+ * Either buffer can be NULL.
  */
-int SPI::transfer(const uint8_t *command, uint32_t commandSize, uint8_t *response,
-                  uint32_t responseSize)
+int SPI::transfer(const uint8_t *txBuffer, uint32_t txSize, uint8_t *rxBuffer, uint32_t rxSize)
 {
-    for (uint32_t i = 0; i < commandSize; ++i)
+    uint32_t len = txSize;
+    if (rxSize > len)
+        len = rxSize;
+    for (uint32_t i = 0; i < len; ++i)
     {
-        if (write(command[i]) < 0)
-            return DEVICE_SPI_ERROR;
-    }
-    for (uint32_t i = 0; i < responseSize; ++i)
-    {
-        int c = write(0);
+        int c = write(i < txSize ? txBuffer[i] : 0);
         if (c < 0)
             return DEVICE_SPI_ERROR;
-        response[i] = c;
+        if (i < rxSize)
+            rxBuffer[i] = c;
     }
     return DEVICE_OK;
+}
+
+/**
+ * Writes and reads from the SPI bus concurrently. Finally, calls doneHandler (possibly in IRQ
+ * context).
+ *
+ * Either buffer can be NULL.
+ */
+int SPI::startTransfer(const uint8_t *txBuffer, uint32_t txSize, uint8_t *rxBuffer, uint32_t rxSize,
+                       PVoidCallback doneHandler, void *arg)
+{
+    int r = transfer(txBuffer, txSize, rxBuffer, rxSize);
+    // it's important this doesn't get invoked recursievely, since that leads to stack overflow
+    create_fiber(doneHandler, arg);
+    return r;
 }
 }

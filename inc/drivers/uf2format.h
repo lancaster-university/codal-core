@@ -58,8 +58,6 @@ typedef struct
     const char *info_uf2;
 } UF2_BInfo;
 
-#define UF2_BINFO ((UF2_BInfo *)(APP_START_ADDRESS - sizeof(UF2_BInfo)))
-
 static inline bool is_uf2_block(void *data)
 {
     UF2_Block *bl = (UF2_Block *)data;
@@ -67,22 +65,30 @@ static inline bool is_uf2_block(void *data)
            bl->magicEnd == UF2_MAGIC_END;
 }
 
+#ifdef BOOTLOADER_START_ADDR
+
+#define UF2_BINFO ((UF2_BInfo *)(BOOTLOADER_END_ADDR - sizeof(UF2_BInfo)))
+
+#ifndef UF2_INFO_ADDR
+#define UF2_INFO_ADDR UF2_BINFO->info_uf2
+#endif
+
 static inline bool in_uf2_bootloader_space(const void *addr)
 {
-    return 0xb4 <= (uint32_t)addr && (uint32_t)addr < APP_START_ADDRESS;
+    return (BOOTLOADER_START_ADDR + 0xb0) <= (uint32_t)addr && (uint32_t)addr < BOOTLOADER_END_ADDR;
 }
 
 static inline const char *uf2_info(void)
 {
-    if (in_uf2_bootloader_space(UF2_BINFO->info_uf2))
-        return UF2_BINFO->info_uf2;
+    if (in_uf2_bootloader_space(UF2_INFO_ADDR))
+        return UF2_INFO_ADDR;
     return "N/A";
 }
 
 #ifdef UF2_DEFINE_HANDOVER
 static inline void hf2_handover(uint8_t ep)
 {
-    const char *board_info = UF2_BINFO->info_uf2;
+    const char *board_info = UF2_INFO_ADDR;
     UF2_HID_Handover_Handler fn = UF2_BINFO->handoverHID;
 
     if (in_uf2_bootloader_space(board_info) && in_uf2_bootloader_space((const void *)fn) &&
@@ -112,6 +118,8 @@ static inline void check_uf2_handover(uint8_t *buffer, uint32_t blocks_remaining
         fn(&hand);
     }
 }
-#endif
+#endif // UF2_DEFINE_HANDOVER
+
+#endif // BOOTLOADER_START_ADDR
 
 #endif

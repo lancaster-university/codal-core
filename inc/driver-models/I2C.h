@@ -48,6 +48,7 @@ public:
       */
     virtual int setFrequency(uint32_t frequency);
 
+protected:
     /**
      * Issues a START condition on the I2C bus
      * @return DEVICE_OK on success, or an error code
@@ -78,6 +79,7 @@ public:
     */
     virtual int read(AcknowledgeType ack = ACK);
 
+public:
     /**
       * Issues a standard, 2 byte I2C command write to the I2C bus.
       * This consists of:
@@ -112,7 +114,7 @@ public:
     *
     * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the the write request failed.
     */
-    int write(uint16_t address, uint8_t *data, int len, bool repeated = false);
+    virtual int write(uint16_t address, uint8_t *data, int len, bool repeated = false);
 
     /**
       * Performs a typical register write operation to the I2C slave device provided.
@@ -150,7 +152,7 @@ public:
       *
       * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the the read request failed.
       */
-    int read(uint16_t address, uint8_t *data, int len, bool repeated = false);
+    virtual int read(uint16_t address, uint8_t *data, int len, bool repeated = false);
 
     /**
       * Performs a typical register read operation to the I2C slave device provided.
@@ -174,7 +176,7 @@ public:
       *
       * @return DEVICE_OK or DEVICE_I2C_ERROR if the the read request failed.
       */
-    int readRegister(uint16_t address, uint8_t reg, uint8_t *data, int length, bool repeated = true);
+    virtual int readRegister(uint16_t address, uint8_t reg, uint8_t *data, int length, bool repeated = true);
 };
 }
 

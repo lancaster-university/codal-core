@@ -195,8 +195,8 @@ typedef struct
 class UsbEndpointIn
 {
     uint8_t buf[USB_MAX_PKT_SIZE];
-
 public:
+    volatile uint32_t userdata;
     uint8_t ep;
     uint8_t flags;
     uint16_t wLength;
@@ -214,6 +214,7 @@ class UsbEndpointOut
     void startRead();
 
 public:
+    volatile uint32_t userdata;
     uint8_t ep;
     int stall();
     int reset();
