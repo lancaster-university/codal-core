@@ -35,9 +35,12 @@ namespace codal
 #define CODAL_PKTSERIAL_EVT_DATA_RECEIVED 1
 #define CODAL_PKTSERIAL_EVT_DATA_SENT 2
 #define CODAL_PKTSERIAL_EVT_ERROR 3
+#define CODAL_PKTSERIAL_EVT_DATA_DROPPED 4
 
 struct PktSerialPkt {
 public:
+    PktSerialPkt *next;
+
     uint16_t size; // not including 'size' field
     uint16_t crc;
     // add more stuff
@@ -52,7 +55,7 @@ public:
 class PktSerial
 {
 protected:
-    PktSerialPkt *recvQueue[10];
+    PktSerialPkt *recvQueue;
     void queue(PktSerialPkt *pkt);
     virtual uint32_t getRandom();
 public:

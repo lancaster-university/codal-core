@@ -37,44 +37,58 @@ namespace codal
 
 PktSerialPkt *PktSerialPkt::alloc(uint16_t sz)
 {
-    auto p = malloc(2 + sz);
-    memset(p, 0, 2 + sz);
+    auto p = malloc(6 + sz);
+    memset(p, 0, 6 + sz);
     return (PktSerialPkt *)p;
 }
 
 void PktSerial::queue(PktSerialPkt *pkt)
 {
-    unsigned i;
-    for (i = 0; i < ARRAY_SIZE(recvQueue); ++i)
+    pkt->next = NULL;
+
+    target_disable_irq();
+
+    if (!recvQueue)
     {
-        if (recvQueue[i] == NULL)
+        recvQueue = pkt;
+    }
+    else
+    {
+        unsigned i = 0;
+        PktSerialPkt *last = recvQueue;
+        while (last->next)
         {
-            recvQueue[i] = pkt;
-            Event(id, CODAL_PKTSERIAL_EVT_DATA_RECEIVED);
+            last = last->next;
+            i++;
+        }
+
+        if (i > 10)
+        {
+            target_enable_irq();
+            Event(id, CODAL_PKTSERIAL_EVT_DATA_DROPPED);
             return;
         }
+
+        last->next = pkt;
     }
 
-#if 0
-    free(pkt);
-    return;
-#else
-    free(getPacket());
-    recvQueue[i - 1] = pkt;
+    target_enable_irq();
     Event(id, CODAL_PKTSERIAL_EVT_DATA_RECEIVED);
-#endif
 }
 
 PktSerialPkt *PktSerial::getPacket()
 {
-    if (recvQueue[0])
+    PktSerialPkt *r = NULL;
+
+    target_disable_irq();
+    if (recvQueue)
     {
-        auto r = recvQueue[0];
-        memmove(recvQueue, recvQueue + 1, sizeof(recvQueue) - sizeof(recvQueue[0]));
-        recvQueue[ARRAY_SIZE(recvQueue) - 1] = NULL;
-        return r;
+        r = recvQueue;
+        recvQueue = r->next;
     }
-    return NULL;
+    target_enable_irq();
+
+    return r;
 }
 
 uint32_t PktSerial::getRandom()
