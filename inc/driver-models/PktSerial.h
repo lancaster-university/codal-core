@@ -28,56 +28,62 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "ErrorNo.h"
 #include "Pin.h"
+#include "SingleWireSerial.h"
+#include "Event.h"
+
+// 2 bytes for size
+#define PCKT_SIZE_SIZE      2
 
 namespace codal
 {
 
-#define CODAL_PKTSERIAL_EVT_DATA_RECEIVED 1
-#define CODAL_PKTSERIAL_EVT_DATA_SENT 2
-#define CODAL_PKTSERIAL_EVT_ERROR 3
-#define CODAL_PKTSERIAL_EVT_DATA_DROPPED 4
+    struct PktSerialPkt {
+        public:
+        uint16_t size; // not including 'size' field
+        uint16_t crc;
+        // add more stuff
+        uint8_t data[0];
 
-struct PktSerialPkt {
-public:
-    PktSerialPkt *next;
-
-    uint16_t size; // not including 'size' field
-    uint16_t crc;
-    // add more stuff
-    uint8_t data[0];
-
-    static PktSerialPkt *alloc(uint16_t sz);
-};
-
-/**
- * Class definition for a PktSerial interface.
- */
-class PktSerial
-{
-protected:
-    PktSerialPkt *recvQueue;
-    void queue(PktSerialPkt *pkt);
-    virtual uint32_t getRandom();
-public:
-    uint16_t id;
-
-    PktSerialPkt *getPacket();
+        static PktSerialPkt *alloc(uint16_t sz);
+    };
 
     /**
-     * Start to listen.
-     */
-    virtual void start() = 0;
+    * Class definition for a PktSerial interface.
+    */
+    class PktSerial
+    {
+    protected:
+        SingleWireSerial&  sws;
+        Pin& sp;
 
-    /**
-     * Disables protocol.
-     */
-    virtual void stop() = 0;
+        void queue(PktSerialPkt *pkt);
+        virtual uint32_t getRandom();
 
-    /**
-     * Writes to the PktSerial bus. Waits (possibly un-scheduled) for transfer to finish.
-     */
-    virtual int send(const PktSerialPkt *pkt) = 0;
-};
+        void onRisingEdge(Event);
+
+    public:
+
+        uint16_t id;
+
+        PktSerial(Pin& p, SingleWireSerial& sws);
+
+        PktSerialPkt *getPacket();
+
+        /**
+        * Start to listen.
+        */
+        virtual void start() = 0;
+
+        /**
+        * Disables protocol.
+        */
+        virtual void stop() = 0;
+
+        /**
+        * Writes to the PktSerial bus. Waits (possibly un-scheduled) for transfer to finish.
+        */
+        virtual int send(const PktSerialPkt *pkt) = 0;
+    };
 } // namespace codal
 
 #endif
