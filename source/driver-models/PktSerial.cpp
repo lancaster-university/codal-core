@@ -33,11 +33,19 @@ void PktSerial::dmaComplete(Event evt)
     if (evt.value == SWS_EVT_DATA_RECEIVED)
     {
         status &= ~PKT_SERIAL_RECEIVING;
+        sws.setMode(SingleWireDisconnected);
+        sp.setPull(PullMode::Down);
+        sp.getDigitalValue();
         queuePacket();
     }
 
     if (evt.value == SWS_EVT_DATA_SENT)
+    {
         status &= ~PKT_SERIAL_TRANSMITTING;
+        sws.setMode(SingleWireDisconnected);
+        sp.setPull(PullMode::Down);
+        sp.getDigitalValue();
+    }
 
     // release any waiting fibers.
     evt.source = this->id;
@@ -78,7 +86,10 @@ PktSerial::PktSerial(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sw
 PktSerialPkt* PktSerial::getPacket()
 {
     PktSerialPkt* p = packetBuffer[bufferTail];
-    bufferTail = (bufferTail + 1) % PKT_SERIAL_MAX_BUFFERS;
+
+    if (p)
+        bufferTail = (bufferTail + 1) % PKT_SERIAL_MAX_BUFFERS;
+
     return p;
 }
 
@@ -151,10 +162,6 @@ int PktSerial::send(const PktSerialPkt *pkt)
 
     fiber_wake_on_event(this->id, SWS_EVT_DATA_SENT);
     schedule();
-
-    sws.setMode(SingleWireDisconnected);
-    sp.setPull(PullMode::Down);
-    sp.getDigitalValue();
 
     return DEVICE_OK;
 }
