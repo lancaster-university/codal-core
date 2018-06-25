@@ -28,11 +28,19 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "ErrorNo.h"
 #include "Pin.h"
-#include "SingleWireSerial.h"
 #include "Event.h"
+#include "DMASingleWireSerial.h"
+
+#define PKT_SERIAL_MAX_BUFFERS      10
 
 // 2 bytes for size
-#define PCKT_SIZE_SIZE      2
+#define PKT_SERIAL_HEADER_SIZE      4
+
+#define PKT_SERIAL_RECEIVING        0x01
+#define PKT_SERIAL_TRANSMITTING     0x02
+
+
+#define PKT_SERIAL_DATA_READY       1
 
 namespace codal
 {
@@ -44,45 +52,52 @@ namespace codal
         // add more stuff
         uint8_t data[0];
 
-        static PktSerialPkt *alloc(uint16_t sz);
+        static PktSerialPkt *allocate(PktSerialPkt& p);
+        static PktSerialPkt *allocate(uint16_t size);
     };
-
     /**
     * Class definition for a PktSerial interface.
     */
-    class PktSerial
+    class PktSerial : public CodalComponent
     {
+
+        uint8_t bufferTail;
+
     protected:
-        SingleWireSerial&  sws;
+        DMASingleWireSerial&  sws;
         Pin& sp;
 
-        void queue(PktSerialPkt *pkt);
-        virtual uint32_t getRandom();
-
         void onRisingEdge(Event);
+        void dmaComplete(Event evt);
+        int queuePacket();
 
     public:
 
+        PktSerialPkt* rxBuf;
+        PktSerialPkt* packetBuffer[PKT_SERIAL_MAX_BUFFERS];
+
         uint16_t id;
 
-        PktSerial(Pin& p, SingleWireSerial& sws);
+        PktSerial(Pin& p, DMASingleWireSerial& sws, uint16_t id = DEVICE_ID_PKTSERIAL0);
 
         PktSerialPkt *getPacket();
 
         /**
         * Start to listen.
         */
-        virtual void start() = 0;
+        virtual void start();
 
         /**
         * Disables protocol.
         */
-        virtual void stop() = 0;
+        virtual void stop();
 
         /**
         * Writes to the PktSerial bus. Waits (possibly un-scheduled) for transfer to finish.
         */
-        virtual int send(const PktSerialPkt *pkt) = 0;
+        virtual int send(const PktSerialPkt *pkt);
+
+        virtual int send(uint8_t* buf, int len);
     };
 } // namespace codal
 

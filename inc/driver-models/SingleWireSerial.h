@@ -14,7 +14,8 @@ namespace codal
     enum SingleWireMode
     {
         SingleWireRx = 0,
-        SingleWireTx
+        SingleWireTx,
+        SingleWireDisconnected
     };
 
     class SingleWireSerial : public CodalComponent
@@ -23,8 +24,6 @@ namespace codal
         Pin& p;
 
         virtual void configureRxInterrupt(int enable) = 0;
-
-        virtual int rawGetc() = 0;
 
         virtual int configureTx(int) = 0;
 
@@ -39,9 +38,8 @@ namespace codal
         virtual int putc(char c) = 0;
         virtual int getc() = 0;
 
-        // virtual int sendPacket();
-
-        // virtual int getPacket();
+        virtual int send(uint8_t* buf, int len) = 0;
+        virtual int receive(uint8_t* buf, int len) = 0;
 
         virtual int setBaud(uint32_t baud) = 0;
 
