@@ -24,6 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "Mixer.h"
 #include "ErrorNo.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -69,13 +70,17 @@ ManagedBuffer Mixer::pull() {
         if (sum.length() < data.length()) {
             ManagedBuffer newsum(data.length());
             newsum.writeBuffer(0, sum);
+            for (int i = sum.length(); i < newsum.length(); i += 2)
+                *((uint16_t*)&newsum[i]) = 512;
             sum = newsum;
         }
         auto d = (uint16_t*)&data[0];
         auto s = (uint16_t*)&sum[0];
         auto len = data.length() >> 1;
         while (len--) {
-            int v = (((int)*d << 10) + ((int)*s * vol)) >> 10;
+            int v = ((((int)*d - 512) << 10) + (((int)*s - 512) * (int)vol)) >> 10;
+            v += 512;
+            if (v < 0) v = 0;
             if (v > 1023) v = 1023;
             *s = v;
             d++;
