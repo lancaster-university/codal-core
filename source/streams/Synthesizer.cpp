@@ -235,7 +235,9 @@ int Synthesizer::setBufferSize(int size)
  */
 ManagedBuffer Synthesizer::pull()
 {
-    return buffer;
+    ManagedBuffer out = buffer;
+    buffer = ManagedBuffer();
+    return out;
 }
 
 /**
