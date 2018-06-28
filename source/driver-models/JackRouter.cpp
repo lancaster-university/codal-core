@@ -95,17 +95,25 @@ void JackRouter::idleCallback()
     }
     else if (state == JackState::Buzzer || state == JackState::AllDown)
     {
-        // in buzzer mode - try to turn on the power for a moment to see if sense is connected to it
-        pwrEn.setDigitalValue(1);
-        floatUp = false;
-        checkFloat();
-        pwrEn.setDigitalValue(0);
+        // only do this once - this is a reliable test, unlike the one above
+        if (numIdles == 0)
+        {
+            // in buzzer mode - try to turn on the power for a moment to see if sense is connected
+            // to it
+            pwrEn.setDigitalValue(1);
+            floatUp = false;
+            checkFloat();
+            pwrEn.setDigitalValue(0);
+        }
     }
     else if (state == JackState::BuzzerAndSerial)
     {
-        // power is already on, just see is sense is connected to it
-        floatUp = false;
-        checkFloat();
+        if (numIdles == 0)
+        {
+            // power is already on, just see is sense is connected to it
+            floatUp = false;
+            checkFloat();
+        }
     }
 
     if (state != JackState::BuzzerAndSerial)
@@ -119,7 +127,7 @@ void JackRouter::idleCallback()
     if (numIdles < MAX_IDLES)
         return;
 
-    //DMESG("cycle: lf=%d nl=%d nf=%d", lastSenseFloat, numLows, numSenseForced);
+    // DMESG("cycle: lf=%d nl=%d nf=%d", lastSenseFloat, numLows, numSenseForced);
 
     if (lastSenseFloat)
     {
@@ -138,8 +146,15 @@ void JackRouter::idleCallback()
     }
     else
     {
-        // nothing connected - just send sound to the buzzer
-        setState(JackState::Buzzer);
+        if (state == JackState::AllDown && numSenseForced == 0)
+        {
+            // something connected, will find out next cycle
+        }
+        else
+        {
+            // nothing connected - just send sound to the buzzer
+            setState(JackState::Buzzer);
+        }
     }
 
     lastSenseFloat = numSenseForced == 0;
