@@ -78,7 +78,7 @@ ManagedBuffer Mixer::pull() {
         auto s = (uint16_t*)&sum[0];
         auto len = data.length() >> 1;
         while (len--) {
-            int v = ((((int)*d - 512) << 10) + (((int)*s - 512) * (int)vol)) >> 10;
+            int v = ((((int)*d - 512) * (int)vol) + (((int)*s - 512) << 10)) >> 10;
             v += 512;
             if (v < 0) v = 0;
             if (v > 1023) v = 1023;
