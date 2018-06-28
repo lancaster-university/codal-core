@@ -65,6 +65,16 @@ class JackRouter : public CodalComponent
     void checkFloat();
 
 public:
+    /**
+     * Constructor.
+     *
+     * @param mid - pin connected directly to the middle ring of the jack
+     * @param sense - pin connected to switch on the tip of the jack
+     *        (when jack unplugged the switch is connected to tip)
+     * @param headphoneEnable - when high, sound should be routed to middle ring and tip
+     * @param buzzerEnable - when high, sound should be routed to the buzzer
+     * @param powerEnable - when high, power should be routed to the tip of the jack
+     */
     JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable, Pin &powerEnable);
 
     /**
