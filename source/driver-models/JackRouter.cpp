@@ -31,9 +31,9 @@ DEALINGS IN THE SOFTWARE.
 namespace codal
 {
 
-JackRouter::JackRouter(Pin &tip, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable,
+JackRouter::JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable,
                        Pin &powerEnable)
-    : tip(tip), sense(sense), hpEn(headphoneEnable), bzEn(buzzerEnable), pwrEn(powerEnable)
+    : mid(mid), sense(sense), hpEn(headphoneEnable), bzEn(buzzerEnable), pwrEn(powerEnable)
 {
     status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 
@@ -118,7 +118,7 @@ void JackRouter::idleCallback()
 
     if (state != JackState::BuzzerAndSerial)
     {
-        if (!tip.getDigitalValue(PullMode::Up))
+        if (!mid.getDigitalValue(PullMode::Up))
             numLows++;
     }
 

@@ -52,7 +52,7 @@ class JackRouter : public CodalComponent
     uint8_t numSenseForced;
     JackState state;
 
-    Pin &tip;
+    Pin &mid;
     Pin &sense;
     Pin &hpEn;
     Pin &bzEn;
@@ -65,7 +65,7 @@ class JackRouter : public CodalComponent
     void checkFloat();
 
 public:
-    JackRouter(Pin &tip, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable, Pin &powerEnable);
+    JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable, Pin &powerEnable);
 
     /**
      * Implement this function to receive a callback when the device is idling.
