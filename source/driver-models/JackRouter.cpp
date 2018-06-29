@@ -32,8 +32,8 @@ namespace codal
 {
 
 JackRouter::JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable,
-                       Pin &powerEnable)
-    : mid(mid), sense(sense), hpEn(headphoneEnable), bzEn(buzzerEnable), pwrEn(powerEnable)
+                       Pin &powerEnable, PktSerial &pkt)
+    : mid(mid), sense(sense), hpEn(headphoneEnable), bzEn(buzzerEnable), pwrEn(powerEnable), serial(pkt)
 {
     status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 
@@ -52,10 +52,9 @@ void JackRouter::setState(JackState s)
     if (state == s)
         return;
 
+    // shut down serial
     if (state == JackState::BuzzerAndSerial)
-    {
-        // shut down serial
-    }
+        serial.stop();
 
     state = s;
     hpEn.setDigitalValue(state == JackState::HeadPhones);
@@ -64,10 +63,9 @@ void JackRouter::setState(JackState s)
 
     DMESG("Jack plug-in state: %d", state);
 
+    // start serial
     if (state == JackState::BuzzerAndSerial)
-    {
-        // start serial
-    }
+        serial.start();
 }
 
 void JackRouter::checkFloat()

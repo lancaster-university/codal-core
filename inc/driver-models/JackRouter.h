@@ -28,6 +28,8 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "ErrorNo.h"
 #include "Pin.h"
+#include "PktSerial.h"
+#include "DMASingleWireSerial.h"
 
 namespace codal
 {
@@ -58,6 +60,8 @@ class JackRouter : public CodalComponent
     Pin &bzEn;
     Pin &pwrEn;
 
+    PktSerial& serial;
+
     void setState(JackState s);
     /**
      * Check if the sense pin is floating
@@ -65,6 +69,7 @@ class JackRouter : public CodalComponent
     void checkFloat();
 
 public:
+
     /**
      * Constructor.
      *
@@ -75,7 +80,7 @@ public:
      * @param buzzerEnable - when high, sound should be routed to the buzzer
      * @param powerEnable - when high, power should be routed to the tip of the jack
      */
-    JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable, Pin &powerEnable);
+    JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable, Pin &powerEnable, PktSerial &pkt);
 
     /**
      * Implement this function to receive a callback when the device is idling.
