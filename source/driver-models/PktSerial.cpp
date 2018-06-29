@@ -77,7 +77,7 @@ void PktSerial::onFallingEdge(Event)
     if (status & (PKT_SERIAL_RECEIVING | PKT_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
 
-    // sp.eventOn(DEVICE_PIN_EVENT_NONE);
+    sp.eventOn(DEVICE_PIN_EVENT_NONE);
     sp.getDigitalValue(PullMode::None);
 
     timeoutCounter = 0;
@@ -103,7 +103,7 @@ PktSerial::PktSerial(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sw
     this->id = id;
     status = 0;
 
-    sws.setBaud(115200);
+    sws.setBaud(1000000);
     sws.setDMACompletionHandler(this, &PktSerial::dmaComplete);
 
     if (EventModel::defaultEventBus)
@@ -282,6 +282,7 @@ void PktSerial::stop()
 /**
 * Writes to the PktSerial bus. Waits (possibly un-scheduled) for transfer to finish.
 */
+extern void wait_us(uint32_t);
 void PktSerial::sendPacket(Event)
 {
     // codal_dmesg("DRAIN");
@@ -332,6 +333,7 @@ void PktSerial::sendPacket(Event)
     if (status & PKT_SERIAL_TRANSMITTING)
     {
         codal_dmesg("TX S");
+        sp.setDigitalValue(1);
         sws.sendDMA((uint8_t *)txBuf, PKT_SERIAL_PACKET_SIZE);
         return;
     }
