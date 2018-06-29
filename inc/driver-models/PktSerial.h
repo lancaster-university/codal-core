@@ -31,56 +31,78 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "DMASingleWireSerial.h"
 
-#define PKT_SERIAL_MAX_BUFFERS      10
+#define PKT_SERIAL_MAX_BUFFERS          10
 
-// 2 bytes for size
-#define PKT_SERIAL_HEADER_SIZE      4
-
-#define PKT_SERIAL_RECEIVING        0x01
-#define PKT_SERIAL_TRANSMITTING     0x02
+#define PKT_SERIAL_RECEIVING            0x02
+#define PKT_SERIAL_TRANSMITTING         0x04
+#define PKT_SERIAL_TX_DRAIN_ENABLE      0x08
 
 
-#define PKT_SERIAL_DATA_READY       1
+#define PKT_SERIAL_EVT_DATA_READY       1
+#define PKT_SERIAL_EVT_BUS_ERROR        2
+#define PKT_SERIAL_EVT_DRAIN            3
+
+#define PKT_SERIAL_PACKET_SIZE          32
+#define PKT_SERIAL_HEADER_SIZE          4
+#define PKT_SERIAL_DATA_SIZE            PKT_SERIAL_PACKET_SIZE - PKT_SERIAL_HEADER_SIZE
+
+#define PKT_SERIAL_MAXIMUM_BUFFERS      10
+
+#define PKT_SERIAL_DMA_TIMEOUT          2   // 2 callback ~8 ms
+
+#define PKT_PKT_FLAGS_LOSSY             0x01
 
 namespace codal
 {
 
     struct PktSerialPkt {
         public:
-        uint16_t size; // not including 'size' field
         uint16_t crc;
-        // add more stuff
-        uint8_t data[0];
+        uint8_t size; // not including anything before data
+        uint8_t device_class;
+        uint8_t device_id:4,flags:4;
 
-        static PktSerialPkt *allocate(PktSerialPkt& p);
-        static PktSerialPkt *allocate(uint16_t size);
-    };
+        // add more stuff
+        uint8_t data[PKT_SERIAL_DATA_SIZE];
+
+        PktSerialPkt* next;
+    } __attribute((__packed__));
     /**
     * Class definition for a PktSerial interface.
     */
     class PktSerial : public CodalComponent
     {
-
-        uint8_t bufferTail;
-
     protected:
         DMASingleWireSerial&  sws;
         Pin& sp;
 
+        uint8_t timeoutCounter;
+
+        void onFallingEdge(Event);
         void onRisingEdge(Event);
+        void configure(bool events);
         void dmaComplete(Event evt);
-        int queuePacket();
+
+        PktSerialPkt* popQueue(PktSerialPkt** queue);
+        int addToQueue(PktSerialPkt** queue, PktSerialPkt* packet);
+        PktSerialPkt* removeFromQueue(PktSerialPkt** queue, uint8_t device_class);
+
+        void sendPacket(Event);
 
     public:
-
         PktSerialPkt* rxBuf;
-        PktSerialPkt* packetBuffer[PKT_SERIAL_MAX_BUFFERS];
+        PktSerialPkt* txBuf;
+
+        PktSerialPkt* rxQueue;
+        PktSerialPkt* txQueue;
 
         uint16_t id;
 
         PktSerial(Pin& p, DMASingleWireSerial& sws, uint16_t id = DEVICE_ID_PKTSERIAL0);
 
         PktSerialPkt *getPacket();
+
+        virtual void periodicCallback();
 
         /**
         * Start to listen.
@@ -95,7 +117,7 @@ namespace codal
         /**
         * Writes to the PktSerial bus. Waits (possibly un-scheduled) for transfer to finish.
         */
-        virtual int send(const PktSerialPkt *pkt);
+        virtual int send(PktSerialPkt *pkt);
 
         virtual int send(uint8_t* buf, int len);
     };

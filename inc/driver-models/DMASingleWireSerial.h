@@ -21,6 +21,7 @@ namespace codal
 
         virtual int sendDMA(uint8_t* data, int len) = 0;
         virtual int receiveDMA(uint8_t* data, int len) = 0;
+        virtual int abortDMA() = 0;
 
         template <typename T>
         int setDMACompletionHandler(T* object, void (T::*method)(Event e))
