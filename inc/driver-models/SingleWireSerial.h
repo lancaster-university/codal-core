@@ -9,6 +9,10 @@
 #define SWS_EVT_ERROR               3
 #define SWS_EVT_DATA_DROPPED        4
 
+// required for gcc-6 (but not 7!)
+#undef putc
+#undef getc
+
 namespace codal
 {
     enum SingleWireMode
