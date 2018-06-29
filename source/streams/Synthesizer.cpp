@@ -36,11 +36,9 @@ const uint16_t Synthesizer::SquareWaveTone[] = {1023,1023,1023,1023,1023,1023,10
 /*
  * Simple internal helper funtion that creates a fiber within the givien Synthesizer to handle playback
  */
-static Synthesizer *launching = NULL;
-void begin_playback()
+static void begin_playback(void *data)
 {
-    if (launching)
-        launching->generate(-1);
+    ((Synthesizer*)data)->generate(-1);
 }
 
 /**
@@ -103,8 +101,7 @@ int Synthesizer::setFrequency(float frequency, int period)
         if(!active)
         {
             active = true;
-            launching = this;
-            create_fiber(begin_playback);
+            create_fiber(begin_playback, this);
         }
     }
     else
@@ -238,7 +235,9 @@ int Synthesizer::setBufferSize(int size)
  */
 ManagedBuffer Synthesizer::pull()
 {
-    return buffer;
+    ManagedBuffer out = buffer;
+    buffer = ManagedBuffer();
+    return out;
 }
 
 /**
