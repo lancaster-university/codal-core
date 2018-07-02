@@ -36,7 +36,7 @@ namespace codal
 
 enum class JackState : uint8_t
 {
-    AllDown,
+    AllDown = 1,
     HeadPhones,
     Buzzer,
     BuzzerAndSerial,

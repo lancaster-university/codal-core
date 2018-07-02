@@ -66,6 +66,8 @@ void JackRouter::setState(JackState s)
     // start serial
     if (state == JackState::BuzzerAndSerial)
         serial.start();
+
+    Event(DEVICE_ID_JACKROUTER, (uint8_t)state);
 }
 
 void JackRouter::checkFloat()
