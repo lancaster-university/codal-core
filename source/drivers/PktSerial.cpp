@@ -87,27 +87,6 @@ void PktSerial::onFallingEdge(Event)
     sws.receiveDMA((uint8_t*)rxBuf, PKT_SERIAL_PACKET_SIZE);
 }
 
-PktSerial::PktSerial(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sws(sws), sp(p)
-{
-    rxBuf = NULL;
-    txBuf = NULL;
-
-    rxQueue = NULL;
-    txQueue = NULL;
-
-    this->id = id;
-    status = 0;
-
-    sws.setBaud(1000000);
-    sws.setDMACompletionHandler(this, &PktSerial::dmaComplete);
-
-    if (EventModel::defaultEventBus)
-    {
-        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_FALL, this, &PktSerial::onFallingEdge, MESSAGE_BUS_LISTENER_IMMEDIATE);
-        EventModel::defaultEventBus->listen(this->id, PKT_SERIAL_EVT_DRAIN, this, &PktSerial::sendPacket, MESSAGE_BUS_LISTENER_IMMEDIATE);
-    }
-}
-
 void PktSerial::periodicCallback()
 {
     if (status & PKT_SERIAL_RECEIVING)
@@ -226,14 +205,59 @@ void PktSerial::configure(bool events)
     codal_dmesg("%p", *(volatile uint32_t *) 0x4002000c);
 }
 
+/**
+ * Constructor
+ *
+ * @param p the transmission pin to use
+ *
+ * @param sws an instance of sws created using p.
+ */
+PktSerial::PktSerial(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sws(sws), sp(p)
+{
+    rxBuf = NULL;
+    txBuf = NULL;
+
+    rxQueue = NULL;
+    txQueue = NULL;
+
+    this->id = id;
+    status = 0;
+
+    sws.setBaud(1000000);
+    sws.setDMACompletionHandler(this, &PktSerial::dmaComplete);
+
+    if (EventModel::defaultEventBus)
+    {
+        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_FALL, this, &PktSerial::onFallingEdge, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        EventModel::defaultEventBus->listen(this->id, PKT_SERIAL_EVT_DRAIN, this, &PktSerial::sendPacket, MESSAGE_BUS_LISTENER_IMMEDIATE);
+    }
+}
+
+/**
+ * Retrieves the first packet on the rxQueue irregardless of the device_class
+ *
+ * @returns the first packet on the rxQueue or NULL
+ */
 PktSerialPkt* PktSerial::getPacket()
 {
     return popQueue(&rxQueue);
 }
 
 /**
-* Start to listen.
-*/
+ * Retrieves the first packet on the rxQueue with a matching device_class
+ *
+ * @param device_class the class filter to apply to packets in the rxQueue
+ *
+ * @returns the first packet on the rxQueue matching the device_class or NULL
+ */
+PktSerialPkt* PktSerial::getPacket(uint8_t device_class)
+{
+    return removeFromQueue(&rxQueue, device_class);
+}
+
+/**
+ * Causes this instance of PktSerial to begin listening for packets transmitted on the serial line.
+ */
 void PktSerial::start()
 {
     if (rxBuf == NULL)
@@ -259,8 +283,8 @@ void PktSerial::start()
 }
 
 /**
-* Disables protocol.
-*/
+ * Causes this instance of PktSerial to stop listening for packets transmitted on the serial line.
+ */
 void PktSerial::stop()
 {
     status &= ~(DEVICE_COMPONENT_RUNNING | DEVICE_COMPONENT_STATUS_SYSTEM_TICK);
@@ -273,13 +297,9 @@ void PktSerial::stop()
     configure(false);
 }
 
-/**
-* Writes to the PktSerial bus. Waits (possibly un-scheduled) for transfer to finish.
-*/
 extern void wait_us(uint32_t);
 void PktSerial::sendPacket(Event)
 {
-    // codal_dmesg("DRAIN");
     status |= PKT_SERIAL_TX_DRAIN_ENABLE;
 
     // if we are receiving, randomly back off
@@ -319,8 +339,6 @@ void PktSerial::sendPacket(Event)
             system_timer_event_after_us(100, this->id, PKT_SERIAL_EVT_DRAIN);
             return;
         }
-
-        // sp.eventOn(DEVICE_PIN_EVENT_ON_EDGE);
     }
 
     // we've returned after a DMA transfer has been flagged (above)... start
@@ -332,12 +350,20 @@ void PktSerial::sendPacket(Event)
         return;
     }
 
-    // codal_dmesg("D_DISABLE");
     // if we get here, there's no more to transmit
     status &= ~(PKT_SERIAL_TX_DRAIN_ENABLE);
     return;
 }
 
+/**
+ * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
+ * If an ongoing asynchronous transmission is happening, pkt is added to the txQueue. If this is the first packet in a while
+ * asynchronous transmission is begun.
+ *
+ * @param pkt the packet to send.
+ *
+ * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if pkt is NULL, or DEVICE_NO_RESOURCES if the queue is full.
+ */
 int PktSerial::send(PktSerialPkt *pkt)
 {
     int ret = addToQueue(&txQueue, pkt);
@@ -351,6 +377,17 @@ int PktSerial::send(PktSerialPkt *pkt)
     return ret;
 }
 
+/**
+ * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
+ * If an ongoing asynchronous transmission is happening, pkt is added to the txQueue. If this is the first packet in a while
+ * asynchronous transmission is begun.
+ *
+ * @param buf the buffer to send.
+ *
+ * @param len the length of the buffer to send.
+ *
+ * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
+ */
 int PktSerial::send(uint8_t* buf, int len)
 {
     if (buf == NULL || len <= 0 || len >= PKT_SERIAL_DATA_SIZE)

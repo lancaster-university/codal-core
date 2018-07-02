@@ -97,27 +97,65 @@ namespace codal
 
         uint16_t id;
 
-        PktSerial(Pin& p, DMASingleWireSerial& sws, uint16_t id = DEVICE_ID_PKTSERIAL0);
-
-        PktSerialPkt *getPacket();
-
         virtual void periodicCallback();
 
         /**
-        * Start to listen.
-        */
+          * Constructor
+          *
+          * @param p the transmission pin to use
+          *
+          * @param sws an instance of sws created using p.
+          */
+        PktSerial(Pin& p, DMASingleWireSerial& sws, uint16_t id = DEVICE_ID_PKTSERIAL0);
+
+        /**
+          * Retrieves the first packet on the rxQueue irregardless of the device_class
+          *
+          * @returns the first packet on the rxQueue or NULL
+          */
+        PktSerialPkt *getPacket();
+
+        /**
+          * Retrieves the first packet on the rxQueue with a matching device_class
+          *
+          * @param device_class the class filter to apply to packets in the rxQueue
+          *
+          * @returns the first packet on the rxQueue matching the device_class or NULL
+          */
+        PktSerialPkt* PktSerial::getPacket(uint8_t device_class)
+
+        /**
+          * Causes this instance of PktSerial to begin listening for packets transmitted on the serial line.
+          */
         virtual void start();
 
         /**
-        * Disables protocol.
-        */
+          * Causes this instance of PktSerial to stop listening for packets transmitted on the serial line.
+          */
         virtual void stop();
 
         /**
-        * Writes to the PktSerial bus. Waits (possibly un-scheduled) for transfer to finish.
-        */
+          * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
+          * If an ongoing asynchronous transmission is happening, pkt is added to the txQueue. If this is the first packet in a while
+          * asynchronous transmission is begun.
+          *
+          * @param pkt the packet to send.
+          *
+          * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if pkt is NULL, or DEVICE_NO_RESOURCES if the queue is full.
+          */
         virtual int send(PktSerialPkt *pkt);
 
+        /**
+          * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
+          * If an ongoing asynchronous transmission is happening, pkt is added to the txQueue. If this is the first packet in a while
+          * asynchronous transmission is begun.
+          *
+          * @param buf the buffer to send.
+          *
+          * @param len the length of the buffer to send.
+          *
+          * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
+          */
         virtual int send(uint8_t* buf, int len);
     };
 } // namespace codal
