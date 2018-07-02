@@ -79,7 +79,6 @@ namespace codal
         uint8_t timeoutCounter;
 
         void onFallingEdge(Event);
-        void onRisingEdge(Event);
         void configure(bool events);
         void dmaComplete(Event evt);
 

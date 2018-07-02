@@ -87,11 +87,6 @@ void PktSerial::onFallingEdge(Event)
     sws.receiveDMA((uint8_t*)rxBuf, PKT_SERIAL_PACKET_SIZE);
 }
 
-void PktSerial::onRisingEdge(Event)
-{
-
-}
-
 PktSerial::PktSerial(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sws(sws), sp(p)
 {
     rxBuf = NULL;
@@ -109,7 +104,6 @@ PktSerial::PktSerial(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sw
     if (EventModel::defaultEventBus)
     {
         EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_FALL, this, &PktSerial::onFallingEdge, MESSAGE_BUS_LISTENER_IMMEDIATE);
-        // EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_RISE, this, &PktSerial::onRisingEdge, MESSAGE_BUS_LISTENER_IMMEDIATE);
         EventModel::defaultEventBus->listen(this->id, PKT_SERIAL_EVT_DRAIN, this, &PktSerial::sendPacket, MESSAGE_BUS_LISTENER_IMMEDIATE);
     }
 }
