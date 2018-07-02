@@ -51,6 +51,7 @@ MixerChannel *Mixer::addChannel(DataStream &stream)
     c->stream = &stream;
     c->next = channels;
     c->volume = 1024;
+    c->isSigned = true;
     channels = c;
     stream.connect(*this);
     return c;
@@ -65,29 +66,33 @@ ManagedBuffer Mixer::pull() {
 
     for (auto ch = channels; ch; ch = next) {
         next = ch->next; // save next in case the current channel gets deleted
+        bool isSigned = ch->isSigned;
         int vol = ch->volume;
         ManagedBuffer data = ch->stream->pull();
         if (sum.length() < data.length()) {
             ManagedBuffer newsum(data.length());
             newsum.writeBuffer(0, sum);
-            for (int i = sum.length(); i < newsum.length(); i += 2)
-                *((uint16_t*)&newsum[i]) = 512;
             sum = newsum;
         }
-        auto d = (uint16_t*)&data[0];
-        auto s = (uint16_t*)&sum[0];
+        auto d = (int16_t*)&data[0];
+        auto s = (int16_t*)&sum[0];
         auto len = data.length() >> 1;
         while (len--) {
-            int v = ((((int)*d - 512) * (int)vol) + (((int)*s - 512) << 10)) >> 10;
-            v += 512;
-            if (v < 0) v = 0;
-            if (v > 1023) v = 1023;
+            int v = isSigned ? *d : *(uint16_t*)d - 512;
+            v = ((v * vol) + (*s << 10)) >> 10;
+            if (v < -512) v = -512;
+            if (v > 511) v = 511;
             *s = v;
             d++;
             s++;
         }
     }
 
+    auto s = (int16_t*)&sum[0];
+    auto len = sum.length() >> 1;
+    while (len--)
+        *s++ += 512;
+        
     return sum;
 }
 

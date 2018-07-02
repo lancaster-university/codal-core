@@ -39,6 +39,7 @@ private:
 
 public:
     uint16_t volume;
+    bool isSigned;
 };
 
 class Mixer : public DataSource, public DataSink
