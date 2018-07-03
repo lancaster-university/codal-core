@@ -7,8 +7,6 @@
 #include "SingleWireSerial.h"
 #include "Timer.h"
 
-extern "C" void wait_us(uint32_t);
-
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
 #define CODAL_ASSERT(cond)                                                                         \
@@ -27,16 +25,9 @@ void PktSerial::dmaComplete(Event evt)
         if (status & PKT_SERIAL_TRANSMITTING)
         {
             codal_dmesg("TX ERROR");
-            // if the packet is flagged as lossy, we move on.
-            if (txBuf->flags & PKT_PKT_FLAGS_LOSSY)
-            {
-                status &= ~(PKT_SERIAL_TRANSMITTING);
-                free(txBuf);
-                txBuf = NULL;
-            }
-            else
-                // don't unset the flag, send the same packet again.
-                system_timer_event_after_us(4000, this->id, PKT_SERIAL_EVT_DRAIN);  // should be random
+            status &= ~(PKT_SERIAL_TRANSMITTING);
+            free(txBuf);
+            txBuf = NULL;
         }
     }
     else
@@ -123,7 +114,7 @@ PktSerialPkt* PktSerial::popQueue(PktSerialPkt** queue)
     return ret;
 }
 
-PktSerialPkt* PktSerial::removeFromQueue(PktSerialPkt** queue, uint8_t device_class)
+PktSerialPkt* PktSerial::removeFromQueue(PktSerialPkt** queue, uint8_t address)
 {
     if (*queue == NULL)
         return NULL;
@@ -134,7 +125,7 @@ PktSerialPkt* PktSerial::removeFromQueue(PktSerialPkt** queue, uint8_t device_cl
     PktSerialPkt *p = (*queue)->next;
     PktSerialPkt *previous = *queue;
 
-    if (device_class == (*queue)->device_class)
+    if (address == (*queue)->address)
     {
         *queue = p;
         ret = previous;
@@ -143,7 +134,7 @@ PktSerialPkt* PktSerial::removeFromQueue(PktSerialPkt** queue, uint8_t device_cl
     {
         while (p != NULL)
         {
-            if (device_class == p->device_class)
+            if (address == p->address)
             {
                 ret = p;
                 previous->next = p->next;
@@ -246,13 +237,13 @@ PktSerialPkt* PktSerial::getPacket()
 /**
  * Retrieves the first packet on the rxQueue with a matching device_class
  *
- * @param device_class the class filter to apply to packets in the rxQueue
+ * @param address the address filter to apply to packets in the rxQueue
  *
  * @returns the first packet on the rxQueue matching the device_class or NULL
  */
-PktSerialPkt* PktSerial::getPacket(uint8_t device_class)
+PktSerialPkt* PktSerial::getPacket(uint8_t address)
 {
-    return removeFromQueue(&rxQueue, device_class);
+    return removeFromQueue(&rxQueue, address);
 }
 
 /**
@@ -297,7 +288,6 @@ void PktSerial::stop()
     configure(false);
 }
 
-extern void wait_us(uint32_t);
 void PktSerial::sendPacket(Event)
 {
     status |= PKT_SERIAL_TX_DRAIN_ENABLE;
@@ -388,7 +378,7 @@ int PktSerial::send(PktSerialPkt *pkt)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int PktSerial::send(uint8_t* buf, int len)
+int PktSerial::send(uint8_t* buf, int len, uint8_t address)
 {
     if (buf == NULL || len <= 0 || len >= PKT_SERIAL_DATA_SIZE)
         return DEVICE_INVALID_PARAMETER;
@@ -398,12 +388,13 @@ int PktSerial::send(uint8_t* buf, int len)
 
     // very simple crc
     pkt->crc = 0;
+    pkt->address = address;
     pkt->size = len;
 
     memcpy(pkt->data, buf, len);
 
     // skip the crc.
-    uint8_t* crcPointer = (uint8_t*)&pkt->size;
+    uint8_t* crcPointer = (uint8_t*)&pkt->address;
 
     // simple crc
     for (int i = 0; i < PKT_SERIAL_PACKET_SIZE - 2; i++)

@@ -42,9 +42,9 @@ DEALINGS IN THE SOFTWARE.
 #define PKT_SERIAL_EVT_BUS_ERROR        2
 #define PKT_SERIAL_EVT_DRAIN            3
 
-#define PKT_SERIAL_PACKET_SIZE          32
 #define PKT_SERIAL_HEADER_SIZE          4
-#define PKT_SERIAL_DATA_SIZE            PKT_SERIAL_PACKET_SIZE - PKT_SERIAL_HEADER_SIZE
+#define PKT_SERIAL_DATA_SIZE            32
+#define PKT_SERIAL_PACKET_SIZE          (PKT_SERIAL_HEADER_SIZE + PKT_SERIAL_DATA_SIZE)
 
 #define PKT_SERIAL_MAXIMUM_BUFFERS      10
 
@@ -58,9 +58,8 @@ namespace codal
     struct PktSerialPkt {
         public:
         uint16_t crc;
-        uint8_t size; // not including anything before data
-        uint8_t device_class;
-        uint8_t device_id:4,flags:4;
+        uint8_t address; // control is 0, devices are allocated address in the range 1 - 255
+        uint8_t size;
 
         // add more stuff
         uint8_t data[PKT_SERIAL_DATA_SIZE];
@@ -118,11 +117,11 @@ namespace codal
         /**
           * Retrieves the first packet on the rxQueue with a matching device_class
           *
-          * @param device_class the class filter to apply to packets in the rxQueue
+          * @param address the address filter to apply to packets in the rxQueue
           *
           * @returns the first packet on the rxQueue matching the device_class or NULL
           */
-        PktSerialPkt* PktSerial::getPacket(uint8_t device_class)
+        PktSerialPkt* getPacket(uint8_t address);
 
         /**
           * Causes this instance of PktSerial to begin listening for packets transmitted on the serial line.
@@ -156,7 +155,7 @@ namespace codal
           *
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
           */
-        virtual int send(uint8_t* buf, int len);
+        virtual int send(uint8_t* buf, int len, uint8_t address);
     };
 } // namespace codal
 
