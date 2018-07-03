@@ -37,6 +37,12 @@ extern "C"
 
     void target_wait(unsigned long milliseconds);
 
+    void target_wait_us(unsigned long us);
+
+    int target_seed_random(uint32_t rand);
+
+    int target_random(int max);
+
     void target_wait_for_event();
 
     void target_panic(int statusCode);
