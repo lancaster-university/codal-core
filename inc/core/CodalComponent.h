@@ -56,7 +56,8 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_ID_SPI 24
 #define DEVICE_ID_PKTSERIAL0 25
 #define DEVICE_ID_PKTSERIAL1 26
-#define DEVICE_ID_JACKROUTER 27
+#define DEVICE_ID_PKTSERIAL_PROTOCOL 27
+#define DEVICE_ID_JACKROUTER 28
 
 #define DEVICE_ID_IO_P0               100                       // IDs 100-227 are reserved for I/O Pin IDs.
 
