@@ -34,19 +34,21 @@ DEALINGS IN THE SOFTWARE.
 /**
   * Sensor events
   */
-#define SENSOR_THRESHOLD_LOW                           1
-#define SENSOR_THRESHOLD_HIGH                          2
-#define SENSOR_UPDATE_NEEDED                    3
+#define SENSOR_THRESHOLD_LOW 1
+#define SENSOR_THRESHOLD_HIGH 2
+#define SENSOR_UPDATE_NEEDED 3
 
 /**
  * Status values
  */
-#define SENSOR_INITIALISED                       0x01
-#define SENSOR_HIGH_THRESHOLD_PASSED             0x02
-#define SENSOR_LOW_THRESHOLD_PASSED              0x04
-#define SENSOR_LOW_THRESHOLD_ENABLED             0x08
-#define SENSOR_HIGH_THRESHOLD_ENABLED            0x10
+#define SENSOR_INITIALISED 0x01
+#define SENSOR_HIGH_THRESHOLD_PASSED 0x02
+#define SENSOR_LOW_THRESHOLD_PASSED 0x04
+#define SENSOR_LOW_THRESHOLD_ENABLED 0x08
+#define SENSOR_HIGH_THRESHOLD_ENABLED 0x10
 
+#define SENSOR_DEFAULT_SENSITIVITY 868
+#define SENSOR_DEFAULT_SAMPLE_PERIOD 500
 
 namespace codal
 {
@@ -57,11 +59,11 @@ namespace codal
     {
         protected:
 
-        uint16_t        samplePeriod;       // The time between samples, in milliseconds.
-        uint16_t        sensitivity;        // A value between 0..1023 used with a decay average to smooth the sample data.
-        uint16_t        highThreshold;      // threshold at which a HIGH event is generated
-        uint16_t        lowThreshold;       // threshold at which a LOW event is generated
-        uint16_t        sensorValue;        // Last sampled data.
+        uint16_t samplePeriod;       // The time between samples, in milliseconds.
+        uint16_t sensitivity;        // A value between 0..1023 used with a decay average to smooth the sample data.
+        uint16_t highThreshold;      // threshold at which a HIGH event is generated
+        uint16_t lowThreshold;       // threshold at which a LOW event is generated
+        uint16_t sensorValue;        // Last sampled data.
 
         public:
 
@@ -73,7 +75,7 @@ namespace codal
           * @param pin The pin on which to sense
           * @param id The ID of this compoenent e.g. DEVICE_ID_THERMOMETER
          */
-        Sensor(uint16_t id);
+        Sensor(uint16_t id, uint16_t sensitivity = SENSOR_DEFAULT_SENSITIVITY, uint16_t samplePeriod = SENSOR_DEFAULT_SAMPLE_PERIOD);
 
         /*
          * Event Handler for periodic sample timer
@@ -157,6 +159,7 @@ namespace codal
         ~Sensor();
 
         protected:
+        
         /**
          * Determine if any thresholding events need to be generated, and if so, raise them.
          */

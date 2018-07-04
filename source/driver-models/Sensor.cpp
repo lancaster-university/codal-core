@@ -28,11 +28,8 @@ DEALINGS IN THE SOFTWARE.
  * Implements a base class for such a sensor, using the Steinhart-Hart equation to delineate a result.
  */
 
-#include "CodalConfig.h"
 #include "Sensor.h"
 #include "ErrorNo.h"
-#include "CodalConfig.h"
-#include "Event.h"
 #include "CodalCompat.h"
 #include "CodalFiber.h"
 #include "Timer.h"
@@ -46,16 +43,16 @@ using namespace codal;
  *
  * @param id The ID of this compoenent e.g. DEVICE_ID_THERMOMETER
  */
-Sensor::Sensor(uint16_t id)
+Sensor::Sensor(uint16_t id, uint16_t sensitivity, uint16_t samplePeriod)
 {
     this->id = id;
-    this->sensitivity = 868;
+    this->setSensitivity(sensitivity);
 
     // Configure for a 2 Hz update frequency by default.
     if(EventModel::defaultEventBus)
-        EventModel::defaultEventBus->listen(id, SENSOR_UPDATE_NEEDED, this, &Sensor::onSampleEvent, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        EventModel::defaultEventBus->listen(this->id, SENSOR_UPDATE_NEEDED, this, &Sensor::onSampleEvent, MESSAGE_BUS_LISTENER_IMMEDIATE);
 
-    setPeriod(500);
+    this->setPeriod(samplePeriod);
 }
 
 /*
@@ -84,12 +81,10 @@ void Sensor::updateSample()
     uint32_t value = readValue();
 
     // If this is the first reading performed, take it a a baseline. Otherwise, perform a decay average to smooth out the data.
-    if (!(status & SENSOR_INITIALISED))
+    if (!(this->status & SENSOR_INITIALISED))
     {
         sensorValue = (uint16_t)value;
-        status |=  SENSOR_INITIALISED;
-        // set Period to default value
-        setPeriod(500);
+        this->status |=  SENSOR_INITIALISED;
     }
     else
     {
@@ -104,19 +99,19 @@ void Sensor::updateSample()
  */
 void Sensor::checkThresholding()
 {
-    if ((status & SENSOR_HIGH_THRESHOLD_ENABLED) && (!(status & SENSOR_HIGH_THRESHOLD_PASSED)) && (sensorValue >= highThreshold))
+    if ((this->status & SENSOR_HIGH_THRESHOLD_ENABLED) && (!(this->status & SENSOR_HIGH_THRESHOLD_PASSED)) && (sensorValue >= highThreshold))
     {
-        Event(id, SENSOR_THRESHOLD_HIGH);
-        status |=  SENSOR_HIGH_THRESHOLD_PASSED;
-        status &= ~SENSOR_LOW_THRESHOLD_PASSED;
+        Event(this->id, SENSOR_THRESHOLD_HIGH);
+        this->status |=  SENSOR_HIGH_THRESHOLD_PASSED;
+        this->status &= ~SENSOR_LOW_THRESHOLD_PASSED;
     }
 
-    if ((status & SENSOR_LOW_THRESHOLD_ENABLED) && (!(status & SENSOR_LOW_THRESHOLD_PASSED)) && (sensorValue <= lowThreshold))
+    if ((this->status & SENSOR_LOW_THRESHOLD_ENABLED) && (!(this->status & SENSOR_LOW_THRESHOLD_PASSED)) && (sensorValue <= lowThreshold))
 
     {
-        Event(id, SENSOR_THRESHOLD_LOW);
-        status |=  SENSOR_LOW_THRESHOLD_PASSED;
-        status &= ~SENSOR_HIGH_THRESHOLD_PASSED;
+        Event(this->id, SENSOR_THRESHOLD_LOW);
+        this->status |=  SENSOR_LOW_THRESHOLD_PASSED;
+        this->status &= ~SENSOR_HIGH_THRESHOLD_PASSED;
     }
 }
 
@@ -143,8 +138,8 @@ int Sensor::setSensitivity(uint16_t value)
  */
 int Sensor::setPeriod(int period)
 {
-    samplePeriod = period;
-    system_timer_event_every_us(1000 * period, id, SENSOR_UPDATE_NEEDED);
+    this->samplePeriod = period > 0 ? period : SENSOR_DEFAULT_SAMPLE_PERIOD;
+    system_timer_event_every(this->samplePeriod, this->id, SENSOR_UPDATE_NEEDED);
 
     return DEVICE_OK;
 }
@@ -169,18 +164,18 @@ int Sensor::getPeriod()
 int Sensor::setLowThreshold(uint16_t value)
 {
     // Protect against churn if the same threshold is set repeatedly.
-    if ((status & SENSOR_LOW_THRESHOLD_ENABLED) && lowThreshold == value)
+    if ((this->status & SENSOR_LOW_THRESHOLD_ENABLED) && lowThreshold == value)
         return DEVICE_OK;
 
     // We need to update our threshold
     lowThreshold = value;
 
     // Reset any exisiting threshold state, and enable threshold detection.
-    status &= ~SENSOR_LOW_THRESHOLD_PASSED;
-    status |=  SENSOR_LOW_THRESHOLD_ENABLED;
+    this->status &= ~SENSOR_LOW_THRESHOLD_PASSED;
+    this->status |=  SENSOR_LOW_THRESHOLD_ENABLED;
 
     // If a HIGH threshold has been set, ensure it's above the LOW threshold.
-    if(status & SENSOR_HIGH_THRESHOLD_ENABLED)
+    if(this->status & SENSOR_HIGH_THRESHOLD_ENABLED)
         setHighThreshold(max(lowThreshold+1, highThreshold));
 
     return DEVICE_OK;
@@ -196,18 +191,18 @@ int Sensor::setLowThreshold(uint16_t value)
 int Sensor::setHighThreshold(uint16_t value)
 {
     // Protect against churn if the same threshold is set repeatedly.
-    if ((status & SENSOR_HIGH_THRESHOLD_ENABLED) && highThreshold == value)
+    if ((this->status & SENSOR_HIGH_THRESHOLD_ENABLED) && highThreshold == value)
         return DEVICE_OK;
 
     // We need to update our threshold
     highThreshold = value;
 
     // Reset any exisiting threshold state, and enable threshold detection.
-    status &= ~SENSOR_HIGH_THRESHOLD_PASSED;
-    status |=  SENSOR_HIGH_THRESHOLD_ENABLED;
+    this->status &= ~SENSOR_HIGH_THRESHOLD_PASSED;
+    this->status |=  SENSOR_HIGH_THRESHOLD_ENABLED;
 
     // If a HIGH threshold has been set, ensure it's above the LOW threshold.
-    if(status & SENSOR_LOW_THRESHOLD_ENABLED)
+    if(this->status & SENSOR_LOW_THRESHOLD_ENABLED)
         setLowThreshold(min(highThreshold - 1, lowThreshold));
 
     return DEVICE_OK;
@@ -220,7 +215,7 @@ int Sensor::setHighThreshold(uint16_t value)
  */
 int Sensor::getLowThreshold()
 {
-    if (!(status & SENSOR_LOW_THRESHOLD_ENABLED))
+    if (!(this->status & SENSOR_LOW_THRESHOLD_ENABLED))
         return DEVICE_INVALID_PARAMETER;
 
     return lowThreshold;
@@ -233,7 +228,7 @@ int Sensor::getLowThreshold()
  */
 int Sensor::getHighThreshold()
 {
-    if (!(status & SENSOR_HIGH_THRESHOLD_ENABLED))
+    if (!(this->status & SENSOR_HIGH_THRESHOLD_ENABLED))
         return DEVICE_INVALID_PARAMETER;
 
     return highThreshold;
