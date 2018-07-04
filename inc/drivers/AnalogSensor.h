@@ -79,10 +79,6 @@ namespace codal
           */
         ~AnalogSensor();
 
-        /**
-         * Return the pin on which to sense
-         */
-        Pin& getPin();
    };
 }
 

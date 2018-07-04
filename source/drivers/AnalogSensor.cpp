@@ -58,10 +58,3 @@ int AnalogSensor::readValue()
 AnalogSensor::~AnalogSensor()
 {
 }
-
-/**
- * Return the pin on which to sense
- */
-Pin& AnalogSensor::getPin(){
-    return this->pin;
-}
