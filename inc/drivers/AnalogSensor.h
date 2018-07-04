@@ -53,7 +53,7 @@ namespace codal
      */
     class AnalogSensor : public Sensor
     {
-        protected:
+        private:
 
         Pin& pin;              // Pin where the sensor is connected.
 
@@ -78,6 +78,11 @@ namespace codal
           * Destructor.
           */
         ~AnalogSensor();
+
+        /**
+         * Return the pin on which to sense
+         */
+        Pin& getPin();
    };
 }
 
