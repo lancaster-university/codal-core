@@ -22,19 +22,12 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
+#include "AnalogSensor.h"
+
 /**
  * Class definition for a generic analog sensor, that takes the general form of a logarithmic response to a sensed value, in a potential divider.
  * Implements a base class for such a sensor, using the Steinhart-Hart equation to delineate a result.
  */
-
-#include "CodalConfig.h"
-#include "AnalogSensor.h"
-#include "ErrorNo.h"
-#include "CodalConfig.h"
-#include "Event.h"
-#include "CodalCompat.h"
-#include "CodalFiber.h"
-#include "Timer.h"
 
 using namespace codal;
 
@@ -44,9 +37,9 @@ using namespace codal;
  * Creates a generic AnalogSensor.
  *
  * @param pin The pin on which to sense
- * @param id The ID of this compoenent e.g. DEVICE_ID_THERMOMETER
+ * @param id The ID of this component e.g. DEVICE_ID_THERMOMETER
  */
-AnalogSensor::AnalogSensor(Pin &pin, uint16_t id) : Sensor( id), _pin(pin)
+AnalogSensor::AnalogSensor(Pin &pin, uint16_t id) : Sensor( id), pin(pin)
 {
     updateSample();
 }
@@ -56,7 +49,7 @@ AnalogSensor::AnalogSensor(Pin &pin, uint16_t id) : Sensor( id), _pin(pin)
  */
 int AnalogSensor::readValue()
 {
-    return _pin.getAnalogValue();
+    return this->pin.getAnalogValue();
 }
 
 /**

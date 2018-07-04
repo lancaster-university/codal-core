@@ -26,7 +26,6 @@ DEALINGS IN THE SOFTWARE.
 #define ANALOG_SENSOR_H
 
 #include "CodalConfig.h"
-#include "CodalComponent.h"
 #include "Pin.h"
 #include "Event.h"
 #include "Sensor.h"
@@ -34,19 +33,18 @@ DEALINGS IN THE SOFTWARE.
 /**
   * Sensor events deprecated, use SENSOR_* instead
   */
-#define ANALOG_THRESHOLD_LOW                           SENSOR_THRESHOLD_LOW
-#define ANALOG_THRESHOLD_HIGH                          SENSOR_THRESHOLD_HIGH
-#define ANALOG_SENSOR_UPDATE_NEEDED                    SENSOR_UPDATE_NEEDED
+#define ANALOG_THRESHOLD_LOW SENSOR_THRESHOLD_LOW
+#define ANALOG_THRESHOLD_HIGH SENSOR_THRESHOLD_HIGH
+#define ANALOG_SENSOR_UPDATE_NEEDED SENSOR_UPDATE_NEEDED
 
 /**
  * Status values deprecated, use SENSOR_* instead
  */
-#define ANALOG_SENSOR_INITIALISED                       SENSOR_INITIALISED
-#define ANALOG_SENSOR_HIGH_THRESHOLD_PASSED             SENSOR_HIGH_THRESHOLD_PASSED
-#define ANALOG_SENSOR_LOW_THRESHOLD_PASSED              SENSOR_LOW_THRESHOLD_PASSED
-#define ANALOG_SENSOR_LOW_THRESHOLD_ENABLED             SENSOR_LOW_THRESHOLD_ENABLED
-#define ANALOG_SENSOR_HIGH_THRESHOLD_ENABLED            SENSOR_HIGH_THRESHOLD_ENABLED
-
+#define ANALOG_SENSOR_INITIALISED SENSOR_INITIALISED
+#define ANALOG_SENSOR_HIGH_THRESHOLD_PASSED SENSOR_HIGH_THRESHOLD_PASSED
+#define ANALOG_SENSOR_LOW_THRESHOLD_PASSED SENSOR_LOW_THRESHOLD_PASSED
+#define ANALOG_SENSOR_LOW_THRESHOLD_ENABLED SENSOR_LOW_THRESHOLD_ENABLED
+#define ANALOG_SENSOR_HIGH_THRESHOLD_ENABLED SENSOR_HIGH_THRESHOLD_ENABLED
 
 namespace codal
 {
@@ -57,7 +55,7 @@ namespace codal
     {
         protected:
 
-        Pin             &_pin;              // Pin where the sensor is connected.
+        Pin& pin;              // Pin where the sensor is connected.
 
         public:
 
@@ -80,9 +78,6 @@ namespace codal
           * Destructor.
           */
         ~AnalogSensor();
-
-        protected:
-
    };
 }
 
