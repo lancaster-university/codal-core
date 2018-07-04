@@ -26,9 +26,6 @@ DEALINGS IN THE SOFTWARE.
 #define LINEAR_ANALOG_SENSOR_H
 
 #include "CodalConfig.h"
-#include "CodalComponent.h"
-#include "Pin.h"
-#include "Event.h"
 #include "AnalogSensor.h"
 
 
@@ -40,9 +37,11 @@ namespace codal
      */
     class LinearAnalogSensor : public AnalogSensor
     {
-        uint16_t     inputFloor;        // The minimum level in the input range.
-        float        outputFloor;       // The minimum level in the output range.
-        float        conversionFactor;  // no of output units per input unit.
+        private:
+        
+        uint16_t inputFloor;        // The minimum level in the input range.
+        float outputFloor;       // The minimum level in the output range.
+        float conversionFactor;  // no of output units per input unit.
 
         public:
 
