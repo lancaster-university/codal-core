@@ -21,54 +21,37 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
-
-#include "CodalConfig.h"
-#include "ErrorNo.h"
-#include "Event.h"
-#include "EventModel.h"
 #include "PktSerialProtocol.h"
-#include "Timer.h"
 
 using namespace codal;
 
-void PktSerialProtocol::sendControl(Event)
+int PktSerialDriver::queueControlPacket()
 {
+    ControlPacket cp;
 
-}
+    cp.packet_type = CONTROL_PKT_TYPE_HELLO;
+    cp.address = (device.address > 0) ? device.address : target_random(255);
+    cp.flags = device.flags & 0x00FF;
+    cp.driver_class = this->driver_class;
+    cp.serial_number = device.serial_number;
 
-void PktSerialProtocol::periodicCallback()
-{
+    proto.bus.send((uint8_t *)&cp, sizeof(ControlPacket), 0);
 
-}
-
-void PktSerialProtocol::onPacketReceived(Event)
-{
-    PktSerialPkt* pkt = bus.getPacket();
-
-    // drop for now
-    if (pkt)
-        delete pkt;
-}
-
-PktSerialProtocol::PktSerialProtocol(PktSerial& pkt, uint32_t serialNumber, uint16_t id) : bus(pkt)
-{
-    this->id = id;
-
-    if (EventModel::defaultEventBus)
-    {
-        EventModel::defaultEventBus->listen(bus.id, PKT_SERIAL_EVT_DATA_READY, this, &PktSerialProtocol::onPacketReceived, MESSAGE_BUS_LISTENER_IMMEDIATE);
-        EventModel::defaultEventBus->listen(this->id, PKT_PROTOCOL_EVT_SEND_CONTROL, this, &PktSerialProtocol::sendControl, MESSAGE_BUS_LISTENER_IMMEDIATE);
-    }
-}
-
-int PktSerialProtocol::add(PktSerialDriver& device)
-{
-    device;
     return DEVICE_OK;
 }
 
-int PktSerialProtocol::remove(PktSerialDriver& device)
+PktSerialDriver::PktSerialDriver(PktSerialProtocol& proto, PktDevice d, uint32_t driver_class, uint16_t id) : proto(proto)
 {
-    device;
+    memset((uint8_t*)&device, 0, sizeof(PktDevice));
+
+    this->driver_class = driver_class;
+    this->device = d;
+    this->id = id;
+}
+
+int PktSerialDriver::deviceConnected(PktDevice device)
+{
+    this->device = device;
+    Event(this->id, PKT_DRIVER_EVT_CONNECTED);
     return DEVICE_OK;
 }
