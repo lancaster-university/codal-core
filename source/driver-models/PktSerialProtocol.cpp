@@ -51,7 +51,7 @@ void PktSerialProtocol::onPacketReceived(Event)
     free(pkt);
 }
 
-PktSerialProtocol::PktSerialProtocol(PktSerial& pkt, uint32_t serialNumber, uint16_t id) : logic(*this), bus(pkt)
+PktSerialProtocol::PktSerialProtocol(PktSerial& pkt, uint16_t id) : logic(*this), bus(pkt)
 {
     this->id = id;
 

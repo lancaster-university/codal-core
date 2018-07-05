@@ -154,7 +154,7 @@ namespace codal
     public:
         PktSerial& bus;
 
-        PktSerialProtocol(PktSerial& pkt, uint32_t serialNumber, uint16_t id = DEVICE_ID_PKTSERIAL_PROTOCOL);
+        PktSerialProtocol(PktSerial& pkt, uint16_t id = DEVICE_ID_PKTSERIAL_PROTOCOL);
 
         virtual int add(PktSerialDriver& device);
 
