@@ -31,6 +31,8 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
+PktSerialDriver* PktSerialProtocol::drivers[PKT_PROTOCOL_DRIVER_SIZE] = { 0 };
+
 void PktSerialProtocol::onPacketReceived(Event)
 {
     PktSerialPkt* pkt = bus.getPacket();

@@ -55,3 +55,10 @@ int PktSerialDriver::deviceConnected(PktDevice device)
     Event(this->id, PKT_DRIVER_EVT_CONNECTED);
     return DEVICE_OK;
 }
+
+int PktSerialDriver::deviceRemoved()
+{
+    this->device.flags &= ~(PKT_DEVICE_FLAGS_INITIALISED);
+    Event(this->id, PKT_DRIVER_EVT_DISCONNECTED);
+    return DEVICE_OK;
+}

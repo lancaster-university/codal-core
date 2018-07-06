@@ -6,10 +6,51 @@ void PktLogicDriver::periodicCallback()
 {
     for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
     {
-        if (proto.drivers[i] && proto.drivers[i]->device.flags & (PKT_DEVICE_FLAGS_REMOTE | PKT_DEVICE_FLAGS_INITIALISED))
-        {
-            proto.drivers[i]->device.rolling_counter++;
+        proto.drivers[i]->device.rolling_counter++;
 
+        if (!(proto.drivers[i]->device.flags & (PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_INITIALISING)))
+        {
+            proto.drivers[i]->device.address = 0;
+
+            bool allocated = true;
+
+            while(allocated)
+            {
+                bool stillAllocated = false;
+                proto.drivers[i]->device.address = target_random(256);
+
+                for (int j = 0; j < PKT_PROTOCOL_DRIVER_SIZE; j++)
+                {
+                    if (i == j)
+                        continue;
+
+                    if (proto.drivers[j] && proto.drivers[j]->device.flags & PKT_DEVICE_FLAGS_INITIALISED)
+                    {
+                        if (proto.drivers[j]->device.address == proto.drivers[i]->device.address)
+                        {
+                            stillAllocated = true;
+                            break;
+                        }
+                    }
+                }
+
+                allocated = stillAllocated;
+            }
+
+            proto.drivers[i]->queueControlPacket();
+            proto.drivers[i]->device.flags |= PKT_DEVICE_FLAGS_INITIALISING;
+
+        }
+        else if(proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISING)
+        {
+            if (proto.drivers[i]->device.rolling_counter == PKT_LOGIC_ADDRESS_ALLOC_TIME)
+            {
+                proto.drivers[i]->device.flags |= PKT_DEVICE_FLAGS_INITIALISED;
+                proto.drivers[i]->deviceConnected(proto.drivers[i]->device);
+            }
+        }
+        else if (proto.drivers[i] && proto.drivers[i]->device.flags & (PKT_DEVICE_FLAGS_REMOTE | PKT_DEVICE_FLAGS_INITIALISED))
+        {
             if(proto.drivers[i]->device.rolling_counter == PKT_LOGIC_DRIVER_CTRLPACKET_TIME)
                 proto.drivers[i]->queueControlPacket();
 
@@ -26,7 +67,7 @@ PktLogicDriver::PktLogicDriver(PktSerialProtocol& proto, PktDevice d, uint32_t d
     memset(this->address_filters, 0, PKT_LOGIC_DRIVER_MAX_FILTERS);
 
     // flags this instance as occupied
-    this->device.flags = PKT_DEVICE_FLAGS_LOCAL;
+    this->device.flags = (PKT_DEVICE_FLAGS_LOCAL | PKT_DEVICE_FLAGS_INITIALISED);
 
     status = (DEVICE_COMPONENT_RUNNING | DEVICE_COMPONENT_STATUS_SYSTEM_TICK);
 }
@@ -47,6 +88,20 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
     for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
         if (proto.drivers[i] && proto.drivers[i]->device.address == cp->address)
         {
+            if (proto.drivers[i]->device.serial_number != cp->serial_number && !(proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISING))
+            {
+                cp->flags |= CONTROL_PKT_FLAGS_CONFLICT;
+                proto.bus.send((uint8_t*)cp, sizeof(ControlPacket), 0);
+                return;
+            }
+            // someone has flagged a conflict with an initialising device
+            if (proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISING && cp->flags & CONTROL_PKT_FLAGS_CONFLICT)
+            {
+                // new address will be assigned on next tick.
+                proto.drivers[i]->device.flags &= ~PKT_DEVICE_FLAGS_INITIALISING;
+                return;
+            }
+
             proto.drivers[i]->handleControlPacket(cp);
             return;
         }
