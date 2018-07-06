@@ -4,20 +4,22 @@ using namespace codal;
 
 void PktLogicDriver::periodicCallback()
 {
+    // no sense continuing if we dont have a bus to transmit on...
     if (!proto.bus.isRunning())
-    {
-        codal_dmesg("NOT RUNNING");
         return;
-    }
 
+    // for each driver we maintain a rolling counter, used to trigger various timer related events.
+    // uint8_t might not be big enough in the future if the scheduler runs faster...
     for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
     {
+        // ignore ourself
         if (proto.drivers[i] == NULL || proto.drivers[i] == this)
             continue;
 
         if (proto.drivers[i]->device.flags & (PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_INITIALISING))
             proto.drivers[i]->device.rolling_counter++;
 
+        // if the driver is acting as a virtual driver, we don't need to perform any initialisation, just connect / disconnect events.
         if (proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_REMOTE)
         {
             if (proto.drivers[i]->device.rolling_counter == PKT_LOGIC_DRIVER_TIMEOUT)
@@ -30,6 +32,7 @@ void PktLogicDriver::periodicCallback()
             }
         }
 
+        // local drivers run on the device
         if (proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_LOCAL)
         {
             if (!(proto.drivers[i]->device.flags & (PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_INITIALISING)))
@@ -39,6 +42,7 @@ void PktLogicDriver::periodicCallback()
 
                 bool allocated = true;
 
+                // compute a reasonable first address
                 while(allocated)
                 {
                     bool stillAllocated = false;
@@ -70,6 +74,7 @@ void PktLogicDriver::periodicCallback()
             }
             else if(proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISING)
             {
+                // if no one has complained in a second, consider our address allocated
                 if (proto.drivers[i]->device.rolling_counter == PKT_LOGIC_ADDRESS_ALLOC_TIME)
                 {
                     codal_dmesg("FINISHED");
@@ -84,8 +89,6 @@ void PktLogicDriver::periodicCallback()
                     proto.drivers[i]->queueControlPacket();
             }
         }
-
-
     }
 }
 
@@ -120,6 +123,7 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
         if (proto.drivers[i] && proto.drivers[i]->device.address == cp->address)
         {
             codal_dmesg("FINDING");
+            // if we have allocated that address to one of our devices, respond with a conflict packet
             if (proto.drivers[i]->device.serial_number != cp->serial_number && !(proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISING))
             {
                 cp->flags |= CONTROL_PKT_FLAGS_CONFLICT;
@@ -134,7 +138,10 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
                 return;
             }
 
+            // flag as seen so we do not inadvertently disconnect a device.
             proto.drivers[i]->device.flags |= PKT_DEVICE_FLAGS_CP_SEEN;
+
+            // for some drivers, pairing is required... pass the packet through to the driver.
             proto.drivers[i]->handleControlPacket(cp);
             return;
         }
