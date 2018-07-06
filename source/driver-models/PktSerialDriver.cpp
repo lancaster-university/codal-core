@@ -22,15 +22,17 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 #include "PktSerialProtocol.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
 int PktSerialDriver::queueControlPacket()
 {
+    codal_dmesg("QUEUED CP");
     ControlPacket cp;
 
     cp.packet_type = CONTROL_PKT_TYPE_HELLO;
-    cp.address = (device.address > 0) ? device.address : target_random(255);
+    cp.address = device.address;
     cp.flags = device.flags & 0x00FF;
     cp.driver_class = this->driver_class;
     cp.serial_number = device.serial_number;
@@ -49,16 +51,26 @@ PktSerialDriver::PktSerialDriver(PktSerialProtocol& proto, PktDevice d, uint32_t
     this->id = id;
 }
 
+bool PktSerialDriver::isConnected()
+{
+    return (this->device.flags & PKT_DEVICE_FLAGS_INITIALISED) ? true : false;
+}
+
 int PktSerialDriver::deviceConnected(PktDevice device)
 {
+    codal_dmesg("CONNECTED %d",device.address);
+    uint16_t flags = this->device.flags & 0xFF00;
     this->device = device;
+    this->device.flags |= (flags | PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_CP_SEEN);
     Event(this->id, PKT_DRIVER_EVT_CONNECTED);
     return DEVICE_OK;
 }
 
 int PktSerialDriver::deviceRemoved()
 {
+    codal_dmesg("DISCONN %d",this->device.address);
     this->device.flags &= ~(PKT_DEVICE_FLAGS_INITIALISED);
+    this->device.rolling_counter = 0;
     Event(this->id, PKT_DRIVER_EVT_DISCONNECTED);
     return DEVICE_OK;
 }

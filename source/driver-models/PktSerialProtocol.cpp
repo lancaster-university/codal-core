@@ -28,6 +28,7 @@ DEALINGS IN THE SOFTWARE.
 #include "EventModel.h"
 #include "PktSerialProtocol.h"
 #include "Timer.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -37,11 +38,19 @@ void PktSerialProtocol::onPacketReceived(Event)
 {
     PktSerialPkt* pkt = bus.getPacket();
 
+    codal_dmesg("PKT REC ADDR: %d",pkt->address);
+
     // if this packet is destined for our drivers...
     if (!logic.filterPacket(pkt->address))
     {
+        codal_dmesg("NOT FILTERED");
         for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
         {
+            if (this->drivers[i])
+            {
+                codal_dmesg("%d, %d, %d", this->drivers[i]->device.address, pkt->address, this->drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISED);
+            }
+
             if (this->drivers[i] && this->drivers[i]->device.address == pkt->address && this->drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISED)
             {
                 this->drivers[i]->handlePacket(pkt);
@@ -49,6 +58,8 @@ void PktSerialProtocol::onPacketReceived(Event)
             }
         }
     }
+    else
+        codal_dmesg("FILTERED");
 
     free(pkt);
 }
@@ -57,12 +68,12 @@ PktSerialProtocol::PktSerialProtocol(PktSerial& pkt, uint16_t id) : logic(*this)
 {
     this->id = id;
 
-    add(logic);
-
     memset(this->drivers, 0, sizeof(PktSerialDriver*) * PKT_PROTOCOL_DRIVER_SIZE);
 
+    add(logic);
+
     if (EventModel::defaultEventBus)
-        EventModel::defaultEventBus->listen(bus.id, PKT_SERIAL_EVT_DATA_READY, this, &PktSerialProtocol::onPacketReceived, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        EventModel::defaultEventBus->listen(bus.id, PKT_SERIAL_EVT_DATA_READY, this, &PktSerialProtocol::onPacketReceived);
 }
 
 int PktSerialProtocol::add(PktSerialDriver& driver)
@@ -96,4 +107,14 @@ int PktSerialProtocol::remove(PktSerialDriver& driver)
     }
 
     return DEVICE_OK;
+}
+
+void PktSerialProtocol::start()
+{
+    logic.start();
+}
+
+void PktSerialProtocol::stop()
+{
+    logic.stop();
 }

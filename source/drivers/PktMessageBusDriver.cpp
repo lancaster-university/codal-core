@@ -1,10 +1,11 @@
 #include "PktMessageBusDriver.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
-PktMessageBusDriver::PktMessageBusDriver(PktSerialProtocol& proto, bool remote) :
+PktMessageBusDriver::PktMessageBusDriver(PktSerialProtocol& proto, bool remote, uint32_t serial) :
     PktSerialDriver(proto,
-                    PktDevice(2, 0, (remote) ? PKT_DEVICE_FLAGS_REMOTE : PKT_DEVICE_FLAGS_LOCAL, 0x1234),
+                    PktDevice(0, 0, (remote) ? PKT_DEVICE_FLAGS_REMOTE : PKT_DEVICE_FLAGS_LOCAL, serial),
                     PKT_DRIVER_CLASS_MESSAGE_BUS,
                     DEVICE_ID_PKT_MESSAGE_BUS_DRIVER)
 {
@@ -13,10 +14,10 @@ PktMessageBusDriver::PktMessageBusDriver(PktSerialProtocol& proto, bool remote) 
 }
 
 /**
-  * Associates the given event with the radio channel.
+  * Associates the given event with the serial channel.
   *
   * Once registered, all events matching the given registration sent to this micro:bit's
-  * default EventModel will be automatically retransmitted on the radio.
+  * default EventModel will be automatically retransmitted on the serial bus.
   *
   * @param id The id of the event to register.
   *
@@ -36,10 +37,10 @@ int PktMessageBusDriver::listen(uint16_t id, uint16_t value)
 }
 
 /**
-  * Associates the given event with the radio channel.
+  * Associates the given event with the serial channel.
   *
   * Once registered, all events matching the given registration sent to the given
-  * EventModel will be automatically retransmitted on the radio.
+  * EventModel will be automatically retransmitted on the serial bus.
   *
   * @param id The id of the events to register.
   *
@@ -58,7 +59,7 @@ int PktMessageBusDriver::listen(uint16_t id, uint16_t value, EventModel &eventBu
 }
 
 /**
-  * Disassociates the given event with the radio channel.
+  * Disassociates the given event with the serial channel.
   *
   * @param id The id of the events to deregister.
   *
@@ -77,7 +78,7 @@ int PktMessageBusDriver::ignore(uint16_t id, uint16_t value)
 }
 
 /**
-  * Disassociates the given events with the radio channel.
+  * Disassociates the given events with the serial channel.
   *
   * @param id The id of the events to deregister.
   *
@@ -96,7 +97,7 @@ int PktMessageBusDriver::ignore(uint16_t id, uint16_t value, EventModel &eventBu
 
 
 /**
-  * Protocol handler callback. This is called when the radio receives a packet marked as using the event protocol.
+  * Protocol handler callback. This is called when the serial bus receives a packet marked as using the event protocol.
   *
   * This function process this packet, and fires the event contained inside onto the default EventModel.
   */
@@ -117,12 +118,14 @@ void PktMessageBusDriver::handleControlPacket(ControlPacket*)
 /**
   * Event handler callback. This is called whenever an event is received matching one of those registered through
   * the registerEvent() method described above. Upon receiving such an event, it is wrapped into
-  * a radio packet and transmitted to any other micro:bits in the same group.
+  * a serial bus packet and transmitted to any other micro:bits in the same group.
   */
 void PktMessageBusDriver::eventReceived(Event e)
 {
+    codal_dmesg("EVENT");
     if(suppressForwarding)
         return;
 
+    codal_dmesg("PACKET QUEUED: %d %d", e.source, e.value);
     proto.bus.send((uint8_t *)&e, sizeof(Event), device.address);
 }

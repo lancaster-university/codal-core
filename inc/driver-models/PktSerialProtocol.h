@@ -36,23 +36,27 @@ DEALINGS IN THE SOFTWARE.
 // the following defines should really be in separate head files, but circular includes suck.
 
 // BEGIN    PKT SERIAL DRIVER FLAGS
-#define PKT_DRIVER_EVT_CONNECTED    1
+#define PKT_DRIVER_EVT_CONNECTED        1
+#define PKT_DRIVER_EVT_DISCONNECTED     2
 
 #define PKT_DEVICE_FLAGS_LOCAL          0x8000 // on the board
 #define PKT_DEVICE_FLAGS_REMOTE         0x4000 // off the board
 #define PKT_DEVICE_FLAGS_INITIALISED    0x2000 // off the board
-#define PKT_DEVICE_CTRL_PACKET_QUEUED   0x1000 // a flag to indicate that a control packet has been queued
+#define PKT_DEVICE_FLAGS_INITIALISING   0x1000 // a flag to indicate that a control packet has been queued
+#define PKT_DEVICE_FLAGS_CP_SEEN        0x0800 // indicates whether a control packet has been seen recently.
 // END      PKT SERIAL DRIVER FLAGS
 
 
 // BEGIN    LOGIC DRIVER FLAGS
 #define PKT_LOGIC_DRIVER_MAX_FILTERS        20
 #define PKT_LOGIC_DRIVER_TIMEOUT            254     // 1,016 ms
+#define PKT_LOGIC_ADDRESS_ALLOC_TIME        254     // 1,016 ms
 #define PKT_LOGIC_DRIVER_CTRLPACKET_TIME    112     // 448 ms
 
 #define CONTROL_PKT_FLAGS_BROADCAST     0x0001
 #define CONTROL_PKT_FLAGS_PAIRED        0x0002
 #define CONTROL_PKT_FLAGS_UNCERTAIN     0x0004
+#define CONTROL_PKT_FLAGS_CONFLICT      0x0008
 #define CONTROL_PKT_TYPE_HELLO          0x01
 // END      LOGIC DRIVER FLAGS
 
@@ -64,6 +68,7 @@ DEALINGS IN THE SOFTWARE.
 #define PKT_DRIVER_CLASS_CONTROL        0
 #define PKT_DRIVER_CLASS_ARCADE         1
 #define PKT_DRIVER_CLASS_JOYSTICK       2
+#define PKT_DRIVER_CLASS_MESSAGE_BUS    3
 // END      PKT SERIAL PROTOCOL
 
 namespace codal
@@ -118,6 +123,8 @@ namespace codal
         PktSerialDriver(PktSerialProtocol& proto, PktDevice d, uint32_t driver_class, uint16_t id);
 
         virtual int queueControlPacket();
+
+        virtual bool isConnected();
         virtual int deviceConnected(PktDevice device);
         virtual int deviceRemoved();
 
@@ -139,6 +146,10 @@ namespace codal
         virtual void handlePacket(PktSerialPkt* p);
 
         virtual bool filterPacket(uint8_t address);
+
+        void start();
+
+        void stop();
     };
 
     class PktSerialProtocol : public CodalComponent
@@ -159,6 +170,10 @@ namespace codal
         virtual int add(PktSerialDriver& device);
 
         virtual int remove(PktSerialDriver& device);
+
+        void start();
+
+        void stop();
     };
 
 } // namespace codal

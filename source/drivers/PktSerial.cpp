@@ -186,14 +186,10 @@ void PktSerial::configure(bool events)
 {
     sp.getDigitalValue(PullMode::Up);
 
-    codal_dmesg("%p", *(volatile uint32_t *) 0x4002000c);
-
     if(events)
         sp.eventOn(DEVICE_PIN_EVENT_ON_EDGE);
     else
         sp.eventOn(DEVICE_PIN_EVENT_NONE);
-
-    codal_dmesg("%p", *(volatile uint32_t *) 0x4002000c);
 }
 
 /**
@@ -401,4 +397,9 @@ int PktSerial::send(uint8_t* buf, int len, uint8_t address)
         pkt->crc += crcPointer[i];
 
     return send(pkt);
+}
+
+bool PktSerial::isRunning()
+{
+    return (status & DEVICE_COMPONENT_RUNNING) ? true : false;
 }

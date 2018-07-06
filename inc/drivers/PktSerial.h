@@ -156,6 +156,8 @@ namespace codal
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
           */
         virtual int send(uint8_t* buf, int len, uint8_t address);
+
+        bool isRunning();
     };
 } // namespace codal
 
