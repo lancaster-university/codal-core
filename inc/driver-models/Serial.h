@@ -89,6 +89,28 @@ namespace codal
         volatile uint16_t txBuffTail;
 
         public:
+        
+         /**
+          * Constructor.
+          * Create an instance of Serial
+          *
+          * @param tx the Pin to be used for transmission
+          *
+          * @param rx the Pin to be used for receiving data
+          *
+          * @param rxBufferSize the size of the buffer to be used for receiving bytes
+          *
+          * @param txBufferSize the size of the buffer to be used for transmitting bytes
+          *
+          * @code
+          * DeviceSerial serial(USBTX, USBRX);
+          * @endcode
+          *
+          */
+        Serial(Pin tx, Pin rx, uint8_t rxBufferSize = CODAL_SERIAL_DEFAULT_BUFFER_SIZE, uint8_t txBufferSize = CODAL_SERIAL_DEFAULT_BUFFER_SIZE)
+        {
+        }
+
         /**
           * Sends a single character over the serial line.
           *
