@@ -37,7 +37,6 @@ PktSerialDriver* PktSerialProtocol::drivers[PKT_PROTOCOL_DRIVER_SIZE] = { 0 };
 void PktSerialProtocol::onPacketReceived(Event)
 {
     PktSerialPkt* pkt = bus.getPacket();
-
     codal_dmesg("PKT REC ADDR: %d",pkt->address);
 
     // if this packet is destined for our drivers...
@@ -73,7 +72,7 @@ PktSerialProtocol::PktSerialProtocol(PktSerial& pkt, uint16_t id) : logic(*this)
     add(logic);
 
     if (EventModel::defaultEventBus)
-        EventModel::defaultEventBus->listen(bus.id, PKT_SERIAL_EVT_DATA_READY, this, &PktSerialProtocol::onPacketReceived);
+        EventModel::defaultEventBus->listen(pkt.id, PKT_SERIAL_EVT_DATA_READY, this, &PktSerialProtocol::onPacketReceived);
 }
 
 int PktSerialProtocol::add(PktSerialDriver& driver)

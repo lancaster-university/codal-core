@@ -46,6 +46,7 @@ namespace codal
         virtual int receive(uint8_t* buf, int len) = 0;
 
         virtual int setBaud(uint32_t baud) = 0;
+        virtual uint32_t getBaud() = 0;
 
         virtual int setMode(SingleWireMode sw)
         {

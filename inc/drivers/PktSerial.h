@@ -76,6 +76,7 @@ namespace codal
         Pin& sp;
 
         uint8_t timeoutCounter;
+        uint8_t timeoutValue;
 
         void onFallingEdge(Event);
         void configure(bool events);

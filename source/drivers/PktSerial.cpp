@@ -63,7 +63,7 @@ void PktSerial::dmaComplete(Event evt)
 
 void PktSerial::onFallingEdge(Event)
 {
-    codal_dmesg("FALL: %d %d", (status & PKT_SERIAL_RECEIVING) ? 1 : 0, (status & PKT_SERIAL_TRANSMITTING) ? 1 : 0);
+    // codal_dmesg("FALL: %d %d", (status & PKT_SERIAL_RECEIVING) ? 1 : 0, (status & PKT_SERIAL_TRANSMITTING) ? 1 : 0);
     // guard against repeat events.
     if (status & (PKT_SERIAL_RECEIVING | PKT_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
@@ -80,6 +80,13 @@ void PktSerial::onFallingEdge(Event)
 
 void PktSerial::periodicCallback()
 {
+    // calculate 1 packet at baud
+    if (timeoutCounter == 0)
+    {
+        uint32_t timePerSymbol = 1000000/sws.getBaud();
+        timeoutValue = timePerSymbol * PKT_SERIAL_DMA_TIMEOUT;
+    }
+
     if (status & PKT_SERIAL_RECEIVING)
     {
         codal_dmesg("H");
@@ -209,6 +216,9 @@ PktSerial::PktSerial(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sw
 
     this->id = id;
     status = 0;
+
+    timeoutValue = 0;
+    timeoutCounter = 0;
 
     sws.setBaud(1000000);
     sws.setDMACompletionHandler(this, &PktSerial::dmaComplete);
