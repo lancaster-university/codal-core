@@ -247,7 +247,9 @@ void codal::scheduler_tick(Event evt)
     Fiber *f = sleepQueue;
     Fiber *t;
 
+#if !CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
     evt.timestamp /= 1000;
+#endif
 
     // Check the sleep queue, and wake up any fibers as necessary.
     while (f != NULL)

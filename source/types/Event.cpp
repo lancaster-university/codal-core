@@ -59,7 +59,12 @@ Event::Event(uint16_t source, uint16_t value, EventLaunchMode mode)
 {
     this->source = source;
     this->value = value;
+
+#if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
+    this->timestamp = system_timer_current_time();
+#else
     this->timestamp = system_timer_current_time_us();
+#endif
 
     if(mode != CREATE_ONLY)
         this->fire();
@@ -104,7 +109,12 @@ Event::Event()
 {
     this->source = 0;
     this->value = 0;
+
+#if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
+    this->timestamp = system_timer_current_time();
+#else
     this->timestamp = system_timer_current_time_us();
+#endif
 }
 
 /**

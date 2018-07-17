@@ -52,7 +52,12 @@ namespace codal
 
         uint16_t            source;         // ID of the Device Component that generated the event e.g. DEVICE_ID_BUTTON_A.
         uint16_t            value;          // Component specific code indicating the cause of the event.
-        CODAL_TIMESTAMP      timestamp;      // Time at which the event was generated. us since power on.
+
+#if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
+        uint32_t            timestamp;      // Time at which the event was generated. us since power on.
+#else
+        CODAL_TIMESTAMP     timestamp;      // Time at which the event was generated. us since power on.
+#endif
 
         /**
           * Constructor.
