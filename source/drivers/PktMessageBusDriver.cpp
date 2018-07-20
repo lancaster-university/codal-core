@@ -1,6 +1,12 @@
 #include "PktMessageBusDriver.h"
 #include "CodalDmesg.h"
 
+#ifdef PKT_DEBUG
+#define DBG_DMESG(msg) (codal_dmesg(msg))
+#else
+#define DBG_DMESG(msg) ()
+#endif
+
 using namespace codal;
 
 PktMessageBusDriver::PktMessageBusDriver(PktSerialProtocol& proto, bool remote, uint32_t serial) :
@@ -105,6 +111,8 @@ void PktMessageBusDriver::handlePacket(PktSerialPkt* p)
 {
     Event *e = (Event *) p->data;
 
+    DBG_DMESG("EV: %d, %d", e->source, e->value);
+
     suppressForwarding = true;
     e->fire();
     suppressForwarding = false;
@@ -122,10 +130,10 @@ void PktMessageBusDriver::handleControlPacket(ControlPacket*)
   */
 void PktMessageBusDriver::eventReceived(Event e)
 {
-    codal_dmesg("EVENT");
+    DBG_DMESG("EVENT");
     if(suppressForwarding)
         return;
 
-    codal_dmesg("PACKET QUEUED: %d %d", e.source, e.value);
+    DBG_DMESG("PACKET QUEUED: %d %d", e.source, e.value);
     proto.bus.send((uint8_t *)&e, sizeof(Event), device.address);
 }

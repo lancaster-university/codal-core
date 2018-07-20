@@ -1,5 +1,12 @@
 #include "PktSerialProtocol.h"
 #include "CodalDmesg.h"
+
+#ifdef PKT_DEBUG
+#define DBG_DMESG(msg) (codal_dmesg(msg))
+#else
+#define DBG_DMESG(msg) ()
+#endif
+
 using namespace codal;
 
 void PktLogicDriver::periodicCallback()
@@ -37,7 +44,7 @@ void PktLogicDriver::periodicCallback()
         {
             if (!(proto.drivers[i]->device.flags & (PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_INITIALISING)))
             {
-                codal_dmesg("BEGIN INIT");
+                DBG_DMESG("BEGIN INIT");
                 proto.drivers[i]->device.address = 0;
 
                 bool allocated = true;
@@ -66,7 +73,7 @@ void PktLogicDriver::periodicCallback()
                     allocated = stillAllocated;
                 }
 
-                codal_dmesg("ALLOC: %d",proto.drivers[i]->device.address);
+                DBG_DMESG("ALLOC: %d",proto.drivers[i]->device.address);
 
                 proto.drivers[i]->queueControlPacket();
                 proto.drivers[i]->device.flags |= PKT_DEVICE_FLAGS_INITIALISING;
@@ -77,7 +84,7 @@ void PktLogicDriver::periodicCallback()
                 // if no one has complained in a second, consider our address allocated
                 if (proto.drivers[i]->device.rolling_counter == PKT_LOGIC_ADDRESS_ALLOC_TIME)
                 {
-                    codal_dmesg("FINISHED");
+                    DBG_DMESG("FINISHED");
                     proto.drivers[i]->device.flags &= ~PKT_DEVICE_FLAGS_INITIALISING;
                     proto.drivers[i]->device.flags |= PKT_DEVICE_FLAGS_INITIALISED;
                     proto.drivers[i]->deviceConnected(proto.drivers[i]->device);
@@ -115,14 +122,14 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
 {
     ControlPacket *cp = (ControlPacket *)p->data;
 
-    codal_dmesg("CP REC: %d, %d, %d", cp->address, cp->serial_number, cp->driver_class);
+    DBG_DMESG("CP REC: %d, %d, %d", cp->address, cp->serial_number, cp->driver_class);
 
     // first check for any drivers who are associated with this control packet
     for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
     {
         if (proto.drivers[i] && proto.drivers[i]->device.address == cp->address)
         {
-            codal_dmesg("FINDING");
+            DBG_DMESG("FINDING");
             // if we have allocated that address to one of our devices, respond with a conflict packet
             if (proto.drivers[i]->device.serial_number != cp->serial_number && !(proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISING))
             {
@@ -152,7 +159,7 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
     // if it's paired with another device, we can just ignore
     if (cp->flags & CONTROL_PKT_FLAGS_PAIRED && !filtered)
     {
-        codal_dmesg("FILTERING");
+        DBG_DMESG("FILTERING");
         for (int i = 0; i < PKT_LOGIC_DRIVER_MAX_FILTERS; i++)
         {
             if (this->address_filters[i] == 0)
@@ -165,7 +172,7 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
     // if it was previously paired with another device, we remove the filter.
     if (filtered && cp->flags & CONTROL_PKT_FLAGS_BROADCAST)
     {
-        codal_dmesg("UNDO FILTER");
+        DBG_DMESG("UNDO FILTER");
         for (int i = 0; i < PKT_LOGIC_DRIVER_MAX_FILTERS; i++)
         {
             if (this->address_filters[i] == cp->address)
@@ -178,14 +185,14 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
     // if we reach here, there is no associated device, find a free instance in the drivers array
     for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
     {
-        codal_dmesg("FIND DRIVER");
+        DBG_DMESG("FIND DRIVER");
         if (proto.drivers[i] && proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_REMOTE && proto.drivers[i]->driver_class == cp->driver_class)
         {
             // this driver instance is looking for a specific serial number
             if (proto.drivers[i]->device.serial_number > 0 && proto.drivers[i]->device.serial_number != cp->serial_number)
                 continue;
 
-            codal_dmesg("FOUND");
+            DBG_DMESG("FOUND");
             PktDevice d;
             d.address = cp->address;
             d.rolling_counter = 0;

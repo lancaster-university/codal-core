@@ -7,7 +7,7 @@
 #include "SingleWireSerial.h"
 #include "Timer.h"
 
-#ifdef DEBUG
+#ifdef PKT_DEBUG
 #define DBG_DMESG(msg) (codal_dmesg(msg))
 #else
 #define DBG_DMESG(msg) ()
