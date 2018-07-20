@@ -228,8 +228,12 @@ void Timer::sync(CODAL_TIMESTAMP t)
     // First, update our timestamps.
     currentTimeUs += t;
     overflow += t;
-    currentTime += overflow / 1000;
-    overflow = overflow % 1000;
+
+    while(overflow >= 1000)
+    {
+        overflow -= 1000;
+        currentTime += 1;
+    }
 }
 
 /**

@@ -171,9 +171,9 @@ namespace codal
         virtual int disableInterrupts();
 
     protected:
-        volatile CODAL_TIMESTAMP currentTime;
-        volatile CODAL_TIMESTAMP currentTimeUs;
-        volatile CODAL_TIMESTAMP overflow;
+        CODAL_TIMESTAMP currentTime;
+        CODAL_TIMESTAMP currentTimeUs;
+        uint32_t overflow;
 
         TimerEvent *timerEventList;
         TimerEvent *nextTimerEvent;
@@ -182,8 +182,6 @@ namespace codal
         TimerEvent *getTimerEvent();
         void releaseTimerEvent(TimerEvent *event);
         int setEvent(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, bool repeat);
-
-
     };
 
     /*
