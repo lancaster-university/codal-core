@@ -7,12 +7,6 @@
 #include "SingleWireSerial.h"
 #include "Timer.h"
 
-#ifdef PKT_DEBUG
-#define DBG_DMESG(msg) (codal_dmesg(msg))
-#else
-#define DBG_DMESG(msg) ()
-#endif
-
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
 #define CODAL_ASSERT(cond)                                                                         \

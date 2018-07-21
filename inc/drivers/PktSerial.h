@@ -52,6 +52,12 @@ DEALINGS IN THE SOFTWARE.
 
 #define PKT_PKT_FLAGS_LOSSY             0x01
 
+#if CONFIG_ENABLED(PKT_DEBUG)
+#define DBG_DMESG(...) (codal_dmesg(msg,##__VA_ARGS__))
+#else
+#define DBG_DMESG(...) ((void)0)
+#endif
+
 namespace codal
 {
 

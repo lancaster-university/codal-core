@@ -30,12 +30,6 @@ DEALINGS IN THE SOFTWARE.
 #include "Timer.h"
 #include "CodalDmesg.h"
 
-#ifdef PKT_DEBUG
-#define DBG_DMESG(msg) (codal_dmesg(msg))
-#else
-#define DBG_DMESG(msg) ()
-#endif
-
 using namespace codal;
 
 PktSerialDriver* PktSerialProtocol::drivers[PKT_PROTOCOL_DRIVER_SIZE] = { 0 };

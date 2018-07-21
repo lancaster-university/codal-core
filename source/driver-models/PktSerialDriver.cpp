@@ -24,12 +24,6 @@ DEALINGS IN THE SOFTWARE.
 #include "PktSerialProtocol.h"
 #include "CodalDmesg.h"
 
-#ifdef PKT_DEBUG
-#define DBG_DMESG(msg) (codal_dmesg(msg))
-#else
-#define DBG_DMESG(msg) ()
-#endif
-
 using namespace codal;
 
 int PktSerialDriver::queueControlPacket()

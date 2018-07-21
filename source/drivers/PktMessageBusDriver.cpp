@@ -1,12 +1,6 @@
 #include "PktMessageBusDriver.h"
 #include "CodalDmesg.h"
 
-#ifdef PKT_DEBUG
-#define DBG_DMESG(msg) (codal_dmesg(msg))
-#else
-#define DBG_DMESG(msg) ()
-#endif
-
 using namespace codal;
 
 PktMessageBusDriver::PktMessageBusDriver(PktSerialProtocol& proto, bool remote, uint32_t serial) :
