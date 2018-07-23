@@ -30,6 +30,17 @@ DEALINGS IN THE SOFTWARE.
 
 namespace codal
 {
+    //
+    // Valid rotation settings.
+    //
+    enum DisplayRotation
+    {
+        DISPLAY_ROTATION_0,
+        DISPLAY_ROTATION_90,
+        DISPLAY_ROTATION_180,
+        DISPLAY_ROTATION_270
+    };
+
     /**
      * Class definition for an abstract Display.
      */
@@ -39,6 +50,7 @@ namespace codal
         uint16_t width;
         uint16_t height;
         uint8_t  brightness;
+        DisplayRotation rotation;
 
         public:
 
@@ -53,7 +65,7 @@ namespace codal
          *
          * @param id The id the display should use when sending events on the MessageBus. Defaults to DEVICE_ID_DISPLAY.
          */
-        Display (int width, int height, uint16_t id = DEVICE_ID_DISPLAY);
+        Display (int width, int height, uint8_t ppb = 1, uint16_t id = DEVICE_ID_DISPLAY);
 
         /**
          * Returns the width of the display
@@ -70,6 +82,9 @@ namespace codal
          *
          */
         virtual int getHeight();
+
+        virtual int setRotation(DisplayRotation r);
+        virtual DisplayRotation getRotation();
 
         /**
          * Configures the brightness of the display.
