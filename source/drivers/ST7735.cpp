@@ -163,7 +163,7 @@ ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc, Pin& reset, Pin& bl, int width, int h
     initDisplay();
     // configure(0,0x000603);
     // setAddrWindow(0x0, 0, width, height);
-    setRotation(DISPLAY_ROTATION_90);
+    setRotation(DISPLAY_ROTATION_0);
 }
 
 void ST7735::sendBytes(unsigned num)
@@ -292,6 +292,7 @@ void ST7735::waitForSendDone()
 
 int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height, uint32_t *palette)
 {
+    DMESG("S_IMG: w: %d h: %d",width,height);
     if (!work)
     {
         work = new ST7735WorkBuffer;
@@ -357,35 +358,9 @@ void ST7735::sendCmdSeq(const uint8_t *buf)
     }
 }
 
-void ST7735::setPixelValue(uint32_t x, uint32_t y, uint32_t value)
-{
-    uint32_t t = x;
-    DMESG("x: %d y: %d", x , y);
-    if(rotation == DISPLAY_ROTATION_90)
-    {
-            x = width - 1 - y;
-            y = t;
-    }
-
-    if(rotation == DISPLAY_ROTATION_180)
-    {
-            x = width - 1 - x;
-            y = height - 1 - y;
-    }
-
-    if(rotation == DISPLAY_ROTATION_270)
-    {
-            x = y;
-            y = height - 1 - t;
-    }
-    DMESG("x: %d y: %d", x , y);
-
-    image.setPixelValue(x,y,value);
-}
-
 void ST7735::setAddrWindow(int x, int y, int w, int h)
 {
-    DMESG("screen: %d x %d, off=%d,%d", width, height, x, y);
+    DMESG("screen: %d x %d, off=%d,%d", w, h, x, y);
     uint8_t cmd0[] = {ST7735_RASET, 0, (uint8_t)x, 0, (uint8_t)(x + h - 1)};
     uint8_t cmd1[] = {ST7735_CASET, 0, (uint8_t)y, 0, (uint8_t)(y + w - 1)};
     sendCmd(cmd1, sizeof(cmd1));
@@ -412,6 +387,10 @@ int ST7735::setRotation(DisplayRotation r)
 {
     rotation = r;
 
+    // my 8
+    // mx 4
+    // mv 2
+
     // configure(0,0x000603);
     // setAddrWindow(0xc0, 0, width, height);
 
@@ -419,11 +398,11 @@ int ST7735::setRotation(DisplayRotation r)
 
     if (r == DISPLAY_ROTATION_0)
     {
-        // if (image.getWidth() != dimW || image.getHeight() != dimH)
-        //     image = Image(dimW, dimH, 2);
+        if (image.getWidth() != dimW || image.getHeight() != dimH)
+            image = Image(dimW, dimH, 2);
 
         configure(0,0x000603);
-        setAddrWindow(0x00, 0, width, height);
+        setAddrWindow(0x00, 0, dimW, dimH);
 
         height = dimH;
         width = dimW;
@@ -431,13 +410,37 @@ int ST7735::setRotation(DisplayRotation r)
 
     if (r == DISPLAY_ROTATION_90)
     {
-        // if (image.getWidth() != dimH || image.getHeight() != dimW)
-        image = Image(dimH, dimW, 2);
+        if (image.getWidth() != dimH || image.getHeight() != dimW)
+            image = Image(dimH, dimW, 2);
         configure(0xa0,0x000603);
-        setAddrWindow(0, 0, 160, 128);
+        setAddrWindow(0, 0, dimH, dimW);
 
-        height = 128;
-        width = 160;
+        height = dimW;
+        width = dimH;
+    }
+
+    if (r == DISPLAY_ROTATION_180)
+    {
+        if (image.getWidth() != dimW || image.getHeight() != dimH)
+            image = Image(dimW, dimH, 2);
+
+        configure(0xc0,0x000603);
+        setAddrWindow(0, 0, dimW, dimH);
+
+        height = dimH;
+        width = dimW;
+    }
+
+    if (r == DISPLAY_ROTATION_270)
+    {
+        if (image.getWidth() != dimH || image.getHeight() != dimW)
+            image = Image(dimH, dimW, 2);
+
+        configure(0x60,0x000603);
+        setAddrWindow(0, 0, dimH, dimW);
+
+        height = dimW;
+        width = dimH;
     }
 
     return DEVICE_OK;
