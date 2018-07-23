@@ -64,8 +64,13 @@
 
 namespace codal
 {
-
-ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc) : spi(spi), cs(cs), dc(dc), work(NULL) {}
+uint32_t default_palette[16] =
+{
+    56000,
+    123,
+    456,
+    987,
+};
 
 #define DELAY 0x80
 
@@ -96,7 +101,7 @@ static const uint8_t initCmds[] = {
       0x00,                   //     Boost frequency
     ST7735_PWCTR4 , 2      ,  // 10: Power control, 2 args, no delay:
       0x8A,                   //     BCLK/2, Opamp current small & Medium low
-      0x2A,  
+      0x2A,
     ST7735_PWCTR5 , 2      ,  // 11: Power control, 2 args, no delay:
       0x8A, 0xEE,
     ST7735_VMCTR1 , 1      ,  // 12: Power control, 1 arg, no delay:
@@ -136,6 +141,30 @@ struct ST7735WorkBuffer
     bool inProgress;
     uint32_t expPalette[256];
 };
+
+ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc, Pin& reset, Pin& bl, int width, int height) : Display(width, height, 2), spi(spi), cs(cs), dc(dc)
+{
+    dimH = height;
+    dimW = width;
+
+    reset.setDigitalValue(0);
+    fiber_sleep(20);
+    reset.setDigitalValue(1);
+    fiber_sleep(20);
+
+    bl.setDigitalValue(1);
+    int freq = 22;
+    if (!freq) freq = 15;
+
+    DMESG("SPI at %dMHz", freq);
+
+    spi.setFrequency(freq * 1000000);
+    spi.setMode(0);
+    initDisplay();
+    // configure(0,0x000603);
+    // setAddrWindow(0x0, 0, width, height);
+    setRotation(DISPLAY_ROTATION_90);
+}
 
 void ST7735::sendBytes(unsigned num)
 {
@@ -275,7 +304,10 @@ int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height
     if (work->inProgress)
         return DEVICE_BUSY;
 
-    work->paletteTable = palette;
+    if (palette)
+        work->paletteTable = palette;
+    else
+        work->paletteTable = default_palette;
 
     work->inProgress = true;
     work->srcPtr = src;
@@ -325,15 +357,42 @@ void ST7735::sendCmdSeq(const uint8_t *buf)
     }
 }
 
+void ST7735::setPixelValue(uint32_t x, uint32_t y, uint32_t value)
+{
+    uint32_t t = x;
+    DMESG("x: %d y: %d", x , y);
+    if(rotation == DISPLAY_ROTATION_90)
+    {
+            x = width - 1 - y;
+            y = t;
+    }
+
+    if(rotation == DISPLAY_ROTATION_180)
+    {
+            x = width - 1 - x;
+            y = height - 1 - y;
+    }
+
+    if(rotation == DISPLAY_ROTATION_270)
+    {
+            x = y;
+            y = height - 1 - t;
+    }
+    DMESG("x: %d y: %d", x , y);
+
+    image.setPixelValue(x,y,value);
+}
+
 void ST7735::setAddrWindow(int x, int y, int w, int h)
 {
-    uint8_t cmd0[] = {ST7735_RASET, 0, (uint8_t)x, 0, (uint8_t)(x + w - 1)};
-    uint8_t cmd1[] = {ST7735_CASET, 0, (uint8_t)y, 0, (uint8_t)(y + h - 1)};
+    DMESG("screen: %d x %d, off=%d,%d", width, height, x, y);
+    uint8_t cmd0[] = {ST7735_RASET, 0, (uint8_t)x, 0, (uint8_t)(x + h - 1)};
+    uint8_t cmd1[] = {ST7735_CASET, 0, (uint8_t)y, 0, (uint8_t)(y + w - 1)};
     sendCmd(cmd1, sizeof(cmd1));
     sendCmd(cmd0, sizeof(cmd0));
 }
 
-void ST7735::init()
+void ST7735::initDisplay()
 {
     cs.setDigitalValue(1);
     dc.setDigitalValue(1);
@@ -347,6 +406,41 @@ void ST7735::configure(uint8_t madctl, uint32_t frmctr1) {
     uint8_t cmd1[] = {ST7735_FRMCTR1, (uint8_t)(frmctr1 >> 16), (uint8_t)(frmctr1 >> 8), (uint8_t)frmctr1};
     sendCmd(cmd0, sizeof(cmd0));
     sendCmd(cmd1, cmd1[3] == 0xff ? 3 : 4);
+}
+
+int ST7735::setRotation(DisplayRotation r)
+{
+    rotation = r;
+
+    // configure(0,0x000603);
+    // setAddrWindow(0xc0, 0, width, height);
+
+    DMESG("ASDASDI");
+
+    if (r == DISPLAY_ROTATION_0)
+    {
+        // if (image.getWidth() != dimW || image.getHeight() != dimH)
+        //     image = Image(dimW, dimH, 2);
+
+        configure(0,0x000603);
+        setAddrWindow(0x00, 0, width, height);
+
+        height = dimH;
+        width = dimW;
+    }
+
+    if (r == DISPLAY_ROTATION_90)
+    {
+        // if (image.getWidth() != dimH || image.getHeight() != dimW)
+        image = Image(dimH, dimW, 2);
+        configure(0xa0,0x000603);
+        setAddrWindow(0, 0, 160, 128);
+
+        height = 128;
+        width = 160;
+    }
+
+    return DEVICE_OK;
 }
 
 }

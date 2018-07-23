@@ -28,6 +28,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Pin.h"
 #include "SPI.h"
 #include "Event.h"
+#include "Display.h"
 
 namespace codal
 {
@@ -42,13 +43,16 @@ struct ST7735WorkBuffer;
 #define MADCTL_BGR 0x08
 #define MADCTL_MH 0x04
 
-class ST7735
+class ST7735 : public Display
 {
     SPI &spi;
     Pin &cs;
     Pin &dc;
     uint8_t cmdBuf[20];
     ST7735WorkBuffer *work;
+
+    uint32_t dimW;
+    uint32_t dimH;
 
     void sendCmd(uint8_t *buf, int len);
     void sendCmdSeq(const uint8_t *buf);
@@ -61,8 +65,8 @@ class ST7735
     static void sendColorsStep(ST7735 *st);
 
 public:
-    ST7735(SPI &spi, Pin &cs, Pin &dc);
-    void init();
+    ST7735(SPI &spi, Pin &cs, Pin &dc, Pin& reset, Pin& bl, int displayWidth, int displayHeight);
+    void initDisplay();
 
     /**
      * Configure screen-specific parameters.
@@ -71,6 +75,13 @@ public:
      * @param frmctr1 defaults to 0x083b3b, 0x053a3a, 0x053c3c depending on screen size; 0x000605 was found to work well on 160x128 screen; big-endian
      */
     void configure(uint8_t madctl, uint32_t frmctr1);
+
+    void draw(Image i, int x, int y);
+
+    virtual int setRotation(DisplayRotation r) override;
+
+    void setPixelValue(uint32_t x, uint32_t y, uint32_t value);
+
     /**
      * Set rectangle where pixels sent by sendIndexedImage() will be stored.
      */
