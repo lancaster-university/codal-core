@@ -34,6 +34,7 @@ DEALINGS IN THE SOFTWARE.
 #include "BitmapFont.h"
 #include "CodalCompat.h"
 #include "ManagedString.h"
+#include "CodalDmesg.h"
 #include "ErrorNo.h"
 
 
@@ -83,9 +84,9 @@ Image::Image()
   * TODO: Consider an immutable flavour, which might save us RAM for animation spritesheets...
   * ...as these could be kept in FLASH.
   */
-Image::Image(const int16_t x, const int16_t y)
+Image::Image(const int16_t x, const int16_t y, uint8_t ppb)
 {
-    this->init(x,y,NULL);
+    this->init(x,y,NULL, ppb);
 }
 
 /**
@@ -169,6 +170,7 @@ Image::Image(const char *s)
 
         parseReadPtr++;
     }
+
 
     this->init(width, height, NULL);
 
@@ -282,7 +284,7 @@ void Image::init_empty()
   *
   * @param bitmap an array of integers that make up an image.
   */
-void Image::init(const int16_t x, const int16_t y, const uint8_t *bitmap)
+void Image::init(const int16_t x, const int16_t y, const uint8_t *bitmap, uint8_t ppb)
 {
     //sanity check size of image - you cannot have a negative sizes
     if(x < 0 || y < 0)
@@ -293,10 +295,11 @@ void Image::init(const int16_t x, const int16_t y, const uint8_t *bitmap)
 
 
     // Create a copy of the array
-    ptr = (ImageData*)malloc(sizeof(ImageData) + x * y);
+    ptr = (ImageData*)malloc(sizeof(ImageData) + ((x * y) / ppb));
     REF_COUNTED_INIT(ptr);
     ptr->width = x;
     ptr->height = y;
+    ptr->ppb = ppb;
 
 
     // create a linear buffer to represent the image. We could use a jagged/2D array here, but experimentation
@@ -403,7 +406,25 @@ int Image::setPixelValue(int16_t x , int16_t y, uint8_t value)
     if(x >= getWidth() || y >= getHeight() || x < 0 || y < 0)
         return DEVICE_INVALID_PARAMETER;
 
-    this->getBitmap()[y*getWidth()+x] = value;
+
+
+    int offset = y * (getWidth() / ptr->ppb) + (x >> 1);
+
+
+    // int offset = (64 * y) + (x >> 1);
+    uint8_t* bmp = this->getBitmap();
+
+    if (ptr->ppb > 1)
+    {
+        // odd
+        if (x & 1)
+            bmp[offset] = (bmp[offset] & 0x0f) | (value << 4);
+        else
+            bmp[offset] = (bmp[offset] & 0xf0) | (value & 0xf);
+    }
+    else
+        bmp[offset] = value;
+
     return DEVICE_OK;
 }
 
@@ -427,7 +448,7 @@ int Image::getPixelValue(int16_t x , int16_t y)
     if(x >= getWidth() || y >= getHeight() || x < 0 || y < 0)
         return DEVICE_INVALID_PARAMETER;
 
-    return this->getBitmap()[y*getWidth()+x];
+    return this->getBitmap()[y * (getWidth() / ptr->ppb) + x];
 }
 
 /**
@@ -467,12 +488,29 @@ int Image::printImage(int16_t width, int16_t height, const uint8_t *bitmap)
     pIn = bitmap;
     pOut = this->getBitmap();
 
-    // Copy the image, stride by stride.
-    for (int i=0; i<pixelsToCopyY; i++)
+    if (ptr->ppb == 1)
     {
-        memcpy(pOut, pIn, pixelsToCopyX);
-        pIn += width;
-        pOut += this->getWidth();
+        // Copy the image, stride by stride.
+        for (int i=0; i<pixelsToCopyY; i++)
+        {
+            memcpy(pOut, pIn, pixelsToCopyX);
+            pIn += width;
+            pOut += this->getWidth() / ptr->ppb;
+        }
+    }
+    else
+    {
+        // Copy the image, stride by stride.
+        for (int i=0; i<pixelsToCopyY; i++)
+        {
+            for (int j=0; j<pixelsToCopyX; j++)
+            {
+                setPixelValue(j, i, bitmap[(i * width) + j]);
+            }
+            // memcpy(pOut, pIn, pixelsToCopyX);
+            // pIn += width;
+            // pOut += this->getWidth() / ptr->ppb;
+        }
     }
 
     return DEVICE_OK;
