@@ -169,7 +169,7 @@ namespace codal
           * Image i(10,5,heart);
           * @endcode
           */
-        Image(const int16_t x, const int16_t y, const uint8_t *bitmap);
+        Image(const int16_t x, const int16_t y, const uint8_t *bitmap, uint8_t ppb = 1);
 
         /**
           * Destructor.
