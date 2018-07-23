@@ -64,9 +64,10 @@ class ST7735 : public Display
 
     static void sendColorsStep(ST7735 *st);
 
-public:
-    ST7735(SPI &spi, Pin &cs, Pin &dc, Pin& reset, Pin& bl, int displayWidth, int displayHeight);
-    void initDisplay();
+    /**
+     * Set rectangle where pixels sent by sendIndexedImage() will be stored.
+     */
+    void setAddrWindow(int x, int y, int w, int h);
 
     /**
      * Configure screen-specific parameters.
@@ -76,25 +77,21 @@ public:
      */
     void configure(uint8_t madctl, uint32_t frmctr1);
 
-    void draw(Image i, int x, int y);
+    void initDisplay();
 
-    virtual int setRotation(DisplayRotation r) override;
-
-    void setPixelValue(uint32_t x, uint32_t y, uint32_t value);
-
-    /**
-     * Set rectangle where pixels sent by sendIndexedImage() will be stored.
-     */
-    void setAddrWindow(int x, int y, int w, int h);
-    /**
-     * Send 4 bit indexed color image, little endian, column-major, using specified palette (use NULL
-     * if unchanged).
-     */
-    int sendIndexedImage(const uint8_t *src, unsigned width, unsigned height, uint32_t *palette);
     /**
      * Waits for the previous sendIndexedImage() operation to complete (it normally executes in background).
      */
     void waitForSendDone();
+
+    void render(Event);
+
+public:
+    ST7735(SPI &spi, Pin &cs, Pin &dc, Pin& reset, Pin& bl, int displayWidth, int displayHeight);
+
+    void draw(Image i, int x, int y);
+
+    virtual int setRotation(DisplayRotation r);
 };
 
 }

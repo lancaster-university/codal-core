@@ -1,6 +1,9 @@
 #include "ST7735.h"
 #include "CodalFiber.h"
 #include "CodalDmesg.h"
+#include "Timer.h"
+
+#define ST7735_EVT_WORK_DONE       100
 
 #define SWAP 0
 
@@ -157,13 +160,15 @@ ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc, Pin& reset, Pin& bl, int width, int h
     if (!freq) freq = 15;
 
     DMESG("SPI at %dMHz", freq);
-
     spi.setFrequency(freq * 1000000);
     spi.setMode(0);
     initDisplay();
-    // configure(0,0x000603);
-    // setAddrWindow(0x0, 0, width, height);
     setRotation(DISPLAY_ROTATION_0);
+
+    system_timer_event_every(30, DEVICE_ID_DISPLAY, DISPLAY_EVT_RENDER);
+
+    if (EventModel::defaultEventBus)
+        EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, DISPLAY_EVT_RENDER, this, &ST7735::render);
 }
 
 void ST7735::sendBytes(unsigned num)
@@ -247,7 +252,7 @@ void ST7735::sendColorsStep(ST7735 *st)
         if (work->srcLeft == 0)
         {
             st->cs.setDigitalValue(1);
-            Event(DEVICE_ID_DISPLAY, 100);
+            Event(DEVICE_ID_DISPLAY, ST7735_EVT_WORK_DONE);
         }
         else
         {
@@ -281,45 +286,16 @@ void ST7735::sendDone(Event)
     // this executes outside of interrupt context, so we don't get a race
     // with waitForSendDone
     work->inProgress = false;
-    Event(DEVICE_ID_DISPLAY, 101);
+    Event(DEVICE_ID_DISPLAY, DISPLAY_EVT_RENDER_COMPLETE);
 }
 
 void ST7735::waitForSendDone()
 {
     if (work && work->inProgress)
-        fiber_wait_for_event(DEVICE_ID_DISPLAY, 101);
-}
-
-int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height, uint32_t *palette)
-{
-    DMESG("S_IMG: w: %d h: %d",width,height);
-    if (!work)
     {
-        work = new ST7735WorkBuffer;
-        memset(work, 0, sizeof(*work));
-        for (int i = 0; i < 256; ++i)
-            work->expPalette[i] = 0x1011 * (i & 0xf) | (0x110100 * (i>>4));
-        EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, 100, this, &ST7735::sendDone);
+       fiber_wake_on_event(DEVICE_ID_DISPLAY, DISPLAY_EVT_RENDER_COMPLETE);
+       fiber_sleep(0);
     }
-
-    if (work->inProgress)
-        return DEVICE_BUSY;
-
-    if (palette)
-        work->paletteTable = palette;
-    else
-        work->paletteTable = default_palette;
-
-    work->inProgress = true;
-    work->srcPtr = src;
-    work->width = width;
-    work->height = height;
-    work->srcLeft = ((width + 1) >> 1) * height;
-    work->x = 0;
-
-    sendColorsStep(this);
-
-    return DEVICE_OK;
 }
 
 // we don't modify *buf, but it cannot be in flash, so no const as a hint
@@ -444,6 +420,35 @@ int ST7735::setRotation(DisplayRotation r)
     }
 
     return DEVICE_OK;
+}
+
+void ST7735::render(Event)
+{
+    if (!work)
+    {
+        work = new ST7735WorkBuffer;
+        memset(work, 0, sizeof(*work));
+        for (int i = 0; i < 256; ++i)
+            work->expPalette[i] = 0x1011 * (i & 0xf) | (0x110100 * (i>>4));
+
+        EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, ST7735_EVT_WORK_DONE, this, &ST7735::sendDone);
+    }
+
+    if (work->inProgress)
+        return;
+
+    work->paletteTable = default_palette;
+
+    work->inProgress = true;
+    work->srcPtr = image.getBitmap();
+    work->width = image.getWidth();
+    work->height = image.getHeight();
+    work->srcLeft = ((image.getWidth() + 1) >> 1) * image.getHeight();
+    work->x = 0;
+
+    sendColorsStep(this);
+
+    return;
 }
 
 }

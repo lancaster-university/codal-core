@@ -28,6 +28,9 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "Image.h"
 
+#define DISPLAY_EVT_RENDER              2
+#define DISPLAY_EVT_RENDER_COMPLETE     4
+
 namespace codal
 {
     //
