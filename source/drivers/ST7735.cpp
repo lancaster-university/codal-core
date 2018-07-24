@@ -72,7 +72,10 @@ uint32_t default_palette[16] =
     56000,
     123,
     456,
-    987,
+    0xFFFFFF,
+    0,
+    0x00FF00,
+    0x454545,
 };
 
 #define DELAY 0x80
@@ -436,6 +439,8 @@ void ST7735::render(Event)
 
     if (work->inProgress)
         return;
+
+    Event(id, DISPLAY_EVT_RENDER_START);
 
     work->paletteTable = default_palette;
 

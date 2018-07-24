@@ -552,12 +552,24 @@ int Image::paste(const Image &image, int16_t x, int16_t y, uint8_t alpha)
 
     // Calculate sane start pointer.
     pIn = image.ptr->data;
-    pIn += (x < 0) ? -x : 0;
-    pIn += (y < 0) ? -(image.getWidth() / ptr->ppb)*y : 0;
 
+    // hack for now...
     pOut = getBitmap();
-    pOut += (x > 0) ? x : 0;
+
+    if (ptr->ppb > 1)
+    {
+        pIn += (x < 0) ? -(x >> 1) : 0;
+        pOut += (x > 0) ? (x >> 1) : 0;
+    }
+    else
+    {
+        pIn += (x < 0) ? -(x) : 0;
+        pOut += (x > 0) ? x : 0;
+    }
+
+    pIn += (y < 0) ? -(image.getWidth() / ptr->ppb)*y : 0;
     pOut += (y > 0) ? (getWidth() / ptr->ppb) *y : 0;
+
 
     // Copy the image, stride by stride
     // If we want primitive transparecy, we do this byte by byte.

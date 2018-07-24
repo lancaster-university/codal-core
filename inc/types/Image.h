@@ -49,7 +49,6 @@ namespace codal
     class Image
     {
         ImageData *ptr;     // Pointer to payload data
-        // ImageRotation rotation;
 
         /**
           * Internal constructor which provides sanity checking and initialises class properties.
@@ -405,24 +404,6 @@ namespace codal
         {
             return ptr->width;
         }
-
-        // int setRotation(ImageRotation r)
-        // {
-        //     // if (r == Rotation90)
-        //     // {
-        //     //     DMESG("ROTATE!");
-        //     //     int w = ptr->width;
-        //     //     ptr->width = ptr->height;
-        //     //     ptr->height = w;
-        //     // }
-        //     this->rotation = rotation;
-        //     return DEVICE_OK;
-        // }
-
-        // int getRotation()
-        // {
-        //     return this->rotation;
-        // }
 
 
          /**
