@@ -11,9 +11,11 @@ namespace codal
     class Radio : public CodalComponent
     {
         public:
-        static Radio* instance;
 
-        Radio(uint16_t id = DEVICE_ID_RADIO);
+        Radio(uint16_t id = DEVICE_ID_RADIO)
+        {
+            this->id = id;
+        }
 
         /**
         * Initialises the radio for use as a multipoint sender/receiver
@@ -37,7 +39,7 @@ namespace codal
         *
         * @return MICROBIT_OK on success, or MICROBIT_NOT_SUPPORTED if the BLE stack is running.
         */
-        virtual ManagedBuffer& recv() = 0;
+        virtual ManagedBuffer recvBuffer() = 0;
 
         /**
         * Transmits the given buffer onto the broadcast radio.
@@ -47,7 +49,7 @@ namespace codal
         *
         * @return MICROBIT_OK on success, or MICROBIT_NOT_SUPPORTED if the BLE stack is running.
         */
-        virtual int send(ManagedBuffer&) = 0;
+        virtual int sendBuffer(ManagedBuffer) = 0;
     };
 }
 

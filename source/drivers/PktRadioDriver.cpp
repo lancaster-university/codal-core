@@ -107,7 +107,11 @@ PktRadioPacket* PktRadioDriver::peakQueue(PktRadioPacket** queue, uint16_t id)
 
 void PktRadioDriver::forwardPacket(Event)
 {
-    ManagedBuffer packet = networkInstance->recv();
+    ManagedBuffer packet = networkInstance->recvBuffer();
+
+    if (packet.length() == 0)
+        return;
+
     PktRadioPacket* pkt = (PktRadioPacket *)packet.getBytes();
 
     if (pkt->magic != PKT_RADIO_MAGIC)
@@ -145,7 +149,7 @@ void PktRadioDriver::handlePacket(PktSerialPkt* p)
         if (packet->type == 1)
         {
             ManagedBuffer b(p->data, p->size);
-            networkInstance->send(b);
+            networkInstance->sendBuffer(b);
         }
     }
     // otherwise we are remote and are receiving a packet
