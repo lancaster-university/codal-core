@@ -1,5 +1,7 @@
 #include "SimplePhysicsBody.h"
 #include "CodalDmesg.h"
+#include "cute_c2.h"
+#include "CodalCompat.h"
 
 using namespace codal;
 
@@ -7,8 +9,24 @@ int SimplePhysicsBody::gravity = 1;
 
 SimplePhysicsBody::SimplePhysicsBody(int16_t x, int16_t y, int16_t z, int width, int height) : PhysicsBody(x, y, z, width, height)
 {
-    velocity = 0;
-    mass = 1;
+    dx = 0.0;
+    dy = 0.0;
+
+    restitution = 0.1;
+    // inverse_mass = 1.0;
+    inverse_mass = 1.0 / 100.0;
+    setPosition(x,y);
+}
+
+void SimplePhysicsBody::setPosition(int x, int y)
+{
+    oldPosition = position;
+
+    position.x = (int)(x);
+    position.y = (int)(y);
+
+    rect.min = c2V(position.x, position.y);
+    rect.max = c2V(position.x + width, position.y + height);
 }
 
 void SimplePhysicsBody::apply()
@@ -16,8 +34,15 @@ void SimplePhysicsBody::apply()
     if (flags & (1 << PhysicsStatic))
         return;
 
-    oldPosition = position;
-    position.y += gravity;
+    dy += 1.0f;
+
+    if (dy > 5.0)
+        dy = 5.0;
+
+    if (dx > 5.0)
+        dx = 5.0;
+
+    setPosition(position.x + (int)(dx), position.y + (int)(dy));
 }
 
 bool SimplePhysicsBody::intersectsWith(PhysicsBody& pb)
@@ -25,41 +50,60 @@ bool SimplePhysicsBody::intersectsWith(PhysicsBody& pb)
     if (this->flags & (1 << PhysicsNoCollide) || pb.flags & (1 << PhysicsNoCollide))
         return false;
 
-    // DMESG("INTER");
-    // if (pb.position.y > 160)
-    //     while(1);
+    SimplePhysicsBody* spb = (SimplePhysicsBody*)&pb;
 
-    int ax1 = this->position.x;
-    int ay1 = this->position.y;
-
-    int ax2 = this->position.x + width;
-    int ay2 = this->position.y + height;
-
-    int bx1 = pb.position.x;
-    int by1 = pb.position.y;
-
-    int bx2 = pb.position.x + pb.width;
-    int by2 = pb.position.y + pb.height;
-    // DMESG("a: (%d,%d) (%d,%d)",ax1, ay1, ax2, ay2);
-    // DMESG("b: (%d,%d) (%d,%d)",bx1, by1, bx2, by2);
-    // while(1);
-    // DMESG("chk : %d %d %d %d",ax1 < bx2,  ax2 > bx1, ay1 < by2, ay2 > by1);
-
-    return (ax1 < bx2 && ax2 > bx1 && ay1 < by2 && ay2 > by1);
+    return c2AABBtoAABB(this->rect, spb->rect);
 }
 
 void SimplePhysicsBody::collideWith(PhysicsBody& pb)
 {
-    // if we don't move, we don't collide.
-    if (this->flags & (1 << PhysicsStatic))
-    {
-        DMESG("STATIC %d %d %d", width, height, flags);
-        return;
-    }
-    DMESG("SETTING OLD");
-    velocityRelative = this->velocity - pb.velocity;
+    SimplePhysicsBody* spb = (SimplePhysicsBody*)&pb;
 
-    position = oldPosition;
+    c2Manifold manifold;
+    c2AABBtoAABBManifold(this->rect, spb->rect, &manifold);
+
+    if (manifold.count > 0)
+    {
+        // this->setPosition(position.x - manifold.n.x * manifold.depths[0], position.y - ((manifold.n.y * manifold.depths[0]) + 1));
+        // spb->setPosition(spb->position.x - manifold.n.x * manifold.depths[0], spb->position.y - ((manifold.n.y * manifold.depths[0]) + 1));
+
+        // this->setPosition(oldPosition.x, oldPosition.y);
+        // spb->setPosition(spb->oldPosition.x, spb->oldPosition.y);
+
+        float rvx = spb->dx - this->dx;
+        float rvy = spb->dy - this->dy;
+
+        rvx *= (float)(manifold.n.x * manifold.depths[0]);
+        rvy *= (float)(manifold.n.y * manifold.depths[0]);
+
+        float contactVel = rvx + rvy;
+
+        if (contactVel > 0.0)
+            return;
+
+        float j = /*-(1.0 +*/ (this->restitution * spb->restitution)/*)*/ * contactVel;
+
+        j /= this->inverse_mass + spb->inverse_mass;
+
+        float nx = j * (float)(manifold.n.x * manifold.depths[0]);
+        float ny = j * (float)(manifold.n.y * manifold.depths[0]);
+
+        if (!(this->flags & (1 << PhysicsStatic)))
+        {
+            DMESG("NOT STATIC %d %d %d", width, height, flags);
+            this->dx -= this->inverse_mass * nx;
+            this->dy += this->inverse_mass * ny;
+        }
+
+        if (!(spb->flags & (1 << PhysicsStatic)))
+        {
+            spb->dx += spb->inverse_mass * nx;
+            spb->dy -= spb->inverse_mass * ny;
+        }
+        // this->rect.max.x -= manifold.n.x * manifold.depths[0];
+        // this->rect.min.y -= manifold.n.y * manifold.depths[0];
+    }
+    // position = oldPosition;
 }
 
 void SimplePhysicsBody::setGravity(int gravity)

@@ -75,13 +75,17 @@ void GameEngine::update(Event)
         if (sprites[i] == NULL)
             continue;
 
-        for (int j = 0; j < GAME_ENGINE_MAX_SPRITES; j++)
+        for (int j = i + 1; j < GAME_ENGINE_MAX_SPRITES; j++)
         {
             if (sprites[j] == NULL || sprites[j] == sprites[i])
                 continue;
 
             if (sprites[i]->body.intersectsWith(sprites[j]->body))
+            {
+                DMESG("COLLISION: %p %p", &sprites[j]->body, &sprites[i]->body);
                 sprites[i]->body.collideWith(sprites[j]->body);
+                // sprites[j]->body.collideWith(sprites[i]->body);
+            }
         }
     }
 

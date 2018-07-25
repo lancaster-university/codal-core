@@ -2,6 +2,7 @@
 #define CODAL_SIMPLE_PHYSICS_MODEL_H
 
 #include "PhysicsBody.h"
+#include "cute_c2.h"
 
 namespace codal
 {
@@ -10,10 +11,16 @@ namespace codal
         static int gravity;
 
         public:
-        float mass;
-        float velocity;
+        float dx;
+        float dy;
+        float inverse_mass;
+        float restitution;
+
+        c2AABB rect;
 
         SimplePhysicsBody(int16_t x, int16_t y, int16_t z, int width, int height);
+
+        void setPosition(int x, int y);
 
         virtual void apply();
 
