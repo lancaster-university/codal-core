@@ -165,6 +165,10 @@ ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc, Pin& reset, Pin& bl, int width, int h
     DMESG("SPI at %dMHz", freq);
     spi.setFrequency(freq * 1000000);
     spi.setMode(0);
+}
+
+void ST7735::enable()
+{
     initDisplay();
     setRotation(DISPLAY_ROTATION_0);
 

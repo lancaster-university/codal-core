@@ -89,6 +89,8 @@ class ST7735 : public Display
 public:
     ST7735(SPI &spi, Pin &cs, Pin &dc, Pin& reset, Pin& bl, int displayWidth, int displayHeight);
 
+    virtual void enable();
+
     void draw(Image i, int x, int y);
 
     virtual int setRotation(DisplayRotation r);
