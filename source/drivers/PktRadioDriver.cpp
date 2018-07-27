@@ -120,9 +120,13 @@ void PktRadioDriver::forwardPacket(Event)
     send(pkt, min(packet.length(), PKT_SERIAL_DATA_SIZE));
 }
 
+PktRadioPacket* PktRadioDriver::recv(uint8_t id)
+{
+    return removeFromQueue(&rxQueue, id);
+}
+
 void PktRadioDriver::send(PktRadioPacket* packet, bool retain)
 {
-
     PktRadioPacket* tx = packet;
 
     if (retain)

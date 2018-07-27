@@ -42,7 +42,7 @@ namespace codal
         PktRadioDriver(PktSerialProtocol& proto, Radio& n, uint32_t serial);
         PktRadioDriver(PktSerialProtocol& proto, uint32_t serial = 0);
 
-        PktRadioPacket* recv();
+        PktRadioPacket* recv(uint8_t id);
         void send(PktRadioPacket*, bool retain = true);
 
         void send(uint8_t* buf, int len, bool retain = true);
