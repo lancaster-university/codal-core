@@ -1,5 +1,6 @@
 #include "PktSerialProtocol.h"
 #include "CodalDmesg.h"
+#include "Timer.h"
 
 using namespace codal;
 
@@ -86,7 +87,7 @@ void PktLogicDriver::periodicCallback()
             }
             else if (proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISED)
             {
-                if(proto.drivers[i]->device.rolling_counter == PKT_LOGIC_DRIVER_CTRLPACKET_TIME)
+                if(proto.drivers[i]->device.rolling_counter > 0 && (proto.drivers[i]->device.rolling_counter % PKT_LOGIC_DRIVER_CTRLPACKET_TIME) == 0)
                     proto.drivers[i]->queueControlPacket();
             }
         }
