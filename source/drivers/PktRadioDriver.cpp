@@ -125,22 +125,27 @@ PktRadioPacket* PktRadioDriver::recv(uint8_t id)
     return removeFromQueue(&rxQueue, id);
 }
 
-void PktRadioDriver::send(PktRadioPacket* packet, bool retain)
+int PktRadioDriver::send(PktRadioPacket* packet, bool retain)
 {
+    if (packet == NULL)
+        return DEVICE_INVALID_PARAMETER;
+
     PktRadioPacket* tx = packet;
 
     if (retain)
     {
         tx = new PktRadioPacket;
         memset(tx, 0, sizeof(PktRadioPacket));
-        memcpy(tx, packet, min(len, PKT_SERIAL_DATA_SIZE));
+        memcpy(tx, packet, min(tx->size, PKT_SERIAL_DATA_SIZE));
         addToQueue(&txQueue, tx);
     }
 
     proto.bus.send((uint8_t *)tx, min(tx->size, PKT_SERIAL_DATA_SIZE), device.address);
+
+    return DEVICE_OK;
 }
 
-void PktRadioDriver::send(uint8_t* buf, int len, bool retain)
+int PktRadioDriver::send(uint8_t* buf, int len, bool retain)
 {
     if (len > PKT_SERIAL_DATA_SIZE - PKT_RADIO_HEADER_SIZE || buf == NULL)
         return DEVICE_INVALID_PARAMETER;
@@ -153,7 +158,7 @@ void PktRadioDriver::send(uint8_t* buf, int len, bool retain)
     memcpy(p.data, buf, len);
     p.size = len + 4;
 
-    send(&p, retain);
+    return send(&p, retain);
 }
 
 void PktRadioDriver::handleControlPacket(ControlPacket* cp) {}

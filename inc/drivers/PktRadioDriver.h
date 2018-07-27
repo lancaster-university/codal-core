@@ -5,7 +5,7 @@
 #include "Radio.h"
 
 #define PKT_RADIO_HISTORY_SIZE          4
-#define PKT_RADIO_MAGIC                 0xE145
+#define PKT_RADIO_MAGIC                 (uint16_t)(0xE145)
 #define PKT_RADIO_MAXIMUM_BUFFERS       10
 
 #define PKT_RADIO_HEADER_SIZE           4
@@ -43,9 +43,9 @@ namespace codal
         PktRadioDriver(PktSerialProtocol& proto, uint32_t serial = 0);
 
         PktRadioPacket* recv(uint8_t id);
-        void send(PktRadioPacket*, bool retain = true);
 
-        void send(uint8_t* buf, int len, bool retain = true);
+        int send(PktRadioPacket* packet, bool retain = true);
+        int send(uint8_t* buf, int len, bool retain = true);
 
         virtual void handleControlPacket(ControlPacket* cp);
 
