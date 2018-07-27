@@ -17,13 +17,13 @@ using namespace codal;
 
 void PktSerial::dmaComplete(Event evt)
 {
-    DBG_DMESG("DMA");
+    PKT_DMESG("DMA");
     if (evt.value == SWS_EVT_ERROR)
     {
-        DBG_DMESG("ERR");
+        PKT_DMESG("ERR");
         if (status & PKT_SERIAL_TRANSMITTING)
         {
-            DBG_DMESG("TX ERROR");
+            PKT_DMESG("TX ERROR");
             status &= ~(PKT_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
@@ -31,7 +31,7 @@ void PktSerial::dmaComplete(Event evt)
 
         if (status & PKT_SERIAL_RECEIVING)
         {
-            DBG_DMESG("RX ERROR");
+            PKT_DMESG("RX ERROR");
             status &= ~(PKT_SERIAL_RECEIVING);
             timeoutCounter = 0;
             sws.abortDMA();
@@ -70,7 +70,7 @@ void PktSerial::dmaComplete(Event evt)
 void PktSerial::onFallingEdge(Event)
 {
 
-    DBG_DMESG("FALL: %d %d", (status & PKT_SERIAL_RECEIVING) ? 1 : 0, (status & PKT_SERIAL_TRANSMITTING) ? 1 : 0);
+    PKT_DMESG("FALL: %d %d", (status & PKT_SERIAL_RECEIVING) ? 1 : 0, (status & PKT_SERIAL_TRANSMITTING) ? 1 : 0);
     // guard against repeat events.
     if (status & (PKT_SERIAL_RECEIVING | PKT_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
@@ -81,7 +81,7 @@ void PktSerial::onFallingEdge(Event)
     timeoutCounter = 0;
     status |= (PKT_SERIAL_RECEIVING);
 
-    DBG_DMESG("RX START");
+    PKT_DMESG("RX START");
     sws.receiveDMA((uint8_t*)rxBuf, PKT_SERIAL_PACKET_SIZE);
 }
 
@@ -97,12 +97,12 @@ void PktSerial::periodicCallback()
 
     if (status & PKT_SERIAL_RECEIVING)
     {
-        DBG_DMESG("H");
+        PKT_DMESG("H");
         timeoutCounter++;
 
         if (timeoutCounter > timeoutValue)
         {
-            DBG_DMESG("TIMEOUT");
+            PKT_DMESG("TIMEOUT");
             sws.abortDMA();
             Event(this->id, PKT_SERIAL_EVT_BUS_ERROR);
             timeoutCounter = 0;
@@ -280,7 +280,7 @@ void PktSerial::start()
     // if the line is low, we may be in the middle of a transfer, manually trigger rx mode.
     if (sp.getDigitalValue(PullMode::Up) == 0)
     {
-        DBG_DMESG("TRIGGER");
+        PKT_DMESG("TRIGGER");
         onFallingEdge(evt);
     }
 
@@ -309,7 +309,7 @@ void PktSerial::sendPacket(Event)
     // if we are receiving, randomly back off
     if (status & PKT_SERIAL_RECEIVING)
     {
-        DBG_DMESG("RXing");
+        PKT_DMESG("RXing");
         system_timer_event_after_us(4000, this->id, PKT_SERIAL_EVT_DRAIN);  // should be random
         return;
     }
@@ -319,7 +319,7 @@ void PktSerial::sendPacket(Event)
         // if the bus is lo, we shouldn't transmit
         if (sp.getDigitalValue(PullMode::Up) == 0)
         {
-            DBG_DMESG("BUS LO");
+            PKT_DMESG("BUS LO");
             Event evt(0, 0, CREATE_ONLY);
             onFallingEdge(evt);
             system_timer_event_after_us(4000, this->id, PKT_SERIAL_EVT_DRAIN);  // should be random
@@ -333,7 +333,7 @@ void PktSerial::sendPacket(Event)
         // if we have stuff in our queue, and we have not triggered a DMA transfer...
         if (txQueue)
         {
-            DBG_DMESG("TX B");
+            PKT_DMESG("TX B");
             status |= PKT_SERIAL_TRANSMITTING;
             txBuf = popQueue(&txQueue);
 
@@ -350,7 +350,7 @@ void PktSerial::sendPacket(Event)
     // we've returned after a DMA transfer has been flagged (above)... start
     if (status & PKT_SERIAL_TRANSMITTING)
     {
-        DBG_DMESG("TX S");
+        PKT_DMESG("TX S");
         sws.sendDMA((uint8_t *)txBuf, PKT_SERIAL_PACKET_SIZE);
         return;
     }
