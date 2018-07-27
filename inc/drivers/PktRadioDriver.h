@@ -8,13 +8,15 @@
 #define PKT_RADIO_MAGIC                 0xE145
 #define PKT_RADIO_MAXIMUM_BUFFERS       10
 
+#define PKT_RADIO_HEADER_SIZE           4
+
 namespace codal
 {
     struct PktRadioPacket
     {
         uint16_t app_id:8,id:8;
         uint16_t type:1, magic:15;
-        uint8_t data[PKT_SERIAL_DATA_SIZE - 4];
+        uint8_t data[PKT_SERIAL_DATA_SIZE - PKT_RADIO_HEADER_SIZE];
         uint8_t size;
         PktRadioPacket* next;
     };
@@ -41,7 +43,9 @@ namespace codal
         PktRadioDriver(PktSerialProtocol& proto, uint32_t serial = 0);
 
         PktRadioPacket* recv();
-        void send(PktRadioPacket*, int len, bool retain = true);
+        void send(PktRadioPacket*, bool retain = true);
+
+        void send(uint8_t* buf, int len, bool retain = true);
 
         virtual void handleControlPacket(ControlPacket* cp);
 

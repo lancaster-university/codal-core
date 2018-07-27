@@ -120,7 +120,7 @@ void PktRadioDriver::forwardPacket(Event)
     send(pkt, min(packet.length(), PKT_SERIAL_DATA_SIZE));
 }
 
-void PktRadioDriver::send(PktRadioPacket* packet, int len, bool retain)
+void PktRadioDriver::send(PktRadioPacket* packet, bool retain)
 {
 
     PktRadioPacket* tx = packet;
@@ -133,7 +133,23 @@ void PktRadioDriver::send(PktRadioPacket* packet, int len, bool retain)
         addToQueue(&txQueue, tx);
     }
 
-    proto.bus.send((uint8_t *)tx, min(len, PKT_SERIAL_DATA_SIZE), device.address);
+    proto.bus.send((uint8_t *)tx, min(tx->size, PKT_SERIAL_DATA_SIZE), device.address);
+}
+
+void PktRadioDriver::send(uint8_t* buf, int len, bool retain)
+{
+    if (len > PKT_SERIAL_DATA_SIZE - PKT_RADIO_HEADER_SIZE || buf == NULL)
+        return DEVICE_INVALID_PARAMETER;
+
+    PktRadioPacket p;
+    p.magic = PKT_RADIO_MAGIC;
+    p.app_id = this->app_id;
+    p.id = target_random(255);
+    p.type = 1;
+    memcpy(p.data, buf, len);
+    p.size = len + 4;
+
+    send(&p, retain);
 }
 
 void PktRadioDriver::handleControlPacket(ControlPacket* cp) {}
@@ -148,8 +164,11 @@ void PktRadioDriver::handlePacket(PktSerialPkt* p)
         // for now lets just send the whole packet
         if (packet->type == 1)
         {
-            ManagedBuffer b(p->data, p->size);
-            networkInstance->sendBuffer(b);
+            // ManagedBuffer b(p->data, p->size);
+            // networkInstance->sendBuffer(b);
+
+            // return the same packet for now...
+            send(packet, false);
         }
     }
     // otherwise we are remote and are receiving a packet
