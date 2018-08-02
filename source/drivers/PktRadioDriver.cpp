@@ -111,7 +111,8 @@ void PktRadioDriver::forwardPacket(Event)
     DMESG("PKT RAD");
     ManagedBuffer packet = networkInstance->recvBuffer();
 
-    if (packet.length() == 0)
+    // drop
+    if (packet.length() == 0 || !isConnected())
         return;
 
     DMESG("length: %d", packet.length());
@@ -141,10 +142,8 @@ int PktRadioDriver::send(PktRadioPacket* packet, bool retain)
     if (packet == NULL)
         return DEVICE_INVALID_PARAMETER;
 
-    if (!(device.flags & PKT_DEVICE_FLAGS_INITIALISED) && device.flags & PKT_DEVICE_FLAGS_REMOTE)
-    {
+    if (!isConnected())
         return DEVICE_NO_RESOURCES;
-    }
 
     PktRadioPacket* tx = packet;
 
@@ -181,7 +180,7 @@ void PktRadioDriver::handleControlPacket(ControlPacket* cp) {}
 void PktRadioDriver::handlePacket(PktSerialPkt* p)
 {
     PktRadioPacket* rx = (PktRadioPacket*)malloc(sizeof(PktRadioPacket));
-    memcpy(rx, p->data, p->size + PKT_RADIO_HEADER_SIZE);
+    memcpy(rx, p->data, p->size);
     rx->size = p->size;
 
     // if we are "local" and received packet over the serial line..
