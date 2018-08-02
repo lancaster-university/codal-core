@@ -69,8 +69,7 @@ void PktSerial::dmaComplete(Event evt)
 
 void PktSerial::onFallingEdge(Event)
 {
-
-    PKT_DMESG("FALL: %d %d", (status & PKT_SERIAL_RECEIVING) ? 1 : 0, (status & PKT_SERIAL_TRANSMITTING) ? 1 : 0);
+    // PKT_DMESG("FALL: %d %d", (status & PKT_SERIAL_RECEIVING) ? 1 : 0, (status & PKT_SERIAL_TRANSMITTING) ? 1 : 0);
     // guard against repeat events.
     if (status & (PKT_SERIAL_RECEIVING | PKT_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
@@ -81,7 +80,7 @@ void PktSerial::onFallingEdge(Event)
     timeoutCounter = 0;
     status |= (PKT_SERIAL_RECEIVING);
 
-    PKT_DMESG("RX START");
+    // PKT_DMESG("RX START");
     sws.receiveDMA((uint8_t*)rxBuf, PKT_SERIAL_PACKET_SIZE);
 }
 
@@ -92,7 +91,7 @@ void PktSerial::periodicCallback()
     {
         uint32_t timePerSymbol = 1000000/sws.getBaud();
         timePerSymbol = timePerSymbol * 100 * PKT_SERIAL_PACKET_SIZE;
-        timeoutValue = (timePerSymbol / SCHEDULER_TICK_PERIOD_US);
+        timeoutValue = (timePerSymbol / SCHEDULER_TICK_PERIOD_US) + 2;
     }
 
     if (status & PKT_SERIAL_RECEIVING)
@@ -338,7 +337,7 @@ void PktSerial::sendPacket(Event)
             txBuf = popQueue(&txQueue);
 
             sp.setDigitalValue(0);
-            target_wait_us(10);
+            target_wait_us(20);
             sp.setDigitalValue(1);
 
             // return after 100 us
