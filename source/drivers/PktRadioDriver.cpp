@@ -131,20 +131,22 @@ int PktRadioDriver::send(PktRadioPacket* packet, bool retain)
     if (packet == NULL)
         return DEVICE_INVALID_PARAMETER;
 
+    if (!(device.flags & PKT_DEVICE_FLAGS_INITIALISED) && device.flags & PKT_DEVICE_FLAGS_REMOTE)
+    {
+        return DEVICE_NO_RESOURCES;
+    }
+
     PktRadioPacket* tx = packet;
 
     if (retain)
     {
         tx = new PktRadioPacket;
         memset(tx, 0, sizeof(PktRadioPacket));
-        memcpy(tx, packet, min(tx->size, PKT_SERIAL_DATA_SIZE));
+        memcpy(tx, packet, sizeof(PktRadioPacket));
         addToQueue(&txQueue, tx);
     }
 
-    DMESG("SEND PACKET sz: %d, addr: %d",tx->size, device.address);
-    proto.bus.send((uint8_t *)tx, min(tx->size, PKT_SERIAL_DATA_SIZE), device.address);
-
-    return DEVICE_OK;
+    return proto.bus.send((uint8_t *)tx, min(tx->size, PKT_SERIAL_DATA_SIZE), device.address);
 }
 
 int PktRadioDriver::send(uint8_t* buf, int len, bool retain)
@@ -152,13 +154,15 @@ int PktRadioDriver::send(uint8_t* buf, int len, bool retain)
     if (len > PKT_SERIAL_DATA_SIZE - PKT_RADIO_HEADER_SIZE || buf == NULL)
         return DEVICE_INVALID_PARAMETER;
 
+    DMESG("MSG WITH SIZe: %d",len);
+
     PktRadioPacket p;
     p.magic = PKT_RADIO_MAGIC;
     p.app_id = this->app_id;
     p.id = target_random(255);
     p.type = 1;
     memcpy(p.data, buf, len);
-    p.size = len + 4;
+    p.size = len + PKT_RADIO_HEADER_SIZE;
 
     return send(&p, retain);
 }
