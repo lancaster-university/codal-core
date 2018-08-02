@@ -5,7 +5,7 @@
 #include "Radio.h"
 
 #define PKT_RADIO_HISTORY_SIZE          4
-#define PKT_RADIO_MAGIC                 (uint16_t)(0xE145)
+#define PKT_RADIO_MAGIC                 (uint16_t)(0x4145)
 #define PKT_RADIO_MAXIMUM_BUFFERS       10
 
 #define PKT_RADIO_HEADER_SIZE           4

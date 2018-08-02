@@ -183,6 +183,7 @@ void PktRadioDriver::handlePacket(PktSerialPkt* p)
         if (rx->type == 1)
         {
             DMESG("TYPE SET %d %d", rx->size, rx->magic);
+            rx->type = 0;
             // ManagedBuffer b(p->data, p->size);
             // networkInstance->sendBuffer(b);
 
