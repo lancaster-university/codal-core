@@ -14,7 +14,7 @@ PktRadioDriver::PktRadioDriver(PktSerialProtocol& proto, Radio& n, uint32_t seri
     networkInstance = &n;
 
     if (EventModel::defaultEventBus)
-        EventModel::defaultEventBus->listen(DEVICE_ID_RADIO, RADIO_EVT_DATA_READY, this, &PktRadioDriver::forwardPacket);
+        EventModel::defaultEventBus->listen(n.id, RADIO_EVT_DATA_READY, this, &PktRadioDriver::forwardPacket);
 }
 
 PktRadioDriver::PktRadioDriver(PktSerialProtocol& proto, uint32_t serial):
@@ -38,7 +38,7 @@ PktRadioPacket* PktRadioDriver::removeFromQueue(PktRadioPacket** queue, uint16_t
     PktRadioPacket *p = (*queue)->next;
     PktRadioPacket *previous = *queue;
 
-    if (id == (*queue)->id)
+    if (id == 0 || id == (*queue)->id)
     {
         *queue = p;
         ret = previous;
@@ -47,7 +47,7 @@ PktRadioPacket* PktRadioDriver::removeFromQueue(PktRadioPacket** queue, uint16_t
     {
         while (p != NULL)
         {
-            if (id == p->id)
+            if (id == 0 || id == p->id)
             {
                 ret = p;
                 previous->next = p->next;
@@ -108,15 +108,25 @@ PktRadioPacket* PktRadioDriver::peakQueue(PktRadioPacket** queue, uint16_t id)
 
 void PktRadioDriver::forwardPacket(Event)
 {
+    DMESG("PKT RAD");
     ManagedBuffer packet = networkInstance->recvBuffer();
 
     if (packet.length() == 0)
         return;
 
+    DMESG("length: %d", packet.length());
+
     PktRadioPacket* pkt = (PktRadioPacket *)packet.getBytes();
 
+    uint8_t *pktptr = (uint8_t*)pkt;
+    for (int i = 0; i < packet.length(); i++)
+        DMESG("[%d]",pktptr[i]);
+
     if (pkt->magic != PKT_RADIO_MAGIC)
+    {
+        DMESG("BAD MAGIC %d %d", pkt->magic, PKT_RADIO_MAGIC);
         return;
+    }
 
     send(pkt, min(packet.length(), PKT_SERIAL_DATA_SIZE));
 }
@@ -160,7 +170,6 @@ int PktRadioDriver::send(uint8_t* buf, int len, bool retain)
     p.magic = PKT_RADIO_MAGIC;
     p.app_id = this->app_id;
     p.id = target_random(255);
-    p.type = 1;
     memcpy(p.data, buf, len);
     p.size = len + PKT_RADIO_HEADER_SIZE;
 
@@ -175,31 +184,25 @@ void PktRadioDriver::handlePacket(PktSerialPkt* p)
     memcpy(rx, p->data, p->size + PKT_RADIO_HEADER_SIZE);
     rx->size = p->size;
 
-    // if we are "local"
+    // if we are "local" and received packet over the serial line..
     if (networkInstance)
     {
         DMESG("HOST");
         // for now lets just send the whole packet
-        if (rx->type == 1)
-        {
-            DMESG("TYPE SET %d %d", rx->size, rx->magic);
-            rx->type = 0;
-            // ManagedBuffer b(p->data, p->size);
-            // networkInstance->sendBuffer(b);
+        DMESG("FORWARD: %d %d", rx->size, rx->magic);
+        uint8_t *pktptr = (uint8_t*)rx;
+        for (int i = 0; i < rx->size; i++)
+            DMESG("[%d]",pktptr[i]);
 
-            // return the same packet for now...
-            send(rx, false);
-        }
-        else
-        {
-            DMESG("TYPE NOT SET");
-        }
+        ManagedBuffer b((uint8_t*)rx, rx->size);
+        networkInstance->sendBuffer(b);
     }
     // otherwise we are remote and are receiving a packet
     else
     {
         // if someone else has transmitted record the id so that we don't collide when sending a packet
-        if (rx->type == 1)
+        // this probably isn't the right logic...
+        if (rx->app_id != this->app_id)
         {
             history[idx] = rx->id;
             idx = (idx + 1) % PKT_RADIO_HISTORY_SIZE;
@@ -213,10 +216,7 @@ void PktRadioDriver::handlePacket(PktSerialPkt* p)
             delete pkt;
         }
 
-        if (rx->app_id == this->app_id)
-        {
-            addToQueue(&rxQueue, rx);
-            Event(DEVICE_ID_RADIO, rx->id);
-        }
+        addToQueue(&rxQueue, rx);
+        Event(DEVICE_ID_RADIO, rx->id);
     }
 }

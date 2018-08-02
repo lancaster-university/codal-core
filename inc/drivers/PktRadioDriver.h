@@ -15,7 +15,7 @@ namespace codal
     struct PktRadioPacket
     {
         uint16_t app_id:8,id:8;
-        uint16_t type:1, magic:15;
+        uint16_t magic; // required to differentiate normal, over the air packets. Ideally I should just add another protocol type to the radio interface
         uint8_t data[PKT_SERIAL_DATA_SIZE - PKT_RADIO_HEADER_SIZE];
         uint8_t size;
         PktRadioPacket* next;
