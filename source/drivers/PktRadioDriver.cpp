@@ -1,4 +1,5 @@
 #include "PktRadioDriver.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -140,6 +141,7 @@ int PktRadioDriver::send(PktRadioPacket* packet, bool retain)
         addToQueue(&txQueue, tx);
     }
 
+    DMESG("SEND PACKET sz: %d, addr: %d",tx->size, device.address);
     proto.bus.send((uint8_t *)tx, min(tx->size, PKT_SERIAL_DATA_SIZE), device.address);
 
     return DEVICE_OK;
@@ -165,45 +167,50 @@ void PktRadioDriver::handleControlPacket(ControlPacket* cp) {}
 
 void PktRadioDriver::handlePacket(PktSerialPkt* p)
 {
-    PktRadioPacket* packet = (PktRadioPacket *)p->data;
+    PktRadioPacket* rx = (PktRadioPacket*)malloc(sizeof(PktRadioPacket));
+    memcpy(rx, p->data, p->size + PKT_RADIO_HEADER_SIZE);
+    rx->size = p->size;
 
     // if we are "local"
     if (networkInstance)
     {
+        DMESG("HOST");
         // for now lets just send the whole packet
-        if (packet->type == 1)
+        if (rx->type == 1)
         {
+            DMESG("TYPE SET %d %d", rx->size, rx->magic);
             // ManagedBuffer b(p->data, p->size);
             // networkInstance->sendBuffer(b);
 
             // return the same packet for now...
-            send(packet, false);
+            send(rx, false);
+        }
+        else
+        {
+            DMESG("TYPE NOT SET");
         }
     }
     // otherwise we are remote and are receiving a packet
     else
     {
         // if someone else has transmitted record the id so that we don't collide when sending a packet
-        if (packet->type == 1)
+        if (rx->type == 1)
         {
-            history[idx] = packet->id;
+            history[idx] = rx->id;
             idx = (idx + 1) % PKT_RADIO_HISTORY_SIZE;
             return;
         }
 
         // check if we have a matching id in the send queue
-        if (peakQueue(&txQueue, packet->id))
+        if (peakQueue(&txQueue, rx->id))
         {
-            PktRadioPacket* pkt = removeFromQueue(&txQueue, packet->id);
+            PktRadioPacket* pkt = removeFromQueue(&txQueue, rx->id);
             delete pkt;
         }
 
-        if (packet->app_id == this->app_id)
+        if (rx->app_id == this->app_id)
         {
-            PktRadioPacket* rx = new PktRadioPacket;
-            memcpy(rx, packet, min(p->size, PKT_SERIAL_DATA_SIZE));
             addToQueue(&rxQueue, rx);
-
             Event(DEVICE_ID_RADIO, rx->id);
         }
     }
