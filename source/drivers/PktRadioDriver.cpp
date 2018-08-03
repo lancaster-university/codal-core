@@ -115,9 +115,11 @@ void PktRadioDriver::forwardPacket(Event)
     if (packet.length() == 0 || !isConnected())
         return;
 
-    DMESG("length: %d", packet.length());
+    PktRadioPacket* pkt = (PktRadioPacket*)malloc(sizeof(PktRadioPacket));
+    memcpy(pkt, packet.getBytes(), packet.length());
+    pkt->size = packet.length();
 
-    PktRadioPacket* pkt = (PktRadioPacket *)packet.getBytes();
+    DMESG("length: %d", pkt->size);
 
     uint8_t *pktptr = (uint8_t*)pkt;
     for (int i = 0; i < packet.length(); i++)
@@ -129,7 +131,11 @@ void PktRadioDriver::forwardPacket(Event)
         return;
     }
 
-    send(pkt, min(packet.length(), PKT_SERIAL_DATA_SIZE));
+    int ret = send(pkt, false);
+
+    DMESG("RET %d ",ret);
+
+    delete pkt;
 }
 
 PktRadioPacket* PktRadioDriver::recv(uint8_t id)
@@ -143,7 +149,10 @@ int PktRadioDriver::send(PktRadioPacket* packet, bool retain)
         return DEVICE_INVALID_PARAMETER;
 
     if (!isConnected())
+    {
+        DMESG("NOT CONNECTED");
         return DEVICE_NO_RESOURCES;
+    }
 
     PktRadioPacket* tx = packet;
 

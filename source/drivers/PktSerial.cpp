@@ -15,6 +15,8 @@
 
 using namespace codal;
 
+extern void set_gpio(int);
+
 void PktSerial::dmaComplete(Event evt)
 {
     PKT_DMESG("DMA");
@@ -24,6 +26,7 @@ void PktSerial::dmaComplete(Event evt)
         if (status & PKT_SERIAL_TRANSMITTING)
         {
             PKT_DMESG("TX ERROR");
+            // set_gpio(0);
             status &= ~(PKT_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
@@ -31,6 +34,7 @@ void PktSerial::dmaComplete(Event evt)
 
         if (status & PKT_SERIAL_RECEIVING)
         {
+            // set_gpio(0);
             PKT_DMESG("RX ERROR");
             status &= ~(PKT_SERIAL_RECEIVING);
             timeoutCounter = 0;
@@ -44,6 +48,7 @@ void PktSerial::dmaComplete(Event evt)
         if (evt.value == SWS_EVT_DATA_RECEIVED)
         {
             status &= ~(PKT_SERIAL_RECEIVING);
+            // set_gpio(0);
             // move rxbuf to rxQueue and allocate new buffer.
             addToQueue(&rxQueue, rxBuf);
             rxBuf = (PktSerialPkt*)malloc(sizeof(PktSerialPkt));
@@ -52,6 +57,7 @@ void PktSerial::dmaComplete(Event evt)
 
         if (evt.value == SWS_EVT_DATA_SENT)
         {
+            // set_gpio(0);
             status &= ~(PKT_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
@@ -74,13 +80,16 @@ void PktSerial::onFallingEdge(Event)
     if (status & (PKT_SERIAL_RECEIVING | PKT_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
 
+    set_gpio(1);
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
+    set_gpio(0);
     sp.getDigitalValue(PullMode::None);
 
     timeoutCounter = 0;
     status |= (PKT_SERIAL_RECEIVING);
 
     // PKT_DMESG("RX START");
+
     sws.receiveDMA((uint8_t*)rxBuf, PKT_SERIAL_PACKET_SIZE);
 }
 
@@ -368,8 +377,15 @@ void PktSerial::sendPacket(Event)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if pkt is NULL, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int PktSerial::send(PktSerialPkt *pkt)
+int PktSerial::send(PktSerialPkt* tx)
 {
+    if (pkt == NULL)
+        return DEVICE_INVALID_PARAMETER;
+
+    PktSerialPkt* pkt = (PktSerialPkt *)malloc(sizeof(PktSerialPkt));
+    memset(pkt, target_random(256), sizeof(PktSerialPkt));
+    memcpy(pkt, tx, sizeof(PktSerialPkt));
+
     int ret = addToQueue(&txQueue, pkt);
 
     if (!(status & PKT_SERIAL_TX_DRAIN_ENABLE))
@@ -397,22 +413,23 @@ int PktSerial::send(uint8_t* buf, int len, uint8_t address)
     if (buf == NULL || len <= 0 || len >= PKT_SERIAL_DATA_SIZE)
         return DEVICE_INVALID_PARAMETER;
 
-    PktSerialPkt* pkt = (PktSerialPkt*)malloc(sizeof(PktSerialPkt));
+    PktSerialPkt pkt;
+    // for variation of crc's
     memset(pkt, target_random(256), sizeof(PktSerialPkt));
 
     // very simple crc
-    pkt->crc = 0;
-    pkt->address = address;
-    pkt->size = len;
+    pkt.crc = 0;
+    pkt.address = address;
+    pkt.size = len;
 
-    memcpy(pkt->data, buf, len);
+    memcpy(pkt.data, buf, len);
 
     // skip the crc.
-    uint8_t* crcPointer = (uint8_t*)&pkt->address;
+    uint8_t* crcPointer = (uint8_t*)&pkt.address;
 
     // simple crc
     for (int i = 0; i < PKT_SERIAL_PACKET_SIZE - 2; i++)
-        pkt->crc += crcPointer[i];
+        pkt.crc += crcPointer[i];
 
     return send(pkt);
 }
