@@ -398,7 +398,7 @@ int PktSerial::send(uint8_t* buf, int len, uint8_t address)
         return DEVICE_INVALID_PARAMETER;
 
     PktSerialPkt* pkt = (PktSerialPkt*)malloc(sizeof(PktSerialPkt));
-    memset(pkt, 0, sizeof(PktSerialPkt));
+    memset(pkt, target_random(256), sizeof(PktSerialPkt));
 
     // very simple crc
     pkt->crc = 0;

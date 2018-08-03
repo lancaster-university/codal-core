@@ -133,10 +133,11 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
                 return;
             }
             // someone has flagged a conflict with an initialising device
-            if (proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISING && cp->flags & CONTROL_PKT_FLAGS_CONFLICT)
+            if (cp->flags & CONTROL_PKT_FLAGS_CONFLICT)
             {
                 // new address will be assigned on next tick.
-                proto.drivers[i]->device.flags &= ~PKT_DEVICE_FLAGS_INITIALISING;
+                proto.drivers[i]->device.flags &= ~(PKT_DEVICE_FLAGS_INITIALISING | PKT_DEVICE_FLAGS_INITIALISED);
+                proto.drivers[i]->device.rolling_counter = 0;
                 return;
             }
 

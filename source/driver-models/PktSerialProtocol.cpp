@@ -58,10 +58,13 @@ void PktSerialProtocol::onPacketReceived(Event)
         }
     }
 
+    if (bridge != NULL)
+        bridge->handlePacket(pkt);
+
     free(pkt);
 }
 
-PktSerialProtocol::PktSerialProtocol(PktSerial& pkt, uint16_t id) : logic(*this), bus(pkt)
+PktSerialProtocol::PktSerialProtocol(PktSerial& pkt, uint16_t id) : logic(*this), bridge(NULL), bus(pkt)
 {
     this->id = id;
 
@@ -103,6 +106,12 @@ int PktSerialProtocol::remove(PktSerialDriver& driver)
         }
     }
 
+    return DEVICE_OK;
+}
+
+int PktSerialProtocol::setBridge(PktSerialDriver& bridge)
+{
+    this->bridge = &bridge;
     return DEVICE_OK;
 }
 

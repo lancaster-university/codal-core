@@ -70,6 +70,7 @@ DEALINGS IN THE SOFTWARE.
 #define PKT_DRIVER_CLASS_JOYSTICK       2
 #define PKT_DRIVER_CLASS_MESSAGE_BUS    3
 #define PKT_DRIVER_CLASS_RADIO          4
+#define PKT_DRIVER_CLASS_BRIDGE         5
 // END      PKT SERIAL PROTOCOL
 
 namespace codal
@@ -257,6 +258,7 @@ namespace codal
         static PktSerialDriver* drivers[PKT_PROTOCOL_DRIVER_SIZE];
 
         PktLogicDriver logic;
+        PktSerialDriver* bridge;
 
     public:
         PktSerial& bus;
@@ -269,6 +271,8 @@ namespace codal
          * @param id for the message bus, defaults to  DEVICE_ID_PKTSERIAL_PROTOCOL
          **/
         PktSerialProtocol(PktSerial& pkt, uint16_t id = DEVICE_ID_PKTSERIAL_PROTOCOL);
+
+        int setBridge(PktSerialDriver& bridge);
 
         /**
          * Adds a driver to the drivers array. The logic driver iterates over this array.
