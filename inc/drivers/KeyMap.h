@@ -66,16 +66,17 @@ namespace codal
         F11Key,        /* F11 key */
         F12Key,        /* F12 key */
 
-        PrintScreen,   /* Print Screen key */
+        PrintScreen = 0x46,   /* Print Screen key */
         ScrollLock,    /* Scroll lock */
-        CapsLock,      /* caps lock */
-        NumLock,       /* num lock */
-        Insert,         /* Insert key */
-        Home,           /* Home key */
+        Pause,      /* pause key */
+        Insert,       /* Insert key */
+        Home,         /* Home key */
         PageUp,        /* Page Up key */
+        DeleteForward, /* Delete Forward */
+        End,            /* End */
         PageDown,      /* Page Down key */
 
-        RightArrow,        /* Right arrow */
+        RightArrow = 0x4F,        /* Right arrow */
         LeftArrow,         /* Left arrow */
         DownArrow,         /* Down arrow */
         UpArrow,           /* Up arrow */
