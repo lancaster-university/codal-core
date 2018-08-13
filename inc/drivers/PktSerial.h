@@ -52,6 +52,12 @@ DEALINGS IN THE SOFTWARE.
 
 #define PKT_PKT_FLAGS_LOSSY             0x01
 
+#if CONFIG_ENABLED(PKT_DEBUG)
+#define PKT_DMESG      codal_dmesg
+#else
+#define PKT_DMESG(...) ((void)0)
+#endif
+
 namespace codal
 {
 
@@ -76,6 +82,7 @@ namespace codal
         Pin& sp;
 
         uint8_t timeoutCounter;
+        uint8_t timeoutValue;
 
         void onFallingEdge(Event);
         void configure(bool events);
@@ -156,6 +163,8 @@ namespace codal
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
           */
         virtual int send(uint8_t* buf, int len, uint8_t address);
+
+        bool isRunning();
     };
 } // namespace codal
 

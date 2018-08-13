@@ -59,6 +59,16 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_ID_PKTSERIAL_PROTOCOL 27
 #define DEVICE_ID_JACKROUTER 28
 
+#define DEVICE_ID_PKT_LOGIC_DRIVER 28
+#define DEVICE_ID_PKT_MESSAGE_BUS_DRIVER 29
+#define DEVICE_ID_PKT_RADIO_DRIVER 30
+#define DEVICE_ID_PKT_BRIDGE_DRIVER 31
+
+#define DEVICE_ID_BUTTON_UP 2000
+#define DEVICE_ID_BUTTON_DOWN 2001
+#define DEVICE_ID_BUTTON_LEFT 2002
+#define DEVICE_ID_BUTTON_RIGHT 2003
+
 #define DEVICE_ID_IO_P0               100                       // IDs 100-227 are reserved for I/O Pin IDs.
 
 #define DEVICE_ID_MESSAGE_BUS_LISTENER            1021          // Message bus indication that a handler for a given ID has been registered.

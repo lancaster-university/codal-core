@@ -46,8 +46,28 @@ namespace codal
         virtual int receive(uint8_t* buf, int len) = 0;
 
         virtual int setBaud(uint32_t baud) = 0;
+        virtual uint32_t getBaud() = 0;
 
-        virtual int setMode(SingleWireMode sw) = 0;
+        virtual int setMode(SingleWireMode sw)
+        {
+            if (sw == SingleWireRx)
+            {
+                configureTx(0);
+                configureRx(1);
+            }
+            else if (sw == SingleWireTx)
+            {
+                configureRx(0);
+                configureTx(1);
+            }
+            else
+            {
+                configureTx(0);
+                configureRx(0);
+            }
+
+            return DEVICE_OK;
+        }
 
         virtual int sendBreak() = 0;
     };
