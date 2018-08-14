@@ -32,6 +32,8 @@ DEALINGS IN THE SOFTWARE.
 
 namespace codal
 {
+    typedef uint16_t (*SynthesizerGetSample)(void *arg, int position);
+
     /**
       * Class definition for DataStream.
       * A Datastream holds a number of ManagedBuffer references, provides basic flow control through a push/pull mechanism
@@ -50,16 +52,20 @@ namespace codal
 
         ManagedBuffer buffer;          // Playout buffer.
         int     bytesWritten;          // Number of bytes written to the output buffer.
-        const uint16_t *tonePrint;     // The tone currently selected playout tone (always unsigned).
+        void*   tonePrintArg;
+        SynthesizerGetSample tonePrint;     // The tone currently selected playout tone (always unsigned).
         int     position;              // Position within the tonePrint
 
         public:
 
         DataStream output;
 
-        static const uint16_t SineTone[];
-        static const uint16_t SawtoothTone[];
-        static const uint16_t SquareWaveTone[];
+        static uint16_t SineTone(void *arg, int position);
+        static uint16_t SawtoothTone(void *arg, int position);
+        static uint16_t TriangleTone(void *arg, int position);
+        static uint16_t SquareWaveTone(void *arg, int position);
+        static uint16_t SquareWaveToneExt(void *arg, int position);
+        static uint16_t NoiseTone(void *arg, int position);
 
         /**
           * Default Constructor.
@@ -139,9 +145,11 @@ namespace codal
          *
          * Synthesizer::SineTone
          * Synthesizer::SawtoothTone
+         * Synthesizer::TriangleTone
          * Synthesizer::SquareWaveTone
+         * Synthesizer::SquareWaveToneExt (with argument which is duty cycle 0-1023)
          */
-        void setTone(const uint16_t *tonePrint);
+        void setTone(SynthesizerGetSample tonePrint, void *arg = NULL);
 
         private:
 
