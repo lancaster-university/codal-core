@@ -48,10 +48,10 @@ enum class JackState : uint8_t
 class JackRouter : public CodalComponent
 {
     bool floatUp;
-    bool lastSenseFloat;
     uint8_t numIdles;
     uint8_t numLows;
     uint8_t numSenseForced;
+    uint8_t lastSenseFloat;
     JackState state;
 
     Pin &mid;
