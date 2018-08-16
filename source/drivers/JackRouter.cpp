@@ -44,8 +44,15 @@ JackRouter::JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEn
     numLows = 0;
     numSenseForced = 0;
 
-    state = (JackState)-1;
+    forcedState = state = JackState::None;
     setState(JackState::AllDown);
+}
+
+void JackRouter::forceState(JackState s)
+{
+    forcedState = s;
+    if (s != JackState::None)
+        setState(s);
 }
 
 void JackRouter::setState(JackState s)
@@ -84,11 +91,11 @@ void JackRouter::checkFloat()
     }
 }
 
-/**
- * Implement this function to receive a callback when the device is idling.
- */
 void JackRouter::idleCallback()
 {
+    if (forcedState != JackState::None)
+        return;
+
     if (state == JackState::HeadPhones)
     {
         floatUp = !floatUp;
@@ -130,7 +137,7 @@ void JackRouter::idleCallback()
     if (numIdles < MAX_IDLES)
         return;
 
-    //if (state != JackState::BuzzerAndSerial)
+    // if (state != JackState::BuzzerAndSerial)
     //    DMESG("cycle: lf=%d nl=%d nf=%d", lastSenseFloat, numLows, numSenseForced);
 
     if (lastSenseFloat)
