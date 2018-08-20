@@ -1,5 +1,5 @@
-#ifndef CODAL_MESSAGE_BUS_DRIVER_H
-#define CODAL_MESSAGE_BUS_DRIVER_H
+#ifndef PKT_MESSAGE_BUS_DRIVER_H
+#define PKT_MESSAGE_BUS_DRIVER_H
 
 #include "PktSerialProtocol.h"
 #include "MessageBus.h"

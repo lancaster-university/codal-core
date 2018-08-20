@@ -1,5 +1,6 @@
 #include "PktSerialProtocol.h"
 #include "CodalDmesg.h"
+#include "Timer.h"
 
 using namespace codal;
 
@@ -38,7 +39,7 @@ void PktLogicDriver::periodicCallback()
         {
             if (!(proto.drivers[i]->device.flags & (PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_INITIALISING)))
             {
-                DBG_DMESG("BEGIN INIT");
+                PKT_DMESG("BEGIN INIT");
                 proto.drivers[i]->device.address = 0;
 
                 bool allocated = true;
@@ -67,7 +68,7 @@ void PktLogicDriver::periodicCallback()
                     allocated = stillAllocated;
                 }
 
-                DBG_DMESG("ALLOC: %d",proto.drivers[i]->device.address);
+                PKT_DMESG("ALLOC: %d",proto.drivers[i]->device.address);
 
                 proto.drivers[i]->queueControlPacket();
                 proto.drivers[i]->device.flags |= PKT_DEVICE_FLAGS_INITIALISING;
@@ -78,7 +79,7 @@ void PktLogicDriver::periodicCallback()
                 // if no one has complained in a second, consider our address allocated
                 if (proto.drivers[i]->device.rolling_counter == PKT_LOGIC_ADDRESS_ALLOC_TIME)
                 {
-                    DBG_DMESG("FINISHED");
+                    PKT_DMESG("FINISHED");
                     proto.drivers[i]->device.flags &= ~PKT_DEVICE_FLAGS_INITIALISING;
                     proto.drivers[i]->device.flags |= PKT_DEVICE_FLAGS_INITIALISED;
                     proto.drivers[i]->deviceConnected(proto.drivers[i]->device);
@@ -86,7 +87,7 @@ void PktLogicDriver::periodicCallback()
             }
             else if (proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISED)
             {
-                if(proto.drivers[i]->device.rolling_counter == PKT_LOGIC_DRIVER_CTRLPACKET_TIME)
+                if(proto.drivers[i]->device.rolling_counter > 0 && (proto.drivers[i]->device.rolling_counter % PKT_LOGIC_DRIVER_CTRLPACKET_TIME) == 0)
                     proto.drivers[i]->queueControlPacket();
             }
         }
@@ -116,14 +117,14 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
 {
     ControlPacket *cp = (ControlPacket *)p->data;
 
-    DBG_DMESG("CP REC: %d, %d, %d", cp->address, cp->serial_number, cp->driver_class);
+    PKT_DMESG("CP REC: %d, %d, %d", cp->address, cp->serial_number, cp->driver_class);
 
     // first check for any drivers who are associated with this control packet
     for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
     {
         if (proto.drivers[i] && proto.drivers[i]->device.address == cp->address)
         {
-            DBG_DMESG("FINDING");
+            PKT_DMESG("FINDING");
             // if we have allocated that address to one of our devices, respond with a conflict packet
             if (proto.drivers[i]->device.serial_number != cp->serial_number && !(proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISING))
             {
@@ -132,10 +133,11 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
                 return;
             }
             // someone has flagged a conflict with an initialising device
-            if (proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISING && cp->flags & CONTROL_PKT_FLAGS_CONFLICT)
+            if (cp->flags & CONTROL_PKT_FLAGS_CONFLICT)
             {
                 // new address will be assigned on next tick.
-                proto.drivers[i]->device.flags &= ~PKT_DEVICE_FLAGS_INITIALISING;
+                proto.drivers[i]->device.flags &= ~(PKT_DEVICE_FLAGS_INITIALISING | PKT_DEVICE_FLAGS_INITIALISED);
+                proto.drivers[i]->device.rolling_counter = 0;
                 return;
             }
 
@@ -153,7 +155,7 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
     // if it's paired with another device, we can just ignore
     if (cp->flags & CONTROL_PKT_FLAGS_PAIRED && !filtered)
     {
-        DBG_DMESG("FILTERING");
+        PKT_DMESG("FILTERING");
         for (int i = 0; i < PKT_LOGIC_DRIVER_MAX_FILTERS; i++)
         {
             if (this->address_filters[i] == 0)
@@ -166,7 +168,7 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
     // if it was previously paired with another device, we remove the filter.
     if (filtered && cp->flags & CONTROL_PKT_FLAGS_BROADCAST)
     {
-        DBG_DMESG("UNDO FILTER");
+        PKT_DMESG("UNDO FILTER");
         for (int i = 0; i < PKT_LOGIC_DRIVER_MAX_FILTERS; i++)
         {
             if (this->address_filters[i] == cp->address)
@@ -179,14 +181,14 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
     // if we reach here, there is no associated device, find a free instance in the drivers array
     for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
     {
-        DBG_DMESG("FIND DRIVER");
+        PKT_DMESG("FIND DRIVER");
         if (proto.drivers[i] && proto.drivers[i]->device.flags & PKT_DEVICE_FLAGS_REMOTE && proto.drivers[i]->driver_class == cp->driver_class)
         {
             // this driver instance is looking for a specific serial number
             if (proto.drivers[i]->device.serial_number > 0 && proto.drivers[i]->device.serial_number != cp->serial_number)
                 continue;
 
-            DBG_DMESG("FOUND");
+            PKT_DMESG("FOUND");
             PktDevice d;
             d.address = cp->address;
             d.rolling_counter = 0;

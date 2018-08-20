@@ -105,7 +105,7 @@ void PktMessageBusDriver::handlePacket(PktSerialPkt* p)
 {
     Event *e = (Event *) p->data;
 
-    DBG_DMESG("EV: %d, %d", e->source, e->value);
+    PKT_DMESG("EV: %d, %d", e->source, e->value);
 
     suppressForwarding = true;
     e->fire();
@@ -124,10 +124,10 @@ void PktMessageBusDriver::handleControlPacket(ControlPacket*)
   */
 void PktMessageBusDriver::eventReceived(Event e)
 {
-    DBG_DMESG("EVENT");
+    PKT_DMESG("EVENT");
     if(suppressForwarding)
         return;
 
-    DBG_DMESG("PACKET QUEUED: %d %d", e.source, e.value);
+    PKT_DMESG("PACKET QUEUED: %d %d", e.source, e.value);
     proto.bus.send((uint8_t *)&e, sizeof(Event), device.address);
 }

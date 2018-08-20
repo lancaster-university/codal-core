@@ -28,7 +28,7 @@ using namespace codal;
 
 int PktSerialDriver::queueControlPacket()
 {
-    DBG_DMESG("QUEUED CP");
+    PKT_DMESG("QUEUED CP");
     ControlPacket cp;
 
     cp.packet_type = CONTROL_PKT_TYPE_HELLO;
@@ -58,7 +58,7 @@ bool PktSerialDriver::isConnected()
 
 int PktSerialDriver::deviceConnected(PktDevice device)
 {
-    DBG_DMESG("CONNECTED %d",device.address);
+    PKT_DMESG("CONNECTED %d",device.address);
     uint16_t flags = this->device.flags & 0xFF00;
     this->device = device;
     this->device.flags |= (flags | PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_CP_SEEN);
@@ -68,7 +68,7 @@ int PktSerialDriver::deviceConnected(PktDevice device)
 
 int PktSerialDriver::deviceRemoved()
 {
-    DBG_DMESG("DISCONN %d",this->device.address);
+    PKT_DMESG("DISCONN %d",this->device.address);
     this->device.flags &= ~(PKT_DEVICE_FLAGS_INITIALISED);
     this->device.rolling_counter = 0;
     Event(this->id, PKT_DRIVER_EVT_DISCONNECTED);

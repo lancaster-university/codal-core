@@ -15,15 +15,18 @@
 
 using namespace codal;
 
+extern void set_gpio(int);
+
 void PktSerial::dmaComplete(Event evt)
 {
-    DBG_DMESG("DMA");
+    PKT_DMESG("DMA");
     if (evt.value == SWS_EVT_ERROR)
     {
-        DBG_DMESG("ERR");
+        PKT_DMESG("ERR");
         if (status & PKT_SERIAL_TRANSMITTING)
         {
-            DBG_DMESG("TX ERROR");
+            PKT_DMESG("TX ERROR");
+            // set_gpio(0);
             status &= ~(PKT_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
@@ -31,7 +34,8 @@ void PktSerial::dmaComplete(Event evt)
 
         if (status & PKT_SERIAL_RECEIVING)
         {
-            DBG_DMESG("RX ERROR");
+            // set_gpio(0);
+            PKT_DMESG("RX ERROR");
             status &= ~(PKT_SERIAL_RECEIVING);
             timeoutCounter = 0;
             sws.abortDMA();
@@ -44,6 +48,7 @@ void PktSerial::dmaComplete(Event evt)
         if (evt.value == SWS_EVT_DATA_RECEIVED)
         {
             status &= ~(PKT_SERIAL_RECEIVING);
+            // set_gpio(0);
             // move rxbuf to rxQueue and allocate new buffer.
             addToQueue(&rxQueue, rxBuf);
             rxBuf = (PktSerialPkt*)malloc(sizeof(PktSerialPkt));
@@ -52,6 +57,7 @@ void PktSerial::dmaComplete(Event evt)
 
         if (evt.value == SWS_EVT_DATA_SENT)
         {
+            // set_gpio(0);
             status &= ~(PKT_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
@@ -69,19 +75,21 @@ void PktSerial::dmaComplete(Event evt)
 
 void PktSerial::onFallingEdge(Event)
 {
-
-    DBG_DMESG("FALL: %d %d", (status & PKT_SERIAL_RECEIVING) ? 1 : 0, (status & PKT_SERIAL_TRANSMITTING) ? 1 : 0);
+    // PKT_DMESG("FALL: %d %d", (status & PKT_SERIAL_RECEIVING) ? 1 : 0, (status & PKT_SERIAL_TRANSMITTING) ? 1 : 0);
     // guard against repeat events.
     if (status & (PKT_SERIAL_RECEIVING | PKT_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
 
+    set_gpio(1);
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
+    set_gpio(0);
     sp.getDigitalValue(PullMode::None);
 
     timeoutCounter = 0;
     status |= (PKT_SERIAL_RECEIVING);
 
-    DBG_DMESG("RX START");
+    // PKT_DMESG("RX START");
+
     sws.receiveDMA((uint8_t*)rxBuf, PKT_SERIAL_PACKET_SIZE);
 }
 
@@ -92,17 +100,17 @@ void PktSerial::periodicCallback()
     {
         uint32_t timePerSymbol = 1000000/sws.getBaud();
         timePerSymbol = timePerSymbol * 100 * PKT_SERIAL_PACKET_SIZE;
-        timeoutValue = (timePerSymbol / SCHEDULER_TICK_PERIOD_US);
+        timeoutValue = (timePerSymbol / SCHEDULER_TICK_PERIOD_US) + 2;
     }
 
     if (status & PKT_SERIAL_RECEIVING)
     {
-        DBG_DMESG("H");
+        PKT_DMESG("H");
         timeoutCounter++;
 
         if (timeoutCounter > timeoutValue)
         {
-            DBG_DMESG("TIMEOUT");
+            PKT_DMESG("TIMEOUT");
             sws.abortDMA();
             Event(this->id, PKT_SERIAL_EVT_BUS_ERROR);
             timeoutCounter = 0;
@@ -280,7 +288,7 @@ void PktSerial::start()
     // if the line is low, we may be in the middle of a transfer, manually trigger rx mode.
     if (sp.getDigitalValue(PullMode::Up) == 0)
     {
-        DBG_DMESG("TRIGGER");
+        PKT_DMESG("TRIGGER");
         onFallingEdge(evt);
     }
 
@@ -309,7 +317,7 @@ void PktSerial::sendPacket(Event)
     // if we are receiving, randomly back off
     if (status & PKT_SERIAL_RECEIVING)
     {
-        DBG_DMESG("RXing");
+        PKT_DMESG("RXing");
         system_timer_event_after_us(4000, this->id, PKT_SERIAL_EVT_DRAIN);  // should be random
         return;
     }
@@ -319,7 +327,7 @@ void PktSerial::sendPacket(Event)
         // if the bus is lo, we shouldn't transmit
         if (sp.getDigitalValue(PullMode::Up) == 0)
         {
-            DBG_DMESG("BUS LO");
+            PKT_DMESG("BUS LO");
             Event evt(0, 0, CREATE_ONLY);
             onFallingEdge(evt);
             system_timer_event_after_us(4000, this->id, PKT_SERIAL_EVT_DRAIN);  // should be random
@@ -333,12 +341,12 @@ void PktSerial::sendPacket(Event)
         // if we have stuff in our queue, and we have not triggered a DMA transfer...
         if (txQueue)
         {
-            DBG_DMESG("TX B");
+            PKT_DMESG("TX B");
             status |= PKT_SERIAL_TRANSMITTING;
             txBuf = popQueue(&txQueue);
 
             sp.setDigitalValue(0);
-            target_wait_us(10);
+            target_wait_us(20);
             sp.setDigitalValue(1);
 
             // return after 100 us
@@ -350,7 +358,7 @@ void PktSerial::sendPacket(Event)
     // we've returned after a DMA transfer has been flagged (above)... start
     if (status & PKT_SERIAL_TRANSMITTING)
     {
-        DBG_DMESG("TX S");
+        PKT_DMESG("TX S");
         sws.sendDMA((uint8_t *)txBuf, PKT_SERIAL_PACKET_SIZE);
         return;
     }
@@ -369,8 +377,15 @@ void PktSerial::sendPacket(Event)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if pkt is NULL, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int PktSerial::send(PktSerialPkt *pkt)
+int PktSerial::send(PktSerialPkt* tx)
 {
+    if (pkt == NULL)
+        return DEVICE_INVALID_PARAMETER;
+
+    PktSerialPkt* pkt = (PktSerialPkt *)malloc(sizeof(PktSerialPkt));
+    memset(pkt, target_random(256), sizeof(PktSerialPkt));
+    memcpy(pkt, tx, sizeof(PktSerialPkt));
+
     int ret = addToQueue(&txQueue, pkt);
 
     if (!(status & PKT_SERIAL_TX_DRAIN_ENABLE))
@@ -398,22 +413,23 @@ int PktSerial::send(uint8_t* buf, int len, uint8_t address)
     if (buf == NULL || len <= 0 || len >= PKT_SERIAL_DATA_SIZE)
         return DEVICE_INVALID_PARAMETER;
 
-    PktSerialPkt* pkt = (PktSerialPkt*)malloc(sizeof(PktSerialPkt));
-    memset(pkt, 0, sizeof(PktSerialPkt));
+    PktSerialPkt pkt;
+    // for variation of crc's
+    memset(pkt, target_random(256), sizeof(PktSerialPkt));
 
     // very simple crc
-    pkt->crc = 0;
-    pkt->address = address;
-    pkt->size = len;
+    pkt.crc = 0;
+    pkt.address = address;
+    pkt.size = len;
 
-    memcpy(pkt->data, buf, len);
+    memcpy(pkt.data, buf, len);
 
     // skip the crc.
-    uint8_t* crcPointer = (uint8_t*)&pkt->address;
+    uint8_t* crcPointer = (uint8_t*)&pkt.address;
 
     // simple crc
     for (int i = 0; i < PKT_SERIAL_PACKET_SIZE - 2; i++)
-        pkt->crc += crcPointer[i];
+        pkt.crc += crcPointer[i];
 
     return send(pkt);
 }
