@@ -26,7 +26,6 @@ namespace codal
 
         PhysicsBody(int16_t x, int16_t y, int16_t z, int width, int height): position(x,y,z)
         {
-            this->flags = 0;
             this->width = width;
             this->height = height;
         }
@@ -36,18 +35,6 @@ namespace codal
         virtual bool intersectsWith(PhysicsBody& pb) { return false;}
 
         virtual void collideWith(PhysicsBody&) {}
-
-        int setFlag(PhysicsFlag s)
-        {
-            flags |= (1 << s);
-            return DEVICE_OK;
-        }
-
-        int unsetFlag(PhysicsFlag s)
-        {
-            flags &= ~(1 << s);
-            return DEVICE_OK;
-        }
     };
 }
 

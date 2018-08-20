@@ -11,10 +11,11 @@ namespace codal
         static int gravity;
 
         public:
-        float dx;
-        float dy;
+        c2v velocity;
         float inverse_mass;
         float restitution;
+
+        c2v actualPosition;
 
         c2AABB rect;
 
