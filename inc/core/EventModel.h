@@ -42,7 +42,7 @@ DEALINGS IN THE SOFTWARE.
   *
   * This class defines the functionality an event model needs to have to be able to interact
   * with events generated and/or used by the codal device runtime. Programmer may choose to implement
-  * such funcitonality to integrate their own event models.
+  * such functionality to integrate their own event models.
   *
   * This is an example of a key principle in computing - ABSTRACTION. This is now part of the
   * UK's Computing curriculum in schools... so ask your teacher about it. :-)
