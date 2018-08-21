@@ -54,26 +54,34 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL 22
 #define DEVICE_ID_MSC 23
 #define DEVICE_ID_SPI 24
-#define DEVICE_ID_PKTSERIAL0 25
-#define DEVICE_ID_PKTSERIAL1 26
-#define DEVICE_ID_PKTSERIAL_PROTOCOL 27
-#define DEVICE_ID_JACKROUTER 28
 
-#define DEVICE_ID_PKT_LOGIC_DRIVER 28
-#define DEVICE_ID_PKT_MESSAGE_BUS_DRIVER 29
-#define DEVICE_ID_PKT_RADIO_DRIVER 30
-#define DEVICE_ID_PKT_BRIDGE_DRIVER 31
+#define DEVICE_ID_DISTANCE            25
+#define DEVICE_ID_GYROSCOPE           26
+#define DEVICE_ID_HUMIDITY            27
+#define DEVICE_ID_PRESSURE            28
 
-#define DEVICE_ID_BUTTON_UP 2000
-#define DEVICE_ID_BUTTON_DOWN 2001
-#define DEVICE_ID_BUTTON_LEFT 2002
-#define DEVICE_ID_BUTTON_RIGHT 2003
+#define DEVICE_ID_PKTSERIAL0 29
+#define DEVICE_ID_PKTSERIAL1 30
+#define DEVICE_ID_PKTSERIAL_PROTOCOL 31
+#define DEVICE_ID_JACKROUTER 32
+#define DEVICE_ID_GAME_ENGINE 33
 
 #define DEVICE_ID_IO_P0               100                       // IDs 100-227 are reserved for I/O Pin IDs.
 
 #define DEVICE_ID_MESSAGE_BUS_LISTENER            1021          // Message bus indication that a handler for a given ID has been registered.
 #define DEVICE_ID_NOTIFY_ONE                      1022          // Notfication channel, for general purpose synchronisation
 #define DEVICE_ID_NOTIFY                          1023          // Notfication channel, for general purpose synchronisation
+
+#define DEVICE_ID_BUTTON_UP 2000
+#define DEVICE_ID_BUTTON_DOWN 2001
+#define DEVICE_ID_BUTTON_LEFT 2002
+#define DEVICE_ID_BUTTON_RIGHT 2003
+
+#define DEVICE_ID_PKT_LOGIC_DRIVER 3000
+#define DEVICE_ID_PKT_MESSAGE_BUS_DRIVER 3001
+#define DEVICE_ID_PKT_RADIO_DRIVER 3002
+#define DEVICE_ID_PKT_BRIDGE_DRIVER 3003
+
 
 // Universal flags used as part of the status field
 #define DEVICE_COMPONENT_RUNNING                0x1000

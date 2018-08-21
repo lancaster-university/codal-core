@@ -80,9 +80,9 @@ void PktSerial::onFallingEdge(Event)
     if (status & (PKT_SERIAL_RECEIVING | PKT_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
 
-    set_gpio(1);
+    // set_gpio(1);
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
-    set_gpio(0);
+    // set_gpio(0);
     sp.getDigitalValue(PullMode::None);
 
     timeoutCounter = 0;
@@ -379,7 +379,7 @@ void PktSerial::sendPacket(Event)
  */
 int PktSerial::send(PktSerialPkt* tx)
 {
-    if (pkt == NULL)
+    if (tx == NULL)
         return DEVICE_INVALID_PARAMETER;
 
     PktSerialPkt* pkt = (PktSerialPkt *)malloc(sizeof(PktSerialPkt));
@@ -414,8 +414,9 @@ int PktSerial::send(uint8_t* buf, int len, uint8_t address)
         return DEVICE_INVALID_PARAMETER;
 
     PktSerialPkt pkt;
+
     // for variation of crc's
-    memset(pkt, target_random(256), sizeof(PktSerialPkt));
+    memset(&pkt, target_random(256), sizeof(PktSerialPkt));
 
     // very simple crc
     pkt.crc = 0;
@@ -431,7 +432,7 @@ int PktSerial::send(uint8_t* buf, int len, uint8_t address)
     for (int i = 0; i < PKT_SERIAL_PACKET_SIZE - 2; i++)
         pkt.crc += crcPointer[i];
 
-    return send(pkt);
+    return send(&pkt);
 }
 
 bool PktSerial::isRunning()
