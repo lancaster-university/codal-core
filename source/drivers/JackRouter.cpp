@@ -33,7 +33,8 @@ namespace codal
 
 JackRouter::JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable,
                        Pin &powerEnable, PktSerial &pkt)
-    : mid(mid), sense(sense), hpEn(headphoneEnable), bzEn(buzzerEnable), pwrEn(powerEnable), serial(pkt)
+    : mid(mid), sense(sense), hpEn(headphoneEnable), bzEn(buzzerEnable), pwrEn(powerEnable),
+      serial(pkt)
 {
     status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 
@@ -43,8 +44,15 @@ JackRouter::JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEn
     numLows = 0;
     numSenseForced = 0;
 
-    state = (JackState)-1;
+    forcedState = state = JackState::None;
     setState(JackState::AllDown);
+}
+
+void JackRouter::forceState(JackState s)
+{
+    forcedState = s;
+    if (s != JackState::None)
+        setState(s);
 }
 
 void JackRouter::setState(JackState s)
@@ -83,11 +91,11 @@ void JackRouter::checkFloat()
     }
 }
 
-/**
- * Implement this function to receive a callback when the device is idling.
- */
 void JackRouter::idleCallback()
 {
+    if (forcedState != JackState::None)
+        return;
+
     if (state == JackState::HeadPhones)
     {
         floatUp = !floatUp;
@@ -110,7 +118,7 @@ void JackRouter::idleCallback()
     {
         if (numIdles == 0)
         {
-            // power is already on, just see is sense is connected to it
+            // power is already on, just see if sense is connected to it
             floatUp = false;
             checkFloat();
         }
@@ -118,7 +126,9 @@ void JackRouter::idleCallback()
 
     if (state != JackState::BuzzerAndSerial)
     {
-        if (!mid.getDigitalValue(PullMode::Up))
+        if (state == JackState::HeadPhones)
+            numLows++; // we might be driving "mid" high, depending on the shape of sound wave
+        else if (!mid.getDigitalValue(PullMode::Up))
             numLows++;
     }
 
@@ -127,7 +137,8 @@ void JackRouter::idleCallback()
     if (numIdles < MAX_IDLES)
         return;
 
-    // DMESG("cycle: lf=%d nl=%d nf=%d", lastSenseFloat, numLows, numSenseForced);
+    // if (state != JackState::BuzzerAndSerial)
+    //    DMESG("cycle: lf=%d nl=%d nf=%d", lastSenseFloat, numLows, numSenseForced);
 
     if (lastSenseFloat)
     {
@@ -140,8 +151,12 @@ void JackRouter::idleCallback()
         }
         else
         {
-            // the TX was up some time - assume networking mode
-            setState(JackState::BuzzerAndSerial);
+            // is the plug definetely in?
+            if (lastSenseFloat > 5)
+            {
+                // the TX was up some time - assume networking mode
+                setState(JackState::BuzzerAndSerial);
+            }
         }
     }
     else
@@ -157,7 +172,13 @@ void JackRouter::idleCallback()
         }
     }
 
-    lastSenseFloat = numSenseForced == 0;
+    if (numSenseForced == 0)
+    {
+        if (lastSenseFloat < 100)
+            lastSenseFloat++;
+    }
+    else
+        lastSenseFloat = 0;
 
     numIdles = 0;
     numLows = 0;
