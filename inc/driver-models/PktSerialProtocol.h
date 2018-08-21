@@ -73,6 +73,8 @@ DEALINGS IN THE SOFTWARE.
 #define PKT_DRIVER_CLASS_BRIDGE         5
 // END      PKT SERIAL PROTOCOL
 
+#define CONTROL_PACKET_PAYLOAD_SIZE     (PKT_SERIAL_DATA_SIZE - 12)
+
 namespace codal
 {
     class PktSerialProtocol;
@@ -87,6 +89,7 @@ namespace codal
         uint16_t flags;         // various flags
         uint32_t driver_class;  // the class of the driver
         uint32_t serial_number; // the "unique" serial number of the device.
+        uint8_t data[CONTROL_PACKET_PAYLOAD_SIZE];
     };
 
     /**

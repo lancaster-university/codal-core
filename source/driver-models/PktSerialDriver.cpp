@@ -23,6 +23,7 @@ DEALINGS IN THE SOFTWARE.
 */
 #include "PktSerialProtocol.h"
 #include "CodalDmesg.h"
+#include "codal_target_hal.h"
 
 using namespace codal;
 
@@ -30,6 +31,7 @@ int PktSerialDriver::queueControlPacket()
 {
     PKT_DMESG("QUEUED CP");
     ControlPacket cp;
+    memset(&cp, target_random(256), sizeof(ControlPacket));
 
     cp.packet_type = CONTROL_PKT_TYPE_HELLO;
     cp.address = device.address;
