@@ -36,6 +36,7 @@ namespace codal
 
 enum class JackState : uint8_t
 {
+    None = 0,
     AllDown = 1,
     HeadPhones,
     Buzzer,
@@ -48,11 +49,12 @@ enum class JackState : uint8_t
 class JackRouter : public CodalComponent
 {
     bool floatUp;
-    bool lastSenseFloat;
     uint8_t numIdles;
     uint8_t numLows;
     uint8_t numSenseForced;
+    uint8_t lastSenseFloat;
     JackState state;
+    JackState forcedState;
 
     Pin &mid;
     Pin &sense;
@@ -81,6 +83,11 @@ public:
      * @param powerEnable - when high, power should be routed to the tip of the jack
      */
     JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable, Pin &powerEnable, PktSerial &pkt);
+
+    /**
+     * Forces given state. Set to None to disable.
+     */
+    void forceState(JackState s);
 
     /**
      * Implement this function to receive a callback when the device is idling.
