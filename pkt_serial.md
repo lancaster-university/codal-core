@@ -56,6 +56,10 @@ externally. -->
 
 This section defines the protocol that runs on the physical layer. There are notionally two defined types of packet integral to the protocol: a "Standard Packet" and a "Control Packet" (contained in a standard packet) which will be discussed later in this section.
 
+It borrows concepts from USB, except we work in terms of drivers rather than a device; a device may be composited of many drivers.
+
+There is also the idea of a remote and local driver (time will decide whether this is a good approach or not). A remote driver is a virtual driver where the end device resides somewhere on the pkt bus (off board). A local driver resides on the board and is shared on the pkt bus for others to use. All local drivers have an address on the bus, a class, and a serial number uniquely identifying that device.
+
 In broad terms, the link layer is extremely flexible and aims to support a number of different control paradigms:
 
 * Many masters -> slave - N remote drivers, 1 local driver. Great for sharing a single resource, i.e. a network device, a printer.
@@ -78,21 +82,18 @@ What are the actual types of comms models???
 * separate addresses, shared class?
 ---
 
-It borrows concepts from USB, except we work in terms of drivers rather than a device; a device may be composited of many drivers. All drivers have an address on the bus, a class, and a serial number uniquely identifying that device.
-
-There is also the idea of a remote and local driver (time will decide whether this is a good approach or not). A remote driver is a virtual driver where the end device resides somewhere on the pkt bus (off board). A local driver resides on the board and is shared on the pkt bus for others to use.
-
 Arcades will not ship with a joystick, but they are a useful input mechanism for games. To exemplify the purpose of the remote/local approach, we will hypothesize the connection of a joystick to the pkt bus. If a user expects to connect to a joystick, a driver can be instantiated with the remote flag set. The joystick will be running a local joystick driver which will forward any movements onto the pkt bus. When the pkt bus receives a joystick advertisement packet on the bus, it will be forwarded to the remote joystick driver, from this point on the remote joystick driver will receive all standard packets sent by the real joystick.
 
 The above example assumes all packets sent by a specific joystick are shared between all arcades, in common scenarios this would not work as users expect one joystick per device. Thus, drivers can be paired for the duration of a connection. To decide which joystick "belongs" to who, drivers can explicity list the serial_number to look for on the pkt bus. Alternately, assignment is performed on a first come first serve basis.
 
-------
-TODO: neaten up software model
-In software, this model isn't exactly neat... it is hard to include all the above concepts in a single abstraction without it becoming confusing and duplicating code. Most drivers (whether local, remote, or broadcast) are implemented as a single class, with the local, remote or broadcast flag set dependent on the constructor.
+---
+**TODO**: neaten up software model
+
+**NOTE**:_In software, this model isn't exactly neat... it is hard to include all the above concepts in a single abstraction without it becoming confusing and duplicating code. Thus most drivers (whether local, remote, or broadcast) are implemented as a single class, with the local, remote or broadcast flag set dependent on the constructor._
 
 ## Standard Packet Structure
 
-```
+```cpp
 struct PktSerialPkt {
     public:
     uint16_t crc; // redundency check...
@@ -109,7 +110,7 @@ The total size of a PktSerial packet is 36 bytes. TODO: Decide on extended packe
 
 ## The Logic Driver
 
-With complex logic as listed above there needs to be an application level logic driver that routes packets correctly and manages all drivers. The logic driver uses the address 0, all pkt serial compatible devices must implement the above logic driver, thus the address 0 is reserved for use on all devices. Any packet with address 0 is assumed to be a control packet and will be routed to the logic driver.
+With complex logic as listed above there needs to be an application level logic driver that routes packets correctly and manages all drivers. The logic driver has the address 0. All pkt serial compatible devices must implement the above logic driver. Thus the address 0 is reserved for use on all devices. Any packet with address 0 is assumed to be a control packet and will be routed to the logic driver.
 
 The logic driver is responsible for the "mounting" and "unmounting" of remote devices. It implements a simple state machine that sets various flags to obtain the behaviour described above. The state machine queues control packets, handles device address allocation and conflict resolution.
 
@@ -121,9 +122,9 @@ In both cases the logic driver will invoke the deviceConnected() driver function
 
 ## Control Packets
 
-All local drivers broadcast their prescence every 500 ms, this broadcast contains core information pertaining to the driver, and any additional driver specific information specified in the remainder of the packet:
+All local drivers broadcast their prescence every 500,000 bauds, this broadcast contains core information pertaining to the driver, and any additional driver specific information specified in the remainder of the packet:
 
-```
+```cpp
 struct ControlPacket
 {
     uint8_t packet_type;    // indicates the type of the packet, normally just HELLO
@@ -135,14 +136,14 @@ struct ControlPacket
 };
 ```
 
-A control packet is contained within a PktSerialPkt with address 0. The primary purpose of a control packet is to reduce the meta data contained in the standard packet, note the only addressing information broadcast is the address field. A secondary purpose is to determine if a device is present on the bus. The absence of a control packet indicates a dismount, a new control packet indicates a mount. To reduce churn, a device is only dismounted by the logic driver after a control packet is absent for two consecutive periods of 500 bauds.
+A control packet is contained within a PktSerialPkt with address 0. The primary purpose of a control packet is to reduce the meta data contained in the standard packet, note the only addressing information broadcast is the address field. A secondary purpose is to determine if a device is present on the bus. The absence of a control packet indicates a dismount, a new control packet indicates a mount. To reduce churn, a device is only dismounted by the logic driver after a control packet is absent for two consecutive periods of 500,000 bauds.
 
 ## Address assignment
 
 Address assignment is a relatively simple alogorithm:
 
 1) The logic driver iterates over drivers and looks for any local drivers that require initialisation.
-2) If initialisation is required, a first address is randomly allocated, and is checked against other on device drivers for conflicts. (TODO: it might be smart to maintain a list of all addresses seen as an optimisation)
+2) If initialisation is required, a first address is randomly allocated, and is checked against other on device drivers for conflicts. (**TODO**: _it might be smart to maintain a list of all addresses seen as an optimisation_)
 3) A control packet with the proposed address is sent.
 4) If other drivers see their address in the packet, then they reply with a conflict packet.
 5) Else the driver assumes their address is safe and allocated.
@@ -151,4 +152,8 @@ Address assignment is a relatively simple alogorithm:
 
 Remote drivers requiring pairing to a local driver can reply to control packets by implementing the handleControlPacket function in the driver code. Using this mechanism, a response control packet should be sent containing the serial_number of the unpaired local driver, the remote driver should place its own driver address into the address field of the control packet.
 
+---
+**NOTE**:
+
 This is not implemented at the moment, and currently wouldn't work with the remote/local driver model approach.
+---
