@@ -87,9 +87,10 @@ Arcades will not ship with a joystick, but they are a useful input mechanism for
 The above example assumes all packets sent by a specific joystick are shared between all arcades, in common scenarios this would not work as users expect one joystick per device. Thus, drivers can be paired for the duration of a connection. To decide which joystick "belongs" to who, drivers can explicity list the serial_number to look for on the pkt bus. Alternately, assignment is performed on a first come first serve basis.
 
 ---
-**TODO**: neaten up software model
 
-**NOTE**:_In software, this model isn't exactly neat... it is hard to include all the above concepts in a single abstraction without it becoming confusing and duplicating code. Thus most drivers (whether local, remote, or broadcast) are implemented as a single class, with the local, remote or broadcast flag set dependent on the constructor._
+**NOTE**: _In software, this model isn't exactly neat... it is hard to include all the above concepts in a single abstraction without it becoming confusing and duplicating code. Thus most drivers (whether local, remote, or broadcast) are implemented as a single class, with the local, remote or broadcast flag set dependent on the constructor._
+
+**TODO**: neaten up software model
 
 ## Standard Packet Structure
 
@@ -136,7 +137,7 @@ struct ControlPacket
 };
 ```
 
-A control packet is contained within a PktSerialPkt with address 0. The primary purpose of a control packet is to reduce the meta data contained in the standard packet, note the only addressing information broadcast is the address field. A secondary purpose is to determine if a device is present on the bus. The absence of a control packet indicates a dismount, a new control packet indicates a mount. To reduce churn, a device is only dismounted by the logic driver after a control packet is absent for two consecutive periods of 500,000 bauds.
+A control packet is contained within a PktSerialPkt with address 0. The primary purpose of a control packet is to reduce the meta data contained in the standard packet, note the _only_ addressing information in a standard packet is the address field. A secondary purpose is to determine if a device is present on the bus. The absence of a control packet indicates a dismount, a new control packet indicates a mount. To reduce churn, a device is only dismounted by the logic driver after a control packet is absent for two consecutive periods of 500,000 bauds.
 
 ## Address assignment
 
@@ -155,5 +156,6 @@ Remote drivers requiring pairing to a local driver can reply to control packets 
 ---
 **NOTE**:
 
-This is not implemented at the moment, and currently wouldn't work with the remote/local driver model approach.
+_This is not implemented at the moment, and currently wouldn't work with the remote/local driver model approach._
+
 ---
