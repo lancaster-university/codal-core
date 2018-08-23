@@ -18,18 +18,18 @@ PktBridgeDriver::PktBridgeDriver(Radio& n) :
 
 int PktBridgeDriver::addToHistory(uint16_t id)
 {
-    // history[history_idx] = id;
-    // history_idx = (history_idx + 1) % PKT_BRIDGE_HISTORY_SIZE;
+    history[history_idx] = id;
+    history_idx = (history_idx + 1) % PKT_BRIDGE_HISTORY_SIZE;
     return DEVICE_OK;
 }
 
 bool PktBridgeDriver::checkHistory(uint16_t id)
 {
-    // for (int i = 0; i < PKT_BRIDGE_HISTORY_SIZE; i++)
-    // {
-    //     if (history[i] == id)
-    //         return true;
-    // }
+    for (int i = 0; i < PKT_BRIDGE_HISTORY_SIZE; i++)
+    {
+        if (history[i] == id)
+            return true;
+    }
 
     return false;
 }
