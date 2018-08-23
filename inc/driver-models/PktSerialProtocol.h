@@ -129,7 +129,6 @@ namespace codal
         friend class PktSerialProtocol;
 
         protected:
-        PktSerialProtocol& proto;
         uint32_t driver_class;
         PktDevice device;
 
@@ -147,7 +146,7 @@ namespace codal
          * @param id the message bus id for this driver
          *
          * */
-        PktSerialDriver(PktSerialProtocol& proto, PktDevice d, uint32_t driver_class, uint16_t id);
+        PktSerialDriver(PktDevice d, uint32_t driver_class, uint16_t id);
 
         /**
          * Queues a control packet on the serial bus, called by the logic driver
@@ -215,7 +214,7 @@ namespace codal
          * @param id the message bus id for this driver
          *
          * */
-        PktLogicDriver(PktSerialProtocol& proto, PktDevice d = PktDevice(), uint32_t driver_class = PKT_DRIVER_CLASS_CONTROL, uint16_t id = DEVICE_ID_PKT_LOGIC_DRIVER);
+        PktLogicDriver(PktDevice d = PktDevice(), uint32_t driver_class = PKT_DRIVER_CLASS_CONTROL, uint16_t id = DEVICE_ID_PKT_LOGIC_DRIVER);
 
         /**
          * Called by the logic driver when a control packet is addressed to this driver
@@ -266,6 +265,8 @@ namespace codal
     public:
         PktSerial& bus;
 
+        static PktSerialProtocol* instance;
+
         /**
          * Constructor
          *
@@ -304,6 +305,9 @@ namespace codal
          * End logic driver periodic callbacks.
          * */
         void stop();
+
+        static int send(PktSerialPkt* pkt);
+        static int send(uint8_t* buf, int len, uint8_t address);
     };
 
 } // namespace codal

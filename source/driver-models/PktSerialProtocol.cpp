@@ -34,6 +34,8 @@ using namespace codal;
 
 PktSerialDriver* PktSerialProtocol::drivers[PKT_PROTOCOL_DRIVER_SIZE] = { 0 };
 
+PktSerialProtocol* PktSerialProtocol::instance = NULL;
+
 void PktSerialProtocol::onPacketReceived(Event)
 {
     PktSerialPkt* pkt = bus.getPacket();
@@ -64,9 +66,12 @@ void PktSerialProtocol::onPacketReceived(Event)
     free(pkt);
 }
 
-PktSerialProtocol::PktSerialProtocol(PktSerial& pkt, uint16_t id) : logic(*this), bridge(NULL), bus(pkt)
+PktSerialProtocol::PktSerialProtocol(PktSerial& pkt, uint16_t id) : logic(), bridge(NULL), bus(pkt)
 {
     this->id = id;
+
+    if (instance == NULL)
+        instance = this;
 
     memset(this->drivers, 0, sizeof(PktSerialDriver*) * PKT_PROTOCOL_DRIVER_SIZE);
 
@@ -123,4 +128,20 @@ void PktSerialProtocol::start()
 void PktSerialProtocol::stop()
 {
     logic.stop();
+}
+
+int PktSerialProtocol::send(PktSerialPkt* pkt)
+{
+    if(instance)
+        return instance->bus.send(pkt);
+
+    return DEVICE_NO_RESOURCES;
+}
+
+int PktSerialProtocol::send(uint8_t* buf, int len, uint8_t address)
+{
+    if(instance)
+        return instance->bus.send(buf, len, address);
+
+    return DEVICE_NO_RESOURCES;
 }

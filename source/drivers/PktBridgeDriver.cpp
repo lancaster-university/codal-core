@@ -3,9 +3,8 @@
 
 using namespace codal;
 
-PktBridgeDriver::PktBridgeDriver(PktSerialProtocol& proto, Radio& n) :
-    PktSerialDriver(proto,
-                    PktDevice(0, 0, PKT_DEVICE_FLAGS_LOCAL, 0),
+PktBridgeDriver::PktBridgeDriver(Radio& n) :
+    PktSerialDriver(PktDevice(0, 0, PKT_DEVICE_FLAGS_LOCAL, 0),
                     PKT_DRIVER_CLASS_BRIDGE,
                     DEVICE_ID_PKT_BRIDGE_DRIVER)
 {
@@ -63,7 +62,7 @@ void PktBridgeDriver::forwardPacket(Event)
 
     DMESG("INFO: %d %d %d",pkt->crc, pkt->size, pkt->address);
 
-    proto.bus.send(pkt);
+    PktSerialProtocol::send(pkt);
 }
 
 void PktBridgeDriver::handleControlPacket(ControlPacket* cp) {}

@@ -346,7 +346,7 @@ void PktSerial::sendPacket(Event)
             txBuf = popQueue(&txQueue);
 
             sp.setDigitalValue(0);
-            target_wait_us(20);
+            target_wait_us(10);
             sp.setDigitalValue(1);
 
             // return after 100 us

@@ -77,6 +77,8 @@ What are the actual types of comms models???
 * client, server
 * broadcast
 
+Addressing mechanisms in each model ??
+
 * shared address
 * separate address, paired.
 * separate addresses, shared class?

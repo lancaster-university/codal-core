@@ -3,9 +3,8 @@
 
 using namespace codal;
 
-PktRadioDriver::PktRadioDriver(PktSerialProtocol& proto, Radio& n, uint32_t serial) :
-    PktSerialDriver(proto,
-                    PktDevice(0, 0, PKT_DEVICE_FLAGS_LOCAL, serial),
+PktRadioDriver::PktRadioDriver(Radio& n, uint32_t serial) :
+    PktSerialDriver(PktDevice(0, 0, PKT_DEVICE_FLAGS_LOCAL, serial),
                     PKT_DRIVER_CLASS_RADIO,
                     DEVICE_ID_PKT_RADIO_DRIVER)
 {
@@ -17,9 +16,8 @@ PktRadioDriver::PktRadioDriver(PktSerialProtocol& proto, Radio& n, uint32_t seri
         EventModel::defaultEventBus->listen(n.id, RADIO_EVT_DATA_READY, this, &PktRadioDriver::forwardPacket);
 }
 
-PktRadioDriver::PktRadioDriver(PktSerialProtocol& proto, uint32_t serial):
-    PktSerialDriver(proto,
-                    PktDevice(0, 0, PKT_DEVICE_FLAGS_REMOTE, serial),
+PktRadioDriver::PktRadioDriver(uint32_t serial):
+    PktSerialDriver(PktDevice(0, 0, PKT_DEVICE_FLAGS_REMOTE, serial),
                     PKT_DRIVER_CLASS_RADIO,
                     DEVICE_ID_PKT_RADIO_DRIVER)
 {
@@ -164,7 +162,7 @@ int PktRadioDriver::send(PktRadioPacket* packet, bool retain)
         addToQueue(&txQueue, tx);
     }
 
-    return proto.bus.send((uint8_t *)tx, min(tx->size, PKT_SERIAL_DATA_SIZE), device.address);
+    return PktSerialProtocol::send((uint8_t *)tx, min(tx->size, PKT_SERIAL_DATA_SIZE), device.address);
 }
 
 int PktRadioDriver::send(uint8_t* buf, int len, bool retain)

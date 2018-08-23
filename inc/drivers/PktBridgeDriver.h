@@ -20,7 +20,7 @@ namespace codal
         bool checkHistory(uint16_t id);
 
         public:
-        PktBridgeDriver(PktSerialProtocol& proto, Radio& r);
+        PktBridgeDriver(Radio& r);
 
         virtual void handleControlPacket(ControlPacket* cp);
 

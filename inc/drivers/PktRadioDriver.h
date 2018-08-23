@@ -39,8 +39,8 @@ namespace codal
         PktRadioPacket* removeFromQueue(PktRadioPacket** queue, uint16_t id);
 
         public:
-        PktRadioDriver(PktSerialProtocol& proto, Radio& n, uint32_t serial);
-        PktRadioDriver(PktSerialProtocol& proto, uint32_t serial = 0);
+        PktRadioDriver(Radio& n, uint32_t serial);
+        PktRadioDriver(uint32_t serial = 0);
 
         PktRadioPacket* recv(uint8_t id);
 

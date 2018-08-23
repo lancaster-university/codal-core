@@ -39,12 +39,12 @@ int PktSerialDriver::queueControlPacket()
     cp.driver_class = this->driver_class;
     cp.serial_number = device.serial_number;
 
-    proto.bus.send((uint8_t *)&cp, sizeof(ControlPacket), 0);
+    PktSerialProtocol::send((uint8_t *)&cp, sizeof(ControlPacket), 0);
 
     return DEVICE_OK;
 }
 
-PktSerialDriver::PktSerialDriver(PktSerialProtocol& proto, PktDevice d, uint32_t driver_class, uint16_t id) : proto(proto)
+PktSerialDriver::PktSerialDriver(PktDevice d, uint32_t driver_class, uint16_t id)
 {
     memset((uint8_t*)&device, 0, sizeof(PktDevice));
 
