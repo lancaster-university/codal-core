@@ -32,6 +32,7 @@ DEALINGS IN THE SOFTWARE.
 #define DISPLAY_EVT_FREE                  1
 #define CODAL_SERIAL_EVT_TX_EMPTY         2
 #define BLE_EVT_SERIAL_TX_EMPTY           3
+#define ARCADE_PLAYER_JOIN_RESULT         4
 
 // Any values after 1024 are available for application use
 #define DEVICE_NOTIFY_USER_EVENT_BASE     1024

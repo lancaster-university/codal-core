@@ -39,6 +39,7 @@ void PktLogicDriver::periodicCallback()
         // local drivers run on the device
         if (current->device.flags & PKT_DEVICE_FLAGS_LOCAL)
         {
+            // initialise a driver by queuing a control packet with a first reasonable address
             if (!(current->device.flags & (PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_INITIALISING)))
             {
                 PKT_DMESG("BEGIN INIT");
@@ -109,7 +110,7 @@ PktLogicDriver::PktLogicDriver(PktDevice d, uint32_t driver_class, uint16_t id) 
 
 void PktLogicDriver::handleControlPacket(ControlPacket* p)
 {
-    // nop for now... could be useful in the future
+    // nop for now... could be useful in the future for controlling the mode of the logic driver?
 }
 
 /**
@@ -126,7 +127,8 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
     {
         PktSerialDriver* current = PktSerialProtocol::instance->drivers[i];
 
-        if (current && current->device.address == cp->address)
+        // forward to driver if we match on the address, or the driver is broadcast mode
+        if (current && (current->device.address == cp->address || (current->device.flags & PKT_DEVICE_FLAGS_BROADCAST && current->driver_class == cp->driver_class)))
         {
             PKT_DMESG("FINDING");
             // if we have allocated that address to one of our devices, respond with a conflict packet

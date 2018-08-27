@@ -76,3 +76,8 @@ int PktSerialDriver::deviceRemoved()
     Event(this->id, PKT_DRIVER_EVT_DISCONNECTED);
     return DEVICE_OK;
 }
+
+PktSerialDriver::~PktSerialDriver()
+{
+    PktSerialProtocol::instance->remove(*this);
+}

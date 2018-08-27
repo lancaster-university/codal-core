@@ -41,9 +41,16 @@ DEALINGS IN THE SOFTWARE.
 
 #define PKT_DEVICE_FLAGS_LOCAL          0x8000 // on the board
 #define PKT_DEVICE_FLAGS_REMOTE         0x4000 // off the board
-#define PKT_DEVICE_FLAGS_INITIALISED    0x2000 // off the board
-#define PKT_DEVICE_FLAGS_INITIALISING   0x1000 // a flag to indicate that a control packet has been queued
-#define PKT_DEVICE_FLAGS_CP_SEEN        0x0800 // indicates whether a control packet has been seen recently.
+
+// following flags combined with the above to yield different behaviours
+#define PKT_DEVICE_FLAGS_BROADCAST      0x2000 // receive all class packets regardless of the address
+#define PKT_DEVICE_FLAGS_PAIRED         0x1000 // this flag indicates that a driver is paired with another
+// end combo flags
+
+#define PKT_DEVICE_FLAGS_INITIALISED    0x0800 // device driver is running
+#define PKT_DEVICE_FLAGS_INITIALISING   0x0400 // a flag to indicate that a control packet has been queued
+#define PKT_DEVICE_FLAGS_CP_SEEN        0x0200 // indicates whether a control packet has been seen recently.
+#define PKT_DEVICE_FLAGS_RESERVED       0x0100 // reserved for future use
 // END      PKT SERIAL DRIVER FLAGS
 
 
@@ -189,6 +196,8 @@ namespace codal
          * @param cp the control packet from the serial bus.
          **/
         virtual void handlePacket(PktSerialPkt* p) = 0;
+
+        ~PktSerialDriver();
     };
 
     class PktLogicDriver : public PktSerialDriver
