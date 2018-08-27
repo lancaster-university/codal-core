@@ -30,23 +30,40 @@ inline unsigned char eightBitHash(const char* s)
     return hash;
 }
 
-uint8_t PearsonHash::hash8(ManagedString s)
+uint32_t PearsonHash::hashN(ManagedString s, uint8_t byteCount)
 {
-    return eightBitHash(s.toCharArray());
-}
-
-uint16_t PearsonHash::hash16(ManagedString s)
-{
-    unsigned char h1, h2;
+    unsigned char hash;
     uint32_t length = s.length() + 1;
     char *buffer = (char *)malloc(length);
 
     memcpy(buffer, s.toCharArray(), length);
-    h1 = eightBitHash(buffer);
 
-    buffer[0] = (buffer[0] + 1) % 255;
-    h2 = eightBitHash(buffer);
+    uint32_t res = 0;
+    uint32_t i = 0;
+
+    while (i < length - 1 && i < byteCount)
+    {
+        hash = eightBitHash(buffer);
+        res |= (hash << i);
+        buffer[0] = (buffer[0] + 1) % 255;
+    }
+
     free(buffer);
 
-    return (uint16_t)(h1 << 8) + h2;
+    return res;
+}
+
+uint8_t PearsonHash::hash8(ManagedString s)
+{
+    return (uint8_t)hashN(s, 1);
+}
+
+uint16_t PearsonHash::hash16(ManagedString s)
+{
+    return (uint16_t)hashN(s,2);
+}
+
+uint32_t PearsonHash::hash32(ManagedString s)
+{
+    return (uint32_t)hashN(s,4);
 }
