@@ -7,7 +7,7 @@ using namespace codal;
 void PktLogicDriver::periodicCallback()
 {
     // no sense continuing if we dont have a bus to transmit on...
-    if (!PktSerialProtocol::instance->bus.isRunning())
+    if (!PktSerialProtocol::instance || !PktSerialProtocol::instance->bus.isRunning())
         return;
 
     // for each driver we maintain a rolling counter, used to trigger various timer related events.
