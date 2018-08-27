@@ -63,6 +63,7 @@ void PktSerial::dmaComplete(Event evt)
             txBuf = NULL;
             // we've finished sending... trigger an event in random us (in some cases this might not be necessary, but it's not too much overhead).
             system_timer_event_after_us(4000, this->id, PKT_SERIAL_EVT_DRAIN);  // should be random
+            PKT_DMESG("TX DONE");
         }
     }
 
@@ -276,6 +277,8 @@ void PktSerial::start()
     if (rxBuf == NULL)
         rxBuf = (PktSerialPkt*)malloc(sizeof(PktSerialPkt));
 
+    PKT_DMESG("PKT START");
+
     configure(true);
 
     target_disable_irq();
@@ -313,7 +316,7 @@ void PktSerial::stop()
 void PktSerial::sendPacket(Event)
 {
     status |= PKT_SERIAL_TX_DRAIN_ENABLE;
-
+    PKT_DMESG("PKT SEND");
     // if we are receiving, randomly back off
     if (status & PKT_SERIAL_RECEIVING)
     {
@@ -410,8 +413,11 @@ int PktSerial::send(PktSerialPkt* tx)
  */
 int PktSerial::send(uint8_t* buf, int len, uint8_t address)
 {
-    if (buf == NULL || len <= 0 || len >= PKT_SERIAL_DATA_SIZE)
+    if (buf == NULL || len <= 0 || len > PKT_SERIAL_DATA_SIZE)
+    {
+        PKT_DMESG("PKT TOO BIG: %d ",len);
         return DEVICE_INVALID_PARAMETER;
+    }
 
     PktSerialPkt pkt;
 
