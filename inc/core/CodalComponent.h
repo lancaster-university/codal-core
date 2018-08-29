@@ -66,6 +66,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_ID_JACKROUTER 32
 #define DEVICE_ID_GAME_ENGINE 33
 #define DEVICE_ID_GAME_STATE_MANAGER 34
+#define DEVICE_ID_PLAYER_SPRITE 35
 
 #define DEVICE_ID_IO_P0               100                       // IDs 100-227 are reserved for I/O Pin IDs.
 
