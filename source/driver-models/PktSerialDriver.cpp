@@ -60,10 +60,10 @@ bool PktSerialDriver::isConnected()
 
 int PktSerialDriver::deviceConnected(PktDevice device)
 {
-    PKT_DMESG("CONNECTED %d",device.address);
+    DMESG("CONNECTED %d",device.address);
     uint16_t flags = this->device.flags & 0xFF00;
     this->device = device;
-    this->device.flags |= (flags | PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_CP_SEEN);
+    this->device.flags = (flags | PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_CP_SEEN);
     Event(this->id, PKT_DRIVER_EVT_CONNECTED);
     return DEVICE_OK;
 }

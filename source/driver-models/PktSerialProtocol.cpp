@@ -87,11 +87,13 @@ int PktSerialProtocol::add(PktSerialDriver& driver)
 
     for (i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
     {
+        target_disable_irq();
         if (drivers[i] == NULL)
         {
             drivers[i] = &driver;
             break;
         }
+        target_enable_irq();
     }
 
     if (i == PKT_PROTOCOL_DRIVER_SIZE)
@@ -102,13 +104,16 @@ int PktSerialProtocol::add(PktSerialDriver& driver)
 
 int PktSerialProtocol::remove(PktSerialDriver& driver)
 {
+
     for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
     {
+        target_disable_irq();
         if (drivers[i] == &driver)
         {
             drivers[i] = NULL;
             break;
         }
+        target_enable_irq();
     }
 
     return DEVICE_OK;
