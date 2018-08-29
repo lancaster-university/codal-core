@@ -196,8 +196,7 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
 
             // for some drivers, pairing is required... pass the packet through to the driver.
             current->handleControlPacket(cp);
-            DMESG("FOUND");
-            return;
+            DMESG("FOUND LOCAL");
         }
 
         // for remote drivers, we aren't in charge, so we track the serial_number in the control packets,
@@ -207,13 +206,13 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
             current->device.address = cp->address;
             current->device.flags |= PKT_DEVICE_FLAGS_CP_SEEN;
             current->handleControlPacket(cp);
+            DMESG("FOUND REMOTE");
         }
         else if ((current->device.flags & PKT_DEVICE_FLAGS_BROADCAST) && current->driver_class == cp->driver_class)
         {
             // for some drivers, pairing is required... pass the packet through to the driver.
             current->handleControlPacket(cp);
-            DMESG("FOUND");
-            return;
+            DMESG("FOUND BROAD");
         }
     }
 
