@@ -80,9 +80,9 @@ namespace codal
          */
         int ignore(uint16_t id, uint16_t value, EventModel &eventBus);
 
-        virtual void handleControlPacket(ControlPacket* cp);
+        virtual int handleControlPacket(ControlPacket* cp);
 
-        virtual void handlePacket(PktSerialPkt* p);
+        virtual int handlePacket(PktSerialPkt* p);
     };
 }
 

@@ -22,11 +22,11 @@ namespace codal
         public:
         PktBridgeDriver(Radio& r);
 
-        virtual void handleControlPacket(ControlPacket* cp);
-
         void forwardPacket(Event e);
 
-        virtual void handlePacket(PktSerialPkt* p);
+        virtual int handleControlPacket(ControlPacket* cp);
+
+        virtual int handlePacket(PktSerialPkt* p);
     };
 }
 

@@ -39,21 +39,22 @@ PktSerialProtocol* PktSerialProtocol::instance = NULL;
 void PktSerialProtocol::onPacketReceived(Event)
 {
     PktSerialPkt* pkt = bus.getPacket();
-    PKT_DMESG("PKT REC ADDR: %d",pkt->address);
+    DMESG("PKT REC ADDR: %d",pkt->address);
 
     // if this packet is destined for our drivers...
     if (!logic.filterPacket(pkt->address))
     {
-        PKT_DMESG("NOT FILTERED");
+        DMESG("NOT FILTERED");
         for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
         {
             if (this->drivers[i])
             {
-                PKT_DMESG("%d, %d, %d", this->drivers[i]->device.address, pkt->address, this->drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISED);
+                DMESG("DRIV a:%d sn:%d i:%d", this->drivers[i]->device.address, this->drivers[i]->device.serial_number, this->drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISED ? 1 : 0);
             }
 
             if (this->drivers[i] && this->drivers[i]->device.address == pkt->address && this->drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISED)
             {
+                DMESG("HANDLED");
                 this->drivers[i]->handlePacket(pkt);
                 break;
             }

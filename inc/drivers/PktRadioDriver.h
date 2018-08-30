@@ -47,9 +47,9 @@ namespace codal
         int send(PktRadioPacket* packet, bool retain = true);
         int send(uint8_t* buf, int len, bool retain = true);
 
-        virtual void handleControlPacket(ControlPacket* cp);
+        virtual int handleControlPacket(ControlPacket* cp);
 
-        virtual void handlePacket(PktSerialPkt* p);
+        virtual int handlePacket(PktSerialPkt* p);
 
     };
 }

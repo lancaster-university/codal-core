@@ -117,15 +117,16 @@ PktLogicDriver::PktLogicDriver(PktDevice d, uint32_t driver_class, uint16_t id) 
     this->device.flags = (PKT_DEVICE_FLAGS_LOCAL | PKT_DEVICE_FLAGS_INITIALISED);
 }
 
-void PktLogicDriver::handleControlPacket(ControlPacket* p)
+int PktLogicDriver::handleControlPacket(ControlPacket* p)
 {
     // nop for now... could be useful in the future for controlling the mode of the logic driver?
+    return DEVICE_OK;
 }
 
 /**
   * Given a control packet, finds the associated driver, or if no associated device, associates a remote device with a driver.
   **/
-void PktLogicDriver::handlePacket(PktSerialPkt* p)
+int PktLogicDriver::handlePacket(PktSerialPkt* p)
 {
     ControlPacket *cp = (ControlPacket *)p->data;
 
@@ -180,7 +181,7 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
                     DMESG("INIT REASSIGNING SELF");
                 }
 
-                return;
+                return DEVICE_OK;
             }
             // someone has flagged a conflict with this initialised device
             else if (cp->flags & CONTROL_PKT_FLAGS_CONFLICT)
@@ -188,7 +189,7 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
                 // new address will be assigned on next tick.
                 current->deviceRemoved();
                 DMESG("REASSIGNING SELF");
-                return;
+                return DEVICE_OK;
             }
 
             // if we get here it means that:
@@ -201,8 +202,10 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
             // for some drivers, pairing is required... pass the packet through to the driver.
             DMESG("FOUND LOCAL");
             handled = true;
-            current->handleControlPacket(cp);
-            continue;
+            int ret = current->handleControlPacket(cp);
+
+            if (ret == DEVICE_OK)
+                continue;
         }
 
         // for remote drivers, we aren't in charge, so we track the serial_number in the control packets,
@@ -214,23 +217,27 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
             DMESG("F REM a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & PKT_DEVICE_FLAGS_INITIALISED ? 1 : 0);
 
             handled = true;
-            current->handleControlPacket(cp);
-            continue;
+            int ret = current->handleControlPacket(cp);
+
+            if (ret == DEVICE_OK)
+                continue;
         }
         else if ((current->device.flags & PKT_DEVICE_FLAGS_BROADCAST) && current->driver_class == cp->driver_class)
         {
             // for some drivers, pairing is required... pass the packet through to the driver.
             DMESG("FOUND BROAD");
             handled = true;
-            current->handleControlPacket(cp);
-            continue;
+            int ret = current->handleControlPacket(cp);
+
+            if (ret == DEVICE_OK)
+                continue;
         }
     }
 
     if (handled)
     {
         // DMESG("HANDLED");
-        return;
+        return DEVICE_OK;
     }
 
     bool filtered = filterPacket(cp->address);
@@ -245,7 +252,7 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
                 this->address_filters[i] = cp->address;
         }
 
-        return;
+        return DEVICE_OK;
     }
     // if it was previously paired with another device, we remove the filter.
     else if (filtered)
@@ -277,11 +284,12 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
             d.serial_number = cp->serial_number;
 
             current->deviceConnected(d);
-            return;
+            return DEVICE_OK;
         }
     }
 
     // if we reach here we just drop the packet.
+    return DEVICE_OK;
 }
 
 bool PktLogicDriver::filterPacket(uint8_t address)

@@ -65,20 +65,25 @@ void PktBridgeDriver::forwardPacket(Event)
     PktSerialProtocol::send(pkt);
 }
 
-void PktBridgeDriver::handleControlPacket(ControlPacket* cp) {}
+int PktBridgeDriver::handleControlPacket(ControlPacket* cp)
+{
+    return DEVICE_OK;
+}
 
-void PktBridgeDriver::handlePacket(PktSerialPkt* p)
+int PktBridgeDriver::handlePacket(PktSerialPkt* p)
 {
     uint32_t id = p->address << 16 | p->crc;
 
     DMESG("ID: %d",id);
-    if (checkHistory(id))
-        return;
+    if (!checkHistory(id))
+    {
+        addToHistory(id);
 
-    addToHistory(id);
+        ManagedBuffer b((uint8_t*)p, PKT_SERIAL_PACKET_SIZE);
+        int ret = networkInstance->sendBuffer(b);
 
-    ManagedBuffer b((uint8_t*)p, PKT_SERIAL_PACKET_SIZE);
-    int ret = networkInstance->sendBuffer(b);
+        DMESG("ret %d",ret);
+    }
 
-    DMESG("ret %d",ret);
+    return DEVICE_OK;
 }

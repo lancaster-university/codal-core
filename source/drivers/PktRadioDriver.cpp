@@ -182,9 +182,12 @@ int PktRadioDriver::send(uint8_t* buf, int len, bool retain)
     return send(&p, retain);
 }
 
-void PktRadioDriver::handleControlPacket(ControlPacket* cp) {}
+int PktRadioDriver::handleControlPacket(ControlPacket* cp)
+{
+    return DEVICE_OK;
+}
 
-void PktRadioDriver::handlePacket(PktSerialPkt* p)
+int PktRadioDriver::handlePacket(PktSerialPkt* p)
 {
     PktRadioPacket* rx = (PktRadioPacket*)malloc(sizeof(PktRadioPacket));
     memcpy(rx, p->data, p->size);
@@ -212,7 +215,7 @@ void PktRadioDriver::handlePacket(PktSerialPkt* p)
         {
             history[idx] = rx->id;
             idx = (idx + 1) % PKT_RADIO_HISTORY_SIZE;
-            return;
+            return DEVICE_OK;
         }
 
         // check if we have a matching id in the send queue
@@ -225,4 +228,6 @@ void PktRadioDriver::handlePacket(PktSerialPkt* p)
         addToQueue(&rxQueue, rx);
         Event(DEVICE_ID_RADIO, rx->id);
     }
+
+    return DEVICE_OK;
 }

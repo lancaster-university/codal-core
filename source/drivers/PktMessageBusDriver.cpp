@@ -99,7 +99,7 @@ int PktMessageBusDriver::ignore(uint16_t id, uint16_t value, EventModel &eventBu
   *
   * This function process this packet, and fires the event contained inside onto the default EventModel.
   */
-void PktMessageBusDriver::handlePacket(PktSerialPkt* p)
+int PktMessageBusDriver::handlePacket(PktSerialPkt* p)
 {
     Event *e = (Event *) p->data;
 
@@ -108,11 +108,13 @@ void PktMessageBusDriver::handlePacket(PktSerialPkt* p)
     suppressForwarding = true;
     e->fire();
     suppressForwarding = false;
+
+    return DEVICE_OK;
 }
 
-void PktMessageBusDriver::handleControlPacket(ControlPacket*)
+int PktMessageBusDriver::handleControlPacket(ControlPacket*)
 {
-
+    return DEVICE_OK;
 }
 
 /**

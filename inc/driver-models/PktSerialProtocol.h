@@ -188,14 +188,14 @@ namespace codal
          *
          * @param cp the control packet from the serial bus.
          **/
-        virtual void handleControlPacket(ControlPacket* cp) = 0;
+        virtual int handleControlPacket(ControlPacket* cp) = 0;
 
         /**
          * Called by the logic driver when a data packet is addressed to this driver
          *
          * @param cp the control packet from the serial bus.
          **/
-        virtual void handlePacket(PktSerialPkt* p) = 0;
+        virtual int handlePacket(PktSerialPkt* p) = 0;
 
         ~PktSerialDriver();
     };
@@ -230,14 +230,14 @@ namespace codal
          *
          * @param cp the control packet from the serial bus.
          **/
-        virtual void handleControlPacket(ControlPacket* p);
+        virtual int handleControlPacket(ControlPacket* p);
 
         /**
          * Called by the logic driver when a data packet is addressed to this driver
          *
          * @param cp the control packet from the serial bus.
          **/
-        virtual void handlePacket(PktSerialPkt* p);
+        virtual int handlePacket(PktSerialPkt* p);
 
         /**
          * This function provides the ability to ignore specific packets. For instance, we are not interested in packets that are paired to other devices
