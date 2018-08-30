@@ -91,7 +91,7 @@ void PktLogicDriver::periodicCallback()
                 // if no one has complained in a second, consider our address allocated
                 if (current->device.rolling_counter == PKT_LOGIC_ADDRESS_ALLOC_TIME)
                 {
-                    PKT_DMESG("FINISHED");
+                    DMESG("FINISHED");
                     current->device.flags &= ~PKT_DEVICE_FLAGS_INITIALISING;
                     current->device.flags |= PKT_DEVICE_FLAGS_INITIALISED;
                     current->deviceConnected(current->device);
@@ -143,6 +143,9 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
     // 3. upon receiving a packet with the conflict packet set, the receiving device should reassign their address.
 
     // first check for any drivers who are associated with this control packet
+
+    bool handled = false; // indicates if the control packet has been handled by a driver.
+
     for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
     {
         PktSerialDriver* current = PktSerialProtocol::instance->drivers[i];
@@ -150,14 +153,16 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
         if (current == NULL)
             continue;
 
-        // We are in charge of local drivers, in this if statement we handle address assignment
-        if (current->device.address == cp->address && (current->device.address & PKT_DEVICE_FLAGS_LOCAL))
-        {
-            DMESG("ADDR MATCH %d, s %d, c %d b %d f %d", current->device.address, current->device.serial_number, current->driver_class, current->device.flags & PKT_DEVICE_FLAGS_BROADCAST ? 1 : 0, current->device.flags);
+        // DMESG("ITER %d, s %d, c %d b %d l %d", current->device.address, current->device.serial_number, current->driver_class, current->device.flags & PKT_DEVICE_FLAGS_BROADCAST ? 1 : 0, current->device.flags & PKT_DEVICE_FLAGS_LOCAL ? 1 : 0);
 
+        // We are in charge of local drivers, in this if statement we handle address assignment
+        if ((current->device.flags & PKT_DEVICE_FLAGS_LOCAL) && current->device.address == cp->address)
+        {
+            DMESG("ADDR MATCH");
             // a different device is using our address!!
-            if (current->device.serial_number != cp->serial_number)
+            if (current->device.serial_number != cp->serial_number && !(cp->flags & CONTROL_PKT_FLAGS_CONFLICT))
             {
+                DMESG("SERIAL_DIFF");
                 // if we're initialised, this means that someone else is about to use our address, reject.
                 // see 2. above.
                 if ((current->device.flags & PKT_DEVICE_FLAGS_INITIALISED) && (cp->flags & CONTROL_PKT_FLAGS_UNCERTAIN))
@@ -170,8 +175,8 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
                 else
                 {
                     // new address will be assigned on next tick.
-                    current->device.flags &= ~(PKT_DEVICE_FLAGS_INITIALISING);
-                    current->deviceRemoved();
+                    current->device.address = 0;
+                    current->device.flags &= ~(PKT_DEVICE_FLAGS_INITIALISING | PKT_DEVICE_FLAGS_INITIALISED);
                     DMESG("INIT REASSIGNING SELF");
                 }
 
@@ -181,7 +186,6 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
             else if (cp->flags & CONTROL_PKT_FLAGS_CONFLICT)
             {
                 // new address will be assigned on next tick.
-                current->device.flags &= ~(PKT_DEVICE_FLAGS_INITIALISING);
                 current->deviceRemoved();
                 DMESG("REASSIGNING SELF");
                 return;
@@ -195,25 +199,38 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
             current->device.flags |= PKT_DEVICE_FLAGS_CP_SEEN;
 
             // for some drivers, pairing is required... pass the packet through to the driver.
-            current->handleControlPacket(cp);
             DMESG("FOUND LOCAL");
+            handled = true;
+            current->handleControlPacket(cp);
+            continue;
         }
 
         // for remote drivers, we aren't in charge, so we track the serial_number in the control packets,
         // and silently update the driver.
-        else if ((current->device.flags & (PKT_DEVICE_FLAGS_REMOTE | PKT_DEVICE_FLAGS_INITIALISED))  && current->device.serial_number == cp->serial_number)
+        else if (current->device.flags & PKT_DEVICE_FLAGS_REMOTE && current->device.flags & PKT_DEVICE_FLAGS_INITIALISED && current->device.serial_number == cp->serial_number)
         {
             current->device.address = cp->address;
             current->device.flags |= PKT_DEVICE_FLAGS_CP_SEEN;
+            DMESG("F REM a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & PKT_DEVICE_FLAGS_INITIALISED ? 1 : 0);
+
+            handled = true;
             current->handleControlPacket(cp);
-            DMESG("FOUND REMOTE");
+            continue;
         }
         else if ((current->device.flags & PKT_DEVICE_FLAGS_BROADCAST) && current->driver_class == cp->driver_class)
         {
             // for some drivers, pairing is required... pass the packet through to the driver.
-            current->handleControlPacket(cp);
             DMESG("FOUND BROAD");
+            handled = true;
+            current->handleControlPacket(cp);
+            continue;
         }
+    }
+
+    if (handled)
+    {
+        // DMESG("HANDLED");
+        return;
     }
 
     bool filtered = filterPacket(cp->address);
@@ -252,7 +269,7 @@ void PktLogicDriver::handlePacket(PktSerialPkt* p)
             if (current->device.serial_number > 0 && current->device.serial_number != cp->serial_number)
                 continue;
 
-            PKT_DMESG("FOUND");
+            DMESG("FOUND NEW");
             PktDevice d;
             d.address = cp->address;
             d.rolling_counter = 0;
