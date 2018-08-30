@@ -60,7 +60,7 @@ bool PktSerialDriver::isConnected()
 
 int PktSerialDriver::deviceConnected(PktDevice device)
 {
-    DMESG("CONNECTED %d",device.address);
+    DMESG("CONNECTED a:%d sn:%d",device.address,device.serial_number);
     uint16_t flags = this->device.flags & 0xFF00;
     this->device = device;
     this->device.flags = (flags | PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_CP_SEEN);
@@ -70,7 +70,7 @@ int PktSerialDriver::deviceConnected(PktDevice device)
 
 int PktSerialDriver::deviceRemoved()
 {
-    PKT_DMESG("DISCONN %d",this->device.address);
+    DMESG("DISCONN a:%d sn:%d",device.address,device.serial_number);
     this->device.flags &= ~(PKT_DEVICE_FLAGS_INITIALISED);
     this->device.rolling_counter = 0;
     Event(this->id, PKT_DRIVER_EVT_DISCONNECTED);

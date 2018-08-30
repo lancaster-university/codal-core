@@ -55,8 +55,9 @@ void PktSerialProtocol::onPacketReceived(Event)
             if (this->drivers[i] && this->drivers[i]->device.address == pkt->address && this->drivers[i]->device.flags & PKT_DEVICE_FLAGS_INITIALISED)
             {
                 DMESG("HANDLED");
-                this->drivers[i]->handlePacket(pkt);
-                break;
+                // only break if the driver has "handled the packet" i.e. returns DEVICE_OK.
+                if (this->drivers[i]->handlePacket(pkt) == DEVICE_OK)
+                    break;
             }
         }
     }

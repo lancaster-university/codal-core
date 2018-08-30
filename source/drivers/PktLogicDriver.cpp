@@ -29,7 +29,10 @@ void PktLogicDriver::periodicCallback()
             if (current->device.rolling_counter == PKT_LOGIC_DRIVER_TIMEOUT)
             {
                 if (!(current->device.flags & PKT_DEVICE_FLAGS_CP_SEEN))
+                {
+                    DMESG("CONTROL NOT SEEN");
                     current->deviceRemoved();
+                }
 
                 current->device.flags &= ~(PKT_DEVICE_FLAGS_CP_SEEN);
                 continue;
@@ -201,11 +204,12 @@ int PktLogicDriver::handlePacket(PktSerialPkt* p)
 
             // for some drivers, pairing is required... pass the packet through to the driver.
             DMESG("FOUND LOCAL");
-            handled = true;
-            int ret = current->handleControlPacket(cp);
-
-            if (ret == DEVICE_OK)
+            if (current->handleControlPacket(cp) == DEVICE_OK)
+            {
+                handled = true;
+                DMESG("CP ABSORBED %d", current->device.address);
                 continue;
+            }
         }
 
         // for remote drivers, we aren't in charge, so we track the serial_number in the control packets,
@@ -214,23 +218,25 @@ int PktLogicDriver::handlePacket(PktSerialPkt* p)
         {
             current->device.address = cp->address;
             current->device.flags |= PKT_DEVICE_FLAGS_CP_SEEN;
-            DMESG("F REM a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & PKT_DEVICE_FLAGS_INITIALISED ? 1 : 0);
+            DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & PKT_DEVICE_FLAGS_INITIALISED ? 1 : 0);
 
-            handled = true;
-            int ret = current->handleControlPacket(cp);
-
-            if (ret == DEVICE_OK)
+            if (current->handleControlPacket(cp) == DEVICE_OK)
+            {
+                handled = true;
+                DMESG("CP ABSORBED %d", current->device.address);
                 continue;
+            }
         }
         else if ((current->device.flags & PKT_DEVICE_FLAGS_BROADCAST) && current->driver_class == cp->driver_class)
         {
             // for some drivers, pairing is required... pass the packet through to the driver.
             DMESG("FOUND BROAD");
-            handled = true;
-            int ret = current->handleControlPacket(cp);
-
-            if (ret == DEVICE_OK)
+            if (current->handleControlPacket(cp) == DEVICE_OK)
+            {
+                handled = true;
+                DMESG("CP ABSORBED %d", current->device.address);
                 continue;
+            }
         }
     }
 
