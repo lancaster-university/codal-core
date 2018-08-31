@@ -1,0 +1,170 @@
+/*
+The MIT License (MIT)
+
+Copyright (c) 2017 Lancaster University.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+*/
+
+#include "CodalConfig.h"
+#include "ErrorNo.h"
+#include "Event.h"
+#include "EventModel.h"
+#include "JDProtocol.h"
+#include "Timer.h"
+#include "CodalDmesg.h"
+
+using namespace codal;
+
+JDDriver* JDProtocol::drivers[JD_PROTOCOL_DRIVER_SIZE] = { 0 };
+
+JDProtocol* JDProtocol::instance = NULL;
+
+void JDProtocol::onPacketReceived(Event)
+{
+    JDPkt* JD = bus.getPacket();
+    DMESG("JD REC ADDR: %d",JD->address);
+
+    // if this packet is destined for our drivers...
+    if (!logic.filterPacket(JD->address))
+    {
+        DMESG("NOT FILTERED");
+        for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+        {
+            if (this->drivers[i])
+            {
+                // need to maintain state of all drivers address -> serial number -> class... damn
+                // could be optimised into a single if, but useful for debugging.
+                DMESG("DRIV a:%d sn:%d i:%d", this->drivers[i]->device.address, this->drivers[i]->device.serial_number, this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
+                if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_LOCAL) && (this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED) && this->drivers[i]->device.address == cp->address)
+                {
+                    DMESG("HANDLED BY LOCAL");
+                    // only break if the driver has "handled the packet" i.e. returns DEVICE_OK.
+                    if (this->drivers[i]->handlePacket(JD) == DEVICE_OK)
+                        break;
+                }
+                else if (this->drivers[i]->device.flags & JD_DEVICE_FLAGS_REMOTE && this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED && this->drivers[i]->device.serial_number == cp->serial_number)
+                {
+                    DMESG("HANDLED BY REMOTe");
+                    // only break if the driver has "handled the packet" i.e. returns DEVICE_OK.
+                    if (this->drivers[i]->handlePacket(JD) == DEVICE_OK)
+                        break;
+                }
+                else if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_BROADCAST) && this->drivers[i]->driver_class == cp->driver_class)
+                {
+                    DMESG("HANDLED BY BROADCAST");
+                    // only break if the driver has "handled the packet" i.e. returns DEVICE_OK.
+                    if (this->drivers[i]->handlePacket(JD) == DEVICE_OK)
+                        break;
+                }
+
+            }
+        }
+    }
+
+    if (bridge != NULL)
+        bridge->handlePacket(JD);
+
+    free(JD);
+}
+
+JDProtocol::JDProtocol(JACDAC& JD, uint16_t id) : logic(), bridge(NULL), bus(JD)
+{
+    this->id = id;
+
+    if (instance == NULL)
+        instance = this;
+
+    memset(this->drivers, 0, sizeof(JDDriver*) * JD_PROTOCOL_DRIVER_SIZE);
+
+    add(logic);
+
+    if (EventModel::defaultEventBus)
+        EventModel::defaultEventBus->listen(JD.id, JD_SERIAL_EVT_DATA_READY, this, &JDProtocol::onPacketReceived);
+}
+
+int JDProtocol::add(JDDriver& driver)
+{
+    int i;
+
+    for (i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+    {
+        target_disable_irq();
+        if (drivers[i] == NULL)
+        {
+            drivers[i] = &driver;
+            break;
+        }
+        target_enable_irq();
+    }
+
+    if (i == JD_PROTOCOL_DRIVER_SIZE)
+        return DEVICE_NO_RESOURCES;
+
+    return DEVICE_OK;
+}
+
+int JDProtocol::remove(JDDriver& driver)
+{
+
+    for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+    {
+        target_disable_irq();
+        if (drivers[i] == &driver)
+        {
+            drivers[i] = NULL;
+            break;
+        }
+        target_enable_irq();
+    }
+
+    return DEVICE_OK;
+}
+
+int JDProtocol::setBridge(JDDriver& bridge)
+{
+    this->bridge = &bridge;
+    return DEVICE_OK;
+}
+
+void JDProtocol::start()
+{
+    logic.start();
+}
+
+void JDProtocol::stop()
+{
+    logic.stop();
+}
+
+int JDProtocol::send(JDPkt* JD)
+{
+    if(instance)
+        return instance->bus.send(JD);
+
+    return DEVICE_NO_RESOURCES;
+}
+
+int JDProtocol::send(uint8_t* buf, int len, uint8_t address)
+{
+    if(instance)
+        return instance->bus.send(buf, len, address);
+
+    return DEVICE_NO_RESOURCES;
+}

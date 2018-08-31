@@ -22,8 +22,8 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef CODAL_PKTSERIAL_H
-#define CODAL_PKTSERIAL_H
+#ifndef CODAL_JACDAC_H
+#define CODAL_JACDAC_H
 
 #include "CodalConfig.h"
 #include "ErrorNo.h"
@@ -31,51 +31,51 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "DMASingleWireSerial.h"
 
-#define PKT_SERIAL_MAX_BUFFERS          10
+#define JD_SERIAL_MAX_BUFFERS          10
 
-#define PKT_SERIAL_RECEIVING            0x02
-#define PKT_SERIAL_TRANSMITTING         0x04
-#define PKT_SERIAL_TX_DRAIN_ENABLE      0x08
+#define JD_SERIAL_RECEIVING            0x02
+#define JD_SERIAL_TRANSMITTING         0x04
+#define JD_SERIAL_TX_DRAIN_ENABLE      0x08
 
 
-#define PKT_SERIAL_EVT_DATA_READY       1
-#define PKT_SERIAL_EVT_BUS_ERROR        2
-#define PKT_SERIAL_EVT_DRAIN            3
+#define JD_SERIAL_EVT_DATA_READY       1
+#define JD_SERIAL_EVT_BUS_ERROR        2
+#define JD_SERIAL_EVT_DRAIN            3
 
-#define PKT_SERIAL_HEADER_SIZE          4
-#define PKT_SERIAL_DATA_SIZE            32
-#define PKT_SERIAL_PACKET_SIZE          (PKT_SERIAL_HEADER_SIZE + PKT_SERIAL_DATA_SIZE)
+#define JD_SERIAL_HEADER_SIZE          4
+#define JD_SERIAL_DATA_SIZE            32
+#define JD_SERIAL_PACKET_SIZE          (JD_SERIAL_HEADER_SIZE + JD_SERIAL_DATA_SIZE)
 
-#define PKT_SERIAL_MAXIMUM_BUFFERS      10
+#define JD_SERIAL_MAXIMUM_BUFFERS      10
 
-#define PKT_SERIAL_DMA_TIMEOUT          2   // 2 callback ~8 ms
+#define JD_SERIAL_DMA_TIMEOUT          2   // 2 callback ~8 ms
 
-#define PKT_PKT_FLAGS_LOSSY             0x01
+#define JD_JD_FLAGS_LOSSY             0x01
 
-#if CONFIG_ENABLED(PKT_DEBUG)
-#define PKT_DMESG      codal_dmesg
+#if CONFIG_ENABLED(JD_DEBUG)
+#define JD_DMESG      codal_dmesg
 #else
-#define PKT_DMESG(...) ((void)0)
+#define JD_DMESG(...) ((void)0)
 #endif
 
 namespace codal
 {
 
-    struct PktSerialPkt {
+    struct JDPkt {
         public:
         uint16_t crc;
         uint8_t address; // control is 0, devices are allocated address in the range 1 - 255
         uint8_t size;
 
         // add more stuff
-        uint8_t data[PKT_SERIAL_DATA_SIZE];
+        uint8_t data[JD_SERIAL_DATA_SIZE];
 
-        PktSerialPkt* next;
+        JDPkt* next;
     } __attribute((__packed__));
     /**
-    * Class definition for a PktSerial interface.
+    * Class definition for a JACDAC interface.
     */
-    class PktSerial : public CodalComponent
+    class JACDAC : public CodalComponent
     {
     protected:
         DMASingleWireSerial&  sws;
@@ -88,18 +88,18 @@ namespace codal
         void configure(bool events);
         void dmaComplete(Event evt);
 
-        PktSerialPkt* popQueue(PktSerialPkt** queue);
-        int addToQueue(PktSerialPkt** queue, PktSerialPkt* packet);
-        PktSerialPkt* removeFromQueue(PktSerialPkt** queue, uint8_t device_class);
+        JDPkt* popQueue(JDPkt** queue);
+        int addToQueue(JDPkt** queue, JDPkt* packet);
+        JDPkt* removeFromQueue(JDPkt** queue, uint8_t device_class);
 
         void sendPacket(Event);
 
     public:
-        PktSerialPkt* rxBuf;
-        PktSerialPkt* txBuf;
+        JDPkt* rxBuf;
+        JDPkt* txBuf;
 
-        PktSerialPkt* rxQueue;
-        PktSerialPkt* txQueue;
+        JDPkt* rxQueue;
+        JDPkt* txQueue;
 
         uint16_t id;
 
@@ -112,14 +112,14 @@ namespace codal
           *
           * @param sws an instance of sws created using p.
           */
-        PktSerial(Pin& p, DMASingleWireSerial& sws, uint16_t id = DEVICE_ID_PKTSERIAL0);
+        JACDAC(Pin& p, DMASingleWireSerial& sws, uint16_t id = DEVICE_ID_JACDAC0);
 
         /**
           * Retrieves the first packet on the rxQueue irregardless of the device_class
           *
           * @returns the first packet on the rxQueue or NULL
           */
-        PktSerialPkt *getPacket();
+        JDPkt *getPacket();
 
         /**
           * Retrieves the first packet on the rxQueue with a matching device_class
@@ -128,32 +128,32 @@ namespace codal
           *
           * @returns the first packet on the rxQueue matching the device_class or NULL
           */
-        PktSerialPkt* getPacket(uint8_t address);
+        JDPkt* getPacket(uint8_t address);
 
         /**
-          * Causes this instance of PktSerial to begin listening for packets transmitted on the serial line.
+          * Causes this instance of JACDAC to begin listening for packets transmitted on the serial line.
           */
         virtual void start();
 
         /**
-          * Causes this instance of PktSerial to stop listening for packets transmitted on the serial line.
+          * Causes this instance of JACDAC to stop listening for packets transmitted on the serial line.
           */
         virtual void stop();
 
         /**
           * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
-          * If an ongoing asynchronous transmission is happening, pkt is added to the txQueue. If this is the first packet in a while
+          * If an ongoing asynchronous transmission is happening, JD is added to the txQueue. If this is the first packet in a while
           * asynchronous transmission is begun.
           *
-          * @param pkt the packet to send.
+          * @param JD the packet to send.
           *
-          * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if pkt is NULL, or DEVICE_NO_RESOURCES if the queue is full.
+          * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
           */
-        virtual int send(PktSerialPkt *pkt);
+        virtual int send(JDPkt *JD);
 
         /**
           * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
-          * If an ongoing asynchronous transmission is happening, pkt is added to the txQueue. If this is the first packet in a while
+          * If an ongoing asynchronous transmission is happening, JD is added to the txQueue. If this is the first packet in a while
           * asynchronous transmission is begun.
           *
           * @param buf the buffer to send.

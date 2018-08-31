@@ -1,51 +1,51 @@
-#include "PktSerialProtocol.h"
+#include "JDProtocol.h"
 #include "CodalDmesg.h"
 #include "Timer.h"
 
 using namespace codal;
 
-void PktLogicDriver::periodicCallback()
+void JDLogicDriver::periodicCallback()
 {
     // no sense continuing if we dont have a bus to transmit on...
-    if (!PktSerialProtocol::instance || !PktSerialProtocol::instance->bus.isRunning())
+    if (!JDProtocol::instance || !JDProtocol::instance->bus.isRunning())
         return;
 
     // for each driver we maintain a rolling counter, used to trigger various timer related events.
     // uint8_t might not be big enough in the future if the scheduler runs faster...
-    for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
+    for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
     {
-        PktSerialDriver* current = PktSerialProtocol::instance->drivers[i];
+        JDDriver* current = JDProtocol::instance->drivers[i];
 
         // ignore ourself
         if (current == NULL || current == this)
             continue;
 
-        if (current->device.flags & (PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_INITIALISING))
+        if (current->device.flags & (JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_INITIALISING))
             current->device.rolling_counter++;
 
         // if the driver is acting as a virtual driver, we don't need to perform any initialisation, just connect / disconnect events.
-        if (current->device.flags & PKT_DEVICE_FLAGS_REMOTE)
+        if (current->device.flags & JD_DEVICE_FLAGS_REMOTE)
         {
-            if (current->device.rolling_counter == PKT_LOGIC_DRIVER_TIMEOUT)
+            if (current->device.rolling_counter == JD_LOGIC_DRIVER_TIMEOUT)
             {
-                if (!(current->device.flags & PKT_DEVICE_FLAGS_CP_SEEN))
+                if (!(current->device.flags & JD_DEVICE_FLAGS_CP_SEEN))
                 {
                     DMESG("CONTROL NOT SEEN");
                     current->deviceRemoved();
                 }
 
-                current->device.flags &= ~(PKT_DEVICE_FLAGS_CP_SEEN);
+                current->device.flags &= ~(JD_DEVICE_FLAGS_CP_SEEN);
                 continue;
             }
         }
 
         // local drivers run on the device
-        if (current->device.flags & PKT_DEVICE_FLAGS_LOCAL)
+        if (current->device.flags & JD_DEVICE_FLAGS_LOCAL)
         {
             // initialise a driver by queuing a control packet with a first reasonable address
-            if (!(current->device.flags & (PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_INITIALISING)))
+            if (!(current->device.flags & (JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_INITIALISING)))
             {
-                PKT_DMESG("BEGIN INIT");
+                JD_DMESG("BEGIN INIT");
                 current->device.address = 0;
 
                 bool allocated = true;
@@ -56,14 +56,14 @@ void PktLogicDriver::periodicCallback()
                     bool stillAllocated = false;
                     current->device.address = target_random(256);
 
-                    for (int j = 0; j < PKT_PROTOCOL_DRIVER_SIZE; j++)
+                    for (int j = 0; j < JD_PROTOCOL_DRIVER_SIZE; j++)
                     {
                         if (i == j)
                             continue;
 
-                        if (PktSerialProtocol::instance->drivers[j] && PktSerialProtocol::instance->drivers[j]->device.flags & PKT_DEVICE_FLAGS_INITIALISED)
+                        if (JDProtocol::instance->drivers[j] && JDProtocol::instance->drivers[j]->device.flags & JD_DEVICE_FLAGS_INITIALISED)
                         {
-                            if (PktSerialProtocol::instance->drivers[j]->device.address == current->device.address)
+                            if (JDProtocol::instance->drivers[j]->device.address == current->device.address)
                             {
                                 stillAllocated = true;
                                 break;
@@ -74,35 +74,35 @@ void PktLogicDriver::periodicCallback()
                     allocated = stillAllocated;
                 }
 
-                PKT_DMESG("ALLOC: %d",current->device.address);
+                JD_DMESG("ALLOC: %d",current->device.address);
 
                 // we queue the first packet, so that drivers don't send driver related packets on a yet unassigned address
                 ControlPacket cp;
                 memset(&cp, target_random(256), sizeof(ControlPacket));
 
-                cp.packet_type = CONTROL_PKT_TYPE_HELLO;
+                cp.packet_type = CONTROL_JD_TYPE_HELLO;
                 cp.address = current->device.address;
-                cp.flags = (current->device.flags & 0x00FF) | CONTROL_PKT_FLAGS_UNCERTAIN; // flag that we haven't assigned our address.
+                cp.flags = (current->device.flags & 0x00FF) | CONTROL_JD_FLAGS_UNCERTAIN; // flag that we haven't assigned our address.
                 cp.driver_class = current->driver_class;
                 cp.serial_number = current->device.serial_number;
 
-                current->device.flags |= PKT_DEVICE_FLAGS_INITIALISING;
+                current->device.flags |= JD_DEVICE_FLAGS_INITIALISING;
 
             }
-            else if(current->device.flags & PKT_DEVICE_FLAGS_INITIALISING)
+            else if(current->device.flags & JD_DEVICE_FLAGS_INITIALISING)
             {
                 // if no one has complained in a second, consider our address allocated
-                if (current->device.rolling_counter == PKT_LOGIC_ADDRESS_ALLOC_TIME)
+                if (current->device.rolling_counter == JD_LOGIC_ADDRESS_ALLOC_TIME)
                 {
                     DMESG("FINISHED");
-                    current->device.flags &= ~PKT_DEVICE_FLAGS_INITIALISING;
-                    current->device.flags |= PKT_DEVICE_FLAGS_INITIALISED;
+                    current->device.flags &= ~JD_DEVICE_FLAGS_INITIALISING;
+                    current->device.flags |= JD_DEVICE_FLAGS_INITIALISED;
                     current->deviceConnected(current->device);
                 }
             }
-            else if (current->device.flags & PKT_DEVICE_FLAGS_INITIALISED)
+            else if (current->device.flags & JD_DEVICE_FLAGS_INITIALISED)
             {
-                if(current->device.rolling_counter > 0 && (current->device.rolling_counter % PKT_LOGIC_DRIVER_CTRLPACKET_TIME) == 0)
+                if(current->device.rolling_counter > 0 && (current->device.rolling_counter % JD_LOGIC_DRIVER_CTRLPACKET_TIME) == 0)
                     current->queueControlPacket();
             }
         }
@@ -110,17 +110,17 @@ void PktLogicDriver::periodicCallback()
 }
 
 
-PktLogicDriver::PktLogicDriver(PktDevice d, uint32_t driver_class, uint16_t id) : PktSerialDriver(d, driver_class, id)
+JDLogicDriver::JDLogicDriver(JDDevice d, uint32_t driver_class, uint16_t id) : JDDriver(d, driver_class, id)
 {
     this->device.address = 0;
     status = 0;
-    memset(this->address_filters, 0, PKT_LOGIC_DRIVER_MAX_FILTERS);
+    memset(this->address_filters, 0, JD_LOGIC_DRIVER_MAX_FILTERS);
 
     // flags this instance as occupied
-    this->device.flags = (PKT_DEVICE_FLAGS_LOCAL | PKT_DEVICE_FLAGS_INITIALISED);
+    this->device.flags = (JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_INITIALISED);
 }
 
-int PktLogicDriver::handleControlPacket(ControlPacket* p)
+int JDLogicDriver::handleControlPacket(ControlPacket* p)
 {
     // nop for now... could be useful in the future for controlling the mode of the logic driver?
     return DEVICE_OK;
@@ -129,7 +129,7 @@ int PktLogicDriver::handleControlPacket(ControlPacket* p)
 /**
   * Given a control packet, finds the associated driver, or if no associated device, associates a remote device with a driver.
   **/
-int PktLogicDriver::handlePacket(PktSerialPkt* p)
+int JDLogicDriver::handlePacket(JDPkt* p)
 {
     ControlPacket *cp = (ControlPacket *)p->data;
 
@@ -140,7 +140,7 @@ int PktLogicDriver::handlePacket(PktSerialPkt* p)
     // 2. if someone has flagged a conflict with you, you must reassign your address.
 
     // Address assignment rules:
-    // 1. if you are initialising (address unconfirmed), set CONTROL_PKT_FLAGS_UNCERTAIN
+    // 1. if you are initialising (address unconfirmed), set CONTROL_JD_FLAGS_UNCERTAIN
     // 2. if an existing, confirmed device spots a packet with the same address and the uncertain flag set, it should respond with
     //    the same packet, with the CONFLICT flag set.
     // 2b. if the transmitting device has no uncertain flag set, we reassign ourselves (first CP wins)
@@ -150,29 +150,29 @@ int PktLogicDriver::handlePacket(PktSerialPkt* p)
 
     bool handled = false; // indicates if the control packet has been handled by a driver.
 
-    for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
+    for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
     {
-        PktSerialDriver* current = PktSerialProtocol::instance->drivers[i];
+        JDDriver* current = JDProtocol::instance->drivers[i];
 
         if (current == NULL)
             continue;
 
-        // DMESG("ITER %d, s %d, c %d b %d l %d", current->device.address, current->device.serial_number, current->driver_class, current->device.flags & PKT_DEVICE_FLAGS_BROADCAST ? 1 : 0, current->device.flags & PKT_DEVICE_FLAGS_LOCAL ? 1 : 0);
+        // DMESG("ITER %d, s %d, c %d b %d l %d", current->device.address, current->device.serial_number, current->driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 1 : 0, current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 1 : 0);
 
         // We are in charge of local drivers, in this if statement we handle address assignment
-        if ((current->device.flags & PKT_DEVICE_FLAGS_LOCAL) && current->device.address == cp->address)
+        if ((current->device.flags & JD_DEVICE_FLAGS_LOCAL) && current->device.address == cp->address)
         {
             DMESG("ADDR MATCH");
             // a different device is using our address!!
-            if (current->device.serial_number != cp->serial_number && !(cp->flags & CONTROL_PKT_FLAGS_CONFLICT))
+            if (current->device.serial_number != cp->serial_number && !(cp->flags & CONTROL_JD_FLAGS_CONFLICT))
             {
                 DMESG("SERIAL_DIFF");
                 // if we're initialised, this means that someone else is about to use our address, reject.
                 // see 2. above.
-                if ((current->device.flags & PKT_DEVICE_FLAGS_INITIALISED) && (cp->flags & CONTROL_PKT_FLAGS_UNCERTAIN))
+                if ((current->device.flags & JD_DEVICE_FLAGS_INITIALISED) && (cp->flags & CONTROL_JD_FLAGS_UNCERTAIN))
                 {
-                    cp->flags |= CONTROL_PKT_FLAGS_CONFLICT;
-                    PktSerialProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
+                    cp->flags |= CONTROL_JD_FLAGS_CONFLICT;
+                    JDProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
                     DMESG("ASK OTHER TO REASSIGN");
                 }
                 // the other device is initialised and has transmitted the CP first, we lose.
@@ -180,14 +180,14 @@ int PktLogicDriver::handlePacket(PktSerialPkt* p)
                 {
                     // new address will be assigned on next tick.
                     current->device.address = 0;
-                    current->device.flags &= ~(PKT_DEVICE_FLAGS_INITIALISING | PKT_DEVICE_FLAGS_INITIALISED);
+                    current->device.flags &= ~(JD_DEVICE_FLAGS_INITIALISING | JD_DEVICE_FLAGS_INITIALISED);
                     DMESG("INIT REASSIGNING SELF");
                 }
 
                 return DEVICE_OK;
             }
             // someone has flagged a conflict with this initialised device
-            else if (cp->flags & CONTROL_PKT_FLAGS_CONFLICT)
+            else if (cp->flags & CONTROL_JD_FLAGS_CONFLICT)
             {
                 // new address will be assigned on next tick.
                 current->deviceRemoved();
@@ -200,7 +200,7 @@ int PktLogicDriver::handlePacket(PktSerialPkt* p)
                 // 2) the serial_number is the same as we expect
                 // 3) we are not conflicting with another device.
             // so we flag as seen so we do not disconnect a device
-            current->device.flags |= PKT_DEVICE_FLAGS_CP_SEEN;
+            current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
 
             // for some drivers, pairing is required... pass the packet through to the driver.
             DMESG("FOUND LOCAL");
@@ -214,11 +214,11 @@ int PktLogicDriver::handlePacket(PktSerialPkt* p)
 
         // for remote drivers, we aren't in charge, so we track the serial_number in the control packets,
         // and silently update the driver.
-        else if (current->device.flags & PKT_DEVICE_FLAGS_REMOTE && current->device.flags & PKT_DEVICE_FLAGS_INITIALISED && current->device.serial_number == cp->serial_number)
+        else if (current->device.flags & JD_DEVICE_FLAGS_REMOTE && current->device.flags & JD_DEVICE_FLAGS_INITIALISED && current->device.serial_number == cp->serial_number)
         {
             current->device.address = cp->address;
-            current->device.flags |= PKT_DEVICE_FLAGS_CP_SEEN;
-            DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & PKT_DEVICE_FLAGS_INITIALISED ? 1 : 0);
+            current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
+            DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
 
             if (current->handleControlPacket(cp) == DEVICE_OK)
             {
@@ -227,7 +227,7 @@ int PktLogicDriver::handlePacket(PktSerialPkt* p)
                 continue;
             }
         }
-        else if ((current->device.flags & PKT_DEVICE_FLAGS_BROADCAST) && current->driver_class == cp->driver_class)
+        else if ((current->device.flags & JD_DEVICE_FLAGS_BROADCAST) && current->driver_class == cp->driver_class)
         {
             // for some drivers, pairing is required... pass the packet through to the driver.
             DMESG("FOUND BROAD");
@@ -249,10 +249,10 @@ int PktLogicDriver::handlePacket(PktSerialPkt* p)
     bool filtered = filterPacket(cp->address);
 
     // if it's paired with another device, we can just ignore
-    if (cp->flags & CONTROL_PKT_FLAGS_PAIRED && !filtered)
+    if (cp->flags & CONTROL_JD_FLAGS_PAIRED && !filtered)
     {
-        PKT_DMESG("FILTERING");
-        for (int i = 0; i < PKT_LOGIC_DRIVER_MAX_FILTERS; i++)
+        JD_DMESG("FILTERING");
+        for (int i = 0; i < JD_LOGIC_DRIVER_MAX_FILTERS; i++)
         {
             if (this->address_filters[i] == 0)
                 this->address_filters[i] = cp->address;
@@ -263,8 +263,8 @@ int PktLogicDriver::handlePacket(PktSerialPkt* p)
     // if it was previously paired with another device, we remove the filter.
     else if (filtered)
     {
-        PKT_DMESG("UNDO FILTER");
-        for (int i = 0; i < PKT_LOGIC_DRIVER_MAX_FILTERS; i++)
+        JD_DMESG("UNDO FILTER");
+        for (int i = 0; i < JD_LOGIC_DRIVER_MAX_FILTERS; i++)
         {
             if (this->address_filters[i] == cp->address)
                 this->address_filters[i] = 0;
@@ -272,18 +272,18 @@ int PktLogicDriver::handlePacket(PktSerialPkt* p)
     }
 
     // if we reach here, there is no associated device, find a free remote instance in the drivers array
-    for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
+    for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
     {
-        PktSerialDriver* current = PktSerialProtocol::instance->drivers[i];
-        PKT_DMESG("FIND DRIVER");
-        if (current && current->device.flags & PKT_DEVICE_FLAGS_REMOTE && current->driver_class == cp->driver_class)
+        JDDriver* current = JDProtocol::instance->drivers[i];
+        JD_DMESG("FIND DRIVER");
+        if (current && current->device.flags & JD_DEVICE_FLAGS_REMOTE && current->driver_class == cp->driver_class)
         {
             // this driver instance is looking for a specific serial number
             if (current->device.serial_number > 0 && current->device.serial_number != cp->serial_number)
                 continue;
 
             DMESG("FOUND NEW");
-            PktDevice d;
+            JDDevice d;
             d.address = cp->address;
             d.rolling_counter = 0;
             d.flags = cp->flags;
@@ -294,15 +294,16 @@ int PktLogicDriver::handlePacket(PktSerialPkt* p)
         }
     }
 
-    // if we reach here we just drop the packet.
+    // if still not allocated we maintain a copy of the device information for routing based on serial number or class.
+
     return DEVICE_OK;
 }
 
-bool PktLogicDriver::filterPacket(uint8_t address)
+bool JDLogicDriver::filterPacket(uint8_t address)
 {
     if (address > 0)
     {
-        for (int i = 0; i < PKT_PROTOCOL_DRIVER_SIZE; i++)
+        for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
             if (address_filters[i] == address)
                 return true;
     }
@@ -310,12 +311,12 @@ bool PktLogicDriver::filterPacket(uint8_t address)
     return false;
 }
 
-void PktLogicDriver::start()
+void JDLogicDriver::start()
 {
     status |= (DEVICE_COMPONENT_RUNNING | DEVICE_COMPONENT_STATUS_SYSTEM_TICK);
 }
 
-void PktLogicDriver::stop()
+void JDLogicDriver::stop()
 {
     status &= ~(DEVICE_COMPONENT_RUNNING | DEVICE_COMPONENT_STATUS_SYSTEM_TICK);
 }

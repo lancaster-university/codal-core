@@ -1,4 +1,4 @@
-#include "PktSerial.h"
+#include "JACDAC.h"
 #include "Event.h"
 #include "EventModel.h"
 #include "codal_target_hal.h"
@@ -17,29 +17,29 @@ using namespace codal;
 
 extern void set_gpio(int);
 
-void PktSerial::dmaComplete(Event evt)
+void JACDAC::dmaComplete(Event evt)
 {
-    PKT_DMESG("DMA");
+    JD_DMESG("DMA");
     if (evt.value == SWS_EVT_ERROR)
     {
-        PKT_DMESG("ERR");
-        if (status & PKT_SERIAL_TRANSMITTING)
+        JD_DMESG("ERR");
+        if (status & JD_SERIAL_TRANSMITTING)
         {
-            PKT_DMESG("TX ERROR");
+            JD_DMESG("TX ERROR");
             // set_gpio(0);
-            status &= ~(PKT_SERIAL_TRANSMITTING);
+            status &= ~(JD_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
         }
 
-        if (status & PKT_SERIAL_RECEIVING)
+        if (status & JD_SERIAL_RECEIVING)
         {
             // set_gpio(0);
-            PKT_DMESG("RX ERROR");
-            status &= ~(PKT_SERIAL_RECEIVING);
+            JD_DMESG("RX ERROR");
+            status &= ~(JD_SERIAL_RECEIVING);
             timeoutCounter = 0;
             sws.abortDMA();
-            Event(this->id, PKT_SERIAL_EVT_BUS_ERROR);
+            Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
         }
     }
     else
@@ -47,23 +47,23 @@ void PktSerial::dmaComplete(Event evt)
         // rx complete, queue packet for later handling
         if (evt.value == SWS_EVT_DATA_RECEIVED)
         {
-            status &= ~(PKT_SERIAL_RECEIVING);
+            status &= ~(JD_SERIAL_RECEIVING);
             // set_gpio(0);
             // move rxbuf to rxQueue and allocate new buffer.
             addToQueue(&rxQueue, rxBuf);
-            rxBuf = (PktSerialPkt*)malloc(sizeof(PktSerialPkt));
-            Event(id, PKT_SERIAL_EVT_DATA_READY);
+            rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
+            Event(id, JD_SERIAL_EVT_DATA_READY);
         }
 
         if (evt.value == SWS_EVT_DATA_SENT)
         {
             // set_gpio(0);
-            status &= ~(PKT_SERIAL_TRANSMITTING);
+            status &= ~(JD_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
             // we've finished sending... trigger an event in random us (in some cases this might not be necessary, but it's not too much overhead).
-            system_timer_event_after_us(4000, this->id, PKT_SERIAL_EVT_DRAIN);  // should be random
-            PKT_DMESG("TX DONE");
+            system_timer_event_after_us(4000, this->id, JD_SERIAL_EVT_DRAIN);  // should be random
+            JD_DMESG("TX DONE");
         }
     }
 
@@ -74,11 +74,11 @@ void PktSerial::dmaComplete(Event evt)
     configure(true);
 }
 
-void PktSerial::onFallingEdge(Event)
+void JACDAC::onFallingEdge(Event)
 {
-    // PKT_DMESG("FALL: %d %d", (status & PKT_SERIAL_RECEIVING) ? 1 : 0, (status & PKT_SERIAL_TRANSMITTING) ? 1 : 0);
+    // JD_DMESG("FALL: %d %d", (status & JD_SERIAL_RECEIVING) ? 1 : 0, (status & JD_SERIAL_TRANSMITTING) ? 1 : 0);
     // guard against repeat events.
-    if (status & (PKT_SERIAL_RECEIVING | PKT_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
+    if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
 
     // set_gpio(1);
@@ -87,35 +87,35 @@ void PktSerial::onFallingEdge(Event)
     sp.getDigitalValue(PullMode::None);
 
     timeoutCounter = 0;
-    status |= (PKT_SERIAL_RECEIVING);
+    status |= (JD_SERIAL_RECEIVING);
 
-    // PKT_DMESG("RX START");
+    // JD_DMESG("RX START");
 
-    sws.receiveDMA((uint8_t*)rxBuf, PKT_SERIAL_PACKET_SIZE);
+    sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_PACKET_SIZE);
 }
 
-void PktSerial::periodicCallback()
+void JACDAC::periodicCallback()
 {
     // calculate 1 packet at baud
     if (timeoutCounter == 0)
     {
         uint32_t timePerSymbol = 1000000/sws.getBaud();
-        timePerSymbol = timePerSymbol * 100 * PKT_SERIAL_PACKET_SIZE;
+        timePerSymbol = timePerSymbol * 100 * JD_SERIAL_PACKET_SIZE;
         timeoutValue = (timePerSymbol / SCHEDULER_TICK_PERIOD_US) + 2;
     }
 
-    if (status & PKT_SERIAL_RECEIVING)
+    if (status & JD_SERIAL_RECEIVING)
     {
-        PKT_DMESG("H");
+        JD_DMESG("H");
         timeoutCounter++;
 
         if (timeoutCounter > timeoutValue)
         {
-            PKT_DMESG("TIMEOUT");
+            JD_DMESG("TIMEOUT");
             sws.abortDMA();
-            Event(this->id, PKT_SERIAL_EVT_BUS_ERROR);
+            Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
             timeoutCounter = 0;
-            status &= ~(PKT_SERIAL_RECEIVING);
+            status &= ~(JD_SERIAL_RECEIVING);
 
             sws.setMode(SingleWireDisconnected);
             sp.setDigitalValue(1);
@@ -124,12 +124,12 @@ void PktSerial::periodicCallback()
     }
 }
 
-PktSerialPkt* PktSerial::popQueue(PktSerialPkt** queue)
+JDPkt* JACDAC::popQueue(JDPkt** queue)
 {
     if (*queue == NULL)
         return NULL;
 
-    PktSerialPkt *ret = *queue;
+    JDPkt *ret = *queue;
 
     target_disable_irq();
     *queue = (*queue)->next;
@@ -138,16 +138,16 @@ PktSerialPkt* PktSerial::popQueue(PktSerialPkt** queue)
     return ret;
 }
 
-PktSerialPkt* PktSerial::removeFromQueue(PktSerialPkt** queue, uint8_t address)
+JDPkt* JACDAC::removeFromQueue(JDPkt** queue, uint8_t address)
 {
     if (*queue == NULL)
         return NULL;
 
-    PktSerialPkt* ret = NULL;
+    JDPkt* ret = NULL;
 
     target_disable_irq();
-    PktSerialPkt *p = (*queue)->next;
-    PktSerialPkt *previous = *queue;
+    JDPkt *p = (*queue)->next;
+    JDPkt *previous = *queue;
 
     if (address == (*queue)->address)
     {
@@ -175,7 +175,7 @@ PktSerialPkt* PktSerial::removeFromQueue(PktSerialPkt** queue, uint8_t address)
     return ret;
 }
 
-int PktSerial::addToQueue(PktSerialPkt** queue, PktSerialPkt* packet)
+int JACDAC::addToQueue(JDPkt** queue, JDPkt* packet)
 {
     int queueDepth = 0;
     packet->next = NULL;
@@ -185,7 +185,7 @@ int PktSerial::addToQueue(PktSerialPkt** queue, PktSerialPkt* packet)
         *queue = packet;
     else
     {
-        PktSerialPkt *p = *queue;
+        JDPkt *p = *queue;
 
         while (p->next != NULL)
         {
@@ -193,7 +193,7 @@ int PktSerial::addToQueue(PktSerialPkt** queue, PktSerialPkt* packet)
             queueDepth++;
         }
 
-        if (queueDepth >= PKT_SERIAL_MAXIMUM_BUFFERS)
+        if (queueDepth >= JD_SERIAL_MAXIMUM_BUFFERS)
         {
             free(packet);
             return DEVICE_NO_RESOURCES;
@@ -206,7 +206,7 @@ int PktSerial::addToQueue(PktSerialPkt** queue, PktSerialPkt* packet)
     return DEVICE_OK;
 }
 
-void PktSerial::configure(bool events)
+void JACDAC::configure(bool events)
 {
     sp.getDigitalValue(PullMode::Up);
 
@@ -223,7 +223,7 @@ void PktSerial::configure(bool events)
  *
  * @param sws an instance of sws created using p.
  */
-PktSerial::PktSerial(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sws(sws), sp(p)
+JACDAC::JACDAC(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sws(sws), sp(p)
 {
     rxBuf = NULL;
     txBuf = NULL;
@@ -238,12 +238,12 @@ PktSerial::PktSerial(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sw
     timeoutCounter = 0;
 
     sws.setBaud(1000000);
-    sws.setDMACompletionHandler(this, &PktSerial::dmaComplete);
+    sws.setDMACompletionHandler(this, &JACDAC::dmaComplete);
 
     if (EventModel::defaultEventBus)
     {
-        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_FALL, this, &PktSerial::onFallingEdge, MESSAGE_BUS_LISTENER_IMMEDIATE);
-        EventModel::defaultEventBus->listen(this->id, PKT_SERIAL_EVT_DRAIN, this, &PktSerial::sendPacket, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_FALL, this, &JACDAC::onFallingEdge, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        EventModel::defaultEventBus->listen(this->id, JD_SERIAL_EVT_DRAIN, this, &JACDAC::sendPacket, MESSAGE_BUS_LISTENER_IMMEDIATE);
     }
 }
 
@@ -252,7 +252,7 @@ PktSerial::PktSerial(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sw
  *
  * @returns the first packet on the rxQueue or NULL
  */
-PktSerialPkt* PktSerial::getPacket()
+JDPkt* JACDAC::getPacket()
 {
     return popQueue(&rxQueue);
 }
@@ -264,20 +264,20 @@ PktSerialPkt* PktSerial::getPacket()
  *
  * @returns the first packet on the rxQueue matching the device_class or NULL
  */
-PktSerialPkt* PktSerial::getPacket(uint8_t address)
+JDPkt* JACDAC::getPacket(uint8_t address)
 {
     return removeFromQueue(&rxQueue, address);
 }
 
 /**
- * Causes this instance of PktSerial to begin listening for packets transmitted on the serial line.
+ * Causes this instance of JACDAC to begin listening for packets transmitted on the serial line.
  */
-void PktSerial::start()
+void JACDAC::start()
 {
     if (rxBuf == NULL)
-        rxBuf = (PktSerialPkt*)malloc(sizeof(PktSerialPkt));
+        rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
 
-    PKT_DMESG("PKT START");
+    JD_DMESG("JD START");
 
     configure(true);
 
@@ -291,7 +291,7 @@ void PktSerial::start()
     // if the line is low, we may be in the middle of a transfer, manually trigger rx mode.
     if (sp.getDigitalValue(PullMode::Up) == 0)
     {
-        PKT_DMESG("TRIGGER");
+        JD_DMESG("TRIGGER");
         onFallingEdge(evt);
     }
 
@@ -299,9 +299,9 @@ void PktSerial::start()
 }
 
 /**
- * Causes this instance of PktSerial to stop listening for packets transmitted on the serial line.
+ * Causes this instance of JACDAC to stop listening for packets transmitted on the serial line.
  */
-void PktSerial::stop()
+void JACDAC::stop()
 {
     status &= ~(DEVICE_COMPONENT_RUNNING | DEVICE_COMPONENT_STATUS_SYSTEM_TICK);
     if (rxBuf)
@@ -313,27 +313,27 @@ void PktSerial::stop()
     configure(false);
 }
 
-void PktSerial::sendPacket(Event)
+void JACDAC::sendPacket(Event)
 {
-    status |= PKT_SERIAL_TX_DRAIN_ENABLE;
-    PKT_DMESG("PKT SEND");
+    status |= JD_SERIAL_TX_DRAIN_ENABLE;
+    JD_DMESG("JD SEND");
     // if we are receiving, randomly back off
-    if (status & PKT_SERIAL_RECEIVING)
+    if (status & JD_SERIAL_RECEIVING)
     {
-        PKT_DMESG("RXing");
-        system_timer_event_after_us(4000, this->id, PKT_SERIAL_EVT_DRAIN);  // should be random
+        JD_DMESG("RXing");
+        system_timer_event_after_us(4000, this->id, JD_SERIAL_EVT_DRAIN);  // should be random
         return;
     }
 
-    if (!(status & PKT_SERIAL_TRANSMITTING))
+    if (!(status & JD_SERIAL_TRANSMITTING))
     {
         // if the bus is lo, we shouldn't transmit
         if (sp.getDigitalValue(PullMode::Up) == 0)
         {
-            PKT_DMESG("BUS LO");
+            JD_DMESG("BUS LO");
             Event evt(0, 0, CREATE_ONLY);
             onFallingEdge(evt);
-            system_timer_event_after_us(4000, this->id, PKT_SERIAL_EVT_DRAIN);  // should be random
+            system_timer_event_after_us(4000, this->id, JD_SERIAL_EVT_DRAIN);  // should be random
             return;
         }
 
@@ -344,8 +344,8 @@ void PktSerial::sendPacket(Event)
         // if we have stuff in our queue, and we have not triggered a DMA transfer...
         if (txQueue)
         {
-            PKT_DMESG("TX B");
-            status |= PKT_SERIAL_TRANSMITTING;
+            JD_DMESG("TX B");
+            status |= JD_SERIAL_TRANSMITTING;
             txBuf = popQueue(&txQueue);
 
             sp.setDigitalValue(0);
@@ -353,45 +353,45 @@ void PktSerial::sendPacket(Event)
             sp.setDigitalValue(1);
 
             // return after 100 us
-            system_timer_event_after_us(100, this->id, PKT_SERIAL_EVT_DRAIN);
+            system_timer_event_after_us(100, this->id, JD_SERIAL_EVT_DRAIN);
             return;
         }
     }
 
     // we've returned after a DMA transfer has been flagged (above)... start
-    if (status & PKT_SERIAL_TRANSMITTING)
+    if (status & JD_SERIAL_TRANSMITTING)
     {
-        PKT_DMESG("TX S");
-        sws.sendDMA((uint8_t *)txBuf, PKT_SERIAL_PACKET_SIZE);
+        JD_DMESG("TX S");
+        sws.sendDMA((uint8_t *)txBuf, JD_SERIAL_PACKET_SIZE);
         return;
     }
 
     // if we get here, there's no more to transmit
-    status &= ~(PKT_SERIAL_TX_DRAIN_ENABLE);
+    status &= ~(JD_SERIAL_TX_DRAIN_ENABLE);
     return;
 }
 
 /**
  * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
- * If an ongoing asynchronous transmission is happening, pkt is added to the txQueue. If this is the first packet in a while
+ * If an ongoing asynchronous transmission is happening, JD is added to the txQueue. If this is the first packet in a while
  * asynchronous transmission is begun.
  *
- * @param pkt the packet to send.
+ * @param JD the packet to send.
  *
- * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if pkt is NULL, or DEVICE_NO_RESOURCES if the queue is full.
+ * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int PktSerial::send(PktSerialPkt* tx)
+int JACDAC::send(JDPkt* tx)
 {
     if (tx == NULL)
         return DEVICE_INVALID_PARAMETER;
 
-    PktSerialPkt* pkt = (PktSerialPkt *)malloc(sizeof(PktSerialPkt));
-    memset(pkt, target_random(256), sizeof(PktSerialPkt));
-    memcpy(pkt, tx, sizeof(PktSerialPkt));
+    JDPkt* JD = (JDPkt *)malloc(sizeof(JDPkt));
+    memset(JD, target_random(256), sizeof(JDPkt));
+    memcpy(JD, tx, sizeof(JDPkt));
 
-    int ret = addToQueue(&txQueue, pkt);
+    int ret = addToQueue(&txQueue, JD);
 
-    if (!(status & PKT_SERIAL_TX_DRAIN_ENABLE))
+    if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
     {
         Event e(0,0,CREATE_ONLY);
         sendPacket(e);
@@ -402,7 +402,7 @@ int PktSerial::send(PktSerialPkt* tx)
 
 /**
  * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
- * If an ongoing asynchronous transmission is happening, pkt is added to the txQueue. If this is the first packet in a while
+ * If an ongoing asynchronous transmission is happening, JD is added to the txQueue. If this is the first packet in a while
  * asynchronous transmission is begun.
  *
  * @param buf the buffer to send.
@@ -411,37 +411,37 @@ int PktSerial::send(PktSerialPkt* tx)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int PktSerial::send(uint8_t* buf, int len, uint8_t address)
+int JACDAC::send(uint8_t* buf, int len, uint8_t address)
 {
-    if (buf == NULL || len <= 0 || len > PKT_SERIAL_DATA_SIZE)
+    if (buf == NULL || len <= 0 || len > JD_SERIAL_DATA_SIZE)
     {
-        PKT_DMESG("PKT TOO BIG: %d ",len);
+        JD_DMESG("JD TOO BIG: %d ",len);
         return DEVICE_INVALID_PARAMETER;
     }
 
-    PktSerialPkt pkt;
+    JDPkt JD;
 
     // for variation of crc's
-    memset(&pkt, target_random(256), sizeof(PktSerialPkt));
+    memset(&JD, target_random(256), sizeof(JDPkt));
 
     // very simple crc
-    pkt.crc = 0;
-    pkt.address = address;
-    pkt.size = len;
+    JD.crc = 0;
+    JD.address = address;
+    JD.size = len;
 
-    memcpy(pkt.data, buf, len);
+    memcpy(JD.data, buf, len);
 
     // skip the crc.
-    uint8_t* crcPointer = (uint8_t*)&pkt.address;
+    uint8_t* crcPointer = (uint8_t*)&JD.address;
 
     // simple crc
-    for (int i = 0; i < PKT_SERIAL_PACKET_SIZE - 2; i++)
-        pkt.crc += crcPointer[i];
+    for (int i = 0; i < JD_SERIAL_PACKET_SIZE - 2; i++)
+        JD.crc += crcPointer[i];
 
-    return send(&pkt);
+    return send(&JD);
 }
 
-bool PktSerial::isRunning()
+bool JACDAC::isRunning()
 {
     return (status & DEVICE_COMPONENT_RUNNING) ? true : false;
 }

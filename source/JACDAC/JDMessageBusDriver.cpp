@@ -1,12 +1,12 @@
-#include "PktMessageBusDriver.h"
+#include "JDMessageBusDriver.h"
 #include "CodalDmesg.h"
 
 using namespace codal;
 
-PktMessageBusDriver::PktMessageBusDriver(uint32_t serial) :
-    PktSerialDriver(PktDevice(0, 0, PKT_DEVICE_FLAGS_LOCAL | PKT_DEVICE_FLAGS_BROADCAST, serial),
-                    PKT_DRIVER_CLASS_MESSAGE_BUS,
-                    DEVICE_ID_PKT_MESSAGE_BUS_DRIVER)
+JDMessageBusDriver::JDMessageBusDriver(uint32_t serial) :
+    JDDriver(JDDevice(0, 0, JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_BROADCAST, serial),
+                    JD_DRIVER_CLASS_MESSAGE_BUS,
+                    DEVICE_ID_JD_MESSAGE_BUS_DRIVER)
 {
     suppressForwarding = false;
 }
@@ -26,7 +26,7 @@ PktMessageBusDriver::PktMessageBusDriver(uint32_t serial) :
   * @note The wildcards DEVICE_ID_ANY and DEVICE_EVT_ANY can also be in place of the
   *       id and value fields.
   */
-int PktMessageBusDriver::listen(uint16_t id, uint16_t value)
+int JDMessageBusDriver::listen(uint16_t id, uint16_t value)
 {
     if (EventModel::defaultEventBus)
         return listen(id, value, *EventModel::defaultEventBus);
@@ -51,9 +51,9 @@ int PktMessageBusDriver::listen(uint16_t id, uint16_t value)
   * @note The wildcards DEVICE_ID_ANY and DEVICE_EVT_ANY can also be in place of the
   *       id and value fields.
   */
-int PktMessageBusDriver::listen(uint16_t id, uint16_t value, EventModel &eventBus)
+int JDMessageBusDriver::listen(uint16_t id, uint16_t value, EventModel &eventBus)
 {
-    return eventBus.listen(id, value, this, &PktMessageBusDriver::eventReceived, MESSAGE_BUS_LISTENER_IMMEDIATE);
+    return eventBus.listen(id, value, this, &JDMessageBusDriver::eventReceived, MESSAGE_BUS_LISTENER_IMMEDIATE);
 }
 
 /**
@@ -67,7 +67,7 @@ int PktMessageBusDriver::listen(uint16_t id, uint16_t value, EventModel &eventBu
   *
   * @note DEVICE_EVT_ANY can be used to deregister all event values matching the given id.
   */
-int PktMessageBusDriver::ignore(uint16_t id, uint16_t value)
+int JDMessageBusDriver::ignore(uint16_t id, uint16_t value)
 {
     if (EventModel::defaultEventBus)
         return ignore(id, value, *EventModel::defaultEventBus);
@@ -88,9 +88,9 @@ int PktMessageBusDriver::ignore(uint16_t id, uint16_t value)
   *
   * @note DEVICE_EVT_ANY can be used to deregister all event values matching the given id.
   */
-int PktMessageBusDriver::ignore(uint16_t id, uint16_t value, EventModel &eventBus)
+int JDMessageBusDriver::ignore(uint16_t id, uint16_t value, EventModel &eventBus)
 {
-    return eventBus.ignore(id, value, this, &PktMessageBusDriver::eventReceived);
+    return eventBus.ignore(id, value, this, &JDMessageBusDriver::eventReceived);
 }
 
 
@@ -99,11 +99,11 @@ int PktMessageBusDriver::ignore(uint16_t id, uint16_t value, EventModel &eventBu
   *
   * This function process this packet, and fires the event contained inside onto the default EventModel.
   */
-int PktMessageBusDriver::handlePacket(PktSerialPkt* p)
+int JDMessageBusDriver::handlePacket(JDPkt* p)
 {
     Event *e = (Event *) p->data;
 
-    PKT_DMESG("EV: %d, %d", e->source, e->value);
+    DMESG("EV: %d, %d", e->source, e->value);
 
     suppressForwarding = true;
     e->fire();
@@ -112,7 +112,7 @@ int PktMessageBusDriver::handlePacket(PktSerialPkt* p)
     return DEVICE_OK;
 }
 
-int PktMessageBusDriver::handleControlPacket(ControlPacket*)
+int JDMessageBusDriver::handleControlPacket(ControlPacket*)
 {
     return DEVICE_OK;
 }
@@ -122,12 +122,13 @@ int PktMessageBusDriver::handleControlPacket(ControlPacket*)
   * the registerEvent() method described above. Upon receiving such an event, it is wrapped into
   * a serial bus packet and transmitted to any other micro:bits in the same group.
   */
-void PktMessageBusDriver::eventReceived(Event e)
+void JDMessageBusDriver::eventReceived(Event e)
 {
-    PKT_DMESG("EVENT");
+    DMESG("EVENT");
     if(suppressForwarding)
         return;
 
-    PKT_DMESG("PACKET QUEUED: %d %d", e.source, e.value);
-    PktSerialProtocol::send((uint8_t *)&e, sizeof(Event), device.address);
+    DMESG("PACKET QUEUED: %d %d %d", e.source, e.value, sizeof(Event));
+    int ret = JDProtocol::send((uint8_t *)&e, sizeof(Event), device.address);
+    DMESG("RET %d",ret);
 }

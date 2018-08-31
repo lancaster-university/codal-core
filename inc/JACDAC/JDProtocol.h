@@ -22,69 +22,69 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef CODAL_PKTSERIAL_PROTOCOL_H
-#define CODAL_PKTSERIAL_PROTOCOL_H
+#ifndef CODAL_JACDAC_PROTOCOL_H
+#define CODAL_JACDAC_PROTOCOL_H
 
 #include "CodalConfig.h"
 #include "CodalComponent.h"
 #include "ErrorNo.h"
 #include "Event.h"
-#include "PktSerial.h"
+#include "JACDAC.h"
 #include "codal_target_hal.h"
 
 
 // the following defines should really be in separate head files, but circular includes suck.
 
-// BEGIN    PKT SERIAL DRIVER FLAGS
-#define PKT_DRIVER_EVT_CONNECTED        1
-#define PKT_DRIVER_EVT_DISCONNECTED     2
+// BEGIN    JD SERIAL DRIVER FLAGS
+#define JD_DRIVER_EVT_CONNECTED        1
+#define JD_DRIVER_EVT_DISCONNECTED     2
 
-#define PKT_DEVICE_FLAGS_LOCAL          0x8000 // on the board
-#define PKT_DEVICE_FLAGS_REMOTE         0x4000 // off the board
+#define JD_DEVICE_FLAGS_LOCAL          0x8000 // on the board
+#define JD_DEVICE_FLAGS_REMOTE         0x4000 // off the board
 
 // following flags combined with the above to yield different behaviours
-#define PKT_DEVICE_FLAGS_BROADCAST      0x2000 // receive all class packets regardless of the address
-#define PKT_DEVICE_FLAGS_PAIRED         0x1000 // this flag indicates that a driver is paired with another
+#define JD_DEVICE_FLAGS_BROADCAST      0x2000 // receive all class packets regardless of the address
+#define JD_DEVICE_FLAGS_PAIRED         0x1000 // this flag indicates that a driver is paired with another
 // end combo flags
 
-#define PKT_DEVICE_FLAGS_INITIALISED    0x0800 // device driver is running
-#define PKT_DEVICE_FLAGS_INITIALISING   0x0400 // a flag to indicate that a control packet has been queued
-#define PKT_DEVICE_FLAGS_CP_SEEN        0x0200 // indicates whether a control packet has been seen recently.
-#define PKT_DEVICE_FLAGS_RESERVED       0x0100 // reserved for future use
-// END      PKT SERIAL DRIVER FLAGS
+#define JD_DEVICE_FLAGS_INITIALISED    0x0800 // device driver is running
+#define JD_DEVICE_FLAGS_INITIALISING   0x0400 // a flag to indicate that a control packet has been queued
+#define JD_DEVICE_FLAGS_CP_SEEN        0x0200 // indicates whether a control packet has been seen recently.
+#define JD_DEVICE_FLAGS_RESERVED       0x0100 // reserved for future use
+// END      JD SERIAL DRIVER FLAGS
 
 
 // BEGIN    LOGIC DRIVER FLAGS
-#define PKT_LOGIC_DRIVER_MAX_FILTERS        20
-#define PKT_LOGIC_DRIVER_TIMEOUT            254     // 1,016 ms
-#define PKT_LOGIC_ADDRESS_ALLOC_TIME        254     // 1,016 ms
-#define PKT_LOGIC_DRIVER_CTRLPACKET_TIME    112     // 448 ms
+#define JD_LOGIC_DRIVER_MAX_FILTERS        20
+#define JD_LOGIC_DRIVER_TIMEOUT            254     // 1,016 ms
+#define JD_LOGIC_ADDRESS_ALLOC_TIME        254     // 1,016 ms
+#define JD_LOGIC_DRIVER_CTRLPACKET_TIME    112     // 448 ms
 
-#define CONTROL_PKT_FLAGS_BROADCAST     0x0001
-#define CONTROL_PKT_FLAGS_PAIRED        0x0002
-#define CONTROL_PKT_FLAGS_UNCERTAIN     0x0004
-#define CONTROL_PKT_FLAGS_CONFLICT      0x0008
-#define CONTROL_PKT_TYPE_HELLO          0x01
+#define CONTROL_JD_FLAGS_BROADCAST     0x0001
+#define CONTROL_JD_FLAGS_PAIRED        0x0002
+#define CONTROL_JD_FLAGS_UNCERTAIN     0x0004
+#define CONTROL_JD_FLAGS_CONFLICT      0x0008
+#define CONTROL_JD_TYPE_HELLO          0x01
 // END      LOGIC DRIVER FLAGS
 
 
-// BEGIN    PKT SERIAL PROTOCOL
-#define PKT_PROTOCOL_EVT_SEND_CONTROL   1
-#define PKT_PROTOCOL_DRIVER_SIZE        10
+// BEGIN    JD SERIAL PROTOCOL
+#define JD_PROTOCOL_EVT_SEND_CONTROL   1
+#define JD_PROTOCOL_DRIVER_SIZE        10
 
-#define PKT_DRIVER_CLASS_CONTROL        0
-#define PKT_DRIVER_CLASS_ARCADE         1
-#define PKT_DRIVER_CLASS_JOYSTICK       2
-#define PKT_DRIVER_CLASS_MESSAGE_BUS    3
-#define PKT_DRIVER_CLASS_RADIO          4
-#define PKT_DRIVER_CLASS_BRIDGE         5
-// END      PKT SERIAL PROTOCOL
+#define JD_DRIVER_CLASS_CONTROL        0
+#define JD_DRIVER_CLASS_ARCADE         1
+#define JD_DRIVER_CLASS_JOYSTICK       2
+#define JD_DRIVER_CLASS_MESSAGE_BUS    3
+#define JD_DRIVER_CLASS_RADIO          4
+#define JD_DRIVER_CLASS_BRIDGE         5
+// END      JD SERIAL PROTOCOL
 
-#define CONTROL_PACKET_PAYLOAD_SIZE     (PKT_SERIAL_DATA_SIZE - 12)
+#define CONTROL_PACKET_PAYLOAD_SIZE     (JD_SERIAL_DATA_SIZE - 12)
 
 namespace codal
 {
-    class PktSerialProtocol;
+    class JDProtocol;
 
     /**
      * This struct represents a ControlPacket used by the logic driver
@@ -100,24 +100,24 @@ namespace codal
     };
 
     /**
-     * This struct represents a PktDevice used by a Device driver
+     * This struct represents a JDDevice used by a Device driver
      **/
-    struct PktDevice
+    struct JDDevice
     {
         uint8_t address; // the address assigned by the logic driver.
         uint8_t rolling_counter; // used to trigger various time related events
         uint16_t flags; // upper 8 bits can be used by drivers, lower 8 bits are placed into the control packet
         uint32_t serial_number; // the serial number used to "uniquely" identify a device
 
-        PktDevice()
+        JDDevice()
         {
             address = 0;
             rolling_counter = 0;
-            flags = PKT_DEVICE_FLAGS_REMOTE;
+            flags = JD_DEVICE_FLAGS_REMOTE;
             serial_number = 0;
         }
 
-        PktDevice(uint8_t address, uint8_t rolling_counter, uint16_t flags, uint32_t serial_number)
+        JDDevice(uint8_t address, uint8_t rolling_counter, uint16_t flags, uint32_t serial_number)
         {
             this->address = address;
             this->rolling_counter = rolling_counter;
@@ -127,24 +127,24 @@ namespace codal
     };
 
     /**
-     * This class presents a common abstraction for all PktSerialDrivers. It also contains some default member functions to perform common operations.
+     * This class presents a common abstraction for all JDDrivers. It also contains some default member functions to perform common operations.
      * This should be subclassed by any driver implementation
      **/
-    class PktSerialDriver : public CodalComponent
+    class JDDriver : public CodalComponent
     {
-        friend class PktLogicDriver;
-        friend class PktSerialProtocol;
+        friend class JDLogicDriver;
+        friend class JDProtocol;
 
         protected:
         uint32_t driver_class;
-        PktDevice device;
+        JDDevice device;
 
         public:
 
         /**
          * Constructor
          *
-         * @param proto a reference to PktSerialProtocol instance
+         * @param proto a reference to JDProtocol instance
          *
          * @param d a struct containing a device representation
          *
@@ -153,12 +153,12 @@ namespace codal
          * @param id the message bus id for this driver
          *
          * */
-        PktSerialDriver(PktDevice d, uint32_t driver_class, uint16_t id);
+        JDDriver(JDDevice d, uint32_t driver_class, uint16_t id);
 
         /**
          * Queues a control packet on the serial bus, called by the logic driver
          **/
-        virtual int queueControlPacket();
+        virtual int fillControlPacket(JDPkt* p);
 
         /**
          * Returns the current connected state of this Serial driver instance.
@@ -170,11 +170,11 @@ namespace codal
         /**
          * Called by the logic driver when a new device is connected to the serial bus
          *
-         * @param device an instance of PktDevice representing the device that has been connected
+         * @param device an instance of JDDevice representing the device that has been connected
          *
          * @return DEVICE_OK for success
          **/
-        virtual int deviceConnected(PktDevice device);
+        virtual int deviceConnected(JDDevice device);
 
         /**
          * Called by the logic driver when an existing device is disconnected from the serial bus
@@ -188,21 +188,21 @@ namespace codal
          *
          * @param cp the control packet from the serial bus.
          **/
-        virtual int handleControlPacket(ControlPacket* cp) = 0;
+        virtual int handleControlPacket(JDPkt* p) = 0;
 
         /**
          * Called by the logic driver when a data packet is addressed to this driver
          *
          * @param cp the control packet from the serial bus.
          **/
-        virtual int handlePacket(PktSerialPkt* p) = 0;
+        virtual int handlePacket(JDPkt* p) = 0;
 
-        ~PktSerialDriver();
+        ~JDDriver();
     };
 
-    class PktLogicDriver : public PktSerialDriver
+    class JDLogicDriver : public JDDriver
     {
-        uint8_t address_filters[PKT_LOGIC_DRIVER_MAX_FILTERS];
+        uint8_t address_filters[JD_LOGIC_DRIVER_MAX_FILTERS];
 
         public:
 
@@ -214,7 +214,7 @@ namespace codal
         /**
          * Constructor
          *
-         * @param proto a reference to PktSerialProtocol instance
+         * @param proto a reference to JDProtocol instance
          *
          * @param d a struct containing a device representation
          *
@@ -223,21 +223,21 @@ namespace codal
          * @param id the message bus id for this driver
          *
          * */
-        PktLogicDriver(PktDevice d = PktDevice(), uint32_t driver_class = PKT_DRIVER_CLASS_CONTROL, uint16_t id = DEVICE_ID_PKT_LOGIC_DRIVER);
+        JDLogicDriver(JDDevice d = JDDevice(), uint32_t driver_class = JD_DRIVER_CLASS_CONTROL, uint16_t id = DEVICE_ID_JD_LOGIC_DRIVER);
 
         /**
          * Called by the logic driver when a control packet is addressed to this driver
          *
          * @param cp the control packet from the serial bus.
          **/
-        virtual int handleControlPacket(ControlPacket* p);
+        virtual int fillControlPacket(JDPkt* p);
 
         /**
          * Called by the logic driver when a data packet is addressed to this driver
          *
          * @param cp the control packet from the serial bus.
          **/
-        virtual int handlePacket(PktSerialPkt* p);
+        virtual int handlePacket(JDPkt* p);
 
         /**
          * This function provides the ability to ignore specific packets. For instance, we are not interested in packets that are paired to other devices
@@ -260,32 +260,32 @@ namespace codal
         void stop();
     };
 
-    class PktSerialProtocol : public CodalComponent
+    class JDProtocol : public CodalComponent
     {
-        friend class PktLogicDriver;
+        friend class JDLogicDriver;
 
         void onPacketReceived(Event);
 
-        static PktSerialDriver* drivers[PKT_PROTOCOL_DRIVER_SIZE];
+        static JDDriver* drivers[JD_PROTOCOL_DRIVER_SIZE];
 
-        PktLogicDriver logic;
-        PktSerialDriver* bridge;
+        JDLogicDriver logic;
+        JDDriver* bridge;
 
     public:
-        PktSerial& bus;
+        JACDAC& bus;
 
-        static PktSerialProtocol* instance;
+        static JDProtocol* instance;
 
         /**
          * Constructor
          *
-         * @param pkt A reference to PktSerial for communicators
+         * @param JD A reference to JACDAC for communicators
          *
-         * @param id for the message bus, defaults to  DEVICE_ID_PKTSERIAL_PROTOCOL
+         * @param id for the message bus, defaults to  DEVICE_ID_JACDAC_PROTOCOL
          **/
-        PktSerialProtocol(PktSerial& pkt, uint16_t id = DEVICE_ID_PKTSERIAL_PROTOCOL);
+        JDProtocol(JACDAC& JD, uint16_t id = DEVICE_ID_JACDAC_PROTOCOL);
 
-        int setBridge(PktSerialDriver& bridge);
+        int setBridge(JDDriver& bridge);
 
         /**
          * Adds a driver to the drivers array. The logic driver iterates over this array.
@@ -294,7 +294,7 @@ namespace codal
          *
          * @note please call stop() before adding a driver, then resume by calling start
          **/
-        virtual int add(PktSerialDriver& device);
+        virtual int add(JDDriver& device);
 
         /**
          * removes a driver from the drivers array. The logic driver iterates over this array.
@@ -303,7 +303,7 @@ namespace codal
          *
          * @note please call stop() before removing a driver, then resume by calling start()
          **/
-        virtual int remove(PktSerialDriver& device);
+        virtual int remove(JDDriver& device);
 
         /**
          * Begin logic driver periodic callbacks
@@ -315,7 +315,7 @@ namespace codal
          * */
         void stop();
 
-        static int send(PktSerialPkt* pkt);
+        static int send(JDPkt* JD);
         static int send(uint8_t* buf, int len, uint8_t address);
     };
 
