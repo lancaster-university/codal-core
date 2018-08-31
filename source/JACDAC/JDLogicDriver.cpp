@@ -103,7 +103,24 @@ void JDLogicDriver::periodicCallback()
             else if (current->device.flags & JD_DEVICE_FLAGS_INITIALISED)
             {
                 if(current->device.rolling_counter > 0 && (current->device.rolling_counter % JD_LOGIC_DRIVER_CTRLPACKET_TIME) == 0)
-                    current->queueControlPacket();
+                {
+                    JDPkt pkt;
+                    pkt.address = 0;
+                    pkt.size = sizeof(ControlPacket);
+                    ControlPacket* cp = (ControlPacket*)pkt.data;
+
+                    memset(cp, target_random(256), sizeof(ControlPacket));
+
+                    cp->packet_type = CONTROL_JD_TYPE_HELLO;
+                    cp->address = current->device.address;
+                    cp->flags = current->device.flags & 0x00FF;
+                    cp->driver_class = current->driver_class;
+                    cp->serial_number = current->device.serial_number;
+
+                    current->fillControlPacket(&pkt);
+
+                    JDProtocol::send(&pkt);
+                }
             }
         }
     }
@@ -120,7 +137,7 @@ JDLogicDriver::JDLogicDriver(JDDevice d, uint32_t driver_class, uint16_t id) : J
     this->device.flags = (JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_INITIALISED);
 }
 
-int JDLogicDriver::handleControlPacket(ControlPacket* p)
+int JDLogicDriver::handleControlPacket(JDPkt* p)
 {
     // nop for now... could be useful in the future for controlling the mode of the logic driver?
     return DEVICE_OK;
@@ -204,7 +221,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 
             // for some drivers, pairing is required... pass the packet through to the driver.
             DMESG("FOUND LOCAL");
-            if (current->handleControlPacket(cp) == DEVICE_OK)
+            if (current->handleControlPacket(p) == DEVICE_OK)
             {
                 handled = true;
                 DMESG("CP ABSORBED %d", current->device.address);
@@ -220,7 +237,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
             DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
 
-            if (current->handleControlPacket(cp) == DEVICE_OK)
+            if (current->handleControlPacket(p) == DEVICE_OK)
             {
                 handled = true;
                 DMESG("CP ABSORBED %d", current->device.address);
@@ -231,7 +248,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
         {
             // for some drivers, pairing is required... pass the packet through to the driver.
             DMESG("FOUND BROAD");
-            if (current->handleControlPacket(cp) == DEVICE_OK)
+            if (current->handleControlPacket(p) == DEVICE_OK)
             {
                 handled = true;
                 DMESG("CP ABSORBED %d", current->device.address);

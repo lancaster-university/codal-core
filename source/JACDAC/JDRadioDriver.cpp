@@ -1,40 +1,40 @@
-#include "PktRadioDriver.h"
+#include "JDRadioDriver.h"
 #include "CodalDmesg.h"
 
 using namespace codal;
 
-PktRadioDriver::PktRadioDriver(Radio& n, uint32_t serial) :
-    PktSerialDriver(PktDevice(0, 0, PKT_DEVICE_FLAGS_LOCAL, serial),
-                    PKT_DRIVER_CLASS_RADIO,
-                    DEVICE_ID_PKT_RADIO_DRIVER)
+JDRadioDriver::JDRadioDriver(Radio& n, uint32_t serial) :
+    JDDriver(JDDevice(0, 0, JD_DEVICE_FLAGS_LOCAL, serial),
+                    JD_DRIVER_CLASS_RADIO,
+                    DEVICE_ID_JD_RADIO_DRIVER)
 {
-    memset(history, 0, sizeof(uint16_t) * PKT_RADIO_HISTORY_SIZE);
+    memset(history, 0, sizeof(uint16_t) * JD_RADIO_HISTORY_SIZE);
     idx = 0;
     networkInstance = &n;
 
     if (EventModel::defaultEventBus)
-        EventModel::defaultEventBus->listen(n.id, RADIO_EVT_DATA_READY, this, &PktRadioDriver::forwardPacket);
+        EventModel::defaultEventBus->listen(n.id, RADIO_EVT_DATA_READY, this, &JDRadioDriver::forwardPacket);
 }
 
-PktRadioDriver::PktRadioDriver(uint32_t serial):
-    PktSerialDriver(PktDevice(0, 0, PKT_DEVICE_FLAGS_REMOTE, serial),
-                    PKT_DRIVER_CLASS_RADIO,
-                    DEVICE_ID_PKT_RADIO_DRIVER)
+JDRadioDriver::JDRadioDriver(uint32_t serial):
+    JDDriver(JDDevice(0, 0, JD_DEVICE_FLAGS_REMOTE, serial),
+                    JD_DRIVER_CLASS_RADIO,
+                    DEVICE_ID_JD_RADIO_DRIVER)
 {
-    memset(history, 0, sizeof(uint16_t) * PKT_RADIO_HISTORY_SIZE);
+    memset(history, 0, sizeof(uint16_t) * JD_RADIO_HISTORY_SIZE);
     idx = 0;
     networkInstance = NULL;
 }
 
-PktRadioPacket* PktRadioDriver::removeFromQueue(PktRadioPacket** queue, uint16_t id)
+JDRadioPacket* JDRadioDriver::removeFromQueue(JDRadioPacket** queue, uint16_t id)
 {
     if (*queue == NULL)
         return NULL;
 
-    PktRadioPacket* ret = NULL;
+    JDRadioPacket* ret = NULL;
 
-    PktRadioPacket *p = (*queue)->next;
-    PktRadioPacket *previous = *queue;
+    JDRadioPacket *p = (*queue)->next;
+    JDRadioPacket *previous = *queue;
 
     if (id == 0 || id == (*queue)->id)
     {
@@ -60,7 +60,7 @@ PktRadioPacket* PktRadioDriver::removeFromQueue(PktRadioPacket** queue, uint16_t
     return ret;
 }
 
-int PktRadioDriver::addToQueue(PktRadioPacket** queue, PktRadioPacket* packet)
+int JDRadioDriver::addToQueue(JDRadioPacket** queue, JDRadioPacket* packet)
 {
     int queueDepth = 0;
     packet->next = NULL;
@@ -69,7 +69,7 @@ int PktRadioDriver::addToQueue(PktRadioPacket** queue, PktRadioPacket* packet)
         *queue = packet;
     else
     {
-        PktRadioPacket *p = *queue;
+        JDRadioPacket *p = *queue;
 
         while (p->next != NULL)
         {
@@ -77,7 +77,7 @@ int PktRadioDriver::addToQueue(PktRadioPacket** queue, PktRadioPacket* packet)
             queueDepth++;
         }
 
-        if (queueDepth >= PKT_RADIO_MAXIMUM_BUFFERS)
+        if (queueDepth >= JD_RADIO_MAXIMUM_BUFFERS)
         {
             delete packet;
             return DEVICE_NO_RESOURCES;
@@ -89,9 +89,9 @@ int PktRadioDriver::addToQueue(PktRadioPacket** queue, PktRadioPacket* packet)
     return DEVICE_OK;
 }
 
-PktRadioPacket* PktRadioDriver::peakQueue(PktRadioPacket** queue, uint16_t id)
+JDRadioPacket* JDRadioDriver::peakQueue(JDRadioPacket** queue, uint16_t id)
 {
-    PktRadioPacket *p = *queue;
+    JDRadioPacket *p = *queue;
 
     while (p != NULL)
     {
@@ -104,44 +104,44 @@ PktRadioPacket* PktRadioDriver::peakQueue(PktRadioPacket** queue, uint16_t id)
     return NULL;
 }
 
-void PktRadioDriver::forwardPacket(Event)
+void JDRadioDriver::forwardPacket(Event)
 {
-    DMESG("PKT RAD");
+    DMESG("JD RAD");
     ManagedBuffer packet = networkInstance->recvBuffer();
 
     // drop
     if (packet.length() == 0 || !isConnected())
         return;
 
-    PktRadioPacket* pkt = (PktRadioPacket*)malloc(sizeof(PktRadioPacket));
-    memcpy(pkt, packet.getBytes(), packet.length());
-    pkt->size = packet.length();
+    JDRadioPacket* JD = (JDRadioPacket*)malloc(sizeof(JDRadioPacket));
+    memcpy(JD, packet.getBytes(), packet.length());
+    JD->size = packet.length();
 
-    DMESG("length: %d", pkt->size);
+    DMESG("length: %d", JD->size);
 
-    uint8_t *pktptr = (uint8_t*)pkt;
+    uint8_t *JDptr = (uint8_t*)JD;
     for (int i = 0; i < packet.length(); i++)
-        DMESG("[%d]",pktptr[i]);
+        DMESG("[%d]",JDptr[i]);
 
-    if (pkt->magic != PKT_RADIO_MAGIC)
+    if (JD->magic != JD_RADIO_MAGIC)
     {
-        DMESG("BAD MAGIC %d %d", pkt->magic, PKT_RADIO_MAGIC);
+        DMESG("BAD MAGIC %d %d", JD->magic, JD_RADIO_MAGIC);
         return;
     }
 
-    int ret = send(pkt, false);
+    int ret = send(JD, false);
 
     DMESG("RET %d ",ret);
 
-    delete pkt;
+    delete JD;
 }
 
-PktRadioPacket* PktRadioDriver::recv(uint8_t id)
+JDRadioPacket* JDRadioDriver::recv(uint8_t id)
 {
     return removeFromQueue(&rxQueue, id);
 }
 
-int PktRadioDriver::send(PktRadioPacket* packet, bool retain)
+int JDRadioDriver::send(JDRadioPacket* packet, bool retain)
 {
     if (packet == NULL)
         return DEVICE_INVALID_PARAMETER;
@@ -152,44 +152,44 @@ int PktRadioDriver::send(PktRadioPacket* packet, bool retain)
         return DEVICE_NO_RESOURCES;
     }
 
-    PktRadioPacket* tx = packet;
+    JDRadioPacket* tx = packet;
 
     if (retain)
     {
-        tx = new PktRadioPacket;
-        memset(tx, 0, sizeof(PktRadioPacket));
-        memcpy(tx, packet, sizeof(PktRadioPacket));
+        tx = new JDRadioPacket;
+        memset(tx, 0, sizeof(JDRadioPacket));
+        memcpy(tx, packet, sizeof(JDRadioPacket));
         addToQueue(&txQueue, tx);
     }
 
-    return PktSerialProtocol::send((uint8_t *)tx, min(tx->size, PKT_SERIAL_DATA_SIZE), device.address);
+    return JDProtocol::send((uint8_t *)tx, min(tx->size, JD_SERIAL_DATA_SIZE), device.address);
 }
 
-int PktRadioDriver::send(uint8_t* buf, int len, bool retain)
+int JDRadioDriver::send(uint8_t* buf, int len, bool retain)
 {
-    if (len > PKT_SERIAL_DATA_SIZE - PKT_RADIO_HEADER_SIZE || buf == NULL)
+    if (len > JD_SERIAL_DATA_SIZE - JD_RADIO_HEADER_SIZE || buf == NULL)
         return DEVICE_INVALID_PARAMETER;
 
     DMESG("MSG WITH SIZe: %d",len);
 
-    PktRadioPacket p;
-    p.magic = PKT_RADIO_MAGIC;
+    JDRadioPacket p;
+    p.magic = JD_RADIO_MAGIC;
     p.app_id = this->app_id;
     p.id = target_random(255);
     memcpy(p.data, buf, len);
-    p.size = len + PKT_RADIO_HEADER_SIZE;
+    p.size = len + JD_RADIO_HEADER_SIZE;
 
     return send(&p, retain);
 }
 
-int PktRadioDriver::handleControlPacket(ControlPacket* cp)
+int JDRadioDriver::handleControlPacket(JDPkt* cp)
 {
     return DEVICE_OK;
 }
 
-int PktRadioDriver::handlePacket(PktSerialPkt* p)
+int JDRadioDriver::handlePacket(JDPkt* p)
 {
-    PktRadioPacket* rx = (PktRadioPacket*)malloc(sizeof(PktRadioPacket));
+    JDRadioPacket* rx = (JDRadioPacket*)malloc(sizeof(JDRadioPacket));
     memcpy(rx, p->data, p->size);
     rx->size = p->size;
 
@@ -199,9 +199,9 @@ int PktRadioDriver::handlePacket(PktSerialPkt* p)
         DMESG("HOST");
         // for now lets just send the whole packet
         DMESG("FORWARD: %d %d", rx->size, rx->magic);
-        uint8_t *pktptr = (uint8_t*)rx;
+        uint8_t *JDptr = (uint8_t*)rx;
         for (int i = 0; i < rx->size; i++)
-            DMESG("[%d]",pktptr[i]);
+            DMESG("[%d]",JDptr[i]);
 
         ManagedBuffer b((uint8_t*)rx, rx->size);
         networkInstance->sendBuffer(b);
@@ -214,15 +214,15 @@ int PktRadioDriver::handlePacket(PktSerialPkt* p)
         if (rx->app_id != this->app_id)
         {
             history[idx] = rx->id;
-            idx = (idx + 1) % PKT_RADIO_HISTORY_SIZE;
+            idx = (idx + 1) % JD_RADIO_HISTORY_SIZE;
             return DEVICE_OK;
         }
 
         // check if we have a matching id in the send queue
         if (peakQueue(&txQueue, rx->id))
         {
-            PktRadioPacket* pkt = removeFromQueue(&txQueue, rx->id);
-            delete pkt;
+            JDRadioPacket* JD = removeFromQueue(&txQueue, rx->id);
+            delete JD;
         }
 
         addToQueue(&rxQueue, rx);

@@ -1,21 +1,21 @@
-#ifndef PKT_MESSAGE_BUS_DRIVER_H
-#define PKT_MESSAGE_BUS_DRIVER_H
+#ifndef JD_MESSAGE_BUS_DRIVER_H
+#define JD_MESSAGE_BUS_DRIVER_H
 
-#include "PktSerialProtocol.h"
+#include "JDProtocol.h"
 #include "MessageBus.h"
 
-#define PKT_MESSAGEBUS_TYPE_EVENT       0x01
-#define PKT_MESSAGEBUS_TYPE_LISTEN      0x02
+#define JD_MESSAGEBUS_TYPE_EVENT       0x01
+#define JD_MESSAGEBUS_TYPE_LISTEN      0x02
 
 namespace codal
 {
-    class PktMessageBusDriver : public PktSerialDriver
+    class JDMessageBusDriver : public JDDriver
     {
         void eventReceived(Event e);
         bool suppressForwarding;
 
         public:
-        PktMessageBusDriver(uint32_t serial);
+        JDMessageBusDriver(uint32_t serial);
 
         /**
          * Associates the given event with the serial channel.
@@ -80,9 +80,9 @@ namespace codal
          */
         int ignore(uint16_t id, uint16_t value, EventModel &eventBus);
 
-        virtual int handleControlPacket(ControlPacket* cp);
+        virtual int handleControlPacket(JDPkt* cp);
 
-        virtual int handlePacket(PktSerialPkt* p);
+        virtual int handlePacket(JDPkt* p);
     };
 }
 

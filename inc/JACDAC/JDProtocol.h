@@ -230,7 +230,7 @@ namespace codal
          *
          * @param cp the control packet from the serial bus.
          **/
-        virtual int fillControlPacket(JDPkt* p);
+        virtual int handleControlPacket(JDPkt* p);
 
         /**
          * Called by the logic driver when a data packet is addressed to this driver

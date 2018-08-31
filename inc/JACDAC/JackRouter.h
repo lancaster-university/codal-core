@@ -28,7 +28,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "ErrorNo.h"
 #include "Pin.h"
-#include "PktSerial.h"
+#include "JACDAC.h"
 #include "DMASingleWireSerial.h"
 
 namespace codal
@@ -62,7 +62,7 @@ class JackRouter : public CodalComponent
     Pin &bzEn;
     Pin &pwrEn;
 
-    PktSerial& serial;
+    JACDAC& serial;
 
     void setState(JackState s);
     /**
@@ -82,7 +82,7 @@ public:
      * @param buzzerEnable - when high, sound should be routed to the buzzer
      * @param powerEnable - when high, power should be routed to the tip of the jack
      */
-    JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable, Pin &powerEnable, PktSerial &pkt);
+    JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable, Pin &powerEnable, JACDAC &jacdac);
 
     /**
      * Forces given state. Set to None to disable.

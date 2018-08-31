@@ -1,55 +1,55 @@
-#ifndef PKT_RADIO_DRIVER_H
-#define PKT_RADIO_DRIVER_H
+#ifndef JD_RADIO_DRIVER_H
+#define JD_RADIO_DRIVER_H
 
-#include "PktSerialProtocol.h"
+#include "JDProtocol.h"
 #include "Radio.h"
 
-#define PKT_RADIO_HISTORY_SIZE          4
-#define PKT_RADIO_MAGIC                 (uint16_t)(0x4145)
-#define PKT_RADIO_MAXIMUM_BUFFERS       10
+#define JD_RADIO_HISTORY_SIZE          4
+#define JD_RADIO_MAGIC                 (uint16_t)(0x4145)
+#define JD_RADIO_MAXIMUM_BUFFERS       10
 
-#define PKT_RADIO_HEADER_SIZE           4
+#define JD_RADIO_HEADER_SIZE           4
 
 namespace codal
 {
-    struct PktRadioPacket
+    struct JDRadioPacket
     {
         uint16_t app_id:8,id:8;
         uint16_t magic; // required to differentiate normal, over the air packets. Ideally I should just add another protocol type to the radio interface
-        uint8_t data[PKT_SERIAL_DATA_SIZE - PKT_RADIO_HEADER_SIZE];
+        uint8_t data[JD_SERIAL_DATA_SIZE - JD_RADIO_HEADER_SIZE];
         uint8_t size;
-        PktRadioPacket* next;
+        JDRadioPacket* next;
     };
 
-    class PktRadioDriver : public PktSerialDriver
+    class JDRadioDriver : public JDDriver
     {
         Radio* networkInstance;
-        PktRadioPacket* rxQueue;
-        PktRadioPacket* txQueue;
+        JDRadioPacket* rxQueue;
+        JDRadioPacket* txQueue;
 
         uint8_t app_id;
 
-        uint16_t history[PKT_RADIO_HISTORY_SIZE];
+        uint16_t history[JD_RADIO_HISTORY_SIZE];
         uint8_t idx;
 
         void forwardPacket(Event);
 
-        int addToQueue(PktRadioPacket** queue, PktRadioPacket* packet);
-        PktRadioPacket* peakQueue(PktRadioPacket** queue, uint16_t id);
-        PktRadioPacket* removeFromQueue(PktRadioPacket** queue, uint16_t id);
+        int addToQueue(JDRadioPacket** queue, JDRadioPacket* packet);
+        JDRadioPacket* peakQueue(JDRadioPacket** queue, uint16_t id);
+        JDRadioPacket* removeFromQueue(JDRadioPacket** queue, uint16_t id);
 
         public:
-        PktRadioDriver(Radio& n, uint32_t serial);
-        PktRadioDriver(uint32_t serial = 0);
+        JDRadioDriver(Radio& n, uint32_t serial);
+        JDRadioDriver(uint32_t serial = 0);
 
-        PktRadioPacket* recv(uint8_t id);
+        JDRadioPacket* recv(uint8_t id);
 
-        int send(PktRadioPacket* packet, bool retain = true);
+        int send(JDRadioPacket* packet, bool retain = true);
         int send(uint8_t* buf, int len, bool retain = true);
 
-        virtual int handleControlPacket(ControlPacket* cp);
+        virtual int handleControlPacket(JDPkt* cp);
 
-        virtual int handlePacket(PktSerialPkt* p);
+        virtual int handlePacket(JDPkt* p);
 
     };
 }

@@ -21,63 +21,53 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
-#include "PktSerialProtocol.h"
+#include "JDProtocol.h"
 #include "CodalDmesg.h"
 #include "codal_target_hal.h"
 
 using namespace codal;
 
-int PktSerialDriver::queueControlPacket()
+int JDDriver::fillControlPacket(JDPkt*)
 {
-    PKT_DMESG("QUEUED CP");
-    ControlPacket cp;
-    memset(&cp, target_random(256), sizeof(ControlPacket));
-
-    cp.packet_type = CONTROL_PKT_TYPE_HELLO;
-    cp.address = device.address;
-    cp.flags = device.flags & 0x00FF;
-    cp.driver_class = this->driver_class;
-    cp.serial_number = device.serial_number;
-
-    PktSerialProtocol::send((uint8_t *)&cp, sizeof(ControlPacket), 0);
-
+    // by default, the logic driver will fill in the required information.
+    // any additional information should be added here.... (note: cast to control packet and fill out data)
     return DEVICE_OK;
 }
 
-PktSerialDriver::PktSerialDriver(PktDevice d, uint32_t driver_class, uint16_t id)
+JDDriver::JDDriver(JDDevice d, uint32_t driver_class, uint16_t id)
 {
-    memset((uint8_t*)&device, 0, sizeof(PktDevice));
+    memset((uint8_t*)&device, 0, sizeof(JDDevice));
 
     this->driver_class = driver_class;
     this->device = d;
     this->id = id;
 }
 
-bool PktSerialDriver::isConnected()
+bool JDDriver::isConnected()
 {
-    return (this->device.flags & PKT_DEVICE_FLAGS_INITIALISED) ? true : false;
+    return (this->device.flags & JD_DEVICE_FLAGS_INITIALISED) ? true : false;
 }
 
-int PktSerialDriver::deviceConnected(PktDevice device)
+int JDDriver::deviceConnected(JDDevice device)
 {
     DMESG("CONNECTED a:%d sn:%d",device.address,device.serial_number);
     uint16_t flags = this->device.flags & 0xFF00;
     this->device = device;
-    this->device.flags = (flags | PKT_DEVICE_FLAGS_INITIALISED | PKT_DEVICE_FLAGS_CP_SEEN);
-    Event(this->id, PKT_DRIVER_EVT_CONNECTED);
+    this->device.flags = (flags | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN);
+    Event(this->id, JD_DRIVER_EVT_CONNECTED);
     return DEVICE_OK;
 }
 
-int PktSerialDriver::deviceRemoved()
+int JDDriver::deviceRemoved()
 {
     DMESG("DISCONN a:%d sn:%d",device.address,device.serial_number);
-    this->device.flags &= ~(PKT_DEVICE_FLAGS_INITIALISED);
+    this->device.flags &= ~(JD_DEVICE_FLAGS_INITIALISED);
     this->device.rolling_counter = 0;
-    Event(this->id, PKT_DRIVER_EVT_DISCONNECTED);
+    Event(this->id, JD_DRIVER_EVT_DISCONNECTED);
     return DEVICE_OK;
 }
 
-PktSerialDriver::~PktSerialDriver()
+JDDriver::~JDDriver()
 {
-    PktSerialProtocol::instance->remove(*this);
+    JDProtocol::instance->remove(*this);
 }

@@ -32,9 +32,9 @@ namespace codal
 {
 
 JackRouter::JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable,
-                       Pin &powerEnable, PktSerial &pkt)
+                       Pin &powerEnable, JACDAC &jacdac)
     : mid(mid), sense(sense), hpEn(headphoneEnable), bzEn(buzzerEnable), pwrEn(powerEnable),
-      serial(pkt)
+      serial(jacdac)
 {
     status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 

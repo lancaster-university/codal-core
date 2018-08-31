@@ -112,7 +112,7 @@ int JDMessageBusDriver::handlePacket(JDPkt* p)
     return DEVICE_OK;
 }
 
-int JDMessageBusDriver::handleControlPacket(ControlPacket*)
+int JDMessageBusDriver::handleControlPacket(JDPkt*)
 {
     return DEVICE_OK;
 }
