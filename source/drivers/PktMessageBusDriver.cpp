@@ -3,8 +3,8 @@
 
 using namespace codal;
 
-PktMessageBusDriver::PktMessageBusDriver(bool remote, uint32_t serial) :
-    PktSerialDriver(PktDevice(0, 0, (remote) ? PKT_DEVICE_FLAGS_REMOTE : PKT_DEVICE_FLAGS_LOCAL, serial),
+PktMessageBusDriver::PktMessageBusDriver(uint32_t serial) :
+    PktSerialDriver(PktDevice(0, 0, PKT_DEVICE_FLAGS_LOCAL | PKT_DEVICE_FLAGS_BROADCAST, serial),
                     PKT_DRIVER_CLASS_MESSAGE_BUS,
                     DEVICE_ID_PKT_MESSAGE_BUS_DRIVER)
 {

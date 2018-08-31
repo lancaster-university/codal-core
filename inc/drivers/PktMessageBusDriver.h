@@ -15,7 +15,7 @@ namespace codal
         bool suppressForwarding;
 
         public:
-        PktMessageBusDriver(bool remote, uint32_t serial = 0);
+        PktMessageBusDriver(uint32_t serial);
 
         /**
          * Associates the given event with the serial channel.
