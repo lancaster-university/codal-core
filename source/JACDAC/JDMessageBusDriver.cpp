@@ -4,9 +4,7 @@
 using namespace codal;
 
 JDMessageBusDriver::JDMessageBusDriver(uint32_t serial) :
-    JDDriver(JDDevice(0, 0, JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_BROADCAST, serial),
-                    JD_DRIVER_CLASS_MESSAGE_BUS,
-                    DEVICE_ID_JD_MESSAGE_BUS_DRIVER)
+    JDDriver(JDDevice(JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_BROADCAST, serial, JD_DRIVER_CLASS_MESSAGE_BUS), DEVICE_ID_JD_MESSAGE_BUS_DRIVER)
 {
     suppressForwarding = false;
 }

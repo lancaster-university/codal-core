@@ -34,13 +34,35 @@ int JDDriver::fillControlPacket(JDPkt*)
     return DEVICE_OK;
 }
 
-JDDriver::JDDriver(JDDevice d, uint32_t driver_class, uint16_t id)
+bool JDDriver::isBroadcastAddress(uint8_t address)
 {
-    memset((uint8_t*)&device, 0, sizeof(JDDevice));
+    for (int i = 0; i < JD_DEVICE_BROADCAST_ADDRESSES; i++)
+        if (this->addressMapping[i] == address)
+            return true;
 
-    this->driver_class = driver_class;
-    this->device = d;
+    return false;
+}
+
+void JDDriver::addBroadcastAddress(uint8_t address)
+{
+    for (int i = 0; i < JD_DEVICE_BROADCAST_ADDRESSES; i++)
+        this->addressMapping[i] = address;
+}
+
+void JDDriver::removeBroadcastAddress(uint8_t address)
+{
+    for (int i = 0; i < JD_DEVICE_BROADCAST_ADDRESSES; i++)
+        if (this->addressMapping[i] == address)
+        {
+            this->addressMapping[i] = 0;
+            break;
+        }
+}
+
+JDDriver::JDDriver(JDDevice d, uint16_t id) : device(d)
+{
     this->id = id;
+    memset(addressMapping, 0, JD_DEVICE_BROADCAST_ADDRESSES);
 }
 
 bool JDDriver::isConnected()

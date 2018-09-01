@@ -83,7 +83,7 @@ void JDLogicDriver::periodicCallback()
                 cp.packet_type = CONTROL_JD_TYPE_HELLO;
                 cp.address = current->device.address;
                 cp.flags = (current->device.flags & 0x00FF) | CONTROL_JD_FLAGS_UNCERTAIN; // flag that we haven't assigned our address.
-                cp.driver_class = current->driver_class;
+                cp.driver_class = current->device.driver_class;
                 cp.serial_number = current->device.serial_number;
 
                 current->device.flags |= JD_DEVICE_FLAGS_INITIALISING;
@@ -114,7 +114,7 @@ void JDLogicDriver::periodicCallback()
                     cp->packet_type = CONTROL_JD_TYPE_HELLO;
                     cp->address = current->device.address;
                     cp->flags = current->device.flags & 0x00FF;
-                    cp->driver_class = current->driver_class;
+                    cp->driver_class = current->device.driver_class;
                     cp->serial_number = current->device.serial_number;
 
                     current->fillControlPacket(&pkt);
@@ -127,14 +127,11 @@ void JDLogicDriver::periodicCallback()
 }
 
 
-JDLogicDriver::JDLogicDriver(JDDevice d, uint32_t driver_class, uint16_t id) : JDDriver(d, driver_class, id)
+JDLogicDriver::JDLogicDriver(JDDevice d, uint16_t id) : JDDriver(d, id)
 {
     this->device.address = 0;
     status = 0;
     memset(this->address_filters, 0, JD_LOGIC_DRIVER_MAX_FILTERS);
-
-    // flags this instance as occupied
-    this->device.flags = (JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_INITIALISED);
 }
 
 int JDLogicDriver::handleControlPacket(JDPkt* p)
@@ -219,7 +216,6 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             // so we flag as seen so we do not disconnect a device
             current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
 
-            // for some drivers, pairing is required... pass the packet through to the driver.
             DMESG("FOUND LOCAL");
             if (current->handleControlPacket(p) == DEVICE_OK)
             {
@@ -244,9 +240,8 @@ int JDLogicDriver::handlePacket(JDPkt* p)
                 continue;
             }
         }
-        else if ((current->device.flags & JD_DEVICE_FLAGS_BROADCAST) && current->driver_class == cp->driver_class)
+        else if ((current->device.flags & JD_DEVICE_FLAGS_BROADCAST) && current->device.driver_class == cp->driver_class)
         {
-            // for some drivers, pairing is required... pass the packet through to the driver.
             DMESG("FOUND BROAD");
             if (current->handleControlPacket(p) == DEVICE_OK)
             {
@@ -258,10 +253,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
     }
 
     if (handled)
-    {
-        // DMESG("HANDLED");
         return DEVICE_OK;
-    }
 
     bool filtered = filterPacket(cp->address);
 
@@ -293,25 +285,32 @@ int JDLogicDriver::handlePacket(JDPkt* p)
     {
         JDDriver* current = JDProtocol::instance->drivers[i];
         JD_DMESG("FIND DRIVER");
-        if (current && current->device.flags & JD_DEVICE_FLAGS_REMOTE && current->driver_class == cp->driver_class)
+        if (current && current->device.flags & JD_DEVICE_FLAGS_REMOTE && current->device.driver_class == cp->driver_class)
         {
             // this driver instance is looking for a specific serial number
             if (current->device.serial_number > 0 && current->device.serial_number != cp->serial_number)
                 continue;
 
             DMESG("FOUND NEW");
-            JDDevice d;
-            d.address = cp->address;
-            d.rolling_counter = 0;
-            d.flags = cp->flags;
-            d.serial_number = cp->serial_number;
-
-            current->deviceConnected(d);
+            current->deviceConnected(JDDevice(cp->address, cp->flags, cp->serial_number, cp->driver_class));
             return DEVICE_OK;
         }
     }
 
-    // if still not allocated we maintain a copy of the device information for routing based on serial number or class.
+    // if still not allocated we perform one final check.
+    // if any drivers are running in broadcast local, we need to maintain a mapping of address -> class translations.
+    // let's first check to see if any devices are running in broadcast mode and we match on the class, we add the device to
+    // a mapping.
+    for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+    {
+        JDDriver* current = JDProtocol::instance->drivers[i];
+        JD_DMESG("FIND DRIVER");
+        if (current && current->device.flags & JD_DEVICE_FLAGS_BROADCAST && current->device.driver_class == cp->driver_class)
+        {
+            current->addBroadcastAddress(cp->address);
+            return DEVICE_OK;
+        }
+    }
 
     return DEVICE_OK;
 }

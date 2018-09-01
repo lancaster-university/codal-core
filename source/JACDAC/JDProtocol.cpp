@@ -38,11 +38,11 @@ JDProtocol* JDProtocol::instance = NULL;
 
 void JDProtocol::onPacketReceived(Event)
 {
-    JDPkt* JD = bus.getPacket();
-    DMESG("JD REC ADDR: %d",JD->address);
+    JDPkt* pkt = bus.getPacket();
+    DMESG("pkt REC ADDR: %d",pkt->address);
 
     // if this packet is destined for our drivers...
-    if (!logic.filterPacket(JD->address))
+    if (!logic.filterPacket(pkt->address))
     {
         DMESG("NOT FILTERED");
         for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
@@ -52,36 +52,29 @@ void JDProtocol::onPacketReceived(Event)
                 // need to maintain state of all drivers address -> serial number -> class... damn
                 // could be optimised into a single if, but useful for debugging.
                 DMESG("DRIV a:%d sn:%d i:%d", this->drivers[i]->device.address, this->drivers[i]->device.serial_number, this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
-                // if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_LOCAL) && (this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED) && this->drivers[i]->device.address == cp->address)
-                // {
-                //     DMESG("HANDLED BY LOCAL");
-                //     // only break if the driver has "handled the packet" i.e. returns DEVICE_OK.
-                //     if (this->drivers[i]->handlePacket(JD) == DEVICE_OK)
-                //         break;
-                // }
-                // else if (this->drivers[i]->device.flags & JD_DEVICE_FLAGS_REMOTE && this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED && this->drivers[i]->device.serial_number == cp->serial_number)
-                // {
-                //     DMESG("HANDLED BY REMOTe");
-                //     // only break if the driver has "handled the packet" i.e. returns DEVICE_OK.
-                //     if (this->drivers[i]->handlePacket(JD) == DEVICE_OK)
-                //         break;
-                // }
-                // else if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_BROADCAST) && this->drivers[i]->driver_class == cp->driver_class)
-                // {
-                //     DMESG("HANDLED BY BROADCAST");
-                //     // only break if the driver has "handled the packet" i.e. returns DEVICE_OK.
-                //     if (this->drivers[i]->handlePacket(JD) == DEVICE_OK)
-                //         break;
-                // }
+                if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED) && this->drivers[i]->device.address == pkt->address)
+                {
+                    DMESG("HANDLED BY LOCAL / REMOTE");
+                    // only break if the driver has "handled the packet" i.e. returns DEVICE_OK.
+                    if (this->drivers[i]->handlePacket(pkt) == DEVICE_OK)
+                        break;
+                }
+                else if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_BROADCAST) && this->drivers[i]->isBroadcastAddress(pkt->address))
+                {
+                    DMESG("HANDLED BY BROADCAST");
+                    // only break if the driver has "handled the packet" i.e. returns DEVICE_OK.
+                    if (this->drivers[i]->handlePacket(pkt) == DEVICE_OK)
+                        break;
+                }
 
             }
         }
     }
 
     if (bridge != NULL)
-        bridge->handlePacket(JD);
+        bridge->handlePacket(pkt);
 
-    free(JD);
+    free(pkt);
 }
 
 JDProtocol::JDProtocol(JACDAC& jacdac, uint16_t id) : logic(), bridge(NULL), bus(jacdac)
@@ -153,10 +146,10 @@ void JDProtocol::stop()
     logic.stop();
 }
 
-int JDProtocol::send(JDPkt* JD)
+int JDProtocol::send(JDPkt* pkt)
 {
     if(instance)
-        return instance->bus.send(JD);
+        return instance->bus.send(pkt);
 
     return DEVICE_NO_RESOURCES;
 }

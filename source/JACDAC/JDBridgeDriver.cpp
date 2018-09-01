@@ -4,9 +4,7 @@
 using namespace codal;
 
 JDBridgeDriver::JDBridgeDriver(Radio& n) :
-    JDDriver(JDDevice(0, 0, JD_DEVICE_FLAGS_LOCAL, 0),
-                    JD_DRIVER_CLASS_BRIDGE,
-                    DEVICE_ID_JD_BRIDGE_DRIVER)
+    JDDriver(JDDevice(JD_DEVICE_FLAGS_LOCAL, 0, JD_DRIVER_CLASS_BRIDGE), DEVICE_ID_JD_BRIDGE_DRIVER)
 {
     memset(history, 0, sizeof(uint32_t) * JD_BRIDGE_HISTORY_SIZE);
     history_idx = 0;

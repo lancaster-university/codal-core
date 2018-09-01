@@ -51,6 +51,8 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DEVICE_FLAGS_INITIALISING   0x0400 // a flag to indicate that a control packet has been queued
 #define JD_DEVICE_FLAGS_CP_SEEN        0x0200 // indicates whether a control packet has been seen recently.
 #define JD_DEVICE_FLAGS_RESERVED       0x0100 // reserved for future use
+
+#define JD_DEVICE_BROADCAST_ADDRESSES  8
 // END      JD SERIAL DRIVER FLAGS
 
 
@@ -108,21 +110,33 @@ namespace codal
         uint8_t rolling_counter; // used to trigger various time related events
         uint16_t flags; // upper 8 bits can be used by drivers, lower 8 bits are placed into the control packet
         uint32_t serial_number; // the serial number used to "uniquely" identify a device
+        uint32_t driver_class;
 
-        JDDevice()
+        JDDevice(uint32_t serial_number, uint32_t driver_class)
         {
             address = 0;
             rolling_counter = 0;
             flags = JD_DEVICE_FLAGS_REMOTE;
-            serial_number = 0;
+            serial_number = serial_number;
+            driver_class = driver_class;
         }
 
-        JDDevice(uint8_t address, uint8_t rolling_counter, uint16_t flags, uint32_t serial_number)
+        JDDevice(uint8_t address, uint16_t flags, uint32_t serial_number, uint32_t driver_class)
         {
             this->address = address;
-            this->rolling_counter = rolling_counter;
-            this->flags = flags;
+            this->rolling_counter = 0;
+            this->flags |= flags;
             this->serial_number = serial_number;
+            this->driver_class = driver_class;
+        }
+
+        JDDevice(uint16_t flags, uint32_t serial_number, uint32_t driver_class)
+        {
+            this->address = 0;
+            this->rolling_counter = 0;
+            this->flags |= flags;
+            this->serial_number = serial_number;
+            this->driver_class = driver_class;
         }
     };
 
@@ -135,9 +149,16 @@ namespace codal
         friend class JDLogicDriver;
         friend class JDProtocol;
 
+        uint8_t addressMapping[JD_DEVICE_BROADCAST_ADDRESSES];
+
         protected:
-        uint32_t driver_class;
         JDDevice device;
+
+        virtual bool isBroadcastAddress(uint8_t address);
+
+        virtual void addBroadcastAddress(uint8_t address);
+
+        virtual void removeBroadcastAddress(uint8_t address);
 
         public:
 
@@ -153,7 +174,7 @@ namespace codal
          * @param id the message bus id for this driver
          *
          * */
-        JDDriver(JDDevice d, uint32_t driver_class, uint16_t id);
+        JDDriver(JDDevice d, uint16_t id);
 
         /**
          * Queues a control packet on the serial bus, called by the logic driver
@@ -223,7 +244,7 @@ namespace codal
          * @param id the message bus id for this driver
          *
          * */
-        JDLogicDriver(JDDevice d = JDDevice(), uint32_t driver_class = JD_DRIVER_CLASS_CONTROL, uint16_t id = DEVICE_ID_JD_LOGIC_DRIVER);
+        JDLogicDriver(JDDevice d = JDDevice(0, JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_INITIALISED, 0, 0), uint16_t id = DEVICE_ID_JD_LOGIC_DRIVER);
 
         /**
          * Called by the logic driver when a control packet is addressed to this driver
