@@ -1,6 +1,7 @@
 #include "JDProtocol.h"
 #include "CodalDmesg.h"
 #include "Timer.h"
+#include "JDBroadcastDriver.h"
 
 using namespace codal;
 
@@ -171,6 +172,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
         if (current == NULL)
             continue;
 
+
         // DMESG("ITER %d, s %d, c %d b %d l %d", current->device.address, current->device.serial_number, current->driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 1 : 0, current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 1 : 0);
 
         // We are in charge of local drivers, in this if statement we handle address assignment
@@ -242,11 +244,12 @@ int JDLogicDriver::handlePacket(JDPkt* p)
         }
         else if ((current->device.flags & JD_DEVICE_FLAGS_BROADCAST) && current->device.driver_class == cp->driver_class)
         {
+            new JDBroadcastDriver(JDDevice(cp->address, cp->flags, cp->serial_number, cp->driver_class));
+
             DMESG("FOUND BROAD");
             if (current->handleControlPacket(p) == DEVICE_OK)
             {
                 handled = true;
-                current->addBroadcastAddress(cp->address);  // what happens if devices change addresses?
                 DMESG("CP ABSORBED %d", current->device.address);
                 continue;
             }

@@ -50,9 +50,7 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DEVICE_FLAGS_INITIALISED    0x0800 // device driver is running
 #define JD_DEVICE_FLAGS_INITIALISING   0x0400 // a flag to indicate that a control packet has been queued
 #define JD_DEVICE_FLAGS_CP_SEEN        0x0200 // indicates whether a control packet has been seen recently.
-#define JD_DEVICE_FLAGS_RESERVED       0x0100 // reserved for future use
-
-#define JD_DEVICE_BROADCAST_ADDRESSES  8
+#define JD_DEVICE_FLAGS_BROADCAST_MAP  0x0100 // This driver is held for mapping from bus address to driver class
 // END      JD SERIAL DRIVER FLAGS
 
 
@@ -149,16 +147,8 @@ namespace codal
         friend class JDLogicDriver;
         friend class JDProtocol;
 
-        uint8_t addressMapping[JD_DEVICE_BROADCAST_ADDRESSES];
-
         protected:
         JDDevice device;
-
-        virtual bool isBroadcastAddress(uint8_t address);
-
-        virtual void addBroadcastAddress(uint8_t address);
-
-        virtual void removeBroadcastAddress(uint8_t address);
 
         public:
 
