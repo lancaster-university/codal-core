@@ -57,14 +57,14 @@ void JDProtocol::onPacketReceived(Event)
                     DMESG("HANDLED BY LOCAL / REMOTE");
                     // only break if the driver has "handled the packet" i.e. returns DEVICE_OK.
                     if (this->drivers[i]->handlePacket(pkt) == DEVICE_OK)
-                        break;
+                        continue;
                 }
                 else if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_BROADCAST) && this->drivers[i]->isBroadcastAddress(pkt->address))
                 {
                     DMESG("HANDLED BY BROADCAST");
                     // only break if the driver has "handled the packet" i.e. returns DEVICE_OK.
                     if (this->drivers[i]->handlePacket(pkt) == DEVICE_OK)
-                        break;
+                        continue;
                 }
 
             }

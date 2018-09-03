@@ -30,7 +30,7 @@ using namespace codal;
 int JDDriver::fillControlPacket(JDPkt*)
 {
     // by default, the logic driver will fill in the required information.
-    // any additional information should be added here.... (note: cast to control packet and fill out data)
+    // any additional information should be added here.... (note: cast pkt->data to control packet and fill out data)
     return DEVICE_OK;
 }
 
@@ -45,8 +45,14 @@ bool JDDriver::isBroadcastAddress(uint8_t address)
 
 void JDDriver::addBroadcastAddress(uint8_t address)
 {
+    if (isBroadcastAddress(address))
+        return;
+
     for (int i = 0; i < JD_DEVICE_BROADCAST_ADDRESSES; i++)
-        this->addressMapping[i] = address;
+    {
+        if (this->addressMapping[i] == 0)
+            this->addressMapping[i] = address;
+    }
 }
 
 void JDDriver::removeBroadcastAddress(uint8_t address)

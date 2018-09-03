@@ -246,6 +246,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             if (current->handleControlPacket(p) == DEVICE_OK)
             {
                 handled = true;
+                current->addBroadcastAddress(cp->address);  // what happens if devices change addresses?
                 DMESG("CP ABSORBED %d", current->device.address);
                 continue;
             }
@@ -293,21 +294,6 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 
             DMESG("FOUND NEW");
             current->deviceConnected(JDDevice(cp->address, cp->flags, cp->serial_number, cp->driver_class));
-            return DEVICE_OK;
-        }
-    }
-
-    // if still not allocated we perform one final check.
-    // if any drivers are running in broadcast local, we need to maintain a mapping of address -> class translations.
-    // let's first check to see if any devices are running in broadcast mode and we match on the class, we add the device to
-    // a mapping.
-    for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
-    {
-        JDDriver* current = JDProtocol::instance->drivers[i];
-        JD_DMESG("FIND DRIVER");
-        if (current && current->device.flags & JD_DEVICE_FLAGS_BROADCAST && current->device.driver_class == cp->driver_class)
-        {
-            current->addBroadcastAddress(cp->address);
             return DEVICE_OK;
         }
     }
