@@ -67,7 +67,7 @@
 
 namespace codal
 {
-uint32_t default_palette[16] =
+const uint32_t default_palette[16] =
 {
     56000,
     123,
@@ -142,16 +142,22 @@ struct ST7735WorkBuffer
     uint8_t dataBuf[255];
     const uint8_t *srcPtr;
     unsigned x;
-    uint32_t *paletteTable;
     unsigned srcLeft;
     bool inProgress;
     uint32_t expPalette[256];
 };
 
-ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc, Pin& reset, Pin& bl, int width, int height) : Display(width, height, 2), spi(spi), cs(cs), dc(dc)
+ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc, Pin& reset, Pin& bl, int width, int height, int noAutoUpdate) : Display(width, height, 2), spi(spi), cs(cs), dc(dc)
 {
     dimH = height;
     dimW = width;
+
+    autoUpdate = !noAutoUpdate;
+
+    offX = 0;
+    offY = 0;
+
+    paletteTable = default_palette;
 
     reset.setDigitalValue(0);
     fiber_sleep(20);
@@ -172,10 +178,13 @@ void ST7735::enable()
     initDisplay();
     setRotation(DISPLAY_ROTATION_0);
 
-    system_timer_event_every(30, DEVICE_ID_DISPLAY, DISPLAY_EVT_RENDER);
+    if (autoUpdate) {
+        system_timer_event_every(30, DEVICE_ID_DISPLAY, DISPLAY_EVT_RENDER);
 
-    if (EventModel::defaultEventBus)
-        EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, DISPLAY_EVT_RENDER, this, &ST7735::render);
+        if (EventModel::defaultEventBus) {
+            EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, DISPLAY_EVT_RENDER, this, &ST7735::render);
+        }
+    }
 }
 
 void ST7735::sendBytes(unsigned num)
@@ -222,13 +231,19 @@ void ST7735::sendWords(unsigned numBytes)
     startTransfer((uint8_t *)dst - work->dataBuf);
 }
 
+void ST7735::setPalette(const uint32_t *palette)
+{
+    paletteTable = palette;
+}
+
 void ST7735::sendColorsStep(ST7735 *st)
 {
     ST7735WorkBuffer *work = st->work;
 
-    if (work->paletteTable) {
-        auto palette = work->paletteTable;
-        work->paletteTable = NULL;
+    if (st->paletteTable) {
+        auto palette = st->paletteTable;
+        // only need to send palette when it has changed
+        st->paletteTable = NULL;
         memset(work->dataBuf, 0, sizeof(work->dataBuf));
         uint8_t *base = work->dataBuf;
         for (int i = 0; i < 16; ++i)
@@ -291,12 +306,12 @@ void ST7735::startRAMWR(int cmd)
 void ST7735::sendDone(Event)
 {
     // this executes outside of interrupt context, so we don't get a race
-    // with waitForSendDone
+    // with waitForEndUpdate
     work->inProgress = false;
     Event(DEVICE_ID_DISPLAY, DISPLAY_EVT_RENDER_COMPLETE);
 }
 
-void ST7735::waitForSendDone()
+void ST7735::waitForEndUpdate()
 {
     if (work && work->inProgress)
     {
@@ -359,6 +374,12 @@ void ST7735::initDisplay()
     sendCmdSeq(initCmds);
 }
 
+void ST7735::setOffset(int offX, int offY)
+{
+    this->offX = offX;
+    this->offY = offY;
+}
+
 void ST7735::configure(uint8_t madctl, uint32_t frmctr1) {
     uint8_t cmd0[] = {ST7735_MADCTL, madctl};
     uint8_t cmd1[] = {ST7735_FRMCTR1, (uint8_t)(frmctr1 >> 16), (uint8_t)(frmctr1 >> 8), (uint8_t)frmctr1};
@@ -385,7 +406,7 @@ int ST7735::setRotation(DisplayRotation r)
             image = Image(dimW, dimH, 2);
 
         configure(0,0x000603);
-        setAddrWindow(0x00, 0, dimW, dimH);
+        setAddrWindow(offX, offY, dimW, dimH);
 
         height = dimH;
         width = dimW;
@@ -396,7 +417,7 @@ int ST7735::setRotation(DisplayRotation r)
         if (image.getWidth() != dimH || image.getHeight() != dimW)
             image = Image(dimH, dimW, 2);
         configure(0xa0,0x000603);
-        setAddrWindow(0, 0, dimH, dimW);
+        setAddrWindow(offX, offY, dimH, dimW);
 
         height = dimW;
         width = dimH;
@@ -408,7 +429,7 @@ int ST7735::setRotation(DisplayRotation r)
             image = Image(dimW, dimH, 2);
 
         configure(0xc0,0x000603);
-        setAddrWindow(0, 0, dimW, dimH);
+        setAddrWindow(offX, offY, dimW, dimH);
 
         height = dimH;
         width = dimW;
@@ -420,7 +441,7 @@ int ST7735::setRotation(DisplayRotation r)
             image = Image(dimH, dimW, 2);
 
         configure(0x60,0x000603);
-        setAddrWindow(0, 0, dimH, dimW);
+        setAddrWindow(offX, offY, dimH, dimW);
 
         height = dimW;
         width = dimH;
@@ -429,7 +450,7 @@ int ST7735::setRotation(DisplayRotation r)
     return DEVICE_OK;
 }
 
-void ST7735::render(Event)
+void ST7735::beginUpdate()
 {
     if (!work)
     {
@@ -446,8 +467,6 @@ void ST7735::render(Event)
 
     Event(id, DISPLAY_EVT_RENDER_START);
 
-    work->paletteTable = default_palette;
-
     work->inProgress = true;
     work->srcPtr = image.getBitmap();
     work->width = image.getWidth();
@@ -456,8 +475,11 @@ void ST7735::render(Event)
     work->x = 0;
 
     sendColorsStep(this);
+}
 
-    return;
+void ST7735::render(Event)
+{
+    beginUpdate();
 }
 
 }
