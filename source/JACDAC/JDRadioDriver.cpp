@@ -3,8 +3,8 @@
 
 using namespace codal;
 
-JDRadioDriver::JDRadioDriver(Radio& n, uint32_t serial) :
-    JDDriver(JDDevice(JD_DEVICE_FLAGS_LOCAL, serial, JD_DRIVER_CLASS_RADIO), DEVICE_ID_JD_RADIO_DRIVER)
+JDRadioDriver::JDRadioDriver(Radio& n) :
+    JDDriver(JDDevice(HostDriver, JD_DRIVER_CLASS_RADIO), DEVICE_ID_JD_RADIO_DRIVER)
 {
     memset(history, 0, sizeof(uint16_t) * JD_RADIO_HISTORY_SIZE);
     idx = 0;
@@ -14,8 +14,8 @@ JDRadioDriver::JDRadioDriver(Radio& n, uint32_t serial) :
         EventModel::defaultEventBus->listen(n.id, RADIO_EVT_DATA_READY, this, &JDRadioDriver::forwardPacket);
 }
 
-JDRadioDriver::JDRadioDriver(uint32_t serial):
-    JDDriver(JDDevice(JD_DEVICE_FLAGS_REMOTE, serial, JD_DRIVER_CLASS_RADIO), DEVICE_ID_JD_RADIO_DRIVER)
+JDRadioDriver::JDRadioDriver():
+    JDDriver(JDDevice(VirtualDriver, JD_DRIVER_CLASS_RADIO), DEVICE_ID_JD_RADIO_DRIVER)
 {
     memset(history, 0, sizeof(uint16_t) * JD_RADIO_HISTORY_SIZE);
     idx = 0;

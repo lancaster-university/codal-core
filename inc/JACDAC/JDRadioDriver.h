@@ -39,8 +39,8 @@ namespace codal
         JDRadioPacket* removeFromQueue(JDRadioPacket** queue, uint16_t id);
 
         public:
-        JDRadioDriver(Radio& n, uint32_t serial);
-        JDRadioDriver(uint32_t serial = 0);
+        JDRadioDriver(Radio& n);
+        JDRadioDriver();
 
         JDRadioPacket* recv(uint8_t id);
 

@@ -1,7 +1,7 @@
 #include "JDProtocol.h"
 #include "CodalDmesg.h"
 #include "Timer.h"
-#include "JDBroadcastDriver.h"
+#include "JDBroadcastDummy.h"
 
 using namespace codal;
 
@@ -244,7 +244,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
         }
         else if ((current->device.flags & JD_DEVICE_FLAGS_BROADCAST) && current->device.driver_class == cp->driver_class)
         {
-            new JDBroadcastDriver(JDDevice(cp->address, cp->flags, cp->serial_number, cp->driver_class));
+            new JDBroadcastDummy(JDDevice(cp->address, cp->flags, cp->serial_number, cp->driver_class));
 
             DMESG("FOUND BROAD");
             if (current->handleControlPacket(p) == DEVICE_OK)

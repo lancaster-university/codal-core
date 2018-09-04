@@ -15,7 +15,7 @@ namespace codal
         bool suppressForwarding;
 
         public:
-        JDMessageBusDriver(uint32_t serial);
+        JDMessageBusDriver();
 
         /**
          * Associates the given event with the serial channel.
