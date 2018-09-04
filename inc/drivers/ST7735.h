@@ -53,6 +53,10 @@ class ST7735 : public Display
 
     uint32_t dimW;
     uint32_t dimH;
+    int offX, offY;
+    const uint32_t *paletteTable;
+
+    bool autoUpdate;
 
     void sendCmd(uint8_t *buf, int len);
     void sendCmdSeq(const uint8_t *buf);
@@ -69,33 +73,40 @@ class ST7735 : public Display
      */
     void setAddrWindow(int x, int y, int w, int h);
 
-    /**
-     * Configure screen-specific parameters.
-     *
-     * @param madctl See MADCTL_* constants above
-     * @param frmctr1 defaults to 0x083b3b, 0x053a3a, 0x053c3c depending on screen size; 0x000605 was found to work well on 160x128 screen; big-endian
-     */
-    void configure(uint8_t madctl, uint32_t frmctr1);
-
     void initDisplay();
-
-    /**
-     * Waits for the previous sendIndexedImage() operation to complete (it normally executes in background).
-     */
-    void waitForSendDone();
 
     void render(Event);
 
 public:
-    ST7735(SPI &spi, Pin &cs, Pin &dc, Pin& reset, Pin& bl, int displayWidth, int displayHeight);
+    ST7735(SPI &spi, Pin &cs, Pin &dc, Pin &reset, Pin &bl, int displayWidth, int displayHeight,
+           int noAutoUpdate = 0);
 
     virtual void enable();
 
-    void draw(Image i, int x, int y);
-
     virtual int setRotation(DisplayRotation r);
+
+    void setPalette(const uint32_t *palette);
+
+    /**
+     * Configure screen-specific parameters.
+     *
+     * @param madctl See MADCTL_* constants above
+     * @param frmctr1 defaults to 0x083b3b, 0x053a3a, 0x053c3c depending on screen size; 0x000605
+     * was found to work well on 160x128 screen; big-endian
+     */
+    void configure(uint8_t madctl, uint32_t frmctr1);
+
+    void setOffset(int offX, int offY);
+
+    void beginUpdate();
+
+    /**
+     * Waits for the previous beginUpdate() operation to complete (it normally executes in
+     * background).
+     */
+    void waitForEndUpdate();
 };
 
-}
+} // namespace codal
 
 #endif
