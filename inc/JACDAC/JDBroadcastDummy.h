@@ -1,5 +1,5 @@
-#ifndef JD_BROADCAST_DEVICE_H
-#define JD_BROADCAST_DEVICE_H
+#ifndef JD_BROADCAST_DUMMY_H
+#define JD_BROADCAST_DUMMY_H
 
 #include "JDProtocol.h"
 
@@ -10,11 +10,11 @@ namespace codal
      * This is a class to handle generic broadcast devices for mapping to driver classes. i.e. when a device appears, and we are matching on class, rather than a specific
      * address. It will automatically handle disconnection events and device address changes.
      **/
-    class JDBroadcastDriver : public JDDriver
+    class JDBroadcastDummy : public JDDriver
     {
         public:
 
-        JDBroadcastDriver(JDDevice d);
+        JDBroadcastDummy(JDDevice d);
 
         virtual int deviceRemoved();
 

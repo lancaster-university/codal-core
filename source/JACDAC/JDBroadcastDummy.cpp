@@ -1,8 +1,8 @@
-#include "JDBroadcastDriver.h"
+#include "JDBroadcastDummy.h"
 
 using namespace codal;
 
-JDBroadcastDriver::JDBroadcastDriver(JDDevice d) :
+JDBroadcastDummy::JDBroadcastDummy(JDDevice d) :
     JDDriver(d, DEVICE_ID_JD_BROADCAST_DRIVER)
 {
     if (JDProtocol::instance)
@@ -10,20 +10,20 @@ JDBroadcastDriver::JDBroadcastDriver(JDDevice d) :
     this->device.flags |= JD_DEVICE_FLAGS_BROADCAST_MAP;
 }
 
-int JDBroadcastDriver::deviceRemoved()
+int JDBroadcastDummy::deviceRemoved()
 {
     // a bit risky, but this will also delete us from the array of drivers
     delete this;
     return DEVICE_OK;
 }
 
-int JDBroadcastDriver::handleControlPacket(JDPkt*)
+int JDBroadcastDummy::handleControlPacket(JDPkt*)
 {
     // we don't handle any packets in this driver
     return DEVICE_CANCELLED;
 }
 
-int JDBroadcastDriver::handlePacket(JDPkt*)
+int JDBroadcastDummy::handlePacket(JDPkt*)
 {
     // we don't handle any packets in this driver
     return DEVICE_CANCELLED;
