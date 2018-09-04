@@ -43,7 +43,7 @@ static uint8_t usb_status = 0;
 // static uint8_t usb_suspended = 0; // copy of UDINT to check SUSPI and WAKEUPI bits
 static uint8_t usb_configured = 0;
 
-static const ConfigDescriptor static_config = {9, 2, 0, 0, 1, 0, USB_CONFIG_BUS_POWERED, 250};
+static const ConfigDescriptor static_config = {9, 2, 0, 0, 1, 0, USB_CONFIG_BUS_POWERED, 50};
 
 static const DeviceDescriptor default_device_desc = {
     0x12, // bLength
