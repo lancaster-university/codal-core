@@ -37,6 +37,9 @@ int JDDriver::fillControlPacket(JDPkt*)
 JDDriver::JDDriver(JDDevice d, uint16_t id) : device(d)
 {
     this->id = id;
+
+    if (JDProtocol::instance)
+        JDProtocol::instance->add(*this);
 }
 
 bool JDDriver::isConnected()
@@ -61,6 +64,16 @@ int JDDriver::deviceRemoved()
     this->device.rolling_counter = 0;
     Event(this->id, JD_DRIVER_EVT_DISCONNECTED);
     return DEVICE_OK;
+}
+
+int JDDriver::handleControlPacket(JDPkt* p)
+{
+    return DEVICE_CANCELLED;
+}
+
+int JDDriver::handlePacket(JDPkt* p)
+{
+    return DEVICE_CANCELLED;
 }
 
 JDDriver::~JDDriver()

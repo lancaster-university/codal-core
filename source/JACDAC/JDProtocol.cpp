@@ -105,6 +105,11 @@ int JDProtocol::add(JDDriver& driver)
 {
     int i;
 
+    // check for duplicates first
+    for (i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+        if (drivers[i] == &driver)
+            return DEVICE_OK;
+
     for (i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
     {
         target_disable_irq();
@@ -124,7 +129,6 @@ int JDProtocol::add(JDDriver& driver)
 
 int JDProtocol::remove(JDDriver& driver)
 {
-
     for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
     {
         target_disable_irq();
@@ -157,7 +161,7 @@ void JDProtocol::stop()
 
 int JDProtocol::send(JDPkt* pkt)
 {
-    if(instance)
+    if (instance)
         return instance->bus.send(pkt);
 
     return DEVICE_NO_RESOURCES;
@@ -165,7 +169,7 @@ int JDProtocol::send(JDPkt* pkt)
 
 int JDProtocol::send(uint8_t* buf, int len, uint8_t address)
 {
-    if(instance)
+    if (instance)
         return instance->bus.send(buf, len, address);
 
     return DEVICE_NO_RESOURCES;

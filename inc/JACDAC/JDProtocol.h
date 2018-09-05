@@ -60,11 +60,14 @@ DEALINGS IN THE SOFTWARE.
 #define JD_LOGIC_ADDRESS_ALLOC_TIME        254     // 1,016 ms
 #define JD_LOGIC_DRIVER_CTRLPACKET_TIME    112     // 448 ms
 
-#define CONTROL_JD_FLAGS_BROADCAST     0x0001
-#define CONTROL_JD_FLAGS_PAIRED        0x0002
-#define CONTROL_JD_FLAGS_UNCERTAIN     0x0004
-#define CONTROL_JD_FLAGS_CONFLICT      0x0008
-#define CONTROL_JD_TYPE_HELLO          0x01
+#define CONTROL_JD_FLAGS_PAIRED                 0x0001
+#define CONTROL_JD_FLAGS_PAIRABLE               0x0002
+#define CONTROL_JD_FLAGS_NACK                   0x0004
+#define CONTROL_JD_FLAGS_UNCERTAIN              0x0008
+#define CONTROL_JD_FLAGS_CONFLICT               0x0010
+
+#define CONTROL_JD_TYPE_HELLO                   0x01
+#define CONTROL_JD_TYPE_PAIRING_REQUEST         0x02
 // END      LOGIC DRIVER FLAGS
 
 
@@ -103,7 +106,7 @@ namespace codal
     {
         VirtualDriver = JD_DEVICE_FLAGS_REMOTE, // the driver is seeking the use of another device's resource
         HostDriver = JD_DEVICE_FLAGS_LOCAL, // the driver is hosting a resource for others to use.
-        // VirtualDriverPair = JD_DEVICE_FLAGS_PAIRED | JD_DEVICE_FLAGS_REMOTE, // the driver would like to pair with another driver of the same class
+        // VirtualDriverPair = JD_DEVICE_FLAGS_PAIRED | JD_DEVICE_FLAGS_LOCAL, // the driver would like to pair with another driver of the same class
         // OnBoardPairable = JD_DEVICE_FLAGS_PAIRED | JD_DEVICE_FLAGS_LOCAL, // the driver is allowed to pair with another driver of the same class
         BroadcastDriver = JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_BROADCAST, // the driver is unumerated with its own address, and receives all packets of the same class (including control packets)
         SnifferDriver = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_BROADCAST, // the driver is not unumerated, and receives all packets of the same class (including control packets)
@@ -209,14 +212,14 @@ namespace codal
          *
          * @param cp the control packet from the serial bus.
          **/
-        virtual int handleControlPacket(JDPkt* p) = 0;
+        virtual int handleControlPacket(JDPkt* p);
 
         /**
          * Called by the logic driver when a data packet is addressed to this driver
          *
          * @param cp the control packet from the serial bus.
          **/
-        virtual int handlePacket(JDPkt* p) = 0;
+        virtual int handlePacket(JDPkt* p);
 
         ~JDDriver();
     };
