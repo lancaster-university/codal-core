@@ -56,7 +56,10 @@ void JDProtocol::onPacketReceived(Event)
                 if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED) && this->drivers[i]->device.address == pkt->address)
                 {
                     if (this->drivers[i]->device.flags & JD_DEVICE_FLAGS_BROADCAST_MAP)
+                    {
+                        DMESG("BROADMAP DETECTED");
                         driver_class = this->drivers[i]->device.driver_class;
+                    }
                     else
                     {
                         DMESG("HANDLED BY LOCAL / REMOTE");

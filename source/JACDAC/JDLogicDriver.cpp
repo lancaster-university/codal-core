@@ -178,7 +178,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             continue;
 
 
-        // DMESG("ITER %d, s %d, c %d b %d l %d", current->device.address, current->device.serial_number, current->driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 1 : 0, current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 1 : 0);
+        // DMESG("ITER %d, s %d, c %d b %d l %d", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 1 : 0, current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 1 : 0);
 
         // We are in charge of local drivers, in this if statement we handle address assignment
         if ((current->device.flags & JD_DEVICE_FLAGS_LOCAL) && current->device.address == cp->address)
@@ -251,13 +251,16 @@ int JDLogicDriver::handlePacket(JDPkt* p)
         {
             int j;
 
-            for (j = 0; j < JD_PROTOCOL_DRIVER_SIZE; i++)
+            for (j = 0; j < JD_PROTOCOL_DRIVER_SIZE; j++)
                 if (JDProtocol::instance->drivers[i]->device.serial_number ==cp->serial_number)
                     break;
 
             // only add a broadcast device if it is not already represented in the driver array.
             if (j == JD_PROTOCOL_DRIVER_SIZE)
-                new JDDriver(JDDevice(cp->address, cp->flags | JD_DEVICE_FLAGS_BROADCAST_MAP, cp->serial_number, cp->driver_class), DEVICE_ID_JD_BROADCAST_DRIVER);
+            {
+                DMESG("ADD NEW MAP");
+                new JDDriver(JDDevice(cp->address, cp->flags | JD_DEVICE_FLAGS_BROADCAST_MAP | JD_DEVICE_FLAGS_INITIALISED, cp->serial_number, cp->driver_class), DEVICE_ID_JD_BROADCAST_DRIVER);
+            }
 
             DMESG("FOUND BROAD");
             if (current->handleLogicPacket(p) == DEVICE_OK)
