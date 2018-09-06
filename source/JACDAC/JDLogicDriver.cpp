@@ -114,6 +114,12 @@ void JDLogicDriver::periodicCallback()
                     cp->packet_type = CONTROL_JD_TYPE_HELLO;
                     cp->address = current->device.address;
                     cp->flags = current->device.flags & 0x00FF;
+
+                    if (current->isPaired())
+                        cp->flags |= CONTROL_JD_FLAGS_PAIRED;
+                    else if (current->isPairable())
+                        cp->flags |= CONTROL_JD_FLAGS_PAIRABLE;
+
                     cp->driver_class = current->device.driver_class;
                     cp->serial_number = current->device.serial_number;
 
@@ -218,7 +224,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
 
             DMESG("FOUND LOCAL");
-            if (current->handleControlPacket(p) == DEVICE_OK)
+            if (current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
                 DMESG("CP ABSORBED %d", current->device.address);
@@ -234,7 +240,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
             DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
 
-            if (current->handleControlPacket(p) == DEVICE_OK)
+            if (current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
                 DMESG("CP ABSORBED %d", current->device.address);
@@ -254,7 +260,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
                 new JDDriver(JDDevice(cp->address, cp->flags | JD_DEVICE_FLAGS_BROADCAST_MAP, cp->serial_number, cp->driver_class), DEVICE_ID_JD_BROADCAST_DRIVER);
 
             DMESG("FOUND BROAD");
-            if (current->handleControlPacket(p) == DEVICE_OK)
+            if (current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
                 DMESG("CP ABSORBED %d", current->device.address);

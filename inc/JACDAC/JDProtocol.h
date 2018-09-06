@@ -44,7 +44,7 @@ DEALINGS IN THE SOFTWARE.
 
 // following flags combined with the above to yield different behaviours
 #define JD_DEVICE_FLAGS_BROADCAST      0x2000 // receive all class packets regardless of the address
-#define JD_DEVICE_FLAGS_PAIRED         0x1000 // this flag indicates that a driver is paired with another
+#define JD_DEVICE_FLAGS_PAIRABLE       0x1000 // this flag indicates that a driver is paired with another
 // end combo flags
 
 #define JD_DEVICE_FLAGS_INITIALISED    0x0800 // device driver is running
@@ -161,7 +161,11 @@ namespace codal
         friend class JDProtocol;
 
         protected:
+        JDDriver* pairedInstance;
+
         JDDevice device;
+
+        int handleLogicPacket(JDPkt* p);
 
         public:
 
@@ -207,12 +211,22 @@ namespace codal
          **/
         virtual int deviceRemoved();
 
+        int sendPairingRequest(JDPkt* p);
+
+        virtual bool isPaired();
+
+        virtual bool isPairable();
+
+        void partnerDisconnected(Event);
+
         /**
          * Called by the logic driver when a control packet is addressed to this driver
          *
          * @param cp the control packet from the serial bus.
          **/
         virtual int handleControlPacket(JDPkt* p);
+
+        int handlePairingRequest(JDPkt* p);
 
         /**
          * Called by the logic driver when a data packet is addressed to this driver
