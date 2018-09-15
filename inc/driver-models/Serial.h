@@ -26,18 +26,19 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_SERIAL_H
 
 #include "ManagedString.h"
+#include "Pin.h"
 
-#define CODAL_SERIAL_DEFAULT_BAUD_RATE   115200
+#define CODAL_SERIAL_DEFAULT_BAUD_RATE 115200
 #define CODAL_SERIAL_DEFAULT_BUFFER_SIZE 20
 
-#define CODAL_SERIAL_EVT_DELIM_MATCH     1
-#define CODAL_SERIAL_EVT_HEAD_MATCH      2
-#define CODAL_SERIAL_EVT_RX_FULL         3
+#define CODAL_SERIAL_EVT_DELIM_MATCH 1
+#define CODAL_SERIAL_EVT_HEAD_MATCH  2
+#define CODAL_SERIAL_EVT_RX_FULL     3
 
-#define CODAL_SERIAL_RX_IN_USE           1
-#define CODAL_SERIAL_TX_IN_USE           2
-#define CODAL_SERIAL_RX_BUFF_INIT        4
-#define CODAL_SERIAL_TX_BUFF_INIT        8
+#define CODAL_SERIAL_RX_IN_USE    1
+#define CODAL_SERIAL_TX_IN_USE    2
+#define CODAL_SERIAL_RX_BUFF_INIT 4
+#define CODAL_SERIAL_TX_BUFF_INIT 8
 
 
 namespace codal
@@ -56,7 +57,7 @@ namespace codal
     };
 
     /**
-      * Class definition for DeviceSerial.
+      * Class definition for Serial.
       *
       * Represents an instance of RawSerial which accepts codal device specific data types.
       */
@@ -64,10 +65,10 @@ namespace codal
     {
         protected:
 
-        //holds that state of the mutex locks for all DeviceSerial instances.
+        //holds that state of the mutex locks for all Serial instances.
         static uint8_t status;
 
-        //holds the state of the baudrate for all DeviceSerial instances.
+        //holds the state of the baudrate for all Serial instances.
         static int baudrate;
 
         //delimeters used for matching on receive.
@@ -88,10 +89,10 @@ namespace codal
         volatile uint16_t txBuffTail;
 
         public:
-
-        /**
+        
+         /**
           * Constructor.
-          * Create an instance of DeviceSerial
+          * Create an instance of Serial
           *
           * @param tx the Pin to be used for transmission
           *
@@ -104,13 +105,9 @@ namespace codal
           * @code
           * DeviceSerial serial(USBTX, USBRX);
           * @endcode
-          * @note the default baud rate is 115200. More API details can be found:
-          *       -https://github.com/mbedmicro/mbed/blob/master/libraries/mbed/api/SerialBase.h
-          *       -https://github.com/mbedmicro/mbed/blob/master/libraries/mbed/api/RawSerial.h
           *
-          *       Buffers aren't allocated until the first send or receive respectively.
           */
-        Serial(PinName tx, PinName rx, uint8_t rxBufferSize = CODAL_SERIAL_DEFAULT_BUFFER_SIZE, uint8_t txBufferSize = CODAL_SERIAL_DEFAULT_BUFFER_SIZE)
+        Serial(Pin tx, Pin rx, uint8_t rxBufferSize = CODAL_SERIAL_DEFAULT_BUFFER_SIZE, uint8_t txBufferSize = CODAL_SERIAL_DEFAULT_BUFFER_SIZE)
         {
         }
 
@@ -137,10 +134,7 @@ namespace codal
           * @return the number of bytes written, or CODAL_SERIAL_IN_USE if another fiber
           *         is using the serial instance for transmission.
           */
-        virtual int sendChar(char c, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int sendChar(char c, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE) = 0;;
 
         /**
           * Sends a ManagedString over the serial line.
@@ -166,10 +160,7 @@ namespace codal
           *         is using the serial instance for transmission, DEVICE_INVALID_PARAMETER
           *         if buffer is invalid, or the given bufferLen is <= 0.
           */
-        virtual int send(ManagedString s, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int send(ManagedString s, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE) = 0;
 
         /**
           * Sends a buffer of known length over the serial line.
@@ -197,10 +188,7 @@ namespace codal
           *         is using the serial instance for transmission, DEVICE_INVALID_PARAMETER
           *         if buffer is invalid, or the given bufferLen is <= 0.
           */
-        virtual int send(uint8_t *buffer, int bufferLen, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int send(uint8_t *buffer, int bufferLen, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE) = 0;
 
         /**
           * Reads a single character from the rxBuff
@@ -225,10 +213,7 @@ namespace codal
           *         DEVICE_NO_RESOURCES if buffer allocation did not complete successfully, or DEVICE_NO_DATA if
           *         the rx buffer is empty and the mode given is ASYNC.
           */
-        virtual int read(SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int read(SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE) = 0;
 
         /**
           * Reads multiple characters from the rxBuff and returns them as a ManagedString
@@ -254,10 +239,7 @@ namespace codal
           *
           * @return A ManagedString, or an empty ManagedString if an error was encountered during the read.
           */
-        virtual ManagedString read(int size, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual ManagedString read(int size, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE) = 0;
 
         /**
           * Reads multiple characters from the rxBuff and fills a user buffer.
@@ -286,10 +268,7 @@ namespace codal
           * @return the number of characters read, or CODAL_SERIAL_IN_USE if another fiber
           *         is using the instance for receiving.
           */
-        virtual int read(uint8_t *buffer, int bufferLen, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int read(uint8_t *buffer, int bufferLen, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE) = 0;
 
         /**
           * Reads until one of the delimeters matches a character in the rxBuff
@@ -320,10 +299,7 @@ namespace codal
           *
           * @note delimeters are matched on a per byte basis.
           */
-        virtual ManagedString readUntil(ManagedString delimeters, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual ManagedString readUntil(ManagedString delimeters, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE) = 0;
 
         /**
           * A wrapper around the inherited method "baud" so we can trap the baud rate
@@ -337,24 +313,7 @@ namespace codal
           *
           * @note the underlying implementation chooses the first allowable rate at or above that requested.
           */
-        virtual int baud(int baudrate)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
-
-        /**
-          * A way of dynamically configuring the serial instance to use pins other than USBTX and USBRX.
-          *
-          * @param tx the new transmission pin.
-          *
-          * @param rx the new reception pin.
-          *
-          * @return CODAL_SERIAL_IN_USE if another fiber is currently transmitting or receiving, otherwise DEVICE_OK.
-          */
-        virtual int redirect(PinName tx, PinName rx)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int baud(int baudrate) = 0;
 
         /**
           * Configures an event to be fired after "len" characters.
@@ -375,10 +334,7 @@ namespace codal
           *
           * @return DEVICE_INVALID_PARAMETER if the mode given is SYNC_SPINWAIT, otherwise DEVICE_OK.
           */
-        virtual int eventAfter(int len, SerialMode mode = ASYNC)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int eventAfter(int len, SerialMode mode = ASYNC) = 0;
 
         /**
           * Configures an event to be fired on a match with one of the delimeters.
@@ -401,10 +357,7 @@ namespace codal
           *
           * @note delimeters are matched on a per byte basis.
           */
-        virtual int eventOn(ManagedString delimeters, SerialMode mode = ASYNC)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int eventOn(ManagedString delimeters, SerialMode mode = ASYNC) = 0;
 
         /**
           * Determines whether there is any data waiting in our Rx buffer.
@@ -414,10 +367,7 @@ namespace codal
           * @note We do not wrap the super's readable() method as we don't want to
           *       interfere with communities that use manual calls to serial.readable().
           */
-        virtual int isReadable()
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int isReadable() = 0;
 
         /**
           * Determines if we have space in our txBuff.
@@ -427,10 +377,7 @@ namespace codal
           * @note We do not wrap the super's writeable() method as we don't want to
           *       interfere with communities that use manual calls to serial.writeable().
           */
-        virtual int isWriteable()
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int isWriteable() = 0;
 
         /**
           * Reconfigures the size of our rxBuff
@@ -440,10 +387,7 @@ namespace codal
           * @return CODAL_SERIAL_IN_USE if another fiber is currently using this instance
           *         for reception, otherwise DEVICE_OK.
           */
-        virtual int setRxBufferSize(uint8_t size)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int setRxBufferSize(uint8_t size) = 0;
 
         /**
           * Reconfigures the size of our txBuff
@@ -453,30 +397,21 @@ namespace codal
           * @return CODAL_SERIAL_IN_USE if another fiber is currently using this instance
           *         for transmission, otherwise DEVICE_OK.
           */
-        virtual int setTxBufferSize(uint8_t size)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int setTxBufferSize(uint8_t size) = 0;
 
         /**
           * The size of our rx buffer in bytes.
           *
           * @return the current size of rxBuff in bytes
           */
-        virtual int getRxBufferSize()
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int getRxBufferSize() = 0;
 
         /**
           * The size of our tx buffer in bytes.
           *
           * @return the current size of txBuff in bytes
           */
-        virtual int getTxBufferSize()
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int getTxBufferSize() = 0;
 
         /**
           * Sets the tail to match the head of our circular buffer for reception,
@@ -485,10 +420,7 @@ namespace codal
           * @return CODAL_SERIAL_IN_USE if another fiber is currently using this instance
           *         for reception, otherwise DEVICE_OK.
           */
-        virtual int clearRxBuffer()
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int clearRxBuffer() = 0;
 
         /**
           * Sets the tail to match the head of our circular buffer for transmission,
@@ -497,10 +429,7 @@ namespace codal
           * @return CODAL_SERIAL_IN_USE if another fiber is currently using this instance
           *         for transmission, otherwise DEVICE_OK.
           */
-        virtual int clearTxBuffer()
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int clearTxBuffer() = 0;
 
         /**
           * The number of bytes currently stored in our rx buffer waiting to be digested,
@@ -508,10 +437,7 @@ namespace codal
           *
           * @return The currently buffered number of bytes in our rxBuff.
           */
-        virtual int rxBufferedSize()
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int rxBufferedSize() = 0;
 
         /**
           * The number of bytes currently stored in our tx buffer waiting to be transmitted
@@ -519,10 +445,7 @@ namespace codal
           *
           * @return The currently buffered number of bytes in our txBuff.
           */
-        virtual int txBufferedSize()
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int txBufferedSize() = 0;
 
         /**
           * Determines if the serial bus is currently in use by another fiber for reception.
@@ -531,10 +454,7 @@ namespace codal
           *
           * @note Only one fiber can call read at a time
           */
-        virtual int rxInUse()
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int rxInUse() = 0;
 
         /**
           * Determines if the serial bus is currently in use by another fiber for transmission.
@@ -543,10 +463,7 @@ namespace codal
           *
           * @note Only one fiber can call send at a time
           */
-        virtual int txInUse()
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int txInUse() = 0;
 
         /**
           * Detaches a previously configured interrupt
@@ -555,10 +472,7 @@ namespace codal
           *
           * @return DEVICE_OK on success.
           */
-        virtual int detach(SerialInterruptType interruptType)
-        {
-            return DEVICE_NOT_IMPLEMENTED;
-        }
+        virtual int detach(SerialInterruptType interruptType) = 0;
     };
 }
 

@@ -68,7 +68,7 @@ namespace codal
         PIN_CAPABILITY_ALL = PIN_CAPABILITY_DIGITAL | PIN_CAPABILITY_ANALOG
     };
 
-    typedef uint8_t PinNumber;
+    enum class PinNumber:uint8_t;
 
     enum class PullMode
     {
