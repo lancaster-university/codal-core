@@ -143,6 +143,11 @@ bool JDDriver::isPairable()
     return device.flags & JD_DEVICE_FLAGS_PAIRABLE;
 }
 
+uint8_t JDDriver::getAddress()
+{
+    return device.address;
+}
+
 void JDDriver::partnerDisconnected(Event)
 {
     EventModel::defaultEventBus->ignore(pairedInstance->id, JD_DRIVER_EVT_DISCONNECTED, this, &JDDriver::partnerDisconnected);

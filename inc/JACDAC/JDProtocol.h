@@ -82,6 +82,7 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DRIVER_CLASS_RADIO          4
 #define JD_DRIVER_CLASS_BRIDGE         5
 #define JD_DRIVER_CLASS_BUTTON         6
+#define JD_DRIVER_CLASS_PIN            7
 // END      JD SERIAL PROTOCOL
 
 #define CONTROL_PACKET_PAYLOAD_SIZE     (JD_SERIAL_DATA_SIZE - 12)
@@ -160,9 +161,10 @@ namespace codal
         friend class JDLogicDriver;
         friend class JDProtocol;
 
+        protected:
+
         static uint32_t dynamicId;
 
-        protected:
         JDDriver* pairedInstance;
 
         JDDevice device;
@@ -218,6 +220,8 @@ namespace codal
         virtual bool isPaired();
 
         virtual bool isPairable();
+
+        uint8_t getAddress();
 
         void partnerDisconnected(Event);
 
