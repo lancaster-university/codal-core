@@ -133,16 +133,16 @@ int JDProtocol::add(JDDriver& driver)
 
 int JDProtocol::remove(JDDriver& driver)
 {
+    target_disable_irq();
     for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
     {
-        target_disable_irq();
         if (drivers[i] == &driver)
         {
             drivers[i] = NULL;
             break;
         }
-        target_enable_irq();
     }
+    target_enable_irq();
 
     return DEVICE_OK;
 }
