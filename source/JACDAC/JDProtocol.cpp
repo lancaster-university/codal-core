@@ -42,6 +42,7 @@ void JDProtocol::onPacketReceived(Event)
     DMESG("pkt REC ADDR: %d",pkt->address);
 
     // if this packet is destined for our drivers...
+    // address 0 will never be filtered.
     if (!logic.filterPacket(pkt->address))
     {
         uint32_t driver_class = 0;
@@ -71,7 +72,7 @@ void JDProtocol::onPacketReceived(Event)
             }
         }
 
-        // if we've matched a broadcast map, it means we need to map a broadcast packet to an actual driver.
+        // if we've matched a broadcast map, it means we need to map a broadcast packet to any driver of the same class
         if (driver_class > 0)
             for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
             {
