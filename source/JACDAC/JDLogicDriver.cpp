@@ -278,7 +278,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
     bool filtered = filterPacket(cp->address);
 
     // if it's paired with another device, we can just ignore
-    if (cp->flags & CONTROL_JD_FLAGS_PAIRED && !filtered)
+    if (!filtered && cp->flags & CONTROL_JD_FLAGS_PAIRED)
     {
         JD_DMESG("FILTERING");
         for (int i = 0; i < JD_LOGIC_DRIVER_MAX_FILTERS; i++)
@@ -290,7 +290,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
         return DEVICE_OK;
     }
     // if it was previously paired with another device, we remove the filter.
-    else if (filtered)
+    else if (filtered && !(cp->flags & CONTROL_JD_FLAGS_PAIRED))
     {
         JD_DMESG("UNDO FILTER");
         for (int i = 0; i < JD_LOGIC_DRIVER_MAX_FILTERS; i++)
