@@ -102,34 +102,34 @@ JDRadioPacket* JDRadioDriver::peakQueue(JDRadioPacket** queue, uint16_t id)
 
 void JDRadioDriver::forwardPacket(Event)
 {
-    DMESG("JD RAD");
+    DMESG("pkt RAD");
     ManagedBuffer packet = networkInstance->recvBuffer();
 
     // drop
     if (packet.length() == 0 || !isConnected())
         return;
 
-    JDRadioPacket* JD = (JDRadioPacket*)malloc(sizeof(JDRadioPacket));
-    memcpy(JD, packet.getBytes(), packet.length());
-    JD->size = packet.length();
+    JDRadioPacket* pkt = (JDRadioPacket*)malloc(sizeof(JDRadioPacket));
+    memcpy(pkt, packet.getBytes(), packet.length());
+    pkt->size = packet.length();
 
-    DMESG("length: %d", JD->size);
+    DMESG("length: %d", pkt->size);
 
-    uint8_t *JDptr = (uint8_t*)JD;
+    uint8_t *JDptr = (uint8_t*)pkt;
     for (int i = 0; i < packet.length(); i++)
         DMESG("[%d]",JDptr[i]);
 
-    if (JD->magic != JD_RADIO_MAGIC)
+    if (pkt->magic != JD_RADIO_MAGIC)
     {
-        DMESG("BAD MAGIC %d %d", JD->magic, JD_RADIO_MAGIC);
+        DMESG("BAD MAGIC %d %d", pkt->magic, JD_RADIO_MAGIC);
         return;
     }
 
-    int ret = send(JD, false);
+    int ret = send(pkt, false);
 
     DMESG("RET %d ",ret);
 
-    delete JD;
+    delete pkt;
 }
 
 JDRadioPacket* JDRadioDriver::recv(uint8_t id)
@@ -217,8 +217,8 @@ int JDRadioDriver::handlePacket(JDPkt* p)
         // check if we have a matching id in the send queue
         if (peakQueue(&txQueue, rx->id))
         {
-            JDRadioPacket* JD = removeFromQueue(&txQueue, rx->id);
-            delete JD;
+            JDRadioPacket* pkt = removeFromQueue(&txQueue, rx->id);
+            delete pkt;
         }
 
         addToQueue(&rxQueue, rx);

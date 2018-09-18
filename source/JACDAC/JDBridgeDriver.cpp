@@ -4,7 +4,7 @@
 using namespace codal;
 
 JDBridgeDriver::JDBridgeDriver(Radio& n) :
-    JDDriver(JDDevice(HostDriver, JD_DRIVER_CLASS_BRIDGE), DEVICE_ID_JD_BRIDGE_DRIVER)
+    JDDriver(JDDevice(0, 0, 0, JD_DRIVER_CLASS_BRIDGE), DEVICE_ID_JD_BRIDGE_DRIVER)
 {
     memset(history, 0, sizeof(uint32_t) * JD_BRIDGE_HISTORY_SIZE);
     history_idx = 0;
@@ -32,8 +32,11 @@ bool JDBridgeDriver::checkHistory(uint16_t id)
     return false;
 }
 
+extern void set_gpio(int);
+static int state = 0;
 void JDBridgeDriver::forwardPacket(Event)
 {
+    state = !state;
     DMESG("JD RAD");
     ManagedBuffer packet = networkInstance->recvBuffer();
 
@@ -44,23 +47,26 @@ void JDBridgeDriver::forwardPacket(Event)
         return;
     }
 
+    // set_gpio(state);
+
+
     DMESG("length: %d", packet.length());
 
-    JDPkt* JD = (JDPkt *)packet.getBytes();
-    uint32_t id = JD->address << 16 | JD->crc;
+    JDPkt* pkt = (JDPkt *)packet.getBytes();
+    uint32_t id = pkt->address << 16 | pkt->crc;
 
-    if (checkHistory(id))
-        return;
+    // if (checkHistory(id))
+    //     return;
 
     addToHistory(id);
 
-    uint8_t *JDptr = (uint8_t*)JD;
+    uint8_t *JDptr = (uint8_t*)pkt;
     for (int i = 0; i < packet.length(); i++)
         DMESG("[%d]",JDptr[i]);
 
-    DMESG("INFO: %d %d %d",JD->crc, JD->size, JD->address);
+    DMESG("INFO: %d %d %d",pkt->crc, pkt->size, pkt->address);
 
-    JDProtocol::send(JD);
+    JDProtocol::send(pkt);
 }
 
 int JDBridgeDriver::handleControlPacket(JDPkt* cp)
@@ -79,6 +85,13 @@ int JDBridgeDriver::handlePacket(JDPkt* p)
 
         ManagedBuffer b((uint8_t*)p, JD_SERIAL_PACKET_SIZE);
         int ret = networkInstance->sendBuffer(b);
+
+        // if (ret != DEVICE_OK)
+        // {
+        //     set_gpio(1);
+        //     fiber_sleep(500);
+        //     set_gpio(0);
+        // }
 
         DMESG("ret %d",ret);
     }
