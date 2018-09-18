@@ -81,6 +81,7 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DRIVER_CLASS_MESSAGE_BUS    3
 #define JD_DRIVER_CLASS_RADIO          4
 #define JD_DRIVER_CLASS_BRIDGE         5
+#define JD_DRIVER_CLASS_BUTTON         6
 // END      JD SERIAL PROTOCOL
 
 #define CONTROL_PACKET_PAYLOAD_SIZE     (JD_SERIAL_DATA_SIZE - 12)
@@ -106,8 +107,7 @@ namespace codal
     {
         VirtualDriver = JD_DEVICE_FLAGS_REMOTE, // the driver is seeking the use of another device's resource
         HostDriver = JD_DEVICE_FLAGS_LOCAL, // the driver is hosting a resource for others to use.
-        // VirtualDriverPair = JD_DEVICE_FLAGS_PAIRED | JD_DEVICE_FLAGS_LOCAL, // the driver would like to pair with another driver of the same class
-        // OnBoardPairable = JD_DEVICE_FLAGS_PAIRED | JD_DEVICE_FLAGS_LOCAL, // the driver is allowed to pair with another driver of the same class
+        HostDriverPairable = JD_DEVICE_FLAGS_PAIRABLE | JD_DEVICE_FLAGS_LOCAL, // the driver is allowed to pair with another driver of the same class
         BroadcastDriver = JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_BROADCAST, // the driver is unumerated with its own address, and receives all packets of the same class (including control packets)
         SnifferDriver = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_BROADCAST, // the driver is not unumerated, and receives all packets of the same class (including control packets)
     };
@@ -128,7 +128,7 @@ namespace codal
             address = 0;
             rolling_counter = 0;
             flags = JD_DEVICE_FLAGS_LOCAL;
-            serial_number = target_get_serial() ^ driver_class;
+            serial_number = (target_get_serial() & 0xffffff00) | driver_class;
             driver_class = driver_class;
         }
 
@@ -137,7 +137,7 @@ namespace codal
             this->address = 0;
             this->rolling_counter = 0;
             this->flags |= t;
-            this->serial_number = target_get_serial() ^ driver_class;
+            this->serial_number = (target_get_serial() & 0xffffff00) | driver_class;
             this->driver_class = driver_class;
         }
 
