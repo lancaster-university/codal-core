@@ -385,11 +385,11 @@ int JACDAC::send(JDPkt* tx)
     if (tx == NULL)
         return DEVICE_INVALID_PARAMETER;
 
-    JDPkt* JD = (JDPkt *)malloc(sizeof(JDPkt));
-    memset(JD, target_random(256), sizeof(JDPkt));
-    memcpy(JD, tx, sizeof(JDPkt));
+    JDPkt* pkt = (JDPkt *)malloc(sizeof(JDPkt));
+    memset(pkt, target_random(256), sizeof(JDPkt));
+    memcpy(pkt, tx, sizeof(JDPkt));
 
-    int ret = addToQueue(&txQueue, JD);
+    int ret = addToQueue(&txQueue, pkt);
 
     if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
     {
@@ -402,7 +402,7 @@ int JACDAC::send(JDPkt* tx)
 
 /**
  * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
- * If an ongoing asynchronous transmission is happening, JD is added to the txQueue. If this is the first packet in a while
+ * If an ongoing asynchronous transmission is happening, pkt is added to the txQueue. If this is the first packet in a while
  * asynchronous transmission is begun.
  *
  * @param buf the buffer to send.
@@ -415,30 +415,30 @@ int JACDAC::send(uint8_t* buf, int len, uint8_t address)
 {
     if (buf == NULL || len <= 0 || len > JD_SERIAL_DATA_SIZE)
     {
-        JD_DMESG("JD TOO BIG: %d ",len);
+        JD_DMESG("pkt TOO BIG: %d ",len);
         return DEVICE_INVALID_PARAMETER;
     }
 
-    JDPkt JD;
+    JDPkt pkt;
 
     // for variation of crc's
-    memset(&JD, target_random(256), sizeof(JDPkt));
+    memset(&pkt, target_random(256), sizeof(JDPkt));
 
     // very simple crc
-    JD.crc = 0;
-    JD.address = address;
-    JD.size = len;
+    pkt.crc = 0;
+    pkt.address = address;
+    pkt.size = len;
 
-    memcpy(JD.data, buf, len);
+    memcpy(pkt.data, buf, len);
 
     // skip the crc.
-    uint8_t* crcPointer = (uint8_t*)&JD.address;
+    uint8_t* crcPointer = (uint8_t*)&pkt.address;
 
     // simple crc
     for (int i = 0; i < JD_SERIAL_PACKET_SIZE - 2; i++)
-        JD.crc += crcPointer[i];
+        pkt.crc += crcPointer[i];
 
-    return send(&JD);
+    return send(&pkt);
 }
 
 bool JACDAC::isRunning()
