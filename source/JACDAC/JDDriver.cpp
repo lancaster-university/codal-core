@@ -28,6 +28,8 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
+uint32_t JDDriver::dynamicId = DEVICE_ID_JD_DYNAMIC_ID;
+
 int JDDriver::fillControlPacket(JDPkt*)
 {
     // by default, the logic driver will fill in the required information.
@@ -108,7 +110,7 @@ int JDDriver::handlePairingRequest(JDPkt* p)
     else if (this->device.serial_number == cp->serial_number)
     {
         d.flags = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED;
-        this->pairedInstance = new JDDriver(d, this->id); // id needs handling a little better
+        this->pairedInstance = new JDDriver(d, dynamicId++);
 
         if (EventModel::defaultEventBus)
             EventModel::defaultEventBus->listen(pairedInstance->id, JD_DRIVER_EVT_DISCONNECTED, this, &JDDriver::partnerDisconnected);

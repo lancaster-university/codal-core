@@ -160,6 +160,8 @@ namespace codal
         friend class JDLogicDriver;
         friend class JDProtocol;
 
+        static uint32_t dynamicId;
+
         protected:
         JDDriver* pairedInstance;
 
