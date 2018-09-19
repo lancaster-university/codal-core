@@ -39,7 +39,7 @@ JDProtocol* JDProtocol::instance = NULL;
 void JDProtocol::onPacketReceived(Event)
 {
     JDPkt* pkt = bus.getPacket();
-    DMESG("pkt REC ADDR: %d",pkt->address);
+    JD_DMESG("pkt REC ADDR: %d",pkt->address);
 
     // if this packet is destined for our drivers...
     // address 0 will never be filtered.
@@ -47,23 +47,23 @@ void JDProtocol::onPacketReceived(Event)
     {
         uint32_t driver_class = 0;
 
-        DMESG("NOT FILTERED");
+        JD_DMESG("NOT FILTERED");
         for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
         {
             if (this->drivers[i])
             {
                 // could be optimised into a single if, but useful for debugging.
-                DMESG("DRIV a:%d sn:%d i:%d", this->drivers[i]->device.address, this->drivers[i]->device.serial_number, this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
+                JD_DMESG("DRIV a:%d sn:%d i:%d", this->drivers[i]->device.address, this->drivers[i]->device.serial_number, this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
                 if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED) && this->drivers[i]->device.address == pkt->address)
                 {
                     if (this->drivers[i]->device.flags & JD_DEVICE_FLAGS_BROADCAST_MAP)
                     {
-                        DMESG("BROADMAP DETECTED");
+                        JD_DMESG("BROADMAP DETECTED");
                         driver_class = this->drivers[i]->device.driver_class;
                     }
                     else
                     {
-                        DMESG("HANDLED BY LOCAL / REMOTE");
+                        JD_DMESG("HANDLED BY LOCAL / REMOTE");
                         this->drivers[i]->handlePacket(pkt);
                     }
 
@@ -78,7 +78,7 @@ void JDProtocol::onPacketReceived(Event)
             {
                 if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_BROADCAST) && this->drivers[i]->device.driver_class == driver_class)
                 {
-                    DMESG("HANDLED BY BROADCAST");
+                    JD_DMESG("HANDLED BY BROADCAST");
                     this->drivers[i]->handlePacket(pkt);
                 }
             }

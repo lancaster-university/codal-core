@@ -81,9 +81,10 @@ void JACDAC::onFallingEdge(Event)
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
 
+    set_gpio(0);
     // set_gpio(1);
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
-    // set_gpio(0);
+
     sp.getDigitalValue(PullMode::None);
 
     timeoutCounter = 0;
@@ -92,6 +93,7 @@ void JACDAC::onFallingEdge(Event)
     // JD_DMESG("RX START");
 
     sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_PACKET_SIZE);
+    // set_gpio(0);
 }
 
 void JACDAC::periodicCallback()

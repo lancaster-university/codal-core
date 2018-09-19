@@ -30,7 +30,7 @@ void JDLogicDriver::periodicCallback()
             {
                 if (!(current->device.flags & JD_DEVICE_FLAGS_CP_SEEN))
                 {
-                    DMESG("CONTROL NOT SEEN");
+                    JD_DMESG("CONTROL NOT SEEN");
                     current->deviceRemoved();
                 }
 
@@ -94,7 +94,7 @@ void JDLogicDriver::periodicCallback()
                 // if no one has complained in a second, consider our address allocated
                 if (current->device.rolling_counter == JD_LOGIC_ADDRESS_ALLOC_TIME)
                 {
-                    DMESG("FINISHED");
+                    JD_DMESG("FINISHED");
                     current->device.flags &= ~JD_DEVICE_FLAGS_INITIALISING;
                     current->device.flags |= JD_DEVICE_FLAGS_INITIALISED;
                     current->deviceConnected(current->device);
@@ -153,7 +153,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 {
     ControlPacket *cp = (ControlPacket *)p->data;
 
-    DMESG("CP A %d, S %d, C %d", cp->address, cp->serial_number, cp->driver_class);
+    JD_DMESG("CP A %d, S %d, C %d", cp->address, cp->serial_number, cp->driver_class);
 
     // Logic Driver addressing rules:
     // 1. drivers cannot have the same address and different serial numbers.
@@ -178,23 +178,23 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             continue;
 
 
-        // DMESG("ITER %d, s %d, c %d b %d l %d", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 1 : 0, current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 1 : 0);
+        // JD_DMESG("ITER %d, s %d, c %d b %d l %d", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 1 : 0, current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 1 : 0);
 
         // We are in charge of local drivers, in this if statement we handle address assignment
         if ((current->device.flags & JD_DEVICE_FLAGS_LOCAL) && current->device.address == cp->address)
         {
-            DMESG("ADDR MATCH");
+            JD_DMESG("ADDR MATCH");
             // a different device is using our address!!
             if (current->device.serial_number != cp->serial_number && !(cp->flags & CONTROL_JD_FLAGS_CONFLICT))
             {
-                DMESG("SERIAL_DIFF");
+                JD_DMESG("SERIAL_DIFF");
                 // if we're initialised, this means that someone else is about to use our address, reject.
                 // see 2. above.
                 if ((current->device.flags & JD_DEVICE_FLAGS_INITIALISED) && (cp->flags & CONTROL_JD_FLAGS_UNCERTAIN))
                 {
                     cp->flags |= CONTROL_JD_FLAGS_CONFLICT;
                     JDProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
-                    DMESG("ASK OTHER TO REASSIGN");
+                    JD_DMESG("ASK OTHER TO REASSIGN");
                 }
                 // the other device is initialised and has transmitted the CP first, we lose.
                 else
@@ -202,7 +202,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
                     // new address will be assigned on next tick.
                     current->device.address = 0;
                     current->device.flags &= ~(JD_DEVICE_FLAGS_INITIALISING | JD_DEVICE_FLAGS_INITIALISED);
-                    DMESG("INIT REASSIGNING SELF");
+                    JD_DMESG("INIT REASSIGNING SELF");
                 }
 
                 return DEVICE_OK;
@@ -212,7 +212,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             {
                 // new address will be assigned on next tick.
                 current->deviceRemoved();
-                DMESG("REASSIGNING SELF");
+                JD_DMESG("REASSIGNING SELF");
                 return DEVICE_OK;
             }
 
@@ -223,11 +223,11 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             // so we flag as seen so we do not disconnect a device
             current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
 
-            DMESG("FOUND LOCAL");
+            JD_DMESG("FOUND LOCAL");
             if (current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
-                DMESG("CP ABSORBED %d", current->device.address);
+                JD_DMESG("CP ABSORBED %d", current->device.address);
                 continue;
             }
         }
@@ -238,12 +238,12 @@ int JDLogicDriver::handlePacket(JDPkt* p)
         {
             current->device.address = cp->address;
             current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
-            DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
+            JD_DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
 
             if (current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
-                DMESG("CP ABSORBED %d", current->device.address);
+                JD_DMESG("CP ABSORBED %d", current->device.address);
                 continue;
             }
         }
@@ -258,15 +258,15 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             // only add a broadcast device if it is not already represented in the driver array.
             if (j == JD_PROTOCOL_DRIVER_SIZE)
             {
-                DMESG("ADD NEW MAP");
+                JD_DMESG("ADD NEW MAP");
                 new JDDriver(JDDevice(cp->address, cp->flags | JD_DEVICE_FLAGS_BROADCAST_MAP | JD_DEVICE_FLAGS_INITIALISED, cp->serial_number, cp->driver_class), DEVICE_ID_JD_BROADCAST_DRIVER);
             }
 
-            DMESG("FOUND BROAD");
+            JD_DMESG("FOUND BROAD");
             if (current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
-                DMESG("CP ABSORBED %d", current->device.address);
+                JD_DMESG("CP ABSORBED %d", current->device.address);
                 continue;
             }
         }
@@ -311,7 +311,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             if (current->device.serial_number > 0 && current->device.serial_number != cp->serial_number)
                 continue;
 
-            DMESG("FOUND NEW");
+            JD_DMESG("FOUND NEW");
             current->deviceConnected(JDDevice(cp->address, cp->flags, cp->serial_number, cp->driver_class));
             return DEVICE_OK;
         }
