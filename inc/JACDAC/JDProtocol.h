@@ -139,7 +139,12 @@ namespace codal
             this->address = 0;
             this->rolling_counter = 0;
             this->flags |= t;
-            this->serial_number = (target_get_serial() & 0xffffff00) | driver_class;
+
+            if (t == VirtualDriver)
+                this->serial_number = 0;
+            else
+                this->serial_number = (target_get_serial() & 0xffffff00) | driver_class;
+
             this->driver_class = driver_class;
         }
 
