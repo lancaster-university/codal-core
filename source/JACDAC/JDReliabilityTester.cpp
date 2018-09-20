@@ -6,8 +6,9 @@ using namespace codal;
 
 static uint8_t received[RELIABILITY_TEST_MAX_COUNT] = { 0 };
 
-JDReliabilityTester::JDReliabilityTester(Pin& p) : JDDriver(JDDevice(HostDriver, JD_DRIVER_CLASS_RELIABILITY_TESTER), dynamicId++), pin(&p)
+JDReliabilityTester::JDReliabilityTester(Pin& p, uint32_t max_count) : JDDriver(JDDevice(HostDriver, JD_DRIVER_CLASS_RELIABILITY_TESTER), dynamicId++), pin(&p)
 {
+    this->max_count = max_count;
     memset(received, 0, RELIABILITY_TEST_MAX_COUNT);
 }
 
@@ -30,7 +31,7 @@ int JDReliabilityTester::sendPacket(uint8_t value)
 
 int JDReliabilityTester::start()
 {
-    if (this->device.flags & JD_DEVICE_FLAGS_REMOTE)
+    if (this->device.flags & JD_DEVICE_FLAGS_REMOTE && this->status & RELIABILITY_STATUS_TEST_READY)
     {
         this->count = 0;
         int state = 0;
@@ -64,8 +65,30 @@ int JDReliabilityTester::start()
     return DEVICE_OK;
 }
 
-int JDReliabilityTester::handleControlPacket(JDPkt* cp)
+int JDReliabilityTester::fillControlPacket(JDPkt* p)
 {
+    ControlPacket* cp = (ControlPacket*)p->data;
+    ReliabilityAdvertisement* ra = (ReliabilityAdvertisement*)cp->data;
+    ra->status = this->status;
+    ra->max_count = this->max_count;
+}
+
+int JDReliabilityTester::handleControlPacket(JDPkt* p)
+{
+    ControlPacket* cp = (ControlPacket*)p->data;
+
+    if (this->device.flags & JD_DEVICE_FLAGS_REMOTE)
+    {
+        ReliabilityAdvertisement* ra = (ReliabilityAdvertisement*)cp->data;
+
+        this->max_count = ra->max_count;
+
+        if (ra->status & RELIABILITY_STATUS_TEST_READY)
+        {
+            this->status |= RELIABILITY_STATUS_TEST_READY;
+        }
+    }
+
     return DEVICE_OK;
 }
 
@@ -77,15 +100,16 @@ int JDReliabilityTester::handlePacket(JDPkt* p)
     if ((this->device.flags & JD_DEVICE_FLAGS_REMOTE))
         return DEVICE_CANCELLED;
 
-    // if we're paired and a randomer has sent us a packet ignore
+    // if we're paired and a random device has sent us a packet ignore
     if (isPaired() && this->pairedInstance->getAddress() != p->address )
         return DEVICE_OK;
 
 
-    // DMESG("seq: %d, v %d", pinData->count, pinData->value);
-
     if (pinData->count == 0)
+    {
         this->count = 0;
+        this->status = RELIABILITY_STATUS_TEST_IN_PROGRESS;
+    }
 
     if (pinData->count == RELIABILITY_TEST_MAX_COUNT - 1)
         Event(this->id, RELIABILITY_TEST_FINISHED);
