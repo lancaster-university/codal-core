@@ -4,15 +4,14 @@
 
 using namespace codal;
 
-static uint8_t received[RELIABILITY_TEST_MAX_COUNT] = { 0 };
-
 JDReliabilityTester::JDReliabilityTester(Pin& p, uint32_t max_count) : JDDriver(JDDevice(HostDriver, JD_DRIVER_CLASS_RELIABILITY_TESTER), dynamicId++), pin(&p)
 {
     this->max_count = max_count;
-    memset(received, 0, RELIABILITY_TEST_MAX_COUNT);
+    this->received = (uint8_t*)malloc(this->max_count);
+    memset(received, 0, this->max_count);
 }
 
-JDReliabilityTester::JDReliabilityTester() : JDDriver(JDDevice(VirtualDriver, JD_DRIVER_CLASS_RELIABILITY_TESTER), dynamicId++), pin(NULL)
+JDReliabilityTester::JDReliabilityTester() :  JDDriver(JDDevice(VirtualDriver, JD_DRIVER_CLASS_RELIABILITY_TESTER), dynamicId++), pin(NULL), received(NULL)
 {
 }
 
@@ -36,7 +35,7 @@ int JDReliabilityTester::start()
         this->count = 0;
         int state = 0;
 
-        for (int i = 0; i < RELIABILITY_TEST_MAX_COUNT; i++)
+        for (uint8_t i = 0; i < this->max_count; i++)
         {
             sendPacket(state);
             state = !state;
@@ -51,7 +50,7 @@ int JDReliabilityTester::start()
 
         DMESG("Missed: ");
 
-        for (int i = 0; i < RELIABILITY_TEST_MAX_COUNT; i++)
+        for (uint8_t i = 0; i < this->max_count; i++)
         {
             if (received[i])
                 rx_count++;
@@ -59,7 +58,7 @@ int JDReliabilityTester::start()
                 DMESG("%d ", i);
         }
 
-        DMESG("Reliability: %d", (int)(((float)rx_count) / (float)RELIABILITY_TEST_MAX_COUNT * 100.0));
+        DMESG("Reliability: %d", (int)(((float)rx_count) / (float)this->max_count * 100.0));
     }
 
     return DEVICE_OK;
@@ -71,6 +70,7 @@ int JDReliabilityTester::fillControlPacket(JDPkt* p)
     ReliabilityAdvertisement* ra = (ReliabilityAdvertisement*)cp->data;
     ra->status = this->status;
     ra->max_count = this->max_count;
+    return DEVICE_OK;
 }
 
 int JDReliabilityTester::handleControlPacket(JDPkt* p)
@@ -111,7 +111,7 @@ int JDReliabilityTester::handlePacket(JDPkt* p)
         this->status = RELIABILITY_STATUS_TEST_IN_PROGRESS;
     }
 
-    if (pinData->count == RELIABILITY_TEST_MAX_COUNT - 1)
+    if (pinData->count == this->max_count - 1)
         Event(this->id, RELIABILITY_TEST_FINISHED);
 
     if (pinData->count == this->count)
