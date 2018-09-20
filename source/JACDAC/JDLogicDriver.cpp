@@ -312,7 +312,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
                 continue;
 
             JD_DMESG("FOUND NEW");
-            current->handleControlPacket(cp);
+            current->handleControlPacket(p);
             current->deviceConnected(JDDevice(cp->address, cp->flags, cp->serial_number, cp->driver_class));
             return DEVICE_OK;
         }
