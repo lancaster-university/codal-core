@@ -41,6 +41,8 @@ int JDReliabilityTester::start()
             state = !state;
             fiber_sleep(100);
         }
+
+        fiber_wait_for_event(this->id, RELIABILITY_TEST_FINISHED);
     }
     else
     {
@@ -87,6 +89,7 @@ int JDReliabilityTester::handleControlPacket(JDPkt* p)
         {
             this->max_count = ra->max_count;
             this->status |= RELIABILITY_STATUS_TEST_READY;
+            DMESG("READY: %d",this->max_count);
         }
 
         if (ra->status & RELIABILITY_STATUS_TEST_FINISHED)
