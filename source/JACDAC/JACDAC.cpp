@@ -15,8 +15,6 @@
 
 using namespace codal;
 
-extern void set_gpio(int);
-
 void JACDAC::dmaComplete(Event evt)
 {
     JD_DMESG("DMA");
@@ -26,7 +24,6 @@ void JACDAC::dmaComplete(Event evt)
         if (status & JD_SERIAL_TRANSMITTING)
         {
             JD_DMESG("TX ERROR");
-            // set_gpio(0);
             status &= ~(JD_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
@@ -34,7 +31,6 @@ void JACDAC::dmaComplete(Event evt)
 
         if (status & JD_SERIAL_RECEIVING)
         {
-            // set_gpio(0);
             JD_DMESG("RX ERROR");
             status &= ~(JD_SERIAL_RECEIVING);
             timeoutCounter = 0;
@@ -48,7 +44,6 @@ void JACDAC::dmaComplete(Event evt)
         if (evt.value == SWS_EVT_DATA_RECEIVED)
         {
             status &= ~(JD_SERIAL_RECEIVING);
-            // set_gpio(0);
             // move rxbuf to rxQueue and allocate new buffer.
             addToQueue(&rxQueue, rxBuf);
             rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
@@ -57,7 +52,6 @@ void JACDAC::dmaComplete(Event evt)
 
         if (evt.value == SWS_EVT_DATA_SENT)
         {
-            // set_gpio(0);
             status &= ~(JD_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
@@ -81,19 +75,13 @@ void JACDAC::onFallingEdge(Event)
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
 
-    set_gpio(0);
-    // set_gpio(1);
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
-
     sp.getDigitalValue(PullMode::None);
 
     timeoutCounter = 0;
     status |= (JD_SERIAL_RECEIVING);
 
-    // JD_DMESG("RX START");
-
     sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_PACKET_SIZE);
-    // set_gpio(0);
 }
 
 void JACDAC::periodicCallback()
