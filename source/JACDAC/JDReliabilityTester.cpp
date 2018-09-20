@@ -58,8 +58,9 @@ int JDReliabilityTester::start()
             else
                 DMESG("%d ", i);
         }
-
-        DMESG("Reliability: %d", (int)(((float)rx_count) / (float)this->max_count * 100.0));
+        this->max_count = (uint32_t)(((float)rx_count) / (float)this->max_count * 100.0);
+        this->status = RELIABILITY_STATUS_TEST_FINISHED;
+        DMESG("Reliability: %d", this->max_count);
     }
 
     return DEVICE_OK;
@@ -82,11 +83,17 @@ int JDReliabilityTester::handleControlPacket(JDPkt* p)
     {
         ReliabilityAdvertisement* ra = (ReliabilityAdvertisement*)cp->data;
 
-        this->max_count = ra->max_count;
-
         if (ra->status & RELIABILITY_STATUS_TEST_READY)
         {
+            this->max_count = ra->max_count;
             this->status |= RELIABILITY_STATUS_TEST_READY;
+        }
+
+        if (ra->status & RELIABILITY_STATUS_TEST_FINISHED)
+        {
+            this->status &= ~RELIABILITY_STATUS_TEST_READY;
+            this->max_count = ra->max_count;
+            Event(this->id, RELIABILITY_TEST_FINISHED);
         }
     }
 
