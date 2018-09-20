@@ -9,8 +9,6 @@
 #define RELIABILITY_STATUS_TEST_IN_PROGRESS    0x02
 #define RELIABILITY_STATUS_TEST_READY          0x04
 
-#define RELIABILITY_TEST_MAX_COUNT      1000
-
 namespace codal
 {
     struct ReliabilityAdvertisement
@@ -33,6 +31,8 @@ namespace codal
 
         uint32_t count;
         uint32_t max_count;
+
+        uint8_t* received;
 
         public:
         JDReliabilityTester(Pin& p, uint32_t max = 1000);
