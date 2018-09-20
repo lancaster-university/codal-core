@@ -81,15 +81,22 @@ int JDReliabilityTester::handlePacket(JDPkt* p)
     if (isPaired() && this->pairedInstance->getAddress() != p->address )
         return DEVICE_OK;
 
+
+    // DMESG("seq: %d, v %d", pinData->count, pinData->value);
+
     if (pinData->count == 0)
         this->count = 0;
-    else if (pinData->count == RELIABILITY_TEST_MAX_COUNT - 1)
+
+    if (pinData->count == RELIABILITY_TEST_MAX_COUNT - 1)
         Event(this->id, RELIABILITY_TEST_FINISHED);
-    else if (pinData->count != this->count + 1)
+
+    if (pinData->count == this->count)
     {
-        received[count] = 1;
-        this->count = pinData->count;
+        received[pinData->count] = 1;
+        this->count++;
     }
+    else
+        this->count = pinData->count;
 
     pin->setDigitalValue(pinData->value);
 
