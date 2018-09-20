@@ -63,7 +63,7 @@ int JDReliabilityTester::start()
         DMESG("Reliability: %d", this->max_count);
     }
 
-    return DEVICE_OK;
+    return this->max_count;
 }
 
 int JDReliabilityTester::fillControlPacket(JDPkt* p)
