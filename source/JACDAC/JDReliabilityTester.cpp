@@ -35,7 +35,7 @@ int JDReliabilityTester::start()
         this->count = 0;
         int state = 0;
 
-        for (uint8_t i = 0; i < this->max_count; i++)
+        for (uint32_t i = 0; i < this->max_count; i++)
         {
             sendPacket(state);
             state = !state;
@@ -44,13 +44,14 @@ int JDReliabilityTester::start()
     }
     else
     {
+        this->status = RELIABILITY_STATUS_TEST_READY;
         fiber_wait_for_event(this->id, RELIABILITY_TEST_FINISHED);
 
         int rx_count = 0;
 
         DMESG("Missed: ");
 
-        for (uint8_t i = 0; i < this->max_count; i++)
+        for (uint32_t i = 0; i < this->max_count; i++)
         {
             if (received[i])
                 rx_count++;
