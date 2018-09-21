@@ -3,11 +3,11 @@
 
 using namespace codal;
 
-JDPinDriver::JDPinDriver(Pin& p) : pin(&p), JDDriver(JDDevice(HostDriver, JD_DRIVER_CLASS_PIN), dynamicId++)
+JDPinDriver::JDPinDriver(Pin& p) : JDDriver(JDDevice(HostDriver, JD_DRIVER_CLASS_PIN)), pin(&p)
 {
 }
 
-JDPinDriver::JDPinDriver() : pin(NULL), JDDriver(JDDevice(VirtualDriver, JD_DRIVER_CLASS_PIN), dynamicId++)
+JDPinDriver::JDPinDriver() : JDDriver(JDDevice(VirtualDriver, JD_DRIVER_CLASS_PIN)), pin(NULL)
 {
 }
 

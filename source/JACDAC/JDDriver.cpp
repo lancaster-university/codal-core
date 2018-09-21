@@ -43,12 +43,13 @@ int JDDriver::sendPairingRequest(JDPkt* p)
     cp->packet_type = CONTROL_JD_TYPE_PAIRING_REQUEST;
     memcpy(cp->data, (uint8_t*)&this->device, sizeof(JDDevice)); // should have plenty of room in a control packet
 
-    this->pairedInstance = new JDDriver(JDDevice(cp->address, JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED, cp->serial_number, cp->driver_class), this->id);
+    this->pairedInstance = new JDDriver(JDDevice(cp->address, JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED, cp->serial_number, cp->driver_class));
 
     if (EventModel::defaultEventBus)
         EventModel::defaultEventBus->listen(pairedInstance->id, JD_DRIVER_EVT_DISCONNECTED, this, &JDDriver::partnerDisconnected);
 
     JDProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
+    Event(this->id, JD_DRIVER_EVT_PAIRED);
     return DEVICE_OK;
 }
 
@@ -62,9 +63,9 @@ int JDDriver::handleLogicPacket(JDPkt* p)
     return this->handleControlPacket(p);
 }
 
-JDDriver::JDDriver(JDDevice d, uint16_t id) : device(d)
+JDDriver::JDDriver(JDDevice d) : device(d)
 {
-    this->id = id;
+    this->id = dynamicId++;
 
     this->pairedInstance = NULL;
 
@@ -106,14 +107,17 @@ int JDDriver::handlePairingRequest(JDPkt* p)
     {
         Event e(0,0,CREATE_ONLY);
         partnerDisconnected(e);
+        Event(this->id, JD_DRIVER_EVT_UNPAIRED);
     }
     else if (this->device.serial_number == cp->serial_number)
     {
         d.flags = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED;
-        this->pairedInstance = new JDDriver(d, dynamicId++);
+        this->pairedInstance = new JDDriver(d);
 
         if (EventModel::defaultEventBus)
             EventModel::defaultEventBus->listen(pairedInstance->id, JD_DRIVER_EVT_DISCONNECTED, this, &JDDriver::partnerDisconnected);
+
+        Event(this->id, JD_DRIVER_EVT_PAIRED);
 
         return DEVICE_OK;
     }
@@ -156,6 +160,8 @@ void JDDriver::partnerDisconnected(Event)
     delete this->pairedInstance;
     this->pairedInstance = NULL;
     target_enable_irq();
+
+    Event(this->id, JD_DRIVER_EVT_UNPAIRED);
 }
 
 int JDDriver::handleControlPacket(JDPkt* p)

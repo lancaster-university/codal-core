@@ -60,9 +60,33 @@ DEALINGS IN THE SOFTWARE.
 
 namespace codal
 {
-
+    /**
+     * A JDPkt contains: a crc for error checking, the size of the packet
+     * and an address.
+     *
+     * An address of a packet can be the drivers own address, or another drivers address.
+     *
+     * Why would you send a packet using your own address? Well, there are a number of different paradigms in JACDAC:
+     *
+     * 1) Virtual Drivers
+     *
+     * Virtual drivers allow the virtualisation of a remote resource. Packets produced from the remote resource are
+     * consumed as if the remote resource is on the device. An example of this in action would be a remote Accelerometer.
+     * Any device can modify the configuration of the remote resource. Only the host of the remote resource is required to be enumerated.
+     *
+     * 2) Paired Drivers
+     *
+     * Sharing resources is great, except when you want to own a resource like a joystick. Paired drivers allow ownership
+     * over a remote resource. This mode requires both the host and the consumer to enumerated, so that one can tell if
+     * the other disappears from the bus and vice versa.
+     *
+     * 3) Broadcast Drivers
+     *
+     * Sometimes drivers would like to receive all packets on the bus and do not require the use of addresses. This mode
+     * allows any packet addressed to a class to be received. Broadcast drivers can be combined with either mode above,
+     * or none at all.
+     **/
     struct JDPkt {
-        public:
         uint16_t crc;
         uint8_t address; // control is 0, devices are allocated address in the range 1 - 255
         uint8_t size;

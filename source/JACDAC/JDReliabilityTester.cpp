@@ -4,14 +4,14 @@
 
 using namespace codal;
 
-JDReliabilityTester::JDReliabilityTester(Pin& p, uint32_t max_count) : JDDriver(JDDevice(HostDriver, JD_DRIVER_CLASS_RELIABILITY_TESTER), dynamicId++), pin(&p)
+JDReliabilityTester::JDReliabilityTester(Pin& p, uint32_t max_count) : JDDriver(JDDevice(HostDriver, JD_DRIVER_CLASS_RELIABILITY_TESTER)), pin(&p)
 {
     this->max_count = max_count;
     this->received = (uint8_t*)malloc(this->max_count);
     memset(received, 0, this->max_count);
 }
 
-JDReliabilityTester::JDReliabilityTester() :  JDDriver(JDDevice(VirtualDriver, JD_DRIVER_CLASS_RELIABILITY_TESTER), dynamicId++), pin(NULL), received(NULL)
+JDReliabilityTester::JDReliabilityTester() :  JDDriver(JDDevice(VirtualDriver, JD_DRIVER_CLASS_RELIABILITY_TESTER)), pin(NULL), received(NULL)
 {
 }
 

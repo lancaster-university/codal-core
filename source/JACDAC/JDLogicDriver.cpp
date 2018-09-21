@@ -133,7 +133,7 @@ void JDLogicDriver::periodicCallback()
 }
 
 
-JDLogicDriver::JDLogicDriver(JDDevice d, uint16_t id) : JDDriver(d, id)
+JDLogicDriver::JDLogicDriver() : JDDriver(JDDevice(0, JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_INITIALISED, 0, 0))
 {
     this->device.address = 0;
     status = 0;
@@ -259,7 +259,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             if (j == JD_PROTOCOL_DRIVER_SIZE)
             {
                 JD_DMESG("ADD NEW MAP");
-                new JDDriver(JDDevice(cp->address, cp->flags | JD_DEVICE_FLAGS_BROADCAST_MAP | JD_DEVICE_FLAGS_INITIALISED, cp->serial_number, cp->driver_class), DEVICE_ID_JD_BROADCAST_DRIVER);
+                new JDDriver(JDDevice(cp->address, cp->flags | JD_DEVICE_FLAGS_BROADCAST_MAP | JD_DEVICE_FLAGS_INITIALISED, cp->serial_number, cp->driver_class));
             }
 
             JD_DMESG("FOUND BROAD");

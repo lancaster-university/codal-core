@@ -39,6 +39,9 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DRIVER_EVT_CONNECTED        1
 #define JD_DRIVER_EVT_DISCONNECTED     2
 
+#define JD_DRIVER_EVT_PAIRED           3
+#define JD_DRIVER_EVT_UNPAIRED         4
+
 #define JD_DEVICE_FLAGS_LOCAL          0x8000 // on the board
 #define JD_DEVICE_FLAGS_REMOTE         0x4000 // off the board
 
@@ -110,8 +113,8 @@ namespace codal
         VirtualDriver = JD_DEVICE_FLAGS_REMOTE, // the driver is seeking the use of another device's resource
         HostDriver = JD_DEVICE_FLAGS_LOCAL, // the driver is hosting a resource for others to use.
         HostDriverPairable = JD_DEVICE_FLAGS_PAIRABLE | JD_DEVICE_FLAGS_LOCAL, // the driver is allowed to pair with another driver of the same class
-        BroadcastDriver = JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_BROADCAST, // the driver is unumerated with its own address, and receives all packets of the same class (including control packets)
-        SnifferDriver = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_BROADCAST, // the driver is not unumerated, and receives all packets of the same class (including control packets)
+        BroadcastDriver = JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_BROADCAST, // the driver is enumerated with its own address, and receives all packets of the same class (including control packets)
+        SnifferDriver = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_BROADCAST, // the driver is not enumerated, and receives all packets of the same class (including control packets)
     };
 
     /**
@@ -191,7 +194,7 @@ namespace codal
          * @param id the message bus id for this driver
          *
          * */
-        JDDriver(JDDevice d, uint16_t id);
+        JDDriver(JDDevice d);
 
         /**
          * Queues a control packet on the serial bus, called by the logic driver
@@ -273,7 +276,7 @@ namespace codal
          * @param id the message bus id for this driver
          *
          * */
-        JDLogicDriver(JDDevice d = JDDevice(0, JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_INITIALISED, 0, 0), uint16_t id = DEVICE_ID_JD_LOGIC_DRIVER);
+        JDLogicDriver();
 
         /**
          * Called by the logic driver when a control packet is addressed to this driver
