@@ -8,6 +8,7 @@ void JDLogicDriver::populateControlPacket(JDDriver* driver, ControlPacket* cp)
 {
     cp->packet_type = CONTROL_JD_TYPE_HELLO;
     cp->address = driver->device.address;
+    cp->flags = 0;
 
     if (driver->device.isPairing())
         cp->flags |= CONTROL_JD_FLAGS_PAIRING_MODE;
@@ -161,7 +162,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 
     // devices about to enter pairing mode enumerate themselves, so that they have an address on the bus.
     // These devices aren't useable drivers, so we "drop" their packets
-    if (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE)
+    if (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE) // bad we need to let it filter through the drivers but not get handled.
     {
         DMESG("IGNORE PAIR MODE A %d, S %d, C %d", cp->address, cp->serial_number, cp->driver_class);
         return DEVICE_OK;

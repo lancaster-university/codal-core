@@ -67,13 +67,15 @@ DEALINGS IN THE SOFTWARE.
 #define JD_LOGIC_ADDRESS_ALLOC_TIME        254     // 1,016 ms
 #define JD_LOGIC_DRIVER_CTRLPACKET_TIME    112     // 448 ms
 
-#define CONTROL_JD_FLAGS_PAIRED                 0x1000 // advertises that a driver is already paired with another.
-#define CONTROL_JD_FLAGS_PAIRABLE               0x2000 // advertises that a driver can be optionally paired with another
-#define CONTROL_JD_FLAGS_PAIRING_MODE           0x4000 // in pairing mode, control packets aren't forwarded to drivers
 #define CONTROL_JD_FLAGS_RESERVED               0x8000
-#define CONTROL_JD_FLAGS_NACK                   0x0100
-#define CONTROL_JD_FLAGS_UNCERTAIN              0x0200
+#define CONTROL_JD_FLAGS_PAIRING_MODE           0x4000 // in pairing mode, control packets aren't forwarded to drivers
+#define CONTROL_JD_FLAGS_PAIRABLE               0x2000 // advertises that a driver can be optionally paired with another
+#define CONTROL_JD_FLAGS_PAIRED                 0x1000 // advertises that a driver is already paired with another.
+
+#define CONTROL_JD_FLAGS_RESERVED1              0x0800
 #define CONTROL_JD_FLAGS_CONFLICT               0x0400
+#define CONTROL_JD_FLAGS_UNCERTAIN              0x0200
+#define CONTROL_JD_FLAGS_NACK                   0x0100
 
 #define CONTROL_JD_TYPE_HELLO                   0x01
 #define CONTROL_JD_TYPE_PAIRING_REQUEST         0x02
