@@ -66,7 +66,7 @@ int JDDriver::sendPairingPacket(JDDevice d)
 {
     // send pairing request should create the paired instance, flag pairing mode, and swap to local mode to get an address.
     // Once enumerated we then send the packet.
-    this->pairedInstance = new JDDriver(d);
+    this->pairedInstance = new JDPairedDriver(d, *this);
 
     if (EventModel::defaultEventBus)
     {
@@ -149,7 +149,7 @@ int JDDriver::handlePairingPacket(JDPkt* p)
 
         // create a local instance of a remote device so that if the device is disconnected we are informed.
         d.flags = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED;
-        this->pairedInstance = new JDDriver(d);
+        this->pairedInstance = new JDPairedDriver(d, *this);
 
         // listen for disconnection events.
         if (EventModel::defaultEventBus)

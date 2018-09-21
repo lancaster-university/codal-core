@@ -20,7 +20,7 @@ int JDPinDriver::sendPacket(Mode m, uint32_t value)
     p.mode = m;
     p.value = value;
 
-    return JDProtocol::send((uint8_t*)&p, sizeof(PinPacket), this->pairedInstance->getAddress());
+    return JDProtocol::send((uint8_t*)&p, sizeof(PinPacket), this->device.address);
 }
 
 int JDPinDriver::setAnalogValue(uint32_t value)

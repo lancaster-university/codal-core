@@ -223,6 +223,8 @@ namespace codal
         }
     };
 
+    class JDPairedDriver;
+
     /**
      * This class presents a common abstraction for all JDDrivers. It also contains some default member functions to perform common operations.
      * This should be subclassed by any driver implementation
@@ -236,7 +238,7 @@ namespace codal
 
         static uint32_t dynamicId;
 
-        JDDriver* pairedInstance;
+        JDPairedDriver* pairedInstance;
 
         JDDevice device;
 
@@ -319,6 +321,22 @@ namespace codal
         virtual int handlePacket(JDPkt* p);
 
         ~JDDriver();
+    };
+
+    class JDPairedDriver : public JDDriver
+    {
+        JDDriver& other;
+
+        public:
+
+        JDPairedDriver(JDDevice d, JDDriver& other) : JDDriver(d), other(other)
+        {
+        }
+
+        virtual int handlePacket(JDPkt* p)
+        {
+            return other.handlePacket(p);
+        }
     };
 
     class JDLogicDriver : public JDDriver
