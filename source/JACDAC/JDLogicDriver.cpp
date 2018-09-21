@@ -103,8 +103,12 @@ void JDLogicDriver::periodicCallback()
                 memset(cp, target_random(256), sizeof(ControlPacket));
                 populateControlPacket(current, cp);
 
+                // reset the flags after population as drivers should not receive any packets until their address is confirmed.
+                // i.e. pairing flags may be put into the control packet on an uncertain address.
+                cp->flags = 0;
                 // flag our address as uncertain (i.e. not committed / finalised)
                 cp->flags |= CONTROL_JD_FLAGS_UNCERTAIN;
+
                 current->device.flags |= JD_DEVICE_FLAGS_INITIALISING;
 
                 JDProtocol::send(&pkt);
@@ -160,15 +164,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 {
     ControlPacket *cp = (ControlPacket *)p->data;
 
-    // devices about to enter pairing mode enumerate themselves, so that they have an address on the bus.
-    // These devices aren't useable drivers, so we "drop" their packets
-    if (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE) // bad we need to let it filter through the drivers but not get handled.
-    {
-        DMESG("IGNORE PAIR MODE A %d, S %d, C %d", cp->address, cp->serial_number, cp->driver_class);
-        return DEVICE_OK;
-    }
-
-    DMESG("CP A %d, S %d, C %d", cp->address, cp->serial_number, cp->driver_class);
+    DMESG("CP A %d, S %d, C %d pm: %d", cp->address, cp->serial_number, cp->driver_class, cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE);
 
     // Logic Driver addressing rules:
     // 1. drivers cannot have the same address and different serial numbers.
@@ -184,6 +180,11 @@ int JDLogicDriver::handlePacket(JDPkt* p)
     // first check for any drivers who are associated with this control packet
 
     bool handled = false; // indicates if the control packet has been handled by a driver.
+
+    // devices about to enter pairing mode enumerate themselves, so that they have an address on the bus.
+    // devices with uncertain addresses cannot be used
+    // These two scenarios mean that drivers in this state are unusable, so we determine their packets as unsafe... "dropping" their packets
+    bool safe = (cp->flags & (CONTROL_JD_FLAGS_UNCERTAIN | CONTROL_JD_FLAGS_PAIRING_MODE)) == 0; // the packet it is safe
 
     for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
     {
@@ -239,7 +240,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
 
             JD_DMESG("FOUND LOCAL");
-            if (current->handleLogicPacket(p) == DEVICE_OK)
+            if (safe && current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
                 JD_DMESG("CP ABSORBED %d", current->device.address);
@@ -255,7 +256,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
             JD_DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
 
-            if (current->handleLogicPacket(p) == DEVICE_OK)
+            if (safe && current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
                 JD_DMESG("CP ABSORBED %d", current->device.address);
@@ -282,7 +283,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             }
 
             JD_DMESG("FOUND BROAD");
-            if (current->handleLogicPacket(p) == DEVICE_OK)
+            if (safe && current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
                 JD_DMESG("CP ABSORBED %d", current->device.address);
@@ -291,7 +292,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
         }
     }
 
-    if (handled)
+    if (handled || !safe)
         return DEVICE_OK;
 
     bool filtered = filterPacket(cp->address);
@@ -343,6 +344,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 bool JDLogicDriver::filterPacket(uint8_t address)
 {
     return false;
+
     if (address > 0)
     {
         for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
