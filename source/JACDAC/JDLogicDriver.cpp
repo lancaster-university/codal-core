@@ -297,28 +297,13 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 
     bool filtered = filterPacket(cp->address);
 
-    // if it's paired with another device, we can just ignore
+    // if it's paired with a driver and it's not us, we can just ignore
     if (!filtered && cp->flags & CONTROL_JD_FLAGS_PAIRED)
-    {
-        JD_DMESG("FILTERING");
-        for (int i = 0; i < JD_LOGIC_DRIVER_MAX_FILTERS; i++)
-        {
-            if (this->address_filters[i] == 0)
-                this->address_filters[i] = cp->address;
-        }
+        return addToFilter(cp->address);
 
-        return DEVICE_OK;
-    }
     // if it was previously paired with another device, we remove the filter.
     else if (filtered && !(cp->flags & CONTROL_JD_FLAGS_PAIRED))
-    {
-        JD_DMESG("UNDO FILTER");
-        for (int i = 0; i < JD_LOGIC_DRIVER_MAX_FILTERS; i++)
-        {
-            if (this->address_filters[i] == cp->address)
-                this->address_filters[i] = 0;
-        }
-    }
+        removeFromFilter(cp->address);
 
     // if we reach here, there is no associated device, find a free remote instance in the drivers array
     for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
@@ -341,10 +326,32 @@ int JDLogicDriver::handlePacket(JDPkt* p)
     return DEVICE_OK;
 }
 
+int JDLogicDriver::addToFilter(uint8_t address)
+{
+    JD_DMESG("FILTER: %d", address);
+    for (int i = 0; i < JD_LOGIC_DRIVER_MAX_FILTERS; i++)
+    {
+        if (this->address_filters[i] == 0)
+            this->address_filters[i] = address;
+    }
+
+    return DEVICE_OK;
+}
+
+int JDLogicDriver::removeFromFilter(uint8_t address)
+{
+    JD_DMESG("UNFILTER: %d", address);
+    for (int i = 0; i < JD_LOGIC_DRIVER_MAX_FILTERS; i++)
+    {
+        if (this->address_filters[i] == address)
+            this->address_filters[i] = 0;
+    }
+
+    return DEVICE_OK;
+}
+
 bool JDLogicDriver::filterPacket(uint8_t address)
 {
-    return false;
-
     if (address > 0)
     {
         for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)

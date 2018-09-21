@@ -372,6 +372,10 @@ namespace codal
          **/
         virtual bool filterPacket(uint8_t address);
 
+        int addToFilter(uint8_t address);
+
+        int removeFromFilter(uint8_t address);
+
         /**
          * Begin periodic callbacks
          * */
