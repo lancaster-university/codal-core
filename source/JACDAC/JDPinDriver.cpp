@@ -13,14 +13,14 @@ JDPinDriver::JDPinDriver() : JDDriver(JDDevice(PairedDriver, JD_DRIVER_CLASS_PIN
 
 int JDPinDriver::sendPacket(Mode m, uint32_t value)
 {
-    if (!(this->device.flags & JD_DEVICE_FLAGS_REMOTE) || !this->isConnected())
+    if (!(this->device.isPaired()) || !this->isConnected())
         return DEVICE_INVALID_STATE;
 
     PinPacket p;
     p.mode = m;
     p.value = value;
 
-    return JDProtocol::send((uint8_t*)&p, sizeof(PinPacket), this->device.address);
+    return JDProtocol::send((uint8_t*)&p, sizeof(PinPacket), this->pairedInstance->getAddress());
 }
 
 int JDPinDriver::setAnalogValue(uint32_t value)
