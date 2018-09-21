@@ -4,6 +4,24 @@
 
 using namespace codal;
 
+void JDLogicDriver::populateControlPacket(JDDriver* driver, ControlPacket* cp)
+{
+    cp->packet_type = CONTROL_JD_TYPE_HELLO;
+    cp->address = driver->device.address;
+
+    if (driver->device.isPairing())
+        cp->flags |= CONTROL_JD_FLAGS_PAIRING_MODE;
+
+    if (driver->device.isPaired())
+        cp->flags |= CONTROL_JD_FLAGS_PAIRED;
+
+    if (driver->device.isPairable())
+        cp->flags |= CONTROL_JD_FLAGS_PAIRABLE;
+
+    cp->driver_class = driver->device.driver_class;
+    cp->serial_number = driver->device.serial_number;
+}
+
 void JDLogicDriver::periodicCallback()
 {
     // no sense continuing if we dont have a bus to transmit on...
@@ -77,17 +95,18 @@ void JDLogicDriver::periodicCallback()
                 JD_DMESG("ALLOC: %d",current->device.address);
 
                 // we queue the first packet, so that drivers don't send driver related packets on a yet unassigned address
-                ControlPacket cp;
-                memset(&cp, target_random(256), sizeof(ControlPacket));
+                JDPkt pkt;
+                pkt.address = 0;
+                pkt.size = sizeof(ControlPacket);
+                ControlPacket* cp = (ControlPacket*)pkt.data;
+                memset(cp, target_random(256), sizeof(ControlPacket));
+                populateControlPacket(current, cp);
 
-                cp.packet_type = CONTROL_JD_TYPE_HELLO;
-                cp.address = current->device.address;
-                cp.flags = (current->device.flags & 0x00FF) | CONTROL_JD_FLAGS_UNCERTAIN; // flag that we haven't assigned our address.
-                cp.driver_class = current->device.driver_class;
-                cp.serial_number = current->device.serial_number;
-
+                // flag our address as uncertain (i.e. not committed / finalised)
+                cp->flags |= CONTROL_JD_FLAGS_UNCERTAIN;
                 current->device.flags |= JD_DEVICE_FLAGS_INITIALISING;
 
+                JDProtocol::send(&pkt);
             }
             else if(current->device.flags & JD_DEVICE_FLAGS_INITIALISING)
             {
@@ -108,21 +127,8 @@ void JDLogicDriver::periodicCallback()
                     pkt.address = 0;
                     pkt.size = sizeof(ControlPacket);
                     ControlPacket* cp = (ControlPacket*)pkt.data;
-
                     memset(cp, target_random(256), sizeof(ControlPacket));
-
-                    cp->packet_type = CONTROL_JD_TYPE_HELLO;
-                    cp->address = current->device.address;
-                    cp->flags = current->device.flags & 0x00FF;
-
-                    if (current->isPaired())
-                        cp->flags |= CONTROL_JD_FLAGS_PAIRED;
-                    else if (current->isPairable())
-                        cp->flags |= CONTROL_JD_FLAGS_PAIRABLE;
-
-                    cp->driver_class = current->device.driver_class;
-                    cp->serial_number = current->device.serial_number;
-
+                    populateControlPacket(current, cp);
                     current->fillControlPacket(&pkt);
 
                     JDProtocol::send(&pkt);
@@ -152,6 +158,14 @@ int JDLogicDriver::handleControlPacket(JDPkt* p)
 int JDLogicDriver::handlePacket(JDPkt* p)
 {
     ControlPacket *cp = (ControlPacket *)p->data;
+
+    // devices about to enter pairing mode enumerate themselves, so that they have an address on the bus.
+    // These devices aren't useable drivers, so we "drop" their packets
+    if (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE)
+    {
+        JD_DMESG("IGNORE PAIR MODE A %d, S %d, C %d", cp->address, cp->serial_number, cp->driver_class);
+        return DEVICE_OK;
+    }
 
     JD_DMESG("CP A %d, S %d, C %d", cp->address, cp->serial_number, cp->driver_class);
 

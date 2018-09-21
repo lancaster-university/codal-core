@@ -177,4 +177,7 @@ int JDDriver::handlePacket(JDPkt* p)
 JDDriver::~JDDriver()
 {
     JDProtocol::instance->remove(*this);
+
+    if (this->pairedInstance)
+        delete this->pairedInstance;
 }

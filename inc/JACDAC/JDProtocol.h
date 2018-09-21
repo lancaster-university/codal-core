@@ -36,24 +36,28 @@ DEALINGS IN THE SOFTWARE.
 // the following defines should really be in separate head files, but circular includes suck.
 
 // BEGIN    JD SERIAL DRIVER FLAGS
-#define JD_DRIVER_EVT_CONNECTED        1
-#define JD_DRIVER_EVT_DISCONNECTED     2
+#define JD_DRIVER_EVT_CONNECTED         1
+#define JD_DRIVER_EVT_DISCONNECTED      2
 
-#define JD_DRIVER_EVT_PAIRED           3
-#define JD_DRIVER_EVT_UNPAIRED         4
+#define JD_DRIVER_EVT_PAIRED            3
+#define JD_DRIVER_EVT_UNPAIRED          4
 
-#define JD_DEVICE_FLAGS_LOCAL          0x8000 // on the board
-#define JD_DEVICE_FLAGS_REMOTE         0x4000 // off the board
+#define JD_DEVICE_FLAGS_LOCAL           0x8000 // on the board
+#define JD_DEVICE_FLAGS_REMOTE          0x4000 // off the board
 
 // following flags combined with the above to yield different behaviours
-#define JD_DEVICE_FLAGS_BROADCAST      0x2000 // receive all class packets regardless of the address
-#define JD_DEVICE_FLAGS_PAIRABLE       0x1000 // this flag indicates that a driver is paired with another
+#define JD_DEVICE_FLAGS_BROADCAST       0x2000 // receive all class packets regardless of the address
+#define JD_DEVICE_FLAGS_PAIR            0x1000 // this flag indicates that the driver should pair with another
 // end combo flags
 
-#define JD_DEVICE_FLAGS_INITIALISED    0x0800 // device driver is running
-#define JD_DEVICE_FLAGS_INITIALISING   0x0400 // a flag to indicate that a control packet has been queued
-#define JD_DEVICE_FLAGS_CP_SEEN        0x0200 // indicates whether a control packet has been seen recently.
-#define JD_DEVICE_FLAGS_BROADCAST_MAP  0x0100 // This driver is held for mapping from bus address to driver class
+#define JD_DEVICE_FLAGS_PAIRABLE        0x0800 // this flag indicates that a driver is paired with another
+#define JD_DEVICE_FLAGS_PAIRED          0x0400 // this flag indicates that a driver is paired with another
+#define JD_DEVICE_FLAGS_PAIRING         0x0200 // this flag indicates that a driver is paired with another
+
+#define JD_DEVICE_FLAGS_INITIALISED     0x0080 // device driver is running
+#define JD_DEVICE_FLAGS_INITIALISING    0x0040 // a flag to indicate that a control packet has been queued
+#define JD_DEVICE_FLAGS_CP_SEEN         0x0020 // indicates whether a control packet has been seen recently.
+#define JD_DEVICE_FLAGS_BROADCAST_MAP   0x0010 // This driver is held for mapping from bus address to driver class
 // END      JD SERIAL DRIVER FLAGS
 
 
@@ -63,11 +67,13 @@ DEALINGS IN THE SOFTWARE.
 #define JD_LOGIC_ADDRESS_ALLOC_TIME        254     // 1,016 ms
 #define JD_LOGIC_DRIVER_CTRLPACKET_TIME    112     // 448 ms
 
-#define CONTROL_JD_FLAGS_PAIRED                 0x0001
-#define CONTROL_JD_FLAGS_PAIRABLE               0x0002
-#define CONTROL_JD_FLAGS_NACK                   0x0004
-#define CONTROL_JD_FLAGS_UNCERTAIN              0x0008
-#define CONTROL_JD_FLAGS_CONFLICT               0x0010
+#define CONTROL_JD_FLAGS_PAIRED                 0x1000 // advertises that a driver is already paired with another.
+#define CONTROL_JD_FLAGS_PAIRABLE               0x2000 // advertises that a driver can be optionally paired with another
+#define CONTROL_JD_FLAGS_PAIRING_MODE           0x4000 // in pairing mode, control packets aren't forwarded to drivers
+#define CONTROL_JD_FLAGS_RESERVED               0x8000
+#define CONTROL_JD_FLAGS_NACK                   0x0100
+#define CONTROL_JD_FLAGS_UNCERTAIN              0x0200
+#define CONTROL_JD_FLAGS_CONFLICT               0x0400
 
 #define CONTROL_JD_TYPE_HELLO                   0x01
 #define CONTROL_JD_TYPE_PAIRING_REQUEST         0x02
@@ -102,7 +108,7 @@ namespace codal
     {
         uint8_t packet_type;    // indicates the type of the packet, normally just HELLO
         uint8_t address;        // the address assigned by the logic driver
-        uint16_t flags;         // various flags
+        uint16_t flags;         // various flags, upper eight bits are reserved for control usage, lower 8 remain free for driver use.
         uint32_t driver_class;  // the class of the driver
         uint32_t serial_number; // the "unique" serial number of the device.
         uint8_t data[CONTROL_PACKET_PAYLOAD_SIZE];
@@ -111,8 +117,9 @@ namespace codal
     enum DriverType
     {
         VirtualDriver = JD_DEVICE_FLAGS_REMOTE, // the driver is seeking the use of another device's resource
+        PairedDriver = JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_PAIR | JD_DEVICE_FLAGS_PAIRING, // the driver is enumerated, but requires pairing to another driver to operate
         HostDriver = JD_DEVICE_FLAGS_LOCAL, // the driver is hosting a resource for others to use.
-        HostDriverPairable = JD_DEVICE_FLAGS_PAIRABLE | JD_DEVICE_FLAGS_LOCAL, // the driver is allowed to pair with another driver of the same class
+        PairableHostDriver = JD_DEVICE_FLAGS_PAIRABLE | JD_DEVICE_FLAGS_LOCAL, // the driver is allowed to pair with another driver of the same class
         BroadcastDriver = JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_BROADCAST, // the driver is enumerated with its own address, and receives all packets of the same class (including control packets)
         SnifferDriver = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_BROADCAST, // the driver is not enumerated, and receives all packets of the same class (including control packets)
     };
@@ -124,7 +131,7 @@ namespace codal
     {
         uint8_t address; // the address assigned by the logic driver.
         uint8_t rolling_counter; // used to trigger various time related events
-        uint16_t flags; // upper 8 bits can be used by drivers, lower 8 bits are placed into the control packet
+        uint16_t flags; // various flags indicating the state of the driver
         uint32_t serial_number; // the serial number used to "uniquely" identify a device
         uint32_t driver_class;
 
@@ -160,24 +167,44 @@ namespace codal
             this->driver_class = driver_class;
         }
 
-        bool isVirtual()
+        bool isVirtualDriver()
         {
             return (this->flags & JD_DEVICE_FLAGS_REMOTE) && !(this->flags & JD_DEVICE_FLAGS_BROADCAST);
         }
 
-        bool isHost()
+        bool isPairedDriver()
+        {
+            return this->flags & JD_DEVICE_FLAGS_LOCAL && this->flags & JD_DEVICE_FLAGS_PAIR;
+        }
+
+        bool isHostDriver()
         {
             return this->flags & JD_DEVICE_FLAGS_LOCAL && !(this->flags & JD_DEVICE_FLAGS_BROADCAST);
         }
 
-        bool isBroadcast()
+        bool isBroadcastDriver()
         {
             return this->flags & JD_DEVICE_FLAGS_LOCAL && this->flags & JD_DEVICE_FLAGS_BROADCAST;
         }
 
-        bool isSniffer()
+        bool isSnifferDriver()
         {
             return this->flags & JD_DEVICE_FLAGS_REMOTE && this->flags & JD_DEVICE_FLAGS_BROADCAST;
+        }
+
+        bool isPaired()
+        {
+            return this->flags & JD_DEVICE_FLAGS_PAIRED;
+        }
+
+        bool isPairable()
+        {
+            return this->flags & JD_DEVICE_FLAGS_PAIRABLE;
+        }
+
+        bool isPairing()
+        {
+            return this->flags & JD_DEVICE_FLAGS_PAIRING;
         }
     };
 
@@ -276,6 +303,8 @@ namespace codal
     class JDLogicDriver : public JDDriver
     {
         uint8_t address_filters[JD_LOGIC_DRIVER_MAX_FILTERS];
+
+        void populateControlPacket(JDDriver* driver, ControlPacket* cp);
 
         public:
 
