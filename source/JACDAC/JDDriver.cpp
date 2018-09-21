@@ -62,7 +62,7 @@ void JDDriver::onEnumeration(Event)
     }
 }
 
-int JDDriver::sendPairingRequest(JDPkt* p)
+int JDDriver::sendPairingPacket(JDPkt* p)
 {
     ControlPacket* cp = (ControlPacket*)p->data;
 
@@ -88,7 +88,7 @@ int JDDriver::handleLogicPacket(JDPkt* p)
 
     // filter out any pairing requests for special handling by drivers.
     if (cp->packet_type == CONTROL_JD_TYPE_PAIRING_REQUEST)
-        return this->handlePairingRequest(p);
+        return this->handlePairingPacket(p);
 
     return this->handleControlPacket(p);
 }
@@ -127,14 +127,15 @@ int JDDriver::deviceRemoved()
     return DEVICE_OK;
 }
 
-int JDDriver::handlePairingRequest(JDPkt* p)
+int JDDriver::handlePairingPacket(JDPkt* p)
 {
     ControlPacket* cp = (ControlPacket *)p->data;
     JDDevice d = *((JDDevice*)cp->data);
 
     // we have received a NACK from our pairing request, delete our local representation of our partner.
-    if (this->pairedInstance && cp->flags & CONTROL_JD_FLAGS_NACK && this->device.serial_number == cp->serial_number)
+    if (this->device.isPairable() && cp->flags & CONTROL_JD_FLAGS_NACK && this->device.serial_number == cp->serial_number)
     {
+        DMESG("PAIRING REQ DENIED", d.address, d.serial_number);
         Event e(0,0,CREATE_ONLY);
         partnerDisconnected(e);
     }
@@ -204,6 +205,7 @@ uint32_t JDDriver::getSerialNumber()
 
 void JDDriver::partnerDisconnected(Event)
 {
+    DMESG("PARTNER D/C");
     EventModel::defaultEventBus->ignore(pairedInstance->id, JD_DRIVER_EVT_DISCONNECTED, this, &JDDriver::partnerDisconnected);
 
     this->device.flags &= ~JD_DEVICE_FLAGS_PAIRED;

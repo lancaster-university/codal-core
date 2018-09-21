@@ -50,7 +50,7 @@ int JDPinDriver::handleControlPacket(JDPkt* p)
         if (cp->flags & CONTROL_JD_FLAGS_PAIRABLE)
         {
             DMESG("PAIR!");
-            sendPairingRequest(p);
+            sendPairingPacket(p);
         }
     }
 

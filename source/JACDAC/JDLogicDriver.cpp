@@ -342,6 +342,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 
 bool JDLogicDriver::filterPacket(uint8_t address)
 {
+    return false;
     if (address > 0)
     {
         for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)

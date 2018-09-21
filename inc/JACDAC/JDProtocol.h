@@ -286,7 +286,7 @@ namespace codal
          **/
         virtual int deviceRemoved();
 
-        int sendPairingRequest(JDPkt* p);
+        int sendPairingPacket(JDPkt* p);
 
         virtual bool isPaired();
 
@@ -309,7 +309,7 @@ namespace codal
          **/
         virtual int handleControlPacket(JDPkt* p);
 
-        int handlePairingRequest(JDPkt* p);
+        int handlePairingPacket(JDPkt* p);
 
         /**
          * Called by the logic driver when a data packet is addressed to this driver
