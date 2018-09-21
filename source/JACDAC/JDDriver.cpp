@@ -215,7 +215,7 @@ void JDDriver::partnerDisconnected(Event)
     // return to our correct defaults:
     // * pairing mode for a PairedDriver
     // * advertise pairable for a PairableHostDriver.
-    if (this->device.isPairedDriver())
+    if (this->device.flags & JD_DEVICE_FLAGS_PAIR)
         this->device.setMode(PairedDriver);
     else
         this->device.flags |= JD_DEVICE_FLAGS_PAIRABLE;
