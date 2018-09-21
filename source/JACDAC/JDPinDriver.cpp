@@ -3,11 +3,11 @@
 
 using namespace codal;
 
-JDPinDriver::JDPinDriver(Pin& p) : JDDriver(JDDevice(HostDriver, JD_DRIVER_CLASS_PIN)), pin(&p)
+JDPinDriver::JDPinDriver(Pin& p) : JDDriver(JDDevice(PairableHostDriver, JD_DRIVER_CLASS_PIN)), pin(&p)
 {
 }
 
-JDPinDriver::JDPinDriver() : JDDriver(JDDevice(VirtualDriver, JD_DRIVER_CLASS_PIN)), pin(NULL)
+JDPinDriver::JDPinDriver() : JDDriver(JDDevice(PairedDriver, JD_DRIVER_CLASS_PIN)), pin(NULL)
 {
 }
 
@@ -20,26 +20,35 @@ int JDPinDriver::sendPacket(Mode m, uint32_t value)
     p.mode = m;
     p.value = value;
 
-    JDProtocol::send((uint8_t*)&p, sizeof(PinPacket), this->device.address);
+    return JDProtocol::send((uint8_t*)&p, sizeof(PinPacket), this->device.address);
 }
 
 int JDPinDriver::setAnalogValue(uint32_t value)
 {
-    sendPacket(SetAnalog, value);
+    return sendPacket(SetAnalog, value);
 }
 
 int JDPinDriver::setDigitalValue(uint32_t value)
 {
-    sendPacket(SetDigital, value);
+    return sendPacket(SetDigital, value);
 }
 
 int JDPinDriver::setServoValue(uint32_t value)
 {
-    sendPacket(SetServo, value);
+    return sendPacket(SetServo, value);
 }
 
-int JDPinDriver::handleControlPacket(JDPkt* cp)
+int JDPinDriver::handleControlPacket(JDPkt* p)
 {
+    ControlPacket* cp = (ControlPacket*)p->data;
+
+    if (this->device.isPairedDriver())
+    {
+        if (cp->flags & CONTROL_JD_FLAGS_PAIRABLE)
+            sendPairingRequest(p);
+    }
+
+    return DEVICE_OK;
 }
 
 int JDPinDriver::handlePacket(JDPkt* p)
