@@ -264,17 +264,21 @@ int JDLogicDriver::handlePacket(JDPkt* p)
         }
         else if ((current->device.flags & JD_DEVICE_FLAGS_BROADCAST) && current->device.driver_class == cp->driver_class)
         {
-            int j;
-
-            for (j = 0; j < JD_PROTOCOL_DRIVER_SIZE; j++)
-                if (JDProtocol::instance->drivers[i]->device.serial_number ==cp->serial_number)
-                    break;
-
-            // only add a broadcast device if it is not already represented in the driver array.
-            if (j == JD_PROTOCOL_DRIVER_SIZE)
+            if (current->device.flags & JD_DEVICE_FLAGS_INITIALISED)
             {
-                JD_DMESG("ADD NEW MAP");
-                new JDDriver(JDDevice(cp->address, cp->flags | JD_DEVICE_FLAGS_BROADCAST_MAP | JD_DEVICE_FLAGS_INITIALISED, cp->serial_number, cp->driver_class));
+                // ONLY ADD BROADCAST MAPS IF THE DRIVER IS INITIALISED.
+                int j;
+
+                for (j = 0; j < JD_PROTOCOL_DRIVER_SIZE; j++)
+                    if (JDProtocol::instance->drivers[i]->device.serial_number ==cp->serial_number)
+                        break;
+
+                // only add a broadcast device if it is not already represented in the driver array.
+                if (j == JD_PROTOCOL_DRIVER_SIZE)
+                {
+                    JD_DMESG("ADD NEW MAP");
+                    new JDDriver(JDDevice(cp->address, cp->flags | JD_DEVICE_FLAGS_BROADCAST_MAP | JD_DEVICE_FLAGS_INITIALISED, cp->serial_number, cp->driver_class));
+                }
             }
 
             JD_DMESG("FOUND BROAD");
