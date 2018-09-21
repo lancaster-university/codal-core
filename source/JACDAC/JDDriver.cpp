@@ -37,25 +37,48 @@ int JDDriver::fillControlPacket(JDPkt*)
     return DEVICE_OK;
 }
 
+void JDDriver::onEnumeration(Event)
+{
+    if (this->device.isPairing())
+    {
+        EventModel::defaultEventBus->ignore(this->id, JD_DRIVER_EVT_CONNECTED, this, &JDDriver::onEnumeration);
+
+        ControlPacket cp;
+        cp.address = this->pairedInstance->getAddress();
+        cp.driver_class = this->pairedInstance->getClass();
+        cp.serial_number = this->pairedInstance->getSerialNumber();
+        cp.packet_type = CONTROL_JD_TYPE_PAIRING_REQUEST;
+
+        memcpy(cp.data, (uint8_t*)&this->device, sizeof(JDDevice)); // should have plenty of room in a control packet
+
+        DMESG("SEND PAIRING REQ: A %d S %d", cp.address, cp.serial_number);
+
+        JDProtocol::send((uint8_t*)&cp, sizeof(ControlPacket), cp.address);
+
+        this->device.flags &= ~JD_DEVICE_FLAGS_PAIRING;
+        this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
+
+        Event(this->id, JD_DRIVER_EVT_PAIRED);
+    }
+}
+
 int JDDriver::sendPairingRequest(JDPkt* p)
 {
-    ControlPacket* cp = (ControlPacket *)p->data;
-    cp->packet_type = CONTROL_JD_TYPE_PAIRING_REQUEST;
-    memcpy(cp->data, (uint8_t*)&this->device, sizeof(JDDevice)); // should have plenty of room in a control packet
+    ControlPacket* cp = (ControlPacket*)p->data;
 
-    this->pairedInstance = new JDDriver(JDDevice(cp->address, JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED, cp->serial_number, cp->driver_class));
+    // send pairing request should create the paired instance, flag pairing mode, and swap to local mode to get an address.
+    // Once enumerated we then send the packet.
+    this->pairedInstance = new JDDriver(JDDevice(cp->address, JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN, cp->serial_number, cp->driver_class));
 
     if (EventModel::defaultEventBus)
+    {
         EventModel::defaultEventBus->listen(pairedInstance->id, JD_DRIVER_EVT_DISCONNECTED, this, &JDDriver::partnerDisconnected);
+        EventModel::defaultEventBus->listen(this->id, JD_DRIVER_EVT_CONNECTED, this, &JDDriver::onEnumeration);
+    }
 
-    // update our status flags so we are no longer ignored by logic drivers.
-    this->device.flags &= JD_DEVICE_FLAGS_PAIRING;
-    this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
+    // this is a bit hacky, but we don't want people to use this as an actual driver type
+    this->device.setMode((DriverType)(JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_PAIR | JD_DEVICE_FLAGS_PAIRING));
 
-    DMESG("SEND PAIRING REQ: A %d S %d", cp->address, cp->serial_number);
-
-    JDProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
-    Event(this->id, JD_DRIVER_EVT_PAIRED);
     return DEVICE_OK;
 }
 
@@ -156,17 +179,27 @@ int JDDriver::handlePairingRequest(JDPkt* p)
 
 bool JDDriver::isPaired()
 {
-    return this->device.isPaired();
+    return device.isPaired();
 }
 
 bool JDDriver::isPairable()
 {
-    return this->device.isPairable();
+    return device.isPairable();
 }
 
 uint8_t JDDriver::getAddress()
 {
     return device.address;
+}
+
+uint32_t JDDriver::getClass()
+{
+    return device.driver_class;
+}
+
+uint32_t JDDriver::getSerialNumber()
+{
+    return device.serial_number;
 }
 
 void JDDriver::partnerDisconnected(Event)
@@ -179,7 +212,7 @@ void JDDriver::partnerDisconnected(Event)
     // * pairing mode for a PairedDriver
     // * advertise pairable for a PairableHostDriver.
     if (this->device.isPairedDriver())
-        this->device.flags |= JD_DEVICE_FLAGS_PAIRING;
+        this->device.setMode(PairedDriver);
     else
         this->device.flags |= JD_DEVICE_FLAGS_PAIRABLE;
 

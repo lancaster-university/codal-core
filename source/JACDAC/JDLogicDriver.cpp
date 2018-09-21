@@ -168,7 +168,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
         return DEVICE_OK;
     }
 
-    JD_DMESG("CP A %d, S %d, C %d", cp->address, cp->serial_number, cp->driver_class);
+    DMESG("CP A %d, S %d, C %d", cp->address, cp->serial_number, cp->driver_class);
 
     // Logic Driver addressing rules:
     // 1. drivers cannot have the same address and different serial numbers.

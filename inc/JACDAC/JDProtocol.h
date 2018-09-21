@@ -48,6 +48,8 @@ DEALINGS IN THE SOFTWARE.
 // following flags combined with the above to yield different behaviours
 #define JD_DEVICE_FLAGS_BROADCAST       0x2000 // receive all class packets regardless of the address
 #define JD_DEVICE_FLAGS_PAIR            0x1000 // this flag indicates that the driver should pair with another
+
+#define JD_DEVICE_DRIVER_MODE_MSK       0xF000 // the top byte represents the current driver mode.
 // end combo flags
 
 #define JD_DEVICE_FLAGS_PAIRABLE        0x0800 // this flag indicates that a driver is paired with another
@@ -119,7 +121,7 @@ namespace codal
     enum DriverType
     {
         VirtualDriver = JD_DEVICE_FLAGS_REMOTE, // the driver is seeking the use of another device's resource
-        PairedDriver = JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_PAIR | JD_DEVICE_FLAGS_PAIRING, // the driver is enumerated, but requires pairing to another driver to operate
+        PairedDriver = JD_DEVICE_FLAGS_BROADCAST | JD_DEVICE_FLAGS_PAIR,
         HostDriver = JD_DEVICE_FLAGS_LOCAL, // the driver is hosting a resource for others to use.
         PairableHostDriver = JD_DEVICE_FLAGS_PAIRABLE | JD_DEVICE_FLAGS_LOCAL, // the driver is allowed to pair with another driver of the same class
         BroadcastDriver = JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_BROADCAST, // the driver is enumerated with its own address, and receives all packets of the same class (including control packets)
@@ -169,6 +171,17 @@ namespace codal
             this->driver_class = driver_class;
         }
 
+        void setMode(DriverType m, bool initialised = false)
+        {
+            this->flags &= ~JD_DEVICE_DRIVER_MODE_MSK;
+            this->flags |= m;
+
+            if (initialised)
+                this->flags |= JD_DEVICE_FLAGS_INITIALISED;
+            else
+                this->flags &= ~JD_DEVICE_FLAGS_INITIALISED;
+        }
+
         bool isVirtualDriver()
         {
             return (this->flags & JD_DEVICE_FLAGS_REMOTE) && !(this->flags & JD_DEVICE_FLAGS_BROADCAST);
@@ -176,7 +189,7 @@ namespace codal
 
         bool isPairedDriver()
         {
-            return this->flags & JD_DEVICE_FLAGS_LOCAL && this->flags & JD_DEVICE_FLAGS_PAIR;
+            return this->flags & JD_DEVICE_FLAGS_REMOTE && this->flags & JD_DEVICE_FLAGS_PAIR;
         }
 
         bool isHostDriver()
@@ -281,7 +294,13 @@ namespace codal
 
         uint8_t getAddress();
 
+        uint32_t getClass();
+
+        uint32_t getSerialNumber();
+
         void partnerDisconnected(Event);
+
+        void onEnumeration(Event);
 
         /**
          * Called by the logic driver when a control packet is addressed to this driver
