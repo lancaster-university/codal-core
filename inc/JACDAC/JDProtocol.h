@@ -286,7 +286,7 @@ namespace codal
          **/
         virtual int deviceRemoved();
 
-        int sendPairingPacket(JDPkt* p);
+        int sendPairingPacket(JDDevice d);
 
         virtual bool isPaired();
 

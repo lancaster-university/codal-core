@@ -53,7 +53,7 @@ void JDDriver::onEnumeration(Event)
 
         DMESG("SEND PAIRING REQ: A %d S %d", cp.address, cp.serial_number);
 
-        JDProtocol::send((uint8_t*)&cp, sizeof(ControlPacket), cp.address);
+        JDProtocol::send((uint8_t*)&cp, sizeof(ControlPacket), 0); // address the packet to the logic driver.
 
         this->device.flags &= ~JD_DEVICE_FLAGS_PAIRING;
         this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
@@ -62,13 +62,11 @@ void JDDriver::onEnumeration(Event)
     }
 }
 
-int JDDriver::sendPairingPacket(JDPkt* p)
+int JDDriver::sendPairingPacket(JDDevice d)
 {
-    ControlPacket* cp = (ControlPacket*)p->data;
-
     // send pairing request should create the paired instance, flag pairing mode, and swap to local mode to get an address.
     // Once enumerated we then send the packet.
-    this->pairedInstance = new JDDriver(JDDevice(cp->address, JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN, cp->serial_number, cp->driver_class));
+    this->pairedInstance = new JDDriver(d);
 
     if (EventModel::defaultEventBus)
     {
@@ -129,17 +127,19 @@ int JDDriver::deviceRemoved()
 
 int JDDriver::handlePairingPacket(JDPkt* p)
 {
+    DMESG("Pair PKT");
+
     ControlPacket* cp = (ControlPacket *)p->data;
     JDDevice d = *((JDDevice*)cp->data);
 
     // we have received a NACK from our pairing request, delete our local representation of our partner.
-    if (this->device.isPairable() && cp->flags & CONTROL_JD_FLAGS_NACK && this->device.serial_number == cp->serial_number)
+    if (this->device.isPaired() && cp->flags & CONTROL_JD_FLAGS_NACK && this->device.serial_number == cp->serial_number)
     {
         DMESG("PAIRING REQ DENIED", d.address, d.serial_number);
         Event e(0,0,CREATE_ONLY);
         partnerDisconnected(e);
     }
-    else if (this->device.serial_number == cp->serial_number)
+    else if (this->device.isPairable() && this->device.serial_number == cp->serial_number)
     {
 
         DMESG("PAIRING REQ: A %d S %d", d.address, d.serial_number);
@@ -162,6 +162,8 @@ int JDDriver::handlePairingPacket(JDPkt* p)
     }
     else
     {
+        DMESG("NACK A %d S %d", d.address, d.serial_number);
+
         // respond with a packet DIRECTED at the device that sent us the pairing request
         cp->flags |= CONTROL_JD_FLAGS_NACK;
         cp->address = d.address;
