@@ -48,6 +48,10 @@ int JDDriver::sendPairingRequest(JDPkt* p)
     if (EventModel::defaultEventBus)
         EventModel::defaultEventBus->listen(pairedInstance->id, JD_DRIVER_EVT_DISCONNECTED, this, &JDDriver::partnerDisconnected);
 
+    // update our status flags so we are no longer ignored by logic drivers.
+    this->device.flags &= JD_DEVICE_FLAGS_PAIRING;
+    this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
+
     JDProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
     Event(this->id, JD_DRIVER_EVT_PAIRED);
     return DEVICE_OK;
@@ -65,6 +69,8 @@ int JDDriver::handleLogicPacket(JDPkt* p)
 
 JDDriver::JDDriver(JDDevice d) : device(d)
 {
+    // we use a dynamic id for the message bus for simplicity.
+    // with the dynamic nature of JACDAC, it would be hard to maintain a consistent id.
     this->id = dynamicId++;
 
     this->pairedInstance = NULL;
@@ -81,9 +87,7 @@ bool JDDriver::isConnected()
 int JDDriver::deviceConnected(JDDevice device)
 {
     DMESG("CONNECTED a:%d sn:%d",device.address,device.serial_number);
-    uint16_t flags = this->device.flags & 0xFF00;
-    this->device = device;
-    this->device.flags = (flags | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN);
+    this->device.flags |= JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN;
     Event(this->id, JD_DRIVER_EVT_CONNECTED);
     return DEVICE_OK;
 }
@@ -107,27 +111,35 @@ int JDDriver::handlePairingRequest(JDPkt* p)
     {
         Event e(0,0,CREATE_ONLY);
         partnerDisconnected(e);
-        Event(this->id, JD_DRIVER_EVT_UNPAIRED);
     }
     else if (this->device.serial_number == cp->serial_number)
     {
+        // update our flags
+        this->device.flags &= ~JD_DEVICE_FLAGS_PAIRABLE;
+        this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
+
+        // create a local instance of a remote device so that if the device is disconnected we are informed.
         d.flags = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED;
         this->pairedInstance = new JDDriver(d);
 
+        // listen for disconnection events.
         if (EventModel::defaultEventBus)
             EventModel::defaultEventBus->listen(pairedInstance->id, JD_DRIVER_EVT_DISCONNECTED, this, &JDDriver::partnerDisconnected);
 
+        // let applications know we have paired.
         Event(this->id, JD_DRIVER_EVT_PAIRED);
 
         return DEVICE_OK;
     }
     else
     {
+        // respond with a packet DIRECTED at the device that sent us the pairing request
         cp->flags |= CONTROL_JD_FLAGS_NACK;
         cp->address = d.address;
         cp->serial_number = d.serial_number;
         cp->driver_class = d.driver_class;
 
+        // copy our device data into the packet for any additional checking (not required at the moment)
         memcpy(cp->data, (uint8_t*)&this->device, sizeof(JDDevice)); // should have plenty of room in a control packet
 
         JDProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
@@ -139,12 +151,12 @@ int JDDriver::handlePairingRequest(JDPkt* p)
 
 bool JDDriver::isPaired()
 {
-    return pairedInstance != NULL;
+    return this->device.isPaired();
 }
 
 bool JDDriver::isPairable()
 {
-    return device.flags & JD_DEVICE_FLAGS_PAIRABLE;
+    return this->device.isPairable();
 }
 
 uint8_t JDDriver::getAddress()
@@ -156,11 +168,26 @@ void JDDriver::partnerDisconnected(Event)
 {
     EventModel::defaultEventBus->ignore(pairedInstance->id, JD_DRIVER_EVT_DISCONNECTED, this, &JDDriver::partnerDisconnected);
 
-    target_disable_irq();
-    delete this->pairedInstance;
-    this->pairedInstance = NULL;
-    target_enable_irq();
+    this->device.flags &= ~JD_DEVICE_FLAGS_PAIRED;
 
+    // return to our correct defaults:
+    // * pairing mode for a PairedDriver
+    // * advertise pairable for a PairableHostDriver.
+    if (this->device.isPairedDriver())
+        this->device.flags |= JD_DEVICE_FLAGS_PAIRING;
+    else
+        this->device.flags |= JD_DEVICE_FLAGS_PAIRABLE;
+
+    // we should have a paired instance to reach, but double check just in case
+    if (this->pairedInstance)
+    {
+        target_disable_irq();
+        delete this->pairedInstance;
+        this->pairedInstance = NULL;
+        target_enable_irq();
+    }
+
+    // signal that we have lost our partner.
     Event(this->id, JD_DRIVER_EVT_UNPAIRED);
 }
 
