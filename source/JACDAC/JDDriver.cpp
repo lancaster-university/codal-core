@@ -61,6 +61,7 @@ int JDDriver::handleLogicPacket(JDPkt* p)
 {
     ControlPacket* cp = (ControlPacket*)p->data;
 
+    // filter out any pairing requests for special handling by drivers.
     if (cp->packet_type == CONTROL_JD_TYPE_PAIRING_REQUEST)
         return this->handlePairingRequest(p);
 
