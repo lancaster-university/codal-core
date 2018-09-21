@@ -52,6 +52,8 @@ int JDDriver::sendPairingRequest(JDPkt* p)
     this->device.flags &= JD_DEVICE_FLAGS_PAIRING;
     this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
 
+    DMESG("SEND PAIRING REQ: A %d S %d", cp->address, cp->serial_number);
+
     JDProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
     Event(this->id, JD_DRIVER_EVT_PAIRED);
     return DEVICE_OK;
@@ -115,6 +117,8 @@ int JDDriver::handlePairingRequest(JDPkt* p)
     }
     else if (this->device.serial_number == cp->serial_number)
     {
+
+        DMESG("PAIRING REQ: A %d S %d", d.address, d.serial_number);
         // update our flags
         this->device.flags &= ~JD_DEVICE_FLAGS_PAIRABLE;
         this->device.flags |= JD_DEVICE_FLAGS_PAIRED;

@@ -163,7 +163,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
     // These devices aren't useable drivers, so we "drop" their packets
     if (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE)
     {
-        JD_DMESG("IGNORE PAIR MODE A %d, S %d, C %d", cp->address, cp->serial_number, cp->driver_class);
+        DMESG("IGNORE PAIR MODE A %d, S %d, C %d", cp->address, cp->serial_number, cp->driver_class);
         return DEVICE_OK;
     }
 
