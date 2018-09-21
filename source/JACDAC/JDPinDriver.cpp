@@ -42,10 +42,16 @@ int JDPinDriver::handleControlPacket(JDPkt* p)
 {
     ControlPacket* cp = (ControlPacket*)p->data;
 
-    if (this->device.isPairedDriver())
+    DMESG("PIN CONTROL PKT!");
+
+    if (this->device.isPairedDriver() && !this->device.isPaired())
     {
+        DMESG("NEED TO PAIR!");
         if (cp->flags & CONTROL_JD_FLAGS_PAIRABLE)
+        {
+            DMESG("PAIR!");
             sendPairingRequest(p);
+        }
     }
 
     return DEVICE_OK;

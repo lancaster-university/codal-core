@@ -189,7 +189,7 @@ namespace codal
 
         bool isPairedDriver()
         {
-            return this->flags & JD_DEVICE_FLAGS_REMOTE && this->flags & JD_DEVICE_FLAGS_PAIR;
+            return this->flags & JD_DEVICE_FLAGS_BROADCAST && this->flags & JD_DEVICE_FLAGS_PAIR;
         }
 
         bool isHostDriver()
