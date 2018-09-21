@@ -159,6 +159,26 @@ namespace codal
             this->serial_number = serial_number;
             this->driver_class = driver_class;
         }
+
+        bool isVirtual()
+        {
+            return (this->flags & JD_DEVICE_FLAGS_REMOTE) && !(this->flags & JD_DEVICE_FLAGS_BROADCAST);
+        }
+
+        bool isHost()
+        {
+            return this->flags & JD_DEVICE_FLAGS_LOCAL && !(this->flags & JD_DEVICE_FLAGS_BROADCAST);
+        }
+
+        bool isBroadcast()
+        {
+            return this->flags & JD_DEVICE_FLAGS_LOCAL && this->flags & JD_DEVICE_FLAGS_BROADCAST;
+        }
+
+        bool isSniffer()
+        {
+            return this->flags & JD_DEVICE_FLAGS_REMOTE && this->flags & JD_DEVICE_FLAGS_BROADCAST;
+        }
     };
 
     /**
