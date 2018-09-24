@@ -42,6 +42,9 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DRIVER_EVT_PAIRED            3
 #define JD_DRIVER_EVT_UNPAIRED          4
 
+#define JD_DRIVER_EVT_PAIR_REJECTED     5
+#define JD_DRIVER_EVT_PAIRING_RESPONSE  6
+
 #define JD_DEVICE_FLAGS_LOCAL           0x8000 // on the board
 #define JD_DEVICE_FLAGS_REMOTE          0x4000 // off the board
 
@@ -74,10 +77,10 @@ DEALINGS IN THE SOFTWARE.
 #define CONTROL_JD_FLAGS_PAIRABLE               0x2000 // advertises that a driver can be optionally paired with another
 #define CONTROL_JD_FLAGS_PAIRED                 0x1000 // advertises that a driver is already paired with another.
 
-#define CONTROL_JD_FLAGS_RESERVED1              0x0800
-#define CONTROL_JD_FLAGS_CONFLICT               0x0400
-#define CONTROL_JD_FLAGS_UNCERTAIN              0x0200
-#define CONTROL_JD_FLAGS_NACK                   0x0100
+#define CONTROL_JD_FLAGS_CONFLICT               0x0800
+#define CONTROL_JD_FLAGS_UNCERTAIN              0x0400
+#define CONTROL_JD_FLAGS_NACK                   0x0200
+#define CONTROL_JD_FLAGS_ACK                    0x0100
 
 #define CONTROL_JD_TYPE_HELLO                   0x01
 #define CONTROL_JD_TYPE_PAIRING_REQUEST         0x02

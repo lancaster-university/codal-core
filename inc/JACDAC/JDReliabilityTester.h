@@ -4,7 +4,7 @@
 #include "JDProtocol.h"
 #include "Pin.h"
 
-#define RELIABILITY_TEST_FINISHED 4
+#define RELIABILITY_TEST_FINISHED 7
 
 #define RELIABILITY_STATUS_TEST_IN_PROGRESS     0x02
 #define RELIABILITY_STATUS_TEST_READY           0x04

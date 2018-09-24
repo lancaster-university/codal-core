@@ -25,6 +25,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalDmesg.h"
 #include "codal_target_hal.h"
 #include "EventModel.h"
+#include "CodalFiber.h"
 
 using namespace codal;
 
@@ -41,24 +42,42 @@ void JDDriver::onEnumeration(Event)
 {
     if (this->device.isPairing())
     {
+        // destroy our listener
         EventModel::defaultEventBus->ignore(this->id, JD_DRIVER_EVT_CONNECTED, this, &JDDriver::onEnumeration);
 
+        // create a pairing request control packet.
         ControlPacket cp;
         cp.address = this->pairedInstance->getAddress();
         cp.driver_class = this->pairedInstance->getClass();
         cp.serial_number = this->pairedInstance->getSerialNumber();
         cp.packet_type = CONTROL_JD_TYPE_PAIRING_REQUEST;
 
-        memcpy(cp.data, (uint8_t*)&this->device, sizeof(JDDevice)); // should have plenty of room in a control packet
+        // put the source address (our address) into the packet (should have plenty of room in a control packet)
+        memcpy(cp.data, (uint8_t*)&this->device, sizeof(JDDevice));
 
         DMESG("SEND PAIRING REQ: A %d S %d", cp.address, cp.serial_number);
 
-        JDProtocol::send((uint8_t*)&cp, sizeof(ControlPacket), 0); // address the packet to the logic driver.
+        // address the packet to the logic driver.
+        JDProtocol::send((uint8_t*)&cp, sizeof(ControlPacket), 0);
 
-        this->device.flags &= ~JD_DEVICE_FLAGS_PAIRING;
-        this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
+        // wait for a response.
+        fiber_wake_on_event(this->id, JD_DRIVER_EVT_PAIRING_RESPONSE);
+        schedule();
 
-        Event(this->id, JD_DRIVER_EVT_PAIRED);
+        // when we return, we will either be paired or not.
+        if (this->device.isPaired())
+            Event(this->id, JD_DRIVER_EVT_PAIRED);
+        else
+        {
+            // always check for invalid ptr...
+            if (this->pairedInstance)
+            {
+                delete this->pairedInstance;
+                this->pairedInstance = NULL;
+            }
+
+            Event(this->id, JD_DRIVER_EVT_PAIR_REJECTED);
+        }
     }
 }
 
@@ -74,7 +93,7 @@ int JDDriver::sendPairingPacket(JDDevice d)
         EventModel::defaultEventBus->listen(this->id, JD_DRIVER_EVT_CONNECTED, this, &JDDriver::onEnumeration);
     }
 
-    // this is a bit hacky, but we don't want people to use this as an actual driver type
+    // set our mode to pairing mode (this mode is not accessible as an api).
     this->device.setMode((DriverType)(JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_PAIR | JD_DEVICE_FLAGS_PAIRING));
 
     return DEVICE_OK;
@@ -128,54 +147,68 @@ int JDDriver::deviceRemoved()
 int JDDriver::handlePairingPacket(JDPkt* p)
 {
     DMESG("Pair PKT");
-
     ControlPacket* cp = (ControlPacket *)p->data;
     JDDevice d = *((JDDevice*)cp->data);
 
-    // we have received a NACK from our pairing request, delete our local representation of our partner.
-    if (this->device.isPaired() && cp->flags & CONTROL_JD_FLAGS_NACK && this->device.serial_number == cp->serial_number)
+    // if the packet is addressed to us
+    if (this->device.serial_number == cp->serial_number)
     {
-        DMESG("PAIRING REQ DENIED", d.address, d.serial_number);
-        Event e(0,0,CREATE_ONLY);
-        partnerDisconnected(e);
+        // if we requested to pair
+        if (this->device.isPairing())
+        {
+            this->device.flags &= ~JD_DEVICE_FLAGS_PAIRING;
+            if (cp->flags & CONTROL_JD_FLAGS_NACK)
+                DMESG("PAIRING REQ DENIED", d.address, d.serial_number);
+            else if (cp->flags & CONTROL_JD_FLAGS_ACK)
+            {
+                DMESG("PAIRING REQ ACK", d.address, d.serial_number);
+                this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
+
+            }
+            // else ?
+            // wake the fiber.
+            Event(this->id, JD_DRIVER_EVT_PAIRING_RESPONSE);
+            return DEVICE_OK;
+        }
+        // if we are able to paire...
+        else if (this->device.isPairable())
+        {
+            DMESG("PAIRING REQ: A %d S %d", d.address, d.serial_number);
+            // update our flags
+            this->device.flags &= ~JD_DEVICE_FLAGS_PAIRABLE;
+            this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
+
+            // create a local instance of a remote device so that if the device is disconnected we are informed.
+            d.flags = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED;
+            this->pairedInstance = new JDPairedDriver(d, *this);
+
+            // listen for disconnection events.
+            if (EventModel::defaultEventBus)
+                EventModel::defaultEventBus->listen(pairedInstance->id, JD_DRIVER_EVT_DISCONNECTED, this, &JDDriver::partnerDisconnected);
+
+            // let applications know we have paired.
+            Event(this->id, JD_DRIVER_EVT_PAIRED);
+
+            return DEVICE_OK;
+        }
+        else
+        {
+            DMESG("NACK A %d S %d", d.address, d.serial_number);
+
+            // respond with a packet DIRECTED at the device that sent us the pairing request
+            cp->flags |= CONTROL_JD_FLAGS_NACK;
+            cp->address = d.address;
+            cp->serial_number = d.serial_number;
+            cp->driver_class = d.driver_class;
+
+            // copy our device data into the packet for any additional checking (not required at the moment)
+            memcpy(cp->data, (uint8_t*)&this->device, sizeof(JDDevice)); // should have plenty of room in a control packet
+
+            JDProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
+            return DEVICE_OK;
+        }
     }
-    else if (this->device.isPairable() && this->device.serial_number == cp->serial_number)
-    {
 
-        DMESG("PAIRING REQ: A %d S %d", d.address, d.serial_number);
-        // update our flags
-        this->device.flags &= ~JD_DEVICE_FLAGS_PAIRABLE;
-        this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
-
-        // create a local instance of a remote device so that if the device is disconnected we are informed.
-        d.flags = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED;
-        this->pairedInstance = new JDPairedDriver(d, *this);
-
-        // listen for disconnection events.
-        if (EventModel::defaultEventBus)
-            EventModel::defaultEventBus->listen(pairedInstance->id, JD_DRIVER_EVT_DISCONNECTED, this, &JDDriver::partnerDisconnected);
-
-        // let applications know we have paired.
-        Event(this->id, JD_DRIVER_EVT_PAIRED);
-
-        return DEVICE_OK;
-    }
-    else
-    {
-        DMESG("NACK A %d S %d", d.address, d.serial_number);
-
-        // respond with a packet DIRECTED at the device that sent us the pairing request
-        cp->flags |= CONTROL_JD_FLAGS_NACK;
-        cp->address = d.address;
-        cp->serial_number = d.serial_number;
-        cp->driver_class = d.driver_class;
-
-        // copy our device data into the packet for any additional checking (not required at the moment)
-        memcpy(cp->data, (uint8_t*)&this->device, sizeof(JDDevice)); // should have plenty of room in a control packet
-
-        JDProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
-        return DEVICE_OK;
-    }
 
     return DEVICE_CANCELLED;
 }
