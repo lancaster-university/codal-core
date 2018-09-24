@@ -289,12 +289,12 @@ void JDDriver::partnerDisconnected(Event)
 
 int JDDriver::handleControlPacket(JDPkt* p)
 {
-    return DEVICE_CANCELLED;
+    return DEVICE_OK;
 }
 
 int JDDriver::handlePacket(JDPkt* p)
 {
-    return DEVICE_CANCELLED;
+    return DEVICE_OK;
 }
 
 JDDriver::~JDDriver()
