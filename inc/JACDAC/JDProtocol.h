@@ -91,15 +91,8 @@ DEALINGS IN THE SOFTWARE.
 #define JD_PROTOCOL_EVT_SEND_CONTROL   1
 #define JD_PROTOCOL_DRIVER_SIZE        10
 
-#define JD_DRIVER_CLASS_CONTROL        0
-#define JD_DRIVER_CLASS_ARCADE         1
-#define JD_DRIVER_CLASS_JOYSTICK       2
-#define JD_DRIVER_CLASS_MESSAGE_BUS    3
-#define JD_DRIVER_CLASS_RADIO          4
-#define JD_DRIVER_CLASS_BRIDGE         5
-#define JD_DRIVER_CLASS_BUTTON         6
-#define JD_DRIVER_CLASS_PIN            7
-#define JD_DRIVER_CLASS_RELIABILITY_TESTER             8
+#include "JDClasses.h"
+
 // END      JD SERIAL PROTOCOL
 
 #define CONTROL_PACKET_PAYLOAD_SIZE     (JD_SERIAL_DATA_SIZE - 12)
@@ -110,6 +103,12 @@ namespace codal
 
     /**
      * This struct represents a ControlPacket used by the logic driver
+     * A control packet provides full information about a driver, it's most important use is to translates the address used in
+     * standard packets to the full driver information. Standard packet address == control packet address.
+     *
+     * Currently there are two types of packet:
+     * CONTROL_JD_TYPE_HELLO - Which broadcasts the availablity of a driver
+     * CONTROL_JD_TYPE_PAIRING_REQUEST - Used when drivers are pairing to one another.
      **/
     struct ControlPacket
     {
@@ -121,6 +120,8 @@ namespace codal
         uint8_t data[CONTROL_PACKET_PAYLOAD_SIZE];
     };
 
+    // This enumeration specifies that supported configurations that drivers should utilise.
+    // Many combinations of flags are supported, but only the ones listed here have been fully implemented.
     enum DriverType
     {
         VirtualDriver = JD_DEVICE_FLAGS_REMOTE, // the driver is seeking the use of another device's resource
@@ -132,7 +133,10 @@ namespace codal
     };
 
     /**
-     * This struct represents a JDDevice used by a Device driver
+     * This struct represents a JDDevice used by a JDDriver.
+     *
+     * It is perhaps named incorrectly, but JDDevice represents the core information about the driver which is placed into control packets.
+     * A rolling counter is used to trigger control packets and other core driver events.
      **/
     struct JDDevice
     {
@@ -140,8 +144,15 @@ namespace codal
         uint8_t rolling_counter; // used to trigger various time related events
         uint16_t flags; // various flags indicating the state of the driver
         uint32_t serial_number; // the serial number used to "uniquely" identify a device
-        uint32_t driver_class;
+        uint32_t driver_class; // the class of the driver, created or selected from the list in JDClasses.h
 
+        /**
+         * Constructor, creates a local driver using just the driver class.
+         *
+         * Should be used if only a local driver is required.
+         *
+         * @param driver_class the class of the driver listed in JDClasses.h
+         **/
         JDDevice(uint32_t driver_class)
         {
             address = 0;
@@ -151,6 +162,18 @@ namespace codal
             driver_class = driver_class;
         }
 
+        /**
+         * Constructor, creates a driver given a DriverType (enumeration above) and the driver class.
+         *
+         * Should be used if you need to use any of the other types from the enumeration (most of the time, this will be used).
+         *
+         * @param t the driver type to use
+         *
+         * @param driver_class the class of the driver listed in JDClasses.h
+         *
+         * @note the VirtualDriver will always have a serial_number of 0 by default, as the serial number is used as a filter.
+         *       if a filter is required, then the full constructor should be used (below).
+         **/
         JDDevice(DriverType t, uint32_t driver_class)
         {
             this->address = 0;
@@ -165,6 +188,22 @@ namespace codal
             this->driver_class = driver_class;
         }
 
+        /**
+         * Constructor, allows (almost) full specification of a JDDevice.
+         *
+         * Should be used if you need to specify all of the fields, i.e. if you're adding complex logic that requires already
+         * initialised drivers.
+         *
+         * @param a the address of the driver
+         *
+         * @param flags the low-level flags that are normally set by using the DriverType enum.
+         *
+         * @param serial_number the serial number of the driver
+         *
+         * @param driver_class the class of the driver listed in JDClasses.h
+         *
+         * @note you are responsible for any weirdness you achieve using this constructor.
+         **/
         JDDevice(uint8_t address, uint16_t flags, uint32_t serial_number, uint32_t driver_class)
         {
             this->address = address;
@@ -174,6 +213,13 @@ namespace codal
             this->driver_class = driver_class;
         }
 
+        /**
+         * Sets the mode to the given DriverType
+         *
+         * @param m the new mode the driver should move to.
+         *
+         * @param initialised whether the driver is initialised or not (defaults to false).
+         **/
         void setMode(DriverType m, bool initialised = false)
         {
             this->flags &= ~JD_DEVICE_DRIVER_MODE_MSK;
@@ -185,41 +231,91 @@ namespace codal
                 this->flags &= ~JD_DEVICE_FLAGS_INITIALISED;
         }
 
+        /**
+         * Used to determine what mode the driver is currently in.
+         *
+         * This will check to see if the flags field resembles the VirtualDriver mode specified in the DriverType enumeration.
+         *
+         * @returns true if in VirtualDriver mode.
+         **/
         bool isVirtualDriver()
         {
             return (this->flags & JD_DEVICE_FLAGS_REMOTE) && !(this->flags & JD_DEVICE_FLAGS_BROADCAST);
         }
 
+        /**
+         * Used to determine what mode the driver is currently in.
+         *
+         * This will check to see if the flags field resembles the PairedDriver mode specified in the DriverType enumeration.
+         *
+         * @returns true if in PairedDriver mode.
+         **/
         bool isPairedDriver()
         {
             return this->flags & JD_DEVICE_FLAGS_BROADCAST && this->flags & JD_DEVICE_FLAGS_PAIR;
         }
 
+        /**
+         * Used to determine what mode the driver is currently in.
+         *
+         * This will check to see if the flags field resembles the HostDriver mode specified in the DriverType enumeration.
+         *
+         * @returns true if in SnifferDriver mode.
+         **/
         bool isHostDriver()
         {
             return this->flags & JD_DEVICE_FLAGS_LOCAL && !(this->flags & JD_DEVICE_FLAGS_BROADCAST);
         }
 
+        /**
+         * Used to determine what mode the driver is currently in.
+         *
+         * This will check to see if the flags field resembles the BroadcastDriver mode specified in the DriverType enumeration.
+         *
+         * @returns true if in BroadcastDriver mode.
+         **/
         bool isBroadcastDriver()
         {
             return this->flags & JD_DEVICE_FLAGS_LOCAL && this->flags & JD_DEVICE_FLAGS_BROADCAST;
         }
 
+        /**
+         * Used to determine what mode the driver is currently in.
+         *
+         * This will check to see if the flags field resembles the SnifferDriver mode specified in the DriverType enumeration.
+         *
+         * @returns true if in SnifferDriver mode.
+         **/
         bool isSnifferDriver()
         {
             return this->flags & JD_DEVICE_FLAGS_REMOTE && this->flags & JD_DEVICE_FLAGS_BROADCAST;
         }
 
+        /**
+         * Indicates if the driver is currently paired to another.
+         *
+         * @returns true if paired
+         **/
         bool isPaired()
         {
             return this->flags & JD_DEVICE_FLAGS_PAIRED;
         }
 
+        /**
+         * Indicates if the driver can be currently paired to another.
+         *
+         * @returns true if pairable
+         **/
         bool isPairable()
         {
             return this->flags & JD_DEVICE_FLAGS_PAIRABLE;
         }
 
+        /**
+         * Indicates if the driver is currently in the process of pairing to another.
+         *
+         * @returns true if pairing
+         **/
         bool isPairing()
         {
             return this->flags & JD_DEVICE_FLAGS_PAIRING;
@@ -236,15 +332,25 @@ namespace codal
     {
         friend class JDLogicDriver;
         friend class JDProtocol;
+        // the above need direct access to our member variables and more.
 
         protected:
 
+        // Due to the dynamic nature of JACDAC when a new driver is created, this variable is incremented.
+        // JACDAC id's are allocated from 3000 - 4000
         static uint32_t dynamicId;
 
+        // When we pair to another driver, this points to the stub of our partner.
         JDPairedDriver* pairedInstance;
 
+        // A struct the represents the state of the driver.
         JDDevice device;
 
+        /**
+         * This method internally redirects specific packets from the control driver.
+         *
+         * i.e. it switches the type of the logic packet, and redirects it to handleControlPacket or handlePairingPacket accordingly.
+         **/
         int handleLogicPacket(JDPkt* p);
 
         public:
@@ -252,24 +358,23 @@ namespace codal
         /**
          * Constructor
          *
-         * @param proto a reference to JDProtocol instance
-         *
-         * @param d a struct containing a device representation
-         *
-         * @param driver_class a number that represents this unique driver class
-         *
-         * @param id the message bus id for this driver
-         *
+         * @param d a struct containing a device representation, see JDDevice.
          * */
         JDDriver(JDDevice d);
 
         /**
-         * Queues a control packet on the serial bus, called by the logic driver
+         * Invoked by the logic driver when it is queuing a control packet.
+         *
+         * This allows the addition of driver specific control packet information and the setting of any additional flags.
+         *
+         * @param p A pointer to the packet, where the data field contains a pre-filled control packet.
+         *
+         * @return DEVICE_OK on success
          **/
         virtual int fillControlPacket(JDPkt* p);
 
         /**
-         * Returns the current connected state of this Serial driver instance.
+         * Returns the current connected state of this driver instance.
          *
          * @return true for connected, false for disconnected
          **/
