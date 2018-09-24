@@ -150,6 +150,15 @@ int JDDriver::handlePairingPacket(JDPkt* p)
     ControlPacket* cp = (ControlPacket *)p->data;
     JDDevice d = *((JDDevice*)cp->data);
 
+    // we may reply using the same control packet for ease.
+    // populate similar fields.
+    cp->address = d.address;
+    cp->serial_number = d.serial_number;
+    cp->driver_class = d.driver_class;
+
+    // copy our device data into the packet for any additional checking (not required at the moment)
+    memcpy(cp->data, (uint8_t*)&this->device, sizeof(JDDevice)); // should have plenty of room in a control packet
+
     // if the packet is addressed to us
     if (this->device.serial_number == cp->serial_number)
     {
@@ -163,7 +172,6 @@ int JDDriver::handlePairingPacket(JDPkt* p)
             {
                 DMESG("PAIRING REQ ACK", d.address, d.serial_number);
                 this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
-
             }
             // else ?
             // wake the fiber.
@@ -173,6 +181,10 @@ int JDDriver::handlePairingPacket(JDPkt* p)
         // if we are able to paire...
         else if (this->device.isPairable())
         {
+            // respond with a packet DIRECTED at the device that sent us the pairing request
+            cp->flags |= CONTROL_JD_FLAGS_ACK;
+            JDProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
+
             DMESG("PAIRING REQ: A %d S %d", d.address, d.serial_number);
             // update our flags
             this->device.flags &= ~JD_DEVICE_FLAGS_PAIRABLE;
@@ -197,13 +209,6 @@ int JDDriver::handlePairingPacket(JDPkt* p)
 
             // respond with a packet DIRECTED at the device that sent us the pairing request
             cp->flags |= CONTROL_JD_FLAGS_NACK;
-            cp->address = d.address;
-            cp->serial_number = d.serial_number;
-            cp->driver_class = d.driver_class;
-
-            // copy our device data into the packet for any additional checking (not required at the moment)
-            memcpy(cp->data, (uint8_t*)&this->device, sizeof(JDDevice)); // should have plenty of room in a control packet
-
             JDProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
             return DEVICE_OK;
         }
