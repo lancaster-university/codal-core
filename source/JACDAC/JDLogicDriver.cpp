@@ -164,7 +164,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 {
     ControlPacket *cp = (ControlPacket *)p->data;
 
-    DMESG("CP A %d, S %d, C %d pm: %d", cp->address, cp->serial_number, cp->driver_class, (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE) ? 1 : 0);
+     JD_DMESG("CP Add %d, Ser %d, Class %d pair: %d", cp->address, cp->serial_number, cp->driver_class, (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE) ? 1 : 0);
 
     // Logic Driver addressing rules:
     // 1. drivers cannot have the same address and different serial numbers.
@@ -194,12 +194,12 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             continue;
 
 
-        DMESG("ITER %d, s %d, c %d b %d l %d", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 1 : 0, current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 1 : 0);
+        JD_DMESG("d a %d, s %d, c %d, t %c%c%c", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 'B' : ' ', current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 'L' : ' ', current->device.flags & JD_DEVICE_FLAGS_REMOTE ? 'R' : ' ');
 
         // We are in charge of local drivers, in this if statement we handle address assignment
         if ((current->device.flags & JD_DEVICE_FLAGS_LOCAL) && current->device.address == cp->address)
         {
-            DMESG("ADDR MATCH");
+            JD_DMESG("ADDR MATCH");
             // a different device is using our address!!
             if (current->device.serial_number != cp->serial_number && !(cp->flags & CONTROL_JD_FLAGS_CONFLICT))
             {
@@ -239,11 +239,11 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             // so we flag as seen so we do not disconnect a device
             current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
 
-            DMESG("FOUND LOCAL");
+            JD_DMESG("FOUND LOCAL");
             if (safe && current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
-                DMESG("LOC CP ABSORBED %d", current->device.address);
+                JD_DMESG("LOC CP ABSORBED %d", current->device.address);
                 continue;
             }
         }
@@ -259,7 +259,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             if (safe && current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
-                DMESG("REM CP ABSORBED %d", current->device.address);
+                JD_DMESG("REM CP ABSORBED %d", current->device.address);
                 continue;
             }
         }
@@ -286,15 +286,17 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             if (safe && current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
-                DMESG("BROAD CP ABSORBED %d", current->device.address);
+                JD_DMESG("BROAD CP ABSORBED %d", current->device.address);
                 continue;
             }
         }
     }
 
+    JD_DMESG("OUT: hand %d safe %d", handled, safe);
+
     if (handled || !safe)
     {
-        DMESG("HANDLED");
+        JD_DMESG("HANDLED");
         return DEVICE_OK;
     }
 
@@ -332,6 +334,13 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 int JDLogicDriver::addToFilter(uint8_t address)
 {
     JD_DMESG("FILTER: %d", address);
+    // we shouldn't filter any addresses that we are virtualising or hosting.
+    for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+    {
+        if (address == JDProtocol::instance->drivers[i]->getAddress())
+            return DEVICE_OK;
+    }
+
     for (int i = 0; i < JD_LOGIC_DRIVER_MAX_FILTERS; i++)
     {
         if (this->address_filters[i] == 0)

@@ -61,7 +61,9 @@ int JDPinDriver::handlePacket(JDPkt* p)
 {
     PinPacket* pinData = (PinPacket*)p->data;
 
-    if (isPaired() && this->pairedInstance->getAddress() != p->address)
+    DMESG("PIN DATA: paired %d %d %d",isPaired(), this->pairedInstance->getAddress(), p->address);
+
+    if (device.isVirtualDriver() || (isPaired() && this->pairedInstance->getAddress() != p->address))
         return DEVICE_OK;
 
     switch (pinData->mode)
