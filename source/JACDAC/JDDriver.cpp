@@ -221,7 +221,7 @@ int JDDriver::handlePairingPacket(JDPkt* p)
 
             return DEVICE_OK;
         }
-        else if (device.isPairedDriver())
+        else if (device.flags & JD_DEVICE_FLAGS_PAIR)
         {
             // nack only if we're capable of being paired
             DMESG("NACK A %d S %d", d.address, d.serial_number);
