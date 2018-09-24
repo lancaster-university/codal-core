@@ -194,12 +194,12 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             continue;
 
 
-        // JD_DMESG("ITER %d, s %d, c %d b %d l %d", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 1 : 0, current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 1 : 0);
+        DMESG("ITER %d, s %d, c %d b %d l %d", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 1 : 0, current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 1 : 0);
 
         // We are in charge of local drivers, in this if statement we handle address assignment
         if ((current->device.flags & JD_DEVICE_FLAGS_LOCAL) && current->device.address == cp->address)
         {
-            JD_DMESG("ADDR MATCH");
+            DMESG("ADDR MATCH");
             // a different device is using our address!!
             if (current->device.serial_number != cp->serial_number && !(cp->flags & CONTROL_JD_FLAGS_CONFLICT))
             {
@@ -239,11 +239,11 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             // so we flag as seen so we do not disconnect a device
             current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
 
-            JD_DMESG("FOUND LOCAL");
+            DMESG("FOUND LOCAL");
             if (safe && current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
-                JD_DMESG("CP ABSORBED %d", current->device.address);
+                DMESG("LOC CP ABSORBED %d", current->device.address);
                 continue;
             }
         }
@@ -259,7 +259,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             if (safe && current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
-                JD_DMESG("CP ABSORBED %d", current->device.address);
+                DMESG("REM CP ABSORBED %d", current->device.address);
                 continue;
             }
         }
@@ -286,14 +286,17 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             if (safe && current->handleLogicPacket(p) == DEVICE_OK)
             {
                 handled = true;
-                JD_DMESG("CP ABSORBED %d", current->device.address);
+                DMESG("BROAD CP ABSORBED %d", current->device.address);
                 continue;
             }
         }
     }
 
     if (handled || !safe)
+    {
+        DMESG("HANDLED");
         return DEVICE_OK;
+    }
 
     bool filtered = filterPacket(cp->address);
 
