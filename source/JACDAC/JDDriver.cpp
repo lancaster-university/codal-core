@@ -221,14 +221,17 @@ int JDDriver::handlePairingPacket(JDPkt* p)
 
             return DEVICE_OK;
         }
+        else if (device.isPairedDriver())
+        {
+            // nack only if we're capable of being paired
+            DMESG("NACK A %d S %d", d.address, d.serial_number);
 
-        // nack if we reach here (default)...
-        DMESG("NACK A %d S %d", d.address, d.serial_number);
+            // respond with a packet DIRECTED at the device that sent us the pairing request
+            cp.flags |= CONTROL_JD_FLAGS_NACK;
+            JDProtocol::send((uint8_t*)&cp, sizeof(ControlPacket), 0);
+            return DEVICE_OK;
+        }
 
-        // respond with a packet DIRECTED at the device that sent us the pairing request
-        cp.flags |= CONTROL_JD_FLAGS_NACK;
-        JDProtocol::send((uint8_t*)&cp, sizeof(ControlPacket), 0);
-        return DEVICE_OK;
     }
 
     return DEVICE_CANCELLED;
