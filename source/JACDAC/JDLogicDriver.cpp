@@ -164,7 +164,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 {
     ControlPacket *cp = (ControlPacket *)p->data;
 
-    DMESG("CP A %d, S %d, C %d pm: %d", cp->address, cp->serial_number, cp->driver_class, cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE);
+    DMESG("CP A %d, S %d, C %d pm: %d", cp->address, cp->serial_number, cp->driver_class, (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE) ? 1 : 0);
 
     // Logic Driver addressing rules:
     // 1. drivers cannot have the same address and different serial numbers.

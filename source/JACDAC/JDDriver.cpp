@@ -166,7 +166,9 @@ int JDDriver::handlePairingPacket(JDPkt* p)
         // if we requested to pair
         if (this->device.isPairing())
         {
+            DMESG("PAIRING RESPONSE");
             this->device.flags &= ~JD_DEVICE_FLAGS_PAIRING;
+
             if (cp->flags & CONTROL_JD_FLAGS_NACK)
                 DMESG("PAIRING REQ DENIED", d.address, d.serial_number);
             else if (cp->flags & CONTROL_JD_FLAGS_ACK)
@@ -175,8 +177,10 @@ int JDDriver::handlePairingPacket(JDPkt* p)
                 this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
             }
             // else ?
+
             // wake the fiber.
             Event(this->id, JD_DRIVER_EVT_PAIRING_RESPONSE);
+
             return DEVICE_OK;
         }
         // if we are able to pair...
@@ -201,6 +205,8 @@ int JDDriver::handlePairingPacket(JDPkt* p)
 
             // let applications know we have paired.
             Event(this->id, JD_DRIVER_EVT_PAIRED);
+            DMESG("PAIRING DONE");
+            while(1);
 
             return DEVICE_OK;
         }
