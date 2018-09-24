@@ -83,6 +83,7 @@ void JDDriver::onEnumeration(Event)
 
 int JDDriver::sendPairingPacket(JDDevice d)
 {
+    d.flags |= JD_DEVICE_FLAGS_INITIALISED;
     // send pairing request should create the paired instance, flag pairing mode, and swap to local mode to get an address.
     // Once enumerated we then send the packet.
     this->pairedInstance = new JDPairedDriver(d, *this);
@@ -150,18 +151,18 @@ int JDDriver::handlePairingPacket(JDPkt* p)
     ControlPacket* cp = (ControlPacket *)p->data;
     JDDevice d = *((JDDevice*)cp->data);
 
-    // we may reply using the same control packet for ease.
-    // populate similar fields.
-    cp->address = d.address;
-    cp->serial_number = d.serial_number;
-    cp->driver_class = d.driver_class;
-
-    // copy our device data into the packet for any additional checking (not required at the moment)
-    memcpy(cp->data, (uint8_t*)&this->device, sizeof(JDDevice)); // should have plenty of room in a control packet
-
     // if the packet is addressed to us
     if (this->device.serial_number == cp->serial_number)
     {
+        // we may reply using the same control packet for ease.
+        // populate similar fields.
+        cp->address = d.address;
+        cp->serial_number = d.serial_number;
+        cp->driver_class = d.driver_class;
+
+        // copy our device data into the packet for any additional checking (not required at the moment)
+        memcpy(cp->data, (uint8_t*)&this->device, sizeof(JDDevice)); // should have plenty of room in a control packet
+
         // if we requested to pair
         if (this->device.isPairing())
         {
@@ -178,7 +179,7 @@ int JDDriver::handlePairingPacket(JDPkt* p)
             Event(this->id, JD_DRIVER_EVT_PAIRING_RESPONSE);
             return DEVICE_OK;
         }
-        // if we are able to paire...
+        // if we are able to pair...
         else if (this->device.isPairable())
         {
             // respond with a packet DIRECTED at the device that sent us the pairing request
@@ -206,14 +207,12 @@ int JDDriver::handlePairingPacket(JDPkt* p)
         else
         {
             DMESG("NACK A %d S %d", d.address, d.serial_number);
-
             // respond with a packet DIRECTED at the device that sent us the pairing request
             cp->flags |= CONTROL_JD_FLAGS_NACK;
             JDProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
             return DEVICE_OK;
         }
     }
-
 
     return DEVICE_CANCELLED;
 }
