@@ -32,7 +32,7 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
-JDDriver* JDProtocol::drivers[JD_PROTOCOL_DRIVER_SIZE] = { 0 };
+JDDriver* JDProtocol::drivers[JD_PROTOCOL_DRIVER_ARRAY_SIZE] = { 0 };
 
 JDProtocol* JDProtocol::instance = NULL;
 
@@ -51,7 +51,7 @@ void JDProtocol::onPacketReceived(Event)
             uint32_t driver_class = 0;
 
             JD_DMESG("NOT FILTERED");
-            for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+            for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
             {
                 if (this->drivers[i])
                 {
@@ -77,7 +77,7 @@ void JDProtocol::onPacketReceived(Event)
 
             // if we've matched a broadcast map, it means we need to map a broadcast packet to any driver of the same class
             if (driver_class > 0)
-                for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+                for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
                 {
                     if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_BROADCAST) && this->drivers[i]->device.driver_class == driver_class)
                     {
@@ -101,10 +101,11 @@ JDProtocol::JDProtocol(JACDAC& jacdac, uint16_t id) : logic(), bridge(NULL), bus
     if (instance == NULL)
         instance = this;
 
-    memset(this->drivers, 0, sizeof(JDDriver*) * JD_PROTOCOL_DRIVER_SIZE);
-
     add(logic);
 
+    memset(this->drivers, 0, sizeof(JDDriver*) * JD_PROTOCOL_DRIVER_ARRAY_SIZE);
+
+    // packets are queued, and should be processed in normal context.
     if (EventModel::defaultEventBus)
         EventModel::defaultEventBus->listen(jacdac.id, JD_SERIAL_EVT_DATA_READY, this, &JDProtocol::onPacketReceived);
 }
@@ -114,11 +115,11 @@ int JDProtocol::add(JDDriver& driver)
     int i;
 
     // check for duplicates first
-    for (i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+    for (i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
         if (drivers[i] == &driver)
             return DEVICE_OK;
 
-    for (i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+    for (i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
     {
         target_disable_irq();
         if (drivers[i] == NULL)
@@ -129,7 +130,7 @@ int JDProtocol::add(JDDriver& driver)
         target_enable_irq();
     }
 
-    if (i == JD_PROTOCOL_DRIVER_SIZE)
+    if (i == JD_PROTOCOL_DRIVER_ARRAY_SIZE)
         return DEVICE_NO_RESOURCES;
 
     return DEVICE_OK;
@@ -138,7 +139,7 @@ int JDProtocol::add(JDDriver& driver)
 int JDProtocol::remove(JDDriver& driver)
 {
     target_disable_irq();
-    for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+    for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
     {
         if (drivers[i] == &driver)
         {
@@ -155,16 +156,6 @@ int JDProtocol::setBridge(JDDriver& bridge)
 {
     this->bridge = &bridge;
     return DEVICE_OK;
-}
-
-void JDProtocol::start()
-{
-    logic.start();
-}
-
-void JDProtocol::stop()
-{
-    logic.stop();
 }
 
 int JDProtocol::send(JDPkt* pkt)

@@ -88,8 +88,8 @@ DEALINGS IN THE SOFTWARE.
 
 
 // BEGIN    JD SERIAL PROTOCOL
-#define JD_PROTOCOL_EVT_SEND_CONTROL   1
-#define JD_PROTOCOL_DRIVER_SIZE        10
+#define JD_PROTOCOL_EVT_SEND_CONTROL            1
+#define JD_PROTOCOL_DRIVER_ARRAY_SIZE           20
 
 #include "JDClasses.h"
 
@@ -334,6 +334,13 @@ namespace codal
         friend class JDProtocol;
         // the above need direct access to our member variables and more.
 
+        /**
+         * After calling sendPairingPacket, this member function is called when the device is enumerated.
+         *
+         * It then creates a pairing control packet, and sends it to the remote instance.
+         **/
+        void pair();
+
         protected:
 
         // Due to the dynamic nature of JACDAC when a new driver is created, this variable is incremented.
@@ -352,6 +359,42 @@ namespace codal
          * i.e. it switches the type of the logic packet, and redirects it to handleControlPacket or handlePairingPacket accordingly.
          **/
         int handleLogicPacket(JDPkt* p);
+
+        /**
+         * Called by the logic driver when a new device is connected to the serial bus
+         *
+         * @param device an instance of JDDevice representing the device that has been connected
+         *
+         * @return DEVICE_OK for success
+         **/
+        virtual int deviceConnected(JDDevice device);
+
+        /**
+         * Called by the logic driver when this driver has been disconnected from the serial bus.
+         *
+         * This is only called if a driver is in VirtualMode and the virtualised device disappears from the bus.
+         *
+         * @return DEVICE_OK for success
+         **/
+        virtual int deviceRemoved();
+
+        /**
+         * This should be called when a driver wishes to pair with another. A driver should first detect a driver in pairing mode
+         * by observing packets in Broadcast mode. PairedDriver from the DriverType enumeration first starts in broadcast mode only,
+         * observes packets looking for a device to pair with. When a pairable device appears, the driver enumerates, and sends a
+         * pairing packet by calling this member function.
+         *
+         * @param d the device to pair too.
+         *
+         * @returns DEVICE_OK on success.
+         **/
+        virtual int sendPairingPacket(JDDevice d);
+
+        /**
+         * This is called when a paired driver is removed from the bus. It unpairs this driver instance, and fires an event
+         * using the drivers id, and the event code JD_DRIVER_EVT_UNPAIRED.
+         **/
+        void partnerDisconnected(Event);
 
         public:
 
@@ -374,6 +417,45 @@ namespace codal
         virtual int fillControlPacket(JDPkt* p);
 
         /**
+         * Invoked by the logic driver when a control packet with the address of the driver is received.
+         *
+         * Control packets are routed by address, or by class in broadcast mode. Drivers
+         * can override this function to handle additional payloads in control packet.s
+         *
+         * @param p the packet from the serial bus. Drivers should cast p->data to a ControlPacket.
+         *
+         * @return DEVICE_OK to signal that the packet has been handled, or DEVICE_CANCELLED to indicate the logic driver
+         *         should continue to search for a driver.
+         **/
+        virtual int handleControlPacket(JDPkt* p);
+
+        /**
+         * Invoked by the logic driver when a pairing packet with the address of the driver is received.
+         *
+         * Pairing packets are Control packets with the type set to CONTROL_JD_TYPE_PAIRING_REQUEST. They are routed by
+         * address, or by class in broadcast mode. Drivers can override this function to handle additional payloads in
+         * control packet.
+         *
+         * Pairing packets contain the source information of the device that sent the pairing request in cp->data;
+         *
+         * @param p the packet from the serial bus. Drivers should cast p->data to a ControlPacket.
+         *
+         * @return DEVICE_OK to signal that the packet has been handled, or DEVICE_CANCELLED to indicate the logic driver
+         *         should continue to search for a driver.
+         **/
+        virtual int handlePairingPacket(JDPkt* p);
+
+        /**
+         * Invoked by the Protocol driver when a standard packet with the address of the driver is received.
+         *
+         * @param p the packet from the serial bus. Drivers should cast p->data to their agreed upon structure..
+         *
+         * @return DEVICE_OK to signal that the packet has been handled, or DEVICE_CANCELLED to indicate the logic driver
+         *         should continue to search for a driver.
+         **/
+        virtual int handlePacket(JDPkt* p);
+
+        /**
          * Returns the current connected state of this driver instance.
          *
          * @return true for connected, false for disconnected
@@ -381,56 +463,51 @@ namespace codal
         virtual bool isConnected();
 
         /**
-         * Called by the logic driver when a new device is connected to the serial bus
+         * Returns the current pairing state of this driver instance.
          *
-         * @param device an instance of JDDevice representing the device that has been connected
-         *
-         * @return DEVICE_OK for success
+         * @return true for paired, false for unpaired
          **/
-        virtual int deviceConnected(JDDevice device);
-
-        /**
-         * Called by the logic driver when an existing device is disconnected from the serial bus
-         *
-         * @return DEVICE_OK for success
-         **/
-        virtual int deviceRemoved();
-
-        int sendPairingPacket(JDDevice d);
-
         virtual bool isPaired();
 
+        /**
+         * Returns whether the driver is advertising a pairable state
+         *
+         * @return true for paired, false for unpaired
+         **/
         virtual bool isPairable();
 
+        /**
+         * Retrieves the address of the driver.
+         *
+         * @return the address.
+         **/
         uint8_t getAddress();
 
+        /**
+         * Retrieves the class of the driver.
+         *
+         * @return the class.
+         **/
         uint32_t getClass();
 
+        /**
+         * Retrieves the serial number in use by this driver.
+         *
+         * @return the serial number
+         **/
         uint32_t getSerialNumber();
 
-        void partnerDisconnected(Event);
-
-        void onEnumeration(Event);
-
         /**
-         * Called by the logic driver when a control packet is addressed to this driver
-         *
-         * @param cp the control packet from the serial bus.
+         * Destructor, removes this driver from the drivers array and deletes the pairedInstance member variable if allocated.
          **/
-        virtual int handleControlPacket(JDPkt* p);
-
-        int handlePairingPacket(JDPkt* p);
-
-        /**
-         * Called by the logic driver when a data packet is addressed to this driver
-         *
-         * @param cp the control packet from the serial bus.
-         **/
-        virtual int handlePacket(JDPkt* p);
-
         ~JDDriver();
     };
 
+    /**
+     * This class is a stub of a remote driver that a local driver is paired with.
+     *
+     * It simply forwards all standard packets to the paired local driver for processing.
+     **/
     class JDPairedDriver : public JDDriver
     {
         JDDriver& other;
@@ -447,50 +524,64 @@ namespace codal
         }
     };
 
+    /**
+     * This class represents the logic driver, which is consistent across all JACDAC devices.
+     *
+     * It handles addressing and the routing of control packets from the bus to their respective drivers.
+     **/
     class JDLogicDriver : public JDDriver
     {
+        // this array is used to filter paired driver packets from consuming unneccessary processing cycles
+        // on jacdac devices.
         uint8_t address_filters[JD_LOGIC_DRIVER_MAX_FILTERS];
 
+        /**
+         * A simple function to remove some code duplication, fills a given control packet(cp)
+         * based upon a driver.
+         *
+         * @param driver the driver whose information will fill the control packet.
+         *
+         * @param cp the allocated control packet to fill.
+         **/
         void populateControlPacket(JDDriver* driver, ControlPacket* cp);
 
         public:
 
         /**
-         *  used to detect when a remote device disconnects, and triggers various events for local drivers
-         * */
+         * This member function periodically iterates across all drivers and performs various actions. It handles the sending
+         * of control packets, address assignments for local drivers, and the connection and disconnection of drivers as they
+         * are added or removed from the bus.
+         **/
         virtual void periodicCallback();
 
         /**
-         * Constructor
+         * Constructor.
          *
-         * @param proto a reference to JDProtocol instance
-         *
-         * @param d a struct containing a device representation
-         *
-         * @param driver_class a number that represents this unique driver class
-         *
-         * @param id the message bus id for this driver
-         *
-         * */
+         * Creates a local initialised driver and adds itself to the driver array.
+         **/
         JDLogicDriver();
 
         /**
-         * Called by the logic driver when a control packet is addressed to this driver
-         *
-         * @param cp the control packet from the serial bus.
+         * Overrided for future use. It might be useful to control the behaviour of the logic driver in the future.
          **/
         virtual int handleControlPacket(JDPkt* p);
 
         /**
-         * Called by the logic driver when a data packet is addressed to this driver
+         * Called by the JDProtocol when a data packet has address 0.
          *
-         * @param cp the control packet from the serial bus.
+         * Packets addressed to zero will always be control packets, this function then iterates over all drivers
+         * routing control packets correctly. Virtual drivers are populated if a packet is not handled by an existing driver.
+         *
+         * @param p the packet from the serial bus.
          **/
         virtual int handlePacket(JDPkt* p);
 
         /**
-         * This function provides the ability to ignore specific packets. For instance, we are not interested in packets that are paired to other devices
-         * hence we shouldn't incur the processing cost.
+         * This function provides the ability to ignore specific packets. For instance,
+         * we are not interested in packets that are paired to other devices hence we
+         * shouldn't incur the processing cost.
+         *
+         * Used by JDProtocol for standard packets. The address 0 can never be filtered.
          *
          * @param address the address to check in the filter.
          *
@@ -498,35 +589,57 @@ namespace codal
          **/
         virtual bool filterPacket(uint8_t address);
 
+        /**
+         * This function adds an address to the list of filtered address.
+         *
+         * @param address the address to add to the filter.
+         *
+         * @return DEVICE_OK on success.
+         **/
         int addToFilter(uint8_t address);
 
+        /**
+         * This function removes an address to the list of filtered address.
+         *
+         * @param address the address to remove from the filter.
+         *
+         * @return DEVICE_OK on success.
+         **/
         int removeFromFilter(uint8_t address);
-
-        /**
-         * Begin periodic callbacks
-         * */
-        void start();
-
-        /**
-         * End periodic callbacks.
-         * */
-        void stop();
     };
 
+    /**
+     * This class handles packets produced by the JACDAC physical layer and passes them to our high level drivers.
+     **/
     class JDProtocol : public CodalComponent
     {
         friend class JDLogicDriver;
 
+        /**
+         * Invoked by JACDAC when a packet is received from the serial bus.
+         *
+         * This handler is invoked in standard conext. This also means that users can stop the device from handling packets.
+         * (which might be a bad thing).
+         *
+         * This handler continues to pull packets from the queue and iterate over drivers.
+         **/
         void onPacketReceived(Event);
 
-        static JDDriver* drivers[JD_PROTOCOL_DRIVER_SIZE];
+        // this array holds all drivers on the device
+        static JDDriver* drivers[JD_PROTOCOL_DRIVER_ARRAY_SIZE];
 
+        // An instance of our logic driver
         JDLogicDriver logic;
+
+        // A pointer to a bridge driver (if set, defaults to NULL).
         JDDriver* bridge;
 
-    public:
+        public:
+
+        // a reference to a JACDAC instance
         JACDAC& bus;
 
+        // a singleton pointer to the current instance of JDProtocol.
         static JDProtocol* instance;
 
         /**
@@ -538,6 +651,17 @@ namespace codal
          **/
         JDProtocol(JACDAC& JD, uint16_t id = DEVICE_ID_JACDAC_PROTOCOL);
 
+        /**
+         * Sets the bridge member variable to the give JDDriver reference.
+         * Bridge drivers are given all packets received on the bus, the idea being that
+         * packets can be bridged to another networking medium, i.e. packet radio.
+         *
+         * @param bridge the driver to forward all packets to another networking medium
+         *        this driver will receive all packets via the handlePacket call.
+         *
+         * @note one limitation is that the bridge driver does not receive packets over the radio itself.
+         *       Ultimately the bridge should punt packets back intro JDProtocol for correct handling.
+         **/
         int setBridge(JDDriver& bridge);
 
         /**
@@ -545,7 +669,7 @@ namespace codal
          *
          * @param device a reference to the driver to add.
          *
-         * @note please call stop() before adding a driver, then resume by calling start
+         * @return DEVICE_OK on success.
          **/
         virtual int add(JDDriver& device);
 
@@ -554,21 +678,30 @@ namespace codal
          *
          * @param device a reference to the driver to remove.
          *
-         * @note please call stop() before removing a driver, then resume by calling start()
+         * @return DEVICE_OK on success.
          **/
         virtual int remove(JDDriver& device);
 
         /**
-         * Begin logic driver periodic callbacks
-         * */
-        void start();
+         * A static method to send an entire, premade JDPkt on the bus. Used by the logic driver.
+         *
+         * @param pkt the packet to send.
+         *
+         * @return DEVICE_OK on success.
+         **/
+        static int send(JDPkt* pkt);
 
         /**
-         * End logic driver periodic callbacks.
-         * */
-        void stop();
-
-        static int send(JDPkt* JD);
+         * A static method to send a buffer on the bus. The buffer is placed in a JDPkt and sent.
+         *
+         * @param buf a pointer to the data to send
+         *
+         * @param len the length of the buffer
+         *
+         * @param address the address to use when sending the packet
+         *
+         * @return DEVICE_OK on success.
+         **/
         static int send(uint8_t* buf, int len, uint8_t address);
     };
 

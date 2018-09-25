@@ -31,7 +31,7 @@ void JDLogicDriver::periodicCallback()
 
     // for each driver we maintain a rolling counter, used to trigger various timer related events.
     // uint8_t might not be big enough in the future if the scheduler runs faster...
-    for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+    for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
     {
         JDDriver* current = JDProtocol::instance->drivers[i];
 
@@ -75,7 +75,7 @@ void JDLogicDriver::periodicCallback()
                     bool stillAllocated = false;
                     current->device.address = target_random(256);
 
-                    for (int j = 0; j < JD_PROTOCOL_DRIVER_SIZE; j++)
+                    for (int j = 0; j < JD_PROTOCOL_DRIVER_ARRAY_SIZE; j++)
                     {
                         if (i == j)
                             continue;
@@ -149,6 +149,7 @@ JDLogicDriver::JDLogicDriver() : JDDriver(JDDevice(0, JD_DEVICE_FLAGS_LOCAL | JD
     this->device.address = 0;
     status = 0;
     memset(this->address_filters, 0, JD_LOGIC_DRIVER_MAX_FILTERS);
+    status |= (DEVICE_COMPONENT_RUNNING | DEVICE_COMPONENT_STATUS_SYSTEM_TICK);
 }
 
 int JDLogicDriver::handleControlPacket(JDPkt* p)
@@ -178,7 +179,6 @@ int JDLogicDriver::handlePacket(JDPkt* p)
     // 3. upon receiving a packet with the conflict packet set, the receiving device should reassign their address.
 
     // first check for any drivers who are associated with this control packet
-
     bool handled = false; // indicates if the control packet has been handled by a driver.
 
     // devices about to enter pairing mode enumerate themselves, so that they have an address on the bus.
@@ -186,13 +186,12 @@ int JDLogicDriver::handlePacket(JDPkt* p)
     // These two scenarios mean that drivers in this state are unusable, so we determine their packets as unsafe... "dropping" their packets
     bool safe = (cp->flags & (CONTROL_JD_FLAGS_UNCERTAIN | CONTROL_JD_FLAGS_PAIRING_MODE)) == 0; // the packet it is safe
 
-    for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+    for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
     {
         JDDriver* current = JDProtocol::instance->drivers[i];
 
         if (current == NULL)
             continue;
-
 
         JD_DMESG("d a %d, s %d, c %d, t %c%c%c", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 'B' : ' ', current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 'L' : ' ', current->device.flags & JD_DEVICE_FLAGS_REMOTE ? 'R' : ' ');
 
@@ -270,12 +269,12 @@ int JDLogicDriver::handlePacket(JDPkt* p)
                 // ONLY ADD BROADCAST MAPS IF THE DRIVER IS INITIALISED.
                 int j;
 
-                for (j = 0; j < JD_PROTOCOL_DRIVER_SIZE; j++)
+                for (j = 0; j < JD_PROTOCOL_DRIVER_ARRAY_SIZE; j++)
                     if (JDProtocol::instance->drivers[i]->device.serial_number ==cp->serial_number)
                         break;
 
                 // only add a broadcast device if it is not already represented in the driver array.
-                if (j == JD_PROTOCOL_DRIVER_SIZE)
+                if (j == JD_PROTOCOL_DRIVER_ARRAY_SIZE)
                 {
                     JD_DMESG("ADD NEW MAP");
                     new JDDriver(JDDevice(cp->address, cp->flags | JD_DEVICE_FLAGS_BROADCAST_MAP | JD_DEVICE_FLAGS_INITIALISED, cp->serial_number, cp->driver_class));
@@ -311,7 +310,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
         removeFromFilter(cp->address);
 
     // if we reach here, there is no associated device, find a free remote instance in the drivers array
-    for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+    for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
     {
         JDDriver* current = JDProtocol::instance->drivers[i];
         JD_DMESG("FIND DRIVER");
@@ -335,7 +334,7 @@ int JDLogicDriver::addToFilter(uint8_t address)
 {
     JD_DMESG("FILTER: %d", address);
     // we shouldn't filter any addresses that we are virtualising or hosting.
-    for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+    for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
     {
         if (address == JDProtocol::instance->drivers[i]->getAddress())
             return DEVICE_OK;
@@ -366,20 +365,10 @@ bool JDLogicDriver::filterPacket(uint8_t address)
 {
     if (address > 0)
     {
-        for (int i = 0; i < JD_PROTOCOL_DRIVER_SIZE; i++)
+        for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
             if (address_filters[i] == address)
                 return true;
     }
 
     return false;
-}
-
-void JDLogicDriver::start()
-{
-    status |= (DEVICE_COMPONENT_RUNNING | DEVICE_COMPONENT_STATUS_SYSTEM_TICK);
-}
-
-void JDLogicDriver::stop()
-{
-    status &= ~(DEVICE_COMPONENT_RUNNING | DEVICE_COMPONENT_STATUS_SYSTEM_TICK);
 }
