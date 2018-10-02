@@ -85,6 +85,12 @@ uint16_t Synthesizer::SquareWaveToneExt(void *arg, int position) {
     return (uint32_t)position <= duty ? 1023 : 0;
 }
 
+uint16_t Synthesizer::CustomTone(void *arg, int position) {
+    if (position < 0 || position >= 1024)
+        return 0;
+    return ((uint16_t*)arg)[position];
+}
+
 /*
  * Simple internal helper funtion that creates a fiber within the givien Synthesizer to handle playback
  */
