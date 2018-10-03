@@ -37,7 +37,10 @@ namespace codal
 
         // virtual void dataReceived(uint8_t*, int len);
 
-        SingleWireSerial(Pin& p) : p(p) {}
+        SingleWireSerial(Pin& p, uint16_t id = DEVICE_ID_SINGLE_WIRE_SERIAL) : p(p)
+        {
+            this->id = id;
+        }
 
         virtual int putc(char c) = 0;
         virtual int getc() = 0;
