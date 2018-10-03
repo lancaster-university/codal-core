@@ -66,6 +66,7 @@ namespace codal
         static uint16_t SquareWaveTone(void *arg, int position);
         static uint16_t SquareWaveToneExt(void *arg, int position);
         static uint16_t NoiseTone(void *arg, int position);
+        static uint16_t CustomTone(void *arg, int position);
 
         /**
           * Default Constructor.
@@ -150,6 +151,8 @@ namespace codal
          * Synthesizer::SquareWaveToneExt (with argument which is duty cycle 0-1023)
          */
         void setTone(SynthesizerGetSample tonePrint, void *arg = NULL);
+        // legacy
+        void setTone(const uint16_t *tonePrint) { setTone(CustomTone, (void*)tonePrint); }
 
         private:
 
