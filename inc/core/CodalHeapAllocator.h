@@ -59,7 +59,8 @@ DEALINGS IN THE SOFTWARE.
 struct HeapDefinition
 {
     PROCESSOR_WORD_TYPE *heap_start;		// Physical address of the start of this heap.
-    PROCESSOR_WORD_TYPE *heap_end;		    // Physical address of the end of this heap.
+    PROCESSOR_WORD_TYPE *heap_end;		  // Physical address of the end of this heap.
+    PROCESSOR_WORD_TYPE *last_ptr;		  // Most recent location to start scanning from.
 };
 extern PROCESSOR_WORD_TYPE codal_heap_start;
 
