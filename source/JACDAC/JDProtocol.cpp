@@ -56,7 +56,7 @@ void JDProtocol::onPacketReceived(Event)
                 if (this->drivers[i])
                 {
                     // could be optimised into a single if, but useful for debugging.
-                    JD_DMESG("DRIV a:%d sn:%d i:%d", this->drivers[i]->device.address, this->drivers[i]->device.serial_number, this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
+                    JD_DMESG("DRIV a:%d sn:%d i:%d f %d", this->drivers[i]->device.address, this->drivers[i]->device.serial_number, this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, this->drivers[i]->device.flags);
                     if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED) && this->drivers[i]->device.address == pkt->address)
                     {
                         if (this->drivers[i]->device.flags & JD_DEVICE_FLAGS_BROADCAST_MAP)
@@ -101,9 +101,9 @@ JDProtocol::JDProtocol(JACDAC& jacdac, uint16_t id) : logic(), bridge(NULL), bus
     if (instance == NULL)
         instance = this;
 
-    add(logic);
-
     memset(this->drivers, 0, sizeof(JDDriver*) * JD_PROTOCOL_DRIVER_ARRAY_SIZE);
+
+    add(logic);
 
     // packets are queued, and should be processed in normal context.
     if (EventModel::defaultEventBus)
