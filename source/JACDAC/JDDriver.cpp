@@ -102,7 +102,9 @@ bool JDDriver::isConnected()
 
 int JDDriver::deviceConnected(JDDevice device)
 {
-    DMESG("CONNECTED a:%d sn:%d",device.address,device.serial_number);
+    DMESG("CONNECTED a:%d sn:%d cl:%d",device.address,device.serial_number, device.driver_class);
+    this->device.address = device.address;
+    this->device.serial_number = device.serial_number;
     this->device.flags |= JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN;
 
     // if we are connecting and in pairing mode, we should invoke pair, the second stage of sendPairingPacket().
@@ -115,7 +117,7 @@ int JDDriver::deviceConnected(JDDevice device)
 
 int JDDriver::deviceRemoved()
 {
-    DMESG("DISCONN a:%d sn:%d",device.address,device.serial_number);
+    DMESG("DISCONN a:%d sn:%d cl: %d",device.address,device.serial_number, device.driver_class);
     this->device.flags &= ~(JD_DEVICE_FLAGS_INITIALISED);
     this->device.rolling_counter = 0;
     Event(this->id, JD_DRIVER_EVT_DISCONNECTED);
