@@ -39,12 +39,12 @@ using namespace codal;
  *
  * @param id The id the display should use when sending events on the MessageBus. Defaults to DEVICE_ID_DISPLAY.
  */
-Display::Display(int width, int height, uint8_t ppb, uint16_t id) : image(width, height, ppb)
+Display::Display(int width, int height, uint16_t id) : image(width, height)
 {
     this->width = width;
     this->height = height;
     this->id = id;
-    rotation = DISPLAY_ROTATION_0;
+    this->rotation = DISPLAY_ROTATION_0;
 }
 
 /**

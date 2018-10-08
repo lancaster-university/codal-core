@@ -28,7 +28,6 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "ManagedString.h"
 #include "RefCounted.h"
-#include "CodalDmesg.h"
 
 namespace codal
 {
@@ -36,7 +35,6 @@ namespace codal
     {
         uint16_t width;     // Width in pixels
         uint16_t height;    // Height in pixels
-        uint32_t ppb;
         uint8_t data[0];    // 2D array representing the bitmap image
     };
 
@@ -50,6 +48,7 @@ namespace codal
     {
         ImageData *ptr;     // Pointer to payload data
 
+
         /**
           * Internal constructor which provides sanity checking and initialises class properties.
           *
@@ -59,7 +58,7 @@ namespace codal
           *
           * @param bitmap an array of integers that make up an image.
           */
-        void init(const int16_t x, const int16_t y, const uint8_t *bitmap, uint8_t ppb = 1);
+        void init(const int16_t x, const int16_t y, const uint8_t *bitmap);
 
         /**
           * Internal constructor which defaults to the Empty Image instance variable
@@ -141,8 +140,6 @@ namespace codal
           *
           * @param y the height of the image.
           *
-          * @param ppb the number of pixels contained in a byte.
-          *
           * Bitmap buffer is linear, with 8 bits per pixel, row by row,
           * top to bottom with no word alignment. Stride is therefore the image width in pixels.
           * in where w and h are width and height respectively, the layout is therefore:
@@ -151,7 +148,7 @@ namespace codal
           *
           * A copy of the image is made in RAM, as images are mutable.
           */
-        Image(const int16_t x, const int16_t y, uint8_t ppb = 1);
+        Image(const int16_t x, const int16_t y);
 
         /**
           * Constructor.
@@ -168,7 +165,7 @@ namespace codal
           * Image i(10,5,heart);
           * @endcode
           */
-        Image(const int16_t x, const int16_t y, const uint8_t *bitmap, uint8_t ppb = 1);
+        Image(const int16_t x, const int16_t y, const uint8_t *bitmap);
 
         /**
           * Destructor.
@@ -405,15 +402,6 @@ namespace codal
             return ptr->width;
         }
 
-
-         /**
-          * Gets the width of this image.
-          */
-        int getPixelsPerByte() const
-        {
-            return ptr->ppb;
-        }
-
         /**
           * Gets the height of this image.
           *
@@ -443,7 +431,7 @@ namespace codal
           */
         int getSize() const
         {
-            return (ptr->width * ptr->height) / ptr->ppb;
+            return ptr->width * ptr->height;
         }
 
         /**

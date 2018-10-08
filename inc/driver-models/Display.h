@@ -28,23 +28,8 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "Image.h"
 
-#define DISPLAY_EVT_RENDER              3
-#define DISPLAY_EVT_RENDER_START        2
-#define DISPLAY_EVT_RENDER_COMPLETE     4
-
 namespace codal
 {
-    //
-    // Valid rotation settings.
-    //
-    enum DisplayRotation
-    {
-        DISPLAY_ROTATION_0,
-        DISPLAY_ROTATION_90,
-        DISPLAY_ROTATION_180,
-        DISPLAY_ROTATION_270
-    };
-
     /**
      * Class definition for an abstract Display.
      */
@@ -69,7 +54,7 @@ namespace codal
          *
          * @param id The id the display should use when sending events on the MessageBus. Defaults to DEVICE_ID_DISPLAY.
          */
-        Display (int width, int height, uint8_t ppb = 1, uint16_t id = DEVICE_ID_DISPLAY);
+        Display (int width, int height, uint16_t id = DEVICE_ID_DISPLAY);
 
         /**
          * Returns the width of the display
