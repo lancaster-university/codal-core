@@ -418,7 +418,9 @@ int MessageBus::add(Listener *newListener)
     {
         methodCallback = (newListener->flags & MESSAGE_BUS_LISTENER_METHOD) && (l->flags & MESSAGE_BUS_LISTENER_METHOD);
 
-        if (l->id == newListener->id && l->value == newListener->value && (methodCallback ? *l->cb_method == *newListener->cb_method : l->cb == newListener->cb))
+        if (l->id == newListener->id && l->value == newListener->value && 
+            (methodCallback ? *l->cb_method == *newListener->cb_method : l->cb == newListener->cb) &&
+            && newListener->cb_arg == l->cb_arg)
         {
             // We have a perfect match for this event listener already registered.
             // If it's marked for deletion, we simply resurrect the listener, and we're done.
@@ -508,7 +510,9 @@ int MessageBus::remove(Listener *listener)
             if(((listener->flags & MESSAGE_BUS_LISTENER_METHOD) && (*l->cb_method == *listener->cb_method)) ||
               ((!(listener->flags & MESSAGE_BUS_LISTENER_METHOD) && l->cb == listener->cb)))
             {
-                if ((listener->id == DEVICE_ID_ANY || listener->id == l->id) && (listener->value == DEVICE_EVT_ANY || listener->value == l->value))
+                if ((listener->id == DEVICE_ID_ANY || listener->id == l->id) && 
+                    (listener->value == DEVICE_EVT_ANY || listener->value == l->value) &&
+                    (listener->cb_arg == l->cb_arg || listener->cb_arg == NULL))
                 {
                     // Found a match. mark this to be removed from the list.
                     l->flags |= MESSAGE_BUS_LISTENER_DELETING;
