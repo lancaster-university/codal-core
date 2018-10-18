@@ -285,8 +285,6 @@ namespace codal
           * @param id The Event ID used to register the listener.
           * @param value The Event value used to register the listener.
           * @param handler The function used to register the listener.
-          * @param arg the arg that is passed to the handler on an event. Used to differentiate between handlers with the same id and source, but not the same arg.
-          * Defaults to NULL, which means any handler with the same id, event and callback is removed.
           *
           * @return DEVICE_OK on success or DEVICE_INVALID_PARAMETER if the handler
           *         given is NULL.
@@ -304,12 +302,12 @@ namespace codal
           * uBit.messageBus.ignore(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
           * @endcode
           */
-        int ignore(int id, int value, void (*handler)(Event), void* arg = NULL)
+        int ignore(int id, int value, void (*handler)(Event))
         {
             if (handler == NULL)
                 return DEVICE_INVALID_PARAMETER;
 
-            Listener listener(id, value, handler, arg);
+            Listener listener(id, value, handler);
             remove(&listener);
 
             return DEVICE_OK;
@@ -322,6 +320,8 @@ namespace codal
           * @param id The Event ID used to register the listener.
           * @param value The Event value used to register the listener.
           * @param handler The function used to register the listener.
+          * @param arg the arg that is passed to the handler on an event. Used to differentiate between handlers with the same id and source, but not the same arg.
+          * Defaults to NULL, which means any handler with the same id, event and callback is removed.
           *
           * @return DEVICE_OK on success or DEVICE_INVALID_PARAMETER if the handler
           *         given is NULL.
@@ -339,12 +339,12 @@ namespace codal
           * uBit.messageBus.ignore(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
           * @endcode
           */
-        int ignore(int id, int value, void (*handler)(Event, void*))
+        int ignore(int id, int value, void (*handler)(Event, void*), void *arg = NULL)
         {
             if (handler == NULL)
                 return DEVICE_INVALID_PARAMETER;
 
-            Listener listener(id, value, handler, NULL);
+            Listener listener(id, value, handler, arg);
             remove(&listener);
 
             return DEVICE_OK;
