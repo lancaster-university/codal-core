@@ -69,6 +69,9 @@ enum ErrorCode{
 
     // SPI Communication error occured
     DEVICE_SPI_ERROR = -1014,
+
+    // An invalid state was detected (i.e. not initialised)
+    DEVICE_INVALID_STATE = -1015,
 };
 
 /**

@@ -77,16 +77,6 @@ namespace codal
         DISPLAY_MODE_BLACK_AND_WHITE_LIGHT_SENSE
     };
 
-    //
-    // Valid rotation settings.
-    //
-    enum DisplayRotation {
-        MATRIX_DISPLAY_ROTATION_0,
-        MATRIX_DISPLAY_ROTATION_90,
-        MATRIX_DISPLAY_ROTATION_180,
-        MATRIX_DISPLAY_ROTATION_270
-    };
-
     /**
      * Provides the mapping from Matrix ROW/COL to a linear X/Y buffer.
      * Arranged such that matrixMap[col, row] provides the [x,y] screen co-ordinate.
@@ -123,7 +113,6 @@ namespace codal
     class LEDMatrix : public Display
     {
         uint8_t strobeRow;
-        uint8_t rotation;
         uint8_t mode;
         uint8_t greyscaleBitMsk;
         uint8_t timingCount;

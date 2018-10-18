@@ -34,6 +34,7 @@ DEALINGS IN THE SOFTWARE.
 #include "BitmapFont.h"
 #include "CodalCompat.h"
 #include "ManagedString.h"
+#include "CodalDmesg.h"
 #include "ErrorNo.h"
 
 
@@ -83,9 +84,9 @@ Image::Image()
   * TODO: Consider an immutable flavour, which might save us RAM for animation spritesheets...
   * ...as these could be kept in FLASH.
   */
-Image::Image(const int16_t x, const int16_t y)
+Image::Image(const int16_t x, const int16_t y, uint8_t ppb)
 {
-    this->init(x,y,NULL);
+    this->init(x,y,NULL, ppb);
 }
 
 /**
@@ -170,6 +171,7 @@ Image::Image(const char *s)
         parseReadPtr++;
     }
 
+
     this->init(width, height, NULL);
 
     // Second pass: collect the data.
@@ -250,9 +252,9 @@ ImageData *Image::leakData()
   * Image i(10,5,heart);
   * @endcode
   */
-Image::Image(const int16_t x, const int16_t y, const uint8_t *bitmap)
+Image::Image(const int16_t x, const int16_t y, const uint8_t *bitmap, uint8_t ppb)
 {
-    this->init(x,y,bitmap);
+    this->init(x,y,bitmap, ppb);
 }
 
 /**
@@ -282,7 +284,7 @@ void Image::init_empty()
   *
   * @param bitmap an array of integers that make up an image.
   */
-void Image::init(const int16_t x, const int16_t y, const uint8_t *bitmap)
+void Image::init(const int16_t x, const int16_t y, const uint8_t *bitmap, uint8_t ppb)
 {
     //sanity check size of image - you cannot have a negative sizes
     if(x < 0 || y < 0)
@@ -291,13 +293,12 @@ void Image::init(const int16_t x, const int16_t y, const uint8_t *bitmap)
         return;
     }
 
-
     // Create a copy of the array
-    ptr = (ImageData*)malloc(sizeof(ImageData) + x * y);
+    ptr = (ImageData*)malloc(sizeof(ImageData) + ((x * y) / ppb));
     REF_COUNTED_INIT(ptr);
     ptr->width = x;
     ptr->height = y;
-
+    ptr->ppb = ppb;
 
     // create a linear buffer to represent the image. We could use a jagged/2D array here, but experimentation
     // showed this had a negative effect on memory management (heap fragmentation etc).
@@ -403,7 +404,25 @@ int Image::setPixelValue(int16_t x , int16_t y, uint8_t value)
     if(x >= getWidth() || y >= getHeight() || x < 0 || y < 0)
         return DEVICE_INVALID_PARAMETER;
 
-    this->getBitmap()[y*getWidth()+x] = value;
+
+
+    int offset = y * (getWidth() / ptr->ppb) + (x >> 1);
+
+
+    // int offset = (64 * y) + (x >> 1);
+    uint8_t* bmp = this->getBitmap();
+
+    if (ptr->ppb > 1)
+    {
+        // odd
+        if (x & 1)
+            bmp[offset] = (bmp[offset] & 0x0f) | (value << 4);
+        else
+            bmp[offset] = (bmp[offset] & 0xf0) | (value & 0xf);
+    }
+    else
+        bmp[offset] = value;
+
     return DEVICE_OK;
 }
 
@@ -427,7 +446,7 @@ int Image::getPixelValue(int16_t x , int16_t y)
     if(x >= getWidth() || y >= getHeight() || x < 0 || y < 0)
         return DEVICE_INVALID_PARAMETER;
 
-    return this->getBitmap()[y*getWidth()+x];
+    return this->getBitmap()[y * (getWidth() / ptr->ppb) + x];
 }
 
 /**
@@ -460,20 +479,37 @@ int Image::printImage(int16_t width, int16_t height, const uint8_t *bitmap)
     if (width <= 0 || width <= 0 || bitmap == NULL)
         return DEVICE_INVALID_PARAMETER;
 
-    // Calcualte sane start pointer.
-    pixelsToCopyX = min(width,this->getWidth());
+    // Calculate sane start pointer.
+    pixelsToCopyX = min(width, this->getWidth());
     pixelsToCopyY = min(height,this->getHeight());
 
     pIn = bitmap;
     pOut = this->getBitmap();
 
-    // Copy the image, stride by stride.
-    for (int i=0; i<pixelsToCopyY; i++)
-    {
-        memcpy(pOut, pIn, pixelsToCopyX);
-        pIn += width;
-        pOut += this->getWidth();
-    }
+    // if (ptr->ppb == 1)
+    // {
+        // Copy the image, stride by stride.
+        for (int i=0; i<pixelsToCopyY; i++)
+        {
+            memcpy(pOut, pIn, pixelsToCopyX / ptr->ppb);
+            pIn += width / ptr->ppb;
+            pOut += (this->getWidth() / ptr->ppb);
+        }
+    // }
+    // else
+    // {
+    //     // Copy the image, stride by stride.
+    //     for (int i=0; i<pixelsToCopyY; i++)
+    //     {
+    //         for (int j=0; j<pixelsToCopyX; j++)
+    //         {
+    //             setPixelValue(j, i, bitmap[(i * width) + j]);
+    //         }
+    //         // memcpy(pOut, pIn, pixelsToCopyX);
+    //         // pIn += width;
+    //         // pOut += this->getWidth() / ptr->ppb;
+    //     }
+    // }
 
     return DEVICE_OK;
 }
@@ -507,7 +543,7 @@ int Image::paste(const Image &image, int16_t x, int16_t y, uint8_t alpha)
 
     // Sanity check.
     // We permit writes that overlap us, but ones that are clearly out of scope we can filter early.
-    if (x >= getWidth() || y >= getHeight() || x+image.getWidth() <= 0 || y+image.getHeight() <= 0)
+    if (x >= getWidth() || y >= getHeight() || x+image.getWidth() <= 0 || y+image.getHeight() <= 0 || image.getPixelsPerByte() != getPixelsPerByte())
         return 0;
 
     //Calculate the number of byte we need to copy in each dimension.
@@ -516,12 +552,24 @@ int Image::paste(const Image &image, int16_t x, int16_t y, uint8_t alpha)
 
     // Calculate sane start pointer.
     pIn = image.ptr->data;
-    pIn += (x < 0) ? -x : 0;
-    pIn += (y < 0) ? -image.getWidth()*y : 0;
 
+    // hack for now...
     pOut = getBitmap();
-    pOut += (x > 0) ? x : 0;
-    pOut += (y > 0) ? getWidth()*y : 0;
+
+    if (ptr->ppb > 1)
+    {
+        pIn += (x < 0) ? -(x >> 1) : 0;
+        pOut += (x > 0) ? (x >> 1) : 0;
+    }
+    else
+    {
+        pIn += (x < 0) ? -(x) : 0;
+        pOut += (x > 0) ? x : 0;
+    }
+
+    pIn += (y < 0) ? -(image.getWidth() / ptr->ppb)*y : 0;
+    pOut += (y > 0) ? (getWidth() / ptr->ppb) *y : 0;
+
 
     // Copy the image, stride by stride
     // If we want primitive transparecy, we do this byte by byte.
@@ -540,19 +588,19 @@ int Image::paste(const Image &image, int16_t x, int16_t y, uint8_t alpha)
                 }
             }
 
-            pIn += image.getWidth();
-            pOut += getWidth();
+            pIn += (image.getWidth() / ptr->ppb);
+            pOut += (getWidth() / ptr->ppb);
         }
     }
     else
     {
         for (int i=0; i<cy; i++)
         {
-            memcpy(pOut, pIn, cx);
+            memcpy(pOut, pIn, cx / ptr->ppb);
 
             pxWritten += cx;
-            pIn += image.getWidth();
-            pOut += getWidth();
+            pIn += (image.getWidth() / ptr->ppb);
+            pOut += (getWidth() / ptr->ppb);
         }
     }
 

@@ -159,6 +159,7 @@ int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end)
     // Record the dimensions of this new heap
     h->heap_start = (PROCESSOR_WORD_TYPE *)start;
     h->heap_end = (PROCESSOR_WORD_TYPE *)end;
+    h->last_ptr = h->heap_start;
 
     // Initialise the heap as being completely empty and available for use.
     *h->heap_start = DEVICE_HEAP_BLOCK_FREE | (((PROCESSOR_WORD_TYPE) h->heap_end - (PROCESSOR_WORD_TYPE) h->heap_start) / DEVICE_HEAP_BLOCK_SIZE);
@@ -199,9 +200,11 @@ void *device_malloc(size_t size, HeapDefinition &heap)
     // Disable IRQ temporarily to ensure no race conditions!
     target_disable_irq();
 
+    bool skippedSome = heap.last_ptr != heap.heap_start;
+
     // We implement a first fit algorithm with cache to handle rapid churn...
     // We also defragment free blocks as we search, to optimise this and future searches.
-    block = heap.heap_start;
+    block = heap.last_ptr;
     while (block < heap.heap_end)
     {
         // If the block is used, then keep looking.
@@ -235,6 +238,12 @@ void *device_malloc(size_t size, HeapDefinition &heap)
 
         // Otherwise, keep looking...
         block += blockSize;
+
+        if (skippedSome && block >= heap.heap_end)
+        {
+            skippedSome = false;
+            block = heap.heap_start;
+        }
     }
 
     // We're full!
@@ -259,6 +268,8 @@ void *device_malloc(size_t size, HeapDefinition &heap)
 
         *block = blocksNeeded;
     }
+
+    heap.last_ptr = block;
 
     // Enable Interrupts
     target_enable_irq();
@@ -356,6 +367,8 @@ void free (void *mem)
             if (*cb == 0 || *cb & DEVICE_HEAP_BLOCK_FREE)
                 target_panic(DEVICE_HEAP_ERROR);
             *cb |= DEVICE_HEAP_BLOCK_FREE;
+            if (cb < heap[i].last_ptr)
+                heap[i].last_ptr = cb;
             return;
         }
     }
