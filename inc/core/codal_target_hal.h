@@ -36,6 +36,8 @@ extern "C"
     void target_reset();
 
     void target_wait(unsigned long milliseconds);
+    
+    void target_wait_us(unsigned long us);
 
     void target_wait_for_event();
 
