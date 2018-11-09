@@ -44,7 +44,6 @@ Display::Display(int width, int height, uint16_t id) : image(width, height)
     this->width = width;
     this->height = height;
     this->id = id;
-    this->rotation = DISPLAY_ROTATION_0;
 }
 
 /**
@@ -67,17 +66,6 @@ int Display::getWidth()
 int Display::getHeight()
 {
     return height;
-}
-
-int Display::setRotation(DisplayRotation r)
-{
-    this->rotation = r;
-    return DEVICE_OK;
-}
-
-DisplayRotation Display::getRotation()
-{
-    return this->rotation;
 }
 
 /**

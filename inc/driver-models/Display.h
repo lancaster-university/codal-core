@@ -39,7 +39,6 @@ namespace codal
         uint16_t width;
         uint16_t height;
         uint8_t  brightness;
-        DisplayRotation rotation;
 
         public:
 
@@ -71,9 +70,6 @@ namespace codal
          *
          */
         virtual int getHeight();
-
-        virtual int setRotation(DisplayRotation r);
-        virtual DisplayRotation getRotation();
 
         /**
          * Configures the brightness of the display.
