@@ -208,7 +208,7 @@ namespace codal
         {
             this->address = address;
             this->rolling_counter = 0;
-            this->flags |= flags;
+            this->flags = flags;
             this->serial_number = serial_number;
             this->driver_class = driver_class;
         }
