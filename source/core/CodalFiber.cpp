@@ -174,6 +174,10 @@ Fiber *getFiberContext()
     // Ensure this fiber is in suitable state for reuse.
     f->flags = 0;
 
+    #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
+    f->user_data = 0;
+    #endif
+
     tcb_configure_stack_base(f->tcb, fiber_initial_stack_base());
 
     return f;
@@ -247,7 +251,9 @@ void codal::scheduler_tick(Event evt)
     Fiber *f = sleepQueue;
     Fiber *t;
 
+#if !CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
     evt.timestamp /= 1000;
+#endif
 
     // Check the sleep queue, and wake up any fibers as necessary.
     while (f != NULL)
@@ -506,7 +512,13 @@ int codal::invoke(void (*entry_fn)(void))
     // execute the function directly. If the code tries to block, we detect this and
     // spawn a thread to deal with it.
     currentFiber->flags |= DEVICE_FIBER_FLAG_FOB;
+    #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
+    void *prev_user_data = currentFiber->user_data;
     entry_fn();
+    currentFiber->user_data = prev_user_data;
+    #else
+    entry_fn();
+    #endif
     currentFiber->flags &= ~DEVICE_FIBER_FLAG_FOB;
 
     // If this is is an exiting fiber that for spawned to handle a blocking call, recycle it.
@@ -569,7 +581,13 @@ int codal::invoke(void (*entry_fn)(void *), void *param)
     // execute the function directly. If the code tries to block, we detect this and
     // spawn a thread to deal with it.
     currentFiber->flags |= DEVICE_FIBER_FLAG_FOB;
+    #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
+    void *prev_user_data = currentFiber->user_data;
     entry_fn(param);
+    currentFiber->user_data = prev_user_data;
+    #else
+    entry_fn(param);
+    #endif
     currentFiber->flags &= ~DEVICE_FIBER_FLAG_FOB;
 
     // If this is is an exiting fiber that for spawned to handle a blocking call, recycle it.

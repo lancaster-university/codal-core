@@ -26,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_SERIAL_H
 
 #include "ManagedString.h"
+#include "Pin.h"
 
 #define CODAL_SERIAL_DEFAULT_BAUD_RATE   115200
 #define CODAL_SERIAL_DEFAULT_BUFFER_SIZE 20
@@ -110,7 +111,7 @@ namespace codal
           *
           *       Buffers aren't allocated until the first send or receive respectively.
           */
-        Serial(PinName tx, PinName rx, uint8_t rxBufferSize = CODAL_SERIAL_DEFAULT_BUFFER_SIZE, uint8_t txBufferSize = CODAL_SERIAL_DEFAULT_BUFFER_SIZE)
+        Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize = CODAL_SERIAL_DEFAULT_BUFFER_SIZE, uint8_t txBufferSize = CODAL_SERIAL_DEFAULT_BUFFER_SIZE)
         {
         }
 
@@ -351,7 +352,7 @@ namespace codal
           *
           * @return CODAL_SERIAL_IN_USE if another fiber is currently transmitting or receiving, otherwise DEVICE_OK.
           */
-        virtual int redirect(PinName tx, PinName rx)
+        virtual int redirect(Pin& tx, Pin& rx)
         {
             return DEVICE_NOT_IMPLEMENTED;
         }

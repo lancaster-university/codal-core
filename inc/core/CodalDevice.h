@@ -42,15 +42,12 @@ namespace codal
     class CodalDevice
     {
         public:
-        uint32_t random_value;
 
         /**
           * The default constructor of a DeviceComponent
           */
         CodalDevice()
         {
-            if (random_value == 0)
-                random_value = 0xC0DA1;
         }
 
         /**
@@ -127,7 +124,10 @@ namespace codal
          * @param max the upper range to generate a number for. This number cannot be negative.
          * @return A random, natural number between 0 and the max-1. Or DEVICE_INVALID_VALUE if max is <= 0.
          */
-        int random(int max);
+        int random(int max)
+        {
+            return target_random(max);
+        }
 
         /**
          * Seed the random number generator (RNG).
@@ -137,8 +137,7 @@ namespace codal
          */
         virtual int seedRandom(uint32_t seed)
         {
-            random_value = seed;
-            return DEVICE_OK;
+            return target_seed_random(seed);
         }
     };
 }

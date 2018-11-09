@@ -138,6 +138,25 @@ namespace codal
       */
     int itoa(int n, char *s);
 
+    /**
+     * Seed the random number generator (RNG).
+     *
+     * @param seed an unsigned 32 bit value used to seed codal's lightweight Galois LFSR.
+     * @return DEVICE_OK on success
+     */
+    int seed_random(uint32_t random);
+
+    /**
+     * Generate a random number in the given range.
+     * default: A simple Galois LFSR random number generator.
+     * A well seeded Galois LFSR is sufficient for most applications, and much more lightweight
+     * than hardware random number generators often built int processor, which takes
+     * a long time and uses a lot of energy.
+     *
+     * @param max the upper range to generate a number for. This number cannot be negative.
+     * @return A random, natural number between 0 and the max-1. Or DEVICE_INVALID_VALUE if max is <= 0.
+     */
+    int random(int max);
 }
 
 #endif

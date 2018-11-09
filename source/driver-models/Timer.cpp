@@ -228,8 +228,12 @@ void Timer::sync(CODAL_TIMESTAMP t)
     // First, update our timestamps.
     currentTimeUs += t;
     overflow += t;
-    currentTime += overflow / 1000;
-    overflow = overflow % 1000;
+
+    while(overflow >= 1000)
+    {
+        overflow -= 1000;
+        currentTime += 1;
+    }
 }
 
 /**
@@ -252,17 +256,21 @@ void Timer::trigger()
             if (e->id != 0 && currentTimeUs >= e->timestamp)
             {
                 // We need to trigger this event.
+#if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
+                Event evt(e->id, e->value, currentTime);
+#else
                 Event evt(e->id, e->value, currentTimeUs);
+#endif
 
                 if (e->period == 0)
                     releaseTimerEvent(e);
-				else
-					e->timestamp += e->period;
+                else
+                    e->timestamp += e->period;
 
-				// TODO: Handle rollover case above...
+                // TODO: Handle rollover case above...
                 eventsFired++;
             }
-			e++;
+            e++;
         }
 
     } while (eventsFired);
@@ -395,4 +403,32 @@ int codal::system_timer_event_after(CODAL_TIMESTAMP period, uint16_t id, uint16_
         return DEVICE_NOT_SUPPORTED;
 
     return system_timer->eventAfter(period, id, value);
+}
+
+/**
+ * Spin wait for a given number of microseconds.
+ *
+ * @param period the interval between events
+ * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
+ */
+int codal::system_timer_wait_us(CODAL_TIMESTAMP period)
+{
+    if(system_timer == NULL)
+        return DEVICE_NOT_SUPPORTED;
+
+    CODAL_TIMESTAMP start = system_timer->getTimeUs();
+    while(system_timer->getTimeUs() < start + period);
+
+    return DEVICE_OK;
+}
+
+/**
+ * Spin wait for a given number of milliseconds.
+ *
+ * @param period the interval between events
+ * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
+ */
+int codal::system_timer_wait_ms(CODAL_TIMESTAMP period)
+{
+    return system_timer_wait_us(period * 1000);
 }

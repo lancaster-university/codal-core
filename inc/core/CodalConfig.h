@@ -79,6 +79,10 @@ DEALINGS IN THE SOFTWARE.
 #define SCHEDULER_TICK_PERIOD_US                   6000
 #endif
 
+#ifndef DEVICE_FIBER_USER_DATA
+#define DEVICE_FIBER_USER_DATA                     1
+#endif
+
 //
 // Message Bus:
 // Default behaviour for event handlers, if not specified in the listen() call
