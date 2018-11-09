@@ -46,7 +46,7 @@ const int greyScaleTimings[LED_MATRIX_GREYSCALE_BIT_DEPTH] = {1, 23, 70, 163, 35
   */
 LEDMatrix::LEDMatrix(const MatrixMap &map, uint16_t id) : Display(map.width, map.height, id), matrixMap(map)
 {
-    this->rotation = DISPLAY_ROTATION_0;
+    this->rotation = MATRIX_DISPLAY_ROTATION_0;
     this->greyscaleBitMsk = 0x01;
     this->timingCount = 0;
     this->setBrightness(LED_MATRIX_DEFAULT_BRIGHTNESS);
@@ -123,19 +123,19 @@ void LEDMatrix::render()
         int y = matrixMap.map[index].y;
         int t = x;
 
-        if(rotation == DISPLAY_ROTATION_90)
+        if(rotation == MATRIX_DISPLAY_ROTATION_90)
         {
                 x = width - 1 - y;
                 y = t;
         }
 
-        if(rotation == DISPLAY_ROTATION_180)
+        if(rotation == MATRIX_DISPLAY_ROTATION_180)
         {
                 x = width - 1 - x;
                 y = height - 1 - y;
         }
 
-        if(rotation == DISPLAY_ROTATION_270)
+        if(rotation == MATRIX_DISPLAY_ROTATION_270)
         {
                 x = y;
                 y = height - 1 - t;
