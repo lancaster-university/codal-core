@@ -278,6 +278,9 @@ void* malloc (size_t size)
     static uint8_t initialised = 0;
     void *p;
 
+    if (size <= 0)
+        return NULL;
+
     if (!initialised)
     {
         heap_count = 0;

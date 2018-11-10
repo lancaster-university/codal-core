@@ -514,6 +514,7 @@ int codal::invoke(void (*entry_fn)(void))
     currentFiber->flags |= DEVICE_FIBER_FLAG_FOB;
     #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
     void *prev_user_data = currentFiber->user_data;
+    currentFiber->user_data = NULL;
     entry_fn();
     currentFiber->user_data = prev_user_data;
     #else
@@ -583,6 +584,7 @@ int codal::invoke(void (*entry_fn)(void *), void *param)
     currentFiber->flags |= DEVICE_FIBER_FLAG_FOB;
     #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
     void *prev_user_data = currentFiber->user_data;
+    currentFiber->user_data = NULL;
     entry_fn(param);
     currentFiber->user_data = prev_user_data;
     #else
