@@ -113,6 +113,7 @@ Synthesizer::Synthesizer(int sampleRate, bool isSigned) : output(*this)
     this->synchronous = false;
     this->bytesWritten = 0;
     this->setTone(Synthesizer::TriangleTone);
+    this->position = 0;
     this->status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 }
 
@@ -344,7 +345,6 @@ void Synthesizer::setTone(SynthesizerGetSample tonePrint, void *arg)
 {
     this->tonePrintArg = arg;
     this->tonePrint = tonePrint;
-    this->position = 0;
 }
 
 /**
