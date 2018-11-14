@@ -22,12 +22,64 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#include "CodalDevice.h"
-#include "CodalDmesg.h"
+#ifndef CODAL_MIXER_H
+#define CODAL_MIXER_H
 
-using namespace codal;
+#include "DataStream.h"
 
-void CodalDevice::sleep(unsigned long milliseconds)
+namespace codal
 {
-    fiber_sleep(milliseconds);
-}
+
+class MixerChannel
+{
+private:
+    MixerChannel *next;
+    DataStream *stream;
+    friend class Mixer;
+
+public:
+    uint16_t volume;
+    bool isSigned;
+};
+
+class Mixer : public DataSource, public DataSink
+{
+    MixerChannel *channels;
+    DataSink *downStream;
+
+public:
+    /**
+     * Default Constructor.
+     * Creates an empty Mixer.
+     */
+    Mixer();
+
+    /**
+     * Destructor.
+     * Removes all resources held by the instance.
+     */
+    ~Mixer();
+
+    MixerChannel *addChannel(DataStream &stream);
+
+    /**
+     * Provide the next available ManagedBuffer to our downstream caller, if available.
+     */
+    virtual ManagedBuffer pull();
+
+    /**
+     * Deliver the next available ManagedBuffer to our downstream caller.
+     */
+    virtual int pullRequest();
+
+    /**
+     * Define a downstream component for data stream.
+     *
+     * @sink The component that data will be delivered to, when it is availiable
+     */
+    virtual void connect(DataSink &sink);
+};
+
+} // namespace codal
+
+#endif

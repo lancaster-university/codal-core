@@ -68,6 +68,9 @@ namespace codal
         uint32_t flags;                     // Information about this fiber.
         Fiber **queue;                      // The queue this fiber is stored on.
         Fiber *next, *prev;                 // Position of this Fiber on the run queue.
+        #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
+        void *user_data;
+        #endif
     };
 
     extern Fiber *currentFiber;
