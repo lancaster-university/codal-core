@@ -90,5 +90,8 @@ enum PanicCode{
 
     // Non-recoverable error in USB driver
     DEVICE_USB_ERROR = 50,
+
+    // hardware incorrect configuration
+    DEVICE_HARDWARE_CONFIGURATION_ERROR = 90
 };
 #endif
