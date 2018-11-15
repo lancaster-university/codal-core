@@ -133,7 +133,7 @@ public:
       *
       * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the the write request failed.
       */
-    int writeRegister(uint16_t address, uint8_t reg, uint8_t value);
+    virtual int writeRegister(uint16_t address, uint8_t reg, uint8_t value);
 
     /**
       * Issues a standard, 2 byte I2C command read to the I2C bus.
