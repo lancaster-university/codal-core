@@ -360,8 +360,12 @@ void codal::fiber_sleep(unsigned long t)
 
         // If we're out of memory, there's nothing we can do.
         // keep running in the context of the current thread as a best effort.
-        if (forkedFiber != NULL)
+        if (forkedFiber != NULL) {
+            #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
+            forkedFiber->user_data = f->user_data;
+            #endif
             f = forkedFiber;
+        }
     }
 
     // Calculate and store the time we want to wake up.
@@ -441,8 +445,12 @@ int codal::fiber_wake_on_event(uint16_t id, uint16_t value)
 
         // If we're out of memory, there's nothing we can do.
         // keep running in the context of the current thread as a best effort.
-        if (forkedFiber != NULL)
+        if (forkedFiber != NULL) {
+            #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
+            forkedFiber->user_data = f->user_data;
+            #endif
             f = forkedFiber;
+        }
     }
 
     // Encode the event data in the context field. It's handy having a 32 bit core. :-)
