@@ -69,6 +69,38 @@ static EventModel *messageBus = NULL;
 
 using namespace codal;
 
+static void get_fibers_from(Fiber ***dest, int *sum, Fiber *queue)
+{
+    if (queue && queue->prev) target_panic(30);
+    while (queue) {
+        if (*dest)
+            *(*dest)++ = queue;
+        (*sum)++;
+        queue = queue->next;
+    }
+}
+
+/**
+  * Return all current fibers.
+  *
+  * @param dest If non-null, it points to an array of pointers to fibers to store results in.
+  *
+  * @return the number of fibers (potentially) stored
+  */
+int codal::list_fibers(Fiber **dest)
+{
+    int sum = 0;
+    get_fibers_from(&dest, &sum, runQueue);
+    get_fibers_from(&dest, &sum, sleepQueue);
+    get_fibers_from(&dest, &sum, waitQueue);
+    // idleFiber is used to start event handlers using invoke(),
+    // so it may in fact have the user_data set if in FOB context
+    if (dest)
+        *dest++ = idleFiber;
+    sum++;
+    return sum;
+}
+
 /**
   * Utility function to add the currenty running fiber to the given queue.
   *
@@ -328,6 +360,29 @@ void codal::scheduler_event(Event evt)
         messageBus->ignore(evt.source, evt.value, scheduler_event);
 }
 
+static Fiber* handle_fob()
+{
+    Fiber *f = currentFiber;
+
+    // This is a blocking call, so if we're in a fork on block context,
+    // it's time to spawn a new fiber...
+    if (f->flags & DEVICE_FIBER_FLAG_FOB)
+    {
+        // Allocate a TCB from the new fiber. This will come from the tread pool if availiable,
+        // else a new one will be allocated on the heap.
+        forkedFiber = getFiberContext();
+         // If we're out of memory, there's nothing we can do.
+        // keep running in the context of the current thread as a best effort.
+        if (forkedFiber != NULL) {
+#if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
+            forkedFiber->user_data = f->user_data;
+            f->user_data = NULL;
+#endif
+            f = forkedFiber;
+        }
+    }
+    return f;
+}
 
 /**
   * Blocks the calling thread for the given period of time.
@@ -341,8 +396,6 @@ void codal::scheduler_event(Event evt)
   */
 void codal::fiber_sleep(unsigned long t)
 {
-    Fiber *f = currentFiber;
-
     // If the scheduler is not running, then simply perform a spin wait and exit.
     if (!fiber_scheduler_running())
     {
@@ -350,23 +403,7 @@ void codal::fiber_sleep(unsigned long t)
         return;
     }
 
-    // Sleep is a blocking call, so if we're in a fork on block context,
-    // it's time to spawn a new fiber...
-    if (currentFiber->flags & DEVICE_FIBER_FLAG_FOB)
-    {
-        // Allocate a new fiber. This will come from the fiber pool if availiable,
-        // else a new one will be allocated on the heap.
-        forkedFiber = getFiberContext();
-
-        // If we're out of memory, there's nothing we can do.
-        // keep running in the context of the current thread as a best effort.
-        if (forkedFiber != NULL) {
-            #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
-            forkedFiber->user_data = f->user_data;
-            #endif
-            f = forkedFiber;
-        }
-    }
+    Fiber *f = handle_fob();
 
     // Calculate and store the time we want to wake up.
     f->context = system_timer_current_time() + t;
@@ -430,28 +467,10 @@ int codal::fiber_wait_for_event(uint16_t id, uint16_t value)
   */
 int codal::fiber_wake_on_event(uint16_t id, uint16_t value)
 {
-    Fiber *f = currentFiber;
-
     if (messageBus == NULL || !fiber_scheduler_running())
         return DEVICE_NOT_SUPPORTED;
 
-    // Sleep is a blocking call, so if we're in a fork on block context,
-    // it's time to spawn a new fiber...
-    if (currentFiber->flags & DEVICE_FIBER_FLAG_FOB)
-    {
-        // Allocate a TCB from the new fiber. This will come from the tread pool if availiable,
-        // else a new one will be allocated on the heap.
-        forkedFiber = getFiberContext();
-
-        // If we're out of memory, there's nothing we can do.
-        // keep running in the context of the current thread as a best effort.
-        if (forkedFiber != NULL) {
-            #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
-            forkedFiber->user_data = f->user_data;
-            #endif
-            f = forkedFiber;
-        }
-    }
+    Fiber *f = handle_fob();
 
     // Encode the event data in the context field. It's handy having a 32 bit core. :-)
     f->context = (uint32_t)value << 16 | id;
@@ -469,6 +488,12 @@ int codal::fiber_wake_on_event(uint16_t id, uint16_t value)
 
     return DEVICE_OK;
 }
+
+#if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
+#define HAS_THREAD_USER_DATA (currentFiber->user_data != NULL)
+#else
+#define HAS_THREAD_USER_DATA false
+#endif
 
 /**
   * Executes the given function asynchronously if necessary.
@@ -492,7 +517,7 @@ int codal::invoke(void (*entry_fn)(void))
     if (!fiber_scheduler_running())
         return DEVICE_NOT_SUPPORTED;
 
-    if (currentFiber->flags & DEVICE_FIBER_FLAG_FOB)
+    if (currentFiber->flags & (DEVICE_FIBER_FLAG_FOB | DEVICE_FIBER_FLAG_PARENT | DEVICE_FIBER_FLAG_CHILD) || HAS_THREAD_USER_DATA)
     {
         // If we attempt a fork on block whilst already in  fork n block context,
         // simply launch a fiber to deal with the request and we're done.
@@ -520,13 +545,9 @@ int codal::invoke(void (*entry_fn)(void))
     // execute the function directly. If the code tries to block, we detect this and
     // spawn a thread to deal with it.
     currentFiber->flags |= DEVICE_FIBER_FLAG_FOB;
+    entry_fn();
     #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
-    void *prev_user_data = currentFiber->user_data;
     currentFiber->user_data = NULL;
-    entry_fn();
-    currentFiber->user_data = prev_user_data;
-    #else
-    entry_fn();
     #endif
     currentFiber->flags &= ~DEVICE_FIBER_FLAG_FOB;
 
@@ -562,7 +583,7 @@ int codal::invoke(void (*entry_fn)(void *), void *param)
     if (!fiber_scheduler_running())
         return DEVICE_NOT_SUPPORTED;
 
-    if (currentFiber->flags & (DEVICE_FIBER_FLAG_FOB | DEVICE_FIBER_FLAG_PARENT | DEVICE_FIBER_FLAG_CHILD))
+    if (currentFiber->flags & (DEVICE_FIBER_FLAG_FOB | DEVICE_FIBER_FLAG_PARENT | DEVICE_FIBER_FLAG_CHILD) || HAS_THREAD_USER_DATA)
     {
         // If we attempt a fork on block whilst already in a fork on block context,
         // simply launch a fiber to deal with the request and we're done.
@@ -590,13 +611,9 @@ int codal::invoke(void (*entry_fn)(void *), void *param)
     // execute the function directly. If the code tries to block, we detect this and
     // spawn a thread to deal with it.
     currentFiber->flags |= DEVICE_FIBER_FLAG_FOB;
+    entry_fn(param);
     #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
-    void *prev_user_data = currentFiber->user_data;
     currentFiber->user_data = NULL;
-    entry_fn(param);
-    currentFiber->user_data = prev_user_data;
-    #else
-    entry_fn(param);
     #endif
     currentFiber->flags &= ~DEVICE_FIBER_FLAG_FOB;
 
