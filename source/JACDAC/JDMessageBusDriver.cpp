@@ -101,8 +101,6 @@ int JDMessageBusDriver::handlePacket(JDPkt* p)
 {
     Event *e = (Event *) p->data;
 
-    DMESG("EV: %d, %d", e->source, e->value);
-
     suppressForwarding = true;
     e->fire();
     suppressForwarding = false;
