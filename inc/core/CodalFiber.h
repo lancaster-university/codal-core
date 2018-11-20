@@ -321,6 +321,15 @@ namespace codal
       * This function typically calls idle().
       */
     void idle_task();
+
+    /**
+      * Return all current fibers.
+      *
+      * @param dest If non-null, it points to an array of pointers to fibers to store results in.
+      *
+      * @return the number of fibers (potentially) stored
+      */
+    int list_fibers(Fiber **dest);
 }
 
 
