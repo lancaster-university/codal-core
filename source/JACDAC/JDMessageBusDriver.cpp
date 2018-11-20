@@ -101,8 +101,6 @@ int JDMessageBusDriver::handlePacket(JDPkt* p)
 {
     Event *e = (Event *) p->data;
 
-    DMESG("EV: %d, %d", e->source, e->value);
-
     suppressForwarding = true;
     e->fire();
     suppressForwarding = false;
@@ -122,11 +120,11 @@ int JDMessageBusDriver::handleControlPacket(JDPkt*)
   */
 void JDMessageBusDriver::eventReceived(Event e)
 {
-    DMESG("EVENT");
+    // DMESG("EVENT");
     if(suppressForwarding)
         return;
 
-    DMESG("PACKET QUEUED: %d %d %d", e.source, e.value, sizeof(Event));
+    // DMESG("PACKET QUEUED: %d %d %d", e.source, e.value, sizeof(Event));
     int ret = JDProtocol::send((uint8_t *)&e, sizeof(Event), device.address);
-    DMESG("RET %d",ret);
+    // DMESG("RET %d",ret);
 }

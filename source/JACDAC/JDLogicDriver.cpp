@@ -165,7 +165,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 {
     ControlPacket *cp = (ControlPacket *)p->data;
 
-     JD_DMESG("CP Add %d, Ser %d, Class %d pair: %d", cp->address, cp->serial_number, cp->driver_class, (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE) ? 1 : 0);
+     JD_DMESG("CP A:%d S:%d C:%d p: %d", cp->address, cp->serial_number, cp->driver_class, (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE) ? 1 : 0);
 
     // Logic Driver addressing rules:
     // 1. drivers cannot have the same address and different serial numbers.
@@ -267,14 +267,17 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             if (current->device.flags & JD_DEVICE_FLAGS_INITIALISED)
             {
                 // ONLY ADD BROADCAST MAPS IF THE DRIVER IS INITIALISED.
-                int j;
+                bool exists = false;
 
-                for (j = 0; j < JD_PROTOCOL_DRIVER_ARRAY_SIZE; j++)
-                    if (JDProtocol::instance->drivers[i]->device.serial_number ==cp->serial_number)
+                for (int j = 0; j < JD_PROTOCOL_DRIVER_ARRAY_SIZE; j++)
+                    if (JDProtocol::instance->drivers[j]->device.address == cp->address && JDProtocol::instance->drivers[j]->device.serial_number == cp->serial_number)
+                    {
+                        exists = true;
                         break;
+                    }
 
                 // only add a broadcast device if it is not already represented in the driver array.
-                if (j == JD_PROTOCOL_DRIVER_ARRAY_SIZE)
+                if (!exists)
                 {
                     JD_DMESG("ADD NEW MAP");
                     new JDDriver(JDDevice(cp->address, cp->flags | JD_DEVICE_FLAGS_BROADCAST_MAP | JD_DEVICE_FLAGS_INITIALISED, cp->serial_number, cp->driver_class));
