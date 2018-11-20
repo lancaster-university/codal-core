@@ -519,8 +519,8 @@ int codal::invoke(void (*entry_fn)(void))
 
     if (currentFiber->flags & (DEVICE_FIBER_FLAG_FOB | DEVICE_FIBER_FLAG_PARENT | DEVICE_FIBER_FLAG_CHILD) || HAS_THREAD_USER_DATA)
     {
-        // If we attempt a fork on block whilst already in  fork n block context,
-        // simply launch a fiber to deal with the request and we're done.
+        // If we attempt a fork on block whilst already in a fork on block context, or if the thread 
+        // already has user data set, simply launch a fiber to deal with the request and we're done.
         create_fiber(entry_fn);
         return DEVICE_OK;
     }
@@ -585,8 +585,8 @@ int codal::invoke(void (*entry_fn)(void *), void *param)
 
     if (currentFiber->flags & (DEVICE_FIBER_FLAG_FOB | DEVICE_FIBER_FLAG_PARENT | DEVICE_FIBER_FLAG_CHILD) || HAS_THREAD_USER_DATA)
     {
-        // If we attempt a fork on block whilst already in a fork on block context,
-        // simply launch a fiber to deal with the request and we're done.
+        // If we attempt a fork on block whilst already in a fork on block context, or if the thread 
+        // already has user data set, simply launch a fiber to deal with the request and we're done.
         create_fiber(entry_fn, param);
         return DEVICE_OK;
     }
