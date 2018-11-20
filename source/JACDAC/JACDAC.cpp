@@ -263,6 +263,9 @@ JDPkt* JACDAC::getPacket(uint8_t address)
  */
 void JACDAC::start()
 {
+    if (isRunning())
+        return;
+
     if (rxBuf == NULL)
         rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
 
@@ -292,6 +295,9 @@ void JACDAC::start()
  */
 void JACDAC::stop()
 {
+    if (!isRunning())
+        return;
+
     status &= ~(DEVICE_COMPONENT_RUNNING | DEVICE_COMPONENT_STATUS_SYSTEM_TICK);
     if (rxBuf)
     {
