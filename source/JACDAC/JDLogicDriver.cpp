@@ -165,7 +165,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 {
     ControlPacket *cp = (ControlPacket *)p->data;
 
-     JD_DMESG("CP Add %d, Ser %d, Class %d pair: %d", cp->address, cp->serial_number, cp->driver_class, (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE) ? 1 : 0);
+     JD_DMESG("CP A:%d S:%d C:%d p: %d", cp->address, cp->serial_number, cp->driver_class, (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE) ? 1 : 0);
 
     // Logic Driver addressing rules:
     // 1. drivers cannot have the same address and different serial numbers.
@@ -270,7 +270,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
                 int j;
 
                 for (j = 0; j < JD_PROTOCOL_DRIVER_ARRAY_SIZE; j++)
-                    if (JDProtocol::instance->drivers[i]->device.serial_number ==cp->serial_number)
+                    if (JDProtocol::instance->drivers[i]->device.address == cp->address && JDProtocol::instance->drivers[i]->device.serial_number ==cp->serial_number)
                         break;
 
                 // only add a broadcast device if it is not already represented in the driver array.

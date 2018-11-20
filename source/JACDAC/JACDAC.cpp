@@ -17,13 +17,11 @@ using namespace codal;
 
 void JACDAC::dmaComplete(Event evt)
 {
-    JD_DMESG("DMA");
     if (evt.value == SWS_EVT_ERROR)
     {
-        JD_DMESG("ERR");
         if (status & JD_SERIAL_TRANSMITTING)
         {
-            JD_DMESG("TX ERROR");
+            JD_DMESG("DMA TXE");
             status &= ~(JD_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
@@ -31,7 +29,7 @@ void JACDAC::dmaComplete(Event evt)
 
         if (status & JD_SERIAL_RECEIVING)
         {
-            JD_DMESG("RX ERROR");
+            JD_DMESG("DMA RXE");
             status &= ~(JD_SERIAL_RECEIVING);
             timeoutCounter = 0;
             sws.abortDMA();
@@ -48,6 +46,7 @@ void JACDAC::dmaComplete(Event evt)
             addToQueue(&rxQueue, rxBuf);
             rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
             Event(id, JD_SERIAL_EVT_DATA_READY);
+            JD_DMESG("DMA RXD");
         }
 
         if (evt.value == SWS_EVT_DATA_SENT)
@@ -57,7 +56,7 @@ void JACDAC::dmaComplete(Event evt)
             txBuf = NULL;
             // we've finished sending... trigger an event in random us (in some cases this might not be necessary, but it's not too much overhead).
             system_timer_event_after_us(4000, this->id, JD_SERIAL_EVT_DRAIN);  // should be random
-            JD_DMESG("TX DONE");
+            JD_DMESG("DMA TXD");
         }
     }
 
@@ -374,6 +373,9 @@ int JACDAC::send(JDPkt* tx)
 {
     if (tx == NULL)
         return DEVICE_INVALID_PARAMETER;
+
+    if (!isRunning())
+        return DEVICE_NOT_SUPPORTED;
 
     JDPkt* pkt = (JDPkt *)malloc(sizeof(JDPkt));
     memset(pkt, target_random(256), sizeof(JDPkt));
