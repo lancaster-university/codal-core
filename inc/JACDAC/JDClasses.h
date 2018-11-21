@@ -10,5 +10,6 @@
 #define JD_DRIVER_CLASS_BUTTON         6
 #define JD_DRIVER_CLASS_PIN            7
 #define JD_DRIVER_CLASS_RELIABILITY_TESTER             8
+#define JD_DRIVER_CLASS_ACCELEROMETER                  9
 
 #endif
