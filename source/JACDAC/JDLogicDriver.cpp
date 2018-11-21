@@ -317,9 +317,9 @@ int JDLogicDriver::handlePacket(JDPkt* p)
     {
         JDDriver* current = JDProtocol::instance->drivers[i];
         JD_DMESG("FIND DRIVER");
-        JD_DMESG("ITER a %d, s %d, c %d, t %c%c%c", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 'B' : ' ', current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 'L' : ' ', current->device.flags & JD_DEVICE_FLAGS_REMOTE ? 'R' : ' ');
         if (current && current->device.flags & JD_DEVICE_FLAGS_REMOTE && current->device.driver_class == cp->driver_class)
         {
+            JD_DMESG("ITER a %d, s %d, c %d, t %c%c%c", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 'B' : ' ', current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 'L' : ' ', current->device.flags & JD_DEVICE_FLAGS_REMOTE ? 'R' : ' ');
             // this driver instance is looking for a specific serial number
             if (current->device.serial_number > 0 && current->device.serial_number != cp->serial_number)
                 continue;
