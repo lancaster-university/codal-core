@@ -118,7 +118,7 @@ namespace codal
         uint32_t driver_class;  // the class of the driver
         uint32_t serial_number; // the "unique" serial number of the device.
         uint8_t data[CONTROL_PACKET_PAYLOAD_SIZE];
-    };
+    }__attribute((__packed__));
 
     // This enumeration specifies that supported configurations that drivers should utilise.
     // Many combinations of flags are supported, but only the ones listed here have been fully implemented.
