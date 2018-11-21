@@ -125,6 +125,6 @@ void JDMessageBusDriver::eventReceived(Event e)
         return;
 
     // DMESG("PACKET QUEUED: %d %d %d", e.source, e.value, sizeof(Event));
-    int ret = JDProtocol::send((uint8_t *)&e, sizeof(Event), device.address);
+    JDProtocol::send((uint8_t *)&e, sizeof(Event), device.address);
     // DMESG("RET %d",ret);
 }
