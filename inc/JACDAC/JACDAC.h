@@ -96,6 +96,15 @@ namespace codal
 
         JDPkt* next;
     } __attribute((__packed__));
+
+    enum class JACDACBusState : uint8_t
+    {
+        Receiving,
+        Transmitting,
+        High,
+        Low
+    };
+
     /**
     * Class definition for a JACDAC interface.
     */
@@ -188,7 +197,25 @@ namespace codal
           */
         virtual int send(uint8_t* buf, int len, uint8_t address);
 
+        /**
+         * Returns a bool indicating whether the JACDAC driver has been started.
+         *
+         * @return true if started, false if not.
+         **/
         bool isRunning();
+
+        /**
+         * Returns the current state of the bus, either:
+         *
+         * * Receiving if the driver is in the process of receiving a packet.
+         * * Transmitting if the driver is communicating a packet on the bus.
+         *
+         * If neither of the previous states are true, then the driver looks at the bus and returns the bus state:
+         *
+         * * High, if the line is currently floating high.
+         * * Lo if something is currently pulling the line low.
+         **/
+        JACDACBusState getState();
     };
 } // namespace codal
 

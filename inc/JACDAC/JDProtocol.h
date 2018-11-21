@@ -30,6 +30,7 @@ DEALINGS IN THE SOFTWARE.
 #include "ErrorNo.h"
 #include "Event.h"
 #include "JACDAC.h"
+#include "JackRouter.h"
 #include "codal_target_hal.h"
 
 
@@ -703,6 +704,13 @@ namespace codal
          * @return DEVICE_OK on success.
          **/
         static int send(uint8_t* buf, int len, uint8_t address);
+
+        /**
+         * Logs the current state of JACDAC, drivers, and the jackrouter (if provided).
+         *
+         * @param jr The jack router in use.
+         **/
+        void logState(JackRouter* jr = NULL);
     };
 
 } // namespace codal

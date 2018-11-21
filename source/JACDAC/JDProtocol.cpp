@@ -173,3 +173,74 @@ int JDProtocol::send(uint8_t* buf, int len, uint8_t address)
 
     return DEVICE_NO_RESOURCES;
 }
+
+
+void JDProtocol::logState(JackRouter* jr)
+{
+    if (JDProtocol::instance == NULL)
+        return;
+
+    DMESG("Enabled: %d", JDProtocol::instance->bus.isRunning());
+
+
+    JACDACBusState busState = JDProtocol::instance->bus.getState();
+
+    const char* busStateStr = "";
+
+    switch(busState)
+    {
+        case JACDACBusState::Receiving:
+            busStateStr = "Receiving";
+            break;
+
+        case JACDACBusState::Transmitting:
+            busStateStr = "Transmitting";
+            break;
+
+        case JACDACBusState::High:
+            busStateStr = "High";
+            break;
+
+        case JACDACBusState::Low:
+            busStateStr = "Low";
+            break;
+    }
+
+    DMESG("Bus state: %s", busStateStr);
+
+    const char* jackRouterStateStr = "";
+
+    if (jr)
+    {
+        JackState s = jr->getState();
+
+        switch (s)
+        {
+            case JackState::None:
+                jackRouterStateStr = "None";
+                break;
+            case JackState::AllDown:
+                jackRouterStateStr = "AllDown";
+                break;
+            case JackState::HeadPhones:
+                jackRouterStateStr = "HeadPhones";
+                break;
+            case JackState::Buzzer:
+                jackRouterStateStr = "Buzzer";
+                break;
+            case JackState::BuzzerAndSerial:
+                jackRouterStateStr = "BuzzerAndSerial";
+                break;
+        }
+
+        DMESG("Router state: %s", jackRouterStateStr);
+    }
+
+    for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
+    {
+        JDDriver* current = JDProtocol::instance->drivers[i];
+
+        if (current)
+            DMESG("Driver %d initialised[%d] address[%d] serial[%d] class[%d], mode[%s%s%s]", i, current->isConnected(), current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? "B" : "", current->device.flags & JD_DEVICE_FLAGS_LOCAL ? "L" : "", current->device.flags & JD_DEVICE_FLAGS_REMOTE ? "R" : "");
+    }
+}

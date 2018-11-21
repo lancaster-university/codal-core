@@ -439,7 +439,42 @@ int JACDAC::send(uint8_t* buf, int len, uint8_t address)
     return send(&pkt);
 }
 
+/**
+ * Returns a bool indicating whether the JACDAC driver has been started.
+ *
+ * @return true if started, false if not.
+ **/
 bool JACDAC::isRunning()
 {
     return (status & DEVICE_COMPONENT_RUNNING) ? true : false;
+}
+
+/**
+ * Returns the current state of the bus, either:
+ *
+ * * Receiving if the driver is in the process of receiving a packet.
+ * * Transmitting if the driver is communicating a packet on the bus.
+ *
+ * If neither of the previous states are true, then the driver looks at the bus and returns the bus state:
+ *
+ * * High, if the line is currently floating high.
+ * * Lo if something is currently pulling the line low.
+ **/
+JACDACBusState JACDAC::getState()
+{
+    if (status & JD_SERIAL_RECEIVING)
+        return JACDACBusState::Receiving;
+
+    if (status & JD_SERIAL_TRANSMITTING)
+        return JACDACBusState::Transmitting;
+
+    // if we are neither transmitting or receiving, examine the bus.
+    int busVal = sp.getDigitalValue(PullMode::Up);
+    // re-enable events!
+    configure(true);
+
+    if (busVal)
+        return JACDACBusState::High;
+
+    return JACDACBusState::Low;
 }
