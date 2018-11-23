@@ -15,6 +15,9 @@
 
 using namespace codal;
 
+#define JACDAC_MAX_BACKOFF          4000
+#define JACDAC_MIN_BACKOFF          1000
+
 void JACDAC::dmaComplete(Event evt)
 {
     if (evt.value == SWS_EVT_ERROR)
@@ -55,7 +58,7 @@ void JACDAC::dmaComplete(Event evt)
             free(txBuf);
             txBuf = NULL;
             // we've finished sending... trigger an event in random us (in some cases this might not be necessary, but it's not too much overhead).
-            system_timer_event_after_us(4000, this->id, JD_SERIAL_EVT_DRAIN);  // should be random
+            system_timer_event_after_us(JACDAC_MIN_BACKOFF + target_random(JACDAC_MAX_BACKOFF - JACDAC_MIN_BACKOFF), this->id, JD_SERIAL_EVT_DRAIN);  // should be random
             JD_DMESG("DMA TXD");
         }
     }
@@ -212,7 +215,7 @@ void JACDAC::configure(bool events)
  *
  * @param sws an instance of sws created using p.
  */
-JACDAC::JACDAC(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sws(sws), sp(p)
+JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p)
 {
     rxBuf = NULL;
     txBuf = NULL;
@@ -225,8 +228,9 @@ JACDAC::JACDAC(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sws(sws)
 
     timeoutValue = 0;
     timeoutCounter = 0;
+    baud = baudRate;
 
-    sws.setBaud(1000000);
+    sws.setBaud(1000000 / (uint8_t)baudRate);
     sws.setDMACompletionHandler(this, &JACDAC::dmaComplete);
 
     if (EventModel::defaultEventBus)
@@ -328,7 +332,7 @@ void JACDAC::sendPacket(Event)
             JD_DMESG("BUS LO");
             Event evt(0, 0, CREATE_ONLY);
             onFallingEdge(evt);
-            system_timer_event_after_us(4000, this->id, JD_SERIAL_EVT_DRAIN);  // should be random
+            system_timer_event_after_us(JACDAC_MIN_BACKOFF + target_random(JACDAC_MAX_BACKOFF - JACDAC_MIN_BACKOFF), this->id, JD_SERIAL_EVT_DRAIN);  // should be random
             return;
         }
 

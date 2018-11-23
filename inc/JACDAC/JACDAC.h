@@ -106,10 +106,24 @@ namespace codal
     };
 
     /**
+     * This enumeration defines the low time of the tx pulse, and the transmission speed of
+     * this JACDAC device on the bus.
+     **/
+    enum class JACDACBaudRate : uint8_t
+    {
+        Baud1M = 1,
+        Baud500K = 2,
+        Baud250K = 4,
+        Baud125K = 8
+    };
+
+    /**
     * Class definition for a JACDAC interface.
     */
     class JACDAC : public CodalComponent
     {
+        JACDACBaudRate baud;
+
     protected:
         DMASingleWireSerial&  sws;
         Pin& sp;
@@ -141,11 +155,11 @@ namespace codal
         /**
           * Constructor
           *
-          * @param p the transmission pin to use
+          * @param sws an instance of sws.
           *
-          * @param sws an instance of sws created using p.
+          * @param baud Defaults to 1mbaud
           */
-        JACDAC(Pin& p, DMASingleWireSerial& sws, uint16_t id = DEVICE_ID_JACDAC0);
+        JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baud = JACDACBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
 
         /**
           * Retrieves the first packet on the rxQueue irregardless of the device_class
