@@ -1,6 +1,11 @@
 #ifndef JD_CLASSES_H
 #define JD_CLASSES_H
 
+#define STATIC_CLASS_START                              0
+#define STATIC_CLASS_END                                0x00FFFFFF
+#define DYNAMIC_CLASS_START                             STATIC_ADDRESS_END
+#define DYNAMIC_CLASS_END                               0xFFFFFFFF
+
 #define JD_DRIVER_CLASS_CODAL_START                     0
 #define JD_DRIVER_CLASS_CODAL_END                       2000
 #define JD_DRIVER_CLASS_MAKECODE_START                  2000
