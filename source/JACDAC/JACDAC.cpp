@@ -72,7 +72,7 @@ void JACDAC::dmaComplete(Event evt)
                 status &= ~(JD_SERIAL_RECEIVING_HEADER);
 
                 JDPkt* rx = (JDPkt*)rxBuf;
-                DMESG("RXH %d",rx->size);
+                // DMESG("RXH %d",rx->size);
                 sws.receiveDMA(((uint8_t*)rxBuf) + JD_SERIAL_HEADER_SIZE, rx->size);
 
                 // system_timer_event_after((JD_SERIAL_MAX_BAUD / rxBaud) * (10 * rx->size), this->id, JD_SERIAL_EVT_RX_TIMEOUT);
@@ -90,7 +90,6 @@ void JACDAC::dmaComplete(Event evt)
                 Event(id, JD_SERIAL_EVT_DATA_READY);
                 DMESG("DMA RXD");
             }
-
         }
 
         if (evt.value == SWS_EVT_DATA_SENT)
@@ -124,24 +123,23 @@ void JACDAC::onLowPulse(Event e)
     DMESG("t %d c %d", timestamp, ceilVal);
 
     // unsupported baud rate.
-    if (ceilVal == 0 || ceilVal > 8)
+    if (ceilVal > 8)
         return;
-
 
     if (ceilVal == 0)
         ceilVal = 1;
 
     rxBaud = JD_SERIAL_MAX_BAUD / ceilVal;
 
-    sws.setBaud(rxBaud);
+    // sws.setBaud(rxBaud);
 
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
     sp.getDigitalValue(PullMode::None);
 
     timeoutCounter = 0;
-    status |= (JD_SERIAL_RECEIVING);
+    status |= (JD_SERIAL_RECEIVING_HEADER);
 
-    sws.receiveDMA((uint8_t*)rxBuf, 32);
+    sws.receiveDMA((uint8_t*)rxBuf, 4);
 
     // system_timer_event_after(JD_SERIAL_MAX_BAUD / rxBaud * JD_SERIAL_MIN_PACKET_SIZE, this->id, JD_SERIAL_EVT_RX_TIMEOUT);
 }
