@@ -320,7 +320,7 @@ void JACDAC::sendPacket(Event)
     if (status & JD_SERIAL_RECEIVING)
     {
         JD_DMESG("RXing");
-        system_timer_event_after_us(4000, this->id, JD_SERIAL_EVT_DRAIN);  // should be random
+        system_timer_event_after_us(JACDAC_MIN_BACKOFF + target_random(JACDAC_MAX_BACKOFF - JACDAC_MIN_BACKOFF), this->id, JD_SERIAL_EVT_DRAIN);  // should be random
         return;
     }
 
@@ -348,7 +348,7 @@ void JACDAC::sendPacket(Event)
             txBuf = popQueue(&txQueue);
 
             sp.setDigitalValue(0);
-            target_wait_us(10);
+            target_wait_us(10 * (uint8_t)this->baud);
             sp.setDigitalValue(1);
 
             // return after 100 us
