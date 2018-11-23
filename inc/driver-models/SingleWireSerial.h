@@ -25,8 +25,6 @@ namespace codal
     class SingleWireSerial : public CodalComponent
     {
         protected:
-        Pin& p;
-
         virtual void configureRxInterrupt(int enable) = 0;
 
         virtual int configureTx(int) = 0;
@@ -34,6 +32,7 @@ namespace codal
         virtual int configureRx(int) = 0;
 
         public:
+        Pin& p;
 
         // virtual void dataReceived(uint8_t*, int len);
 
