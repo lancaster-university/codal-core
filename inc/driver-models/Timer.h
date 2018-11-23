@@ -249,6 +249,15 @@ namespace codal
     int system_timer_event_after_us(CODAL_TIMESTAMP period, uint16_t id, uint16_t value);
 
     /**
+      * Cancels any events matching the given id and value.
+      *
+      * @param id the ID that was given upon a previous call to eventEvery / eventAfter
+      *
+      * @param value the value that was given upon a previous call to eventEvery / eventAfter
+      */
+    int system_timer_cancel_event(uint16_t id, uint16_t value);
+
+    /**
      * Spin wait for a given number of microseconds.
      *
      * @param period the interval between events
