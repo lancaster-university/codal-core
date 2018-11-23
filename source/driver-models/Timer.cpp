@@ -154,8 +154,17 @@ int Timer::setEvent(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, bool re
  */
 int Timer::cancel(uint16_t id, uint16_t value)
 {
-    // TOOD:
-    return DEVICE_OK;
+    // Find the first unused slot, and assign it.
+    for (int i=0; i<eventListSize; i++)
+    {
+        if (timerEventList[i].id == id && timerEventList[i].value == value)
+        {
+            timerEventList[i].id = 0;
+            return DEVICE_OK;
+        }
+    }
+
+    return DEVICE_INVALID_PARAMETER;
 
 }
 
@@ -403,6 +412,21 @@ int codal::system_timer_event_after(CODAL_TIMESTAMP period, uint16_t id, uint16_
         return DEVICE_NOT_SUPPORTED;
 
     return system_timer->eventAfter(period, id, value);
+}
+
+/**
+ * Cancels any events matching the given id and value.
+ *
+ * @param id the ID that was given upon a previous call to eventEvery / eventAfter
+ *
+ * @param value the value that was given upon a previous call to eventEvery / eventAfter
+ */
+int codal::system_timer_cancel_event(uint16_t id, uint16_t value)
+{
+    if(system_timer == NULL)
+        return DEVICE_NOT_SUPPORTED;
+
+    return system_timer->cancel(id, value);
 }
 
 /**
