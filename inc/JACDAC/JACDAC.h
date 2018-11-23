@@ -34,13 +34,14 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_MAX_BUFFERS          10
 
 #define JD_SERIAL_RECEIVING            0x02
-#define JD_SERIAL_TRANSMITTING         0x04
-#define JD_SERIAL_TX_DRAIN_ENABLE      0x08
-
+#define JD_SERIAL_RECEIVING_HEADER     0x04
+#define JD_SERIAL_TRANSMITTING         0x08
+#define JD_SERIAL_TX_DRAIN_ENABLE      0x10
 
 #define JD_SERIAL_EVT_DATA_READY       1
 #define JD_SERIAL_EVT_BUS_ERROR        2
 #define JD_SERIAL_EVT_DRAIN            3
+#define JD_SERIAL_EVT_RX_TIMEOUT       4
 
 #define JD_SERIAL_HEADER_SIZE          4
 #define JD_SERIAL_DATA_SIZE            32
@@ -49,8 +50,6 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_MAXIMUM_BUFFERS      10
 
 #define JD_SERIAL_DMA_TIMEOUT          2   // 2 callback ~8 ms
-
-#define JD_JD_FLAGS_LOSSY             0x01
 
 #if CONFIG_ENABLED(JD_DEBUG)
 #define JD_DMESG      codal_dmesg
@@ -131,6 +130,8 @@ namespace codal
         uint8_t timeoutCounter;
         uint8_t timeoutValue;
 
+        uint32_t rxBaud;
+
         void onLowPulse(Event);
         void configure(bool events);
         void dmaComplete(Event evt);
@@ -140,6 +141,7 @@ namespace codal
         JDPkt* removeFromQueue(JDPkt** queue, uint8_t device_class);
 
         void sendPacket(Event);
+        void rxTimeout(Event);
 
     public:
         JDPkt* rxBuf;
@@ -149,8 +151,6 @@ namespace codal
         JDPkt* txQueue;
 
         uint16_t id;
-
-        virtual void periodicCallback();
 
         /**
           * Constructor
@@ -230,6 +230,10 @@ namespace codal
          * * Lo if something is currently pulling the line low.
          **/
         JACDACBusState getState();
+
+        int setBaud(JACDACBaudRate baudRate);
+
+        JACDACBaudRate getBaud();
     };
 } // namespace codal
 
