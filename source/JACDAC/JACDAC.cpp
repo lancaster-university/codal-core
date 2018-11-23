@@ -70,12 +70,14 @@ void JACDAC::dmaComplete(Event evt)
     configure(true);
 }
 
-void JACDAC::onFallingEdge(Event)
+void JACDAC::onLowPulse(Event e)
 {
     // JD_DMESG("FALL: %d %d", (status & JD_SERIAL_RECEIVING) ? 1 : 0, (status & JD_SERIAL_TRANSMITTING) ? 1 : 0);
     // guard against repeat events.
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
+
+    sws.setBaud(1000000 / (e.timestamp / 10));
 
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
     sp.getDigitalValue(PullMode::None);
@@ -203,7 +205,7 @@ void JACDAC::configure(bool events)
     sp.getDigitalValue(PullMode::Up);
 
     if(events)
-        sp.eventOn(DEVICE_PIN_EVENT_ON_EDGE);
+        sp.eventOn(DEVICE_PIN_EVENT_ON_PULSE);
     else
         sp.eventOn(DEVICE_PIN_EVENT_NONE);
 }
@@ -235,7 +237,7 @@ JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) 
 
     if (EventModel::defaultEventBus)
     {
-        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_FALL, this, &JACDAC::onFallingEdge, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_PULSE_LO, this, &JACDAC::onLowPulse, MESSAGE_BUS_LISTENER_IMMEDIATE);
         EventModel::defaultEventBus->listen(this->id, JD_SERIAL_EVT_DRAIN, this, &JACDAC::sendPacket, MESSAGE_BUS_LISTENER_IMMEDIATE);
     }
 }
@@ -288,10 +290,10 @@ void JACDAC::start()
     if (sp.getDigitalValue(PullMode::Up) == 0)
     {
         JD_DMESG("TRIGGER");
-        onFallingEdge(evt);
+        onLowPulse(evt);
     }
 
-    sp.eventOn(DEVICE_PIN_EVENT_ON_EDGE);
+    sp.eventOn(DEVICE_PIN_EVENT_ON_PULSE);
 }
 
 /**
@@ -331,7 +333,7 @@ void JACDAC::sendPacket(Event)
         {
             JD_DMESG("BUS LO");
             Event evt(0, 0, CREATE_ONLY);
-            onFallingEdge(evt);
+            onLowPulse(evt);
             system_timer_event_after_us(JACDAC_MIN_BACKOFF + target_random(JACDAC_MAX_BACKOFF - JACDAC_MIN_BACKOFF), this->id, JD_SERIAL_EVT_DRAIN);  // should be random
             return;
         }

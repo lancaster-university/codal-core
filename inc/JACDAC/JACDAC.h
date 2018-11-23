@@ -131,7 +131,7 @@ namespace codal
         uint8_t timeoutCounter;
         uint8_t timeoutValue;
 
-        void onFallingEdge(Event);
+        void onLowPulse(Event);
         void configure(bool events);
         void dmaComplete(Event evt);
 
