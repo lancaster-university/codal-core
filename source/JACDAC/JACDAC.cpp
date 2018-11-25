@@ -29,7 +29,7 @@ void JACDAC::dmaComplete(Event evt)
 
         if (status & JD_SERIAL_RECEIVING)
         {
-            JD_DMESG("DMA RXE");
+            DMESG("DMA RXE");
             status &= ~(JD_SERIAL_RECEIVING);
             timeoutCounter = 0;
             sws.abortDMA();
@@ -46,7 +46,7 @@ void JACDAC::dmaComplete(Event evt)
             addToQueue(&rxQueue, rxBuf);
             rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
             Event(id, JD_SERIAL_EVT_DATA_READY);
-            JD_DMESG("DMA RXD");
+            DMESG("DMA RXD");
         }
 
         if (evt.value == SWS_EVT_DATA_SENT)
@@ -56,7 +56,7 @@ void JACDAC::dmaComplete(Event evt)
             txBuf = NULL;
             // we've finished sending... trigger an event in random us (in some cases this might not be necessary, but it's not too much overhead).
             system_timer_event_after_us(4000, this->id, JD_SERIAL_EVT_DRAIN);  // should be random
-            JD_DMESG("DMA TXD");
+            DMESG("DMA TXD");
         }
     }
 
@@ -69,10 +69,13 @@ void JACDAC::dmaComplete(Event evt)
 
 void JACDAC::onFallingEdge(Event)
 {
+    DMESG("F");
     // JD_DMESG("FALL: %d %d", (status & JD_SERIAL_RECEIVING) ? 1 : 0, (status & JD_SERIAL_TRANSMITTING) ? 1 : 0);
     // guard against repeat events.
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
+
+    DMESG("RE");
 
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
     sp.getDigitalValue(PullMode::None);
@@ -100,14 +103,13 @@ void JACDAC::periodicCallback()
 
         if (timeoutCounter > timeoutValue)
         {
-            JD_DMESG("TIMEOUT");
+            DMESG("TIMEOUT");
             sws.abortDMA();
             Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
             timeoutCounter = 0;
             status &= ~(JD_SERIAL_RECEIVING);
 
             sws.setMode(SingleWireDisconnected);
-            sp.setDigitalValue(1);
             configure(true);
         }
     }
@@ -199,7 +201,7 @@ void JACDAC::configure(bool events)
 {
     sp.getDigitalValue(PullMode::Up);
 
-    if(events)
+    if (events)
         sp.eventOn(DEVICE_PIN_EVENT_ON_EDGE);
     else
         sp.eventOn(DEVICE_PIN_EVENT_NONE);
@@ -222,6 +224,8 @@ JACDAC::JACDAC(codal::Pin& p, DMASingleWireSerial&  sws, uint16_t id) : sws(sws)
 
     this->id = id;
     status = 0;
+
+    sp.getDigitalValue(PullMode::None);
 
     timeoutValue = 0;
     timeoutCounter = 0;
@@ -269,9 +273,7 @@ void JACDAC::start()
     if (rxBuf == NULL)
         rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
 
-    JD_DMESG("JD START");
-
-    configure(true);
+    DMESG("JD START");
 
     target_disable_irq();
     status = 0;
@@ -281,13 +283,13 @@ void JACDAC::start()
     Event evt(0, 0, CREATE_ONLY);
 
     // if the line is low, we may be in the middle of a transfer, manually trigger rx mode.
-    if (sp.getDigitalValue(PullMode::Up) == 0)
-    {
-        JD_DMESG("TRIGGER");
-        onFallingEdge(evt);
-    }
-
-    sp.eventOn(DEVICE_PIN_EVENT_ON_EDGE);
+    // if (sp.getDigitalValue(PullMode::Up) == 0)
+    // {
+    //     DMESG("TRIGGER");
+    //     onFallingEdge(evt);
+    // }
+    configure(true);
+    // sp.eventOn(DEVICE_PIN_EVENT_ON_EDGE);
 }
 
 /**
@@ -311,11 +313,11 @@ void JACDAC::stop()
 void JACDAC::sendPacket(Event)
 {
     status |= JD_SERIAL_TX_DRAIN_ENABLE;
-    JD_DMESG("JD SEND");
+    DMESG("SEND");
     // if we are receiving, randomly back off
     if (status & JD_SERIAL_RECEIVING)
     {
-        JD_DMESG("RXing");
+        DMESG("RXing");
         system_timer_event_after_us(4000, this->id, JD_SERIAL_EVT_DRAIN);  // should be random
         return;
     }
@@ -325,15 +327,14 @@ void JACDAC::sendPacket(Event)
         // if the bus is lo, we shouldn't transmit
         if (sp.getDigitalValue(PullMode::Up) == 0)
         {
-            JD_DMESG("BUS LO");
-            Event evt(0, 0, CREATE_ONLY);
-            onFallingEdge(evt);
-            system_timer_event_after_us(4000, this->id, JD_SERIAL_EVT_DRAIN);  // should be random
+            DMESG("BUS LO");
+            // something is holding the bus lo
+            configure(true);
+            // system_timer_event_after_us(4000, this->id, JD_SERIAL_EVT_DRAIN);  // should be random
             return;
         }
 
         // performing the above digital read will disable fall events... re-enable
-        sp.setDigitalValue(1);
         configure(true);
 
         // if we have stuff in our queue, and we have not triggered a DMA transfer...
