@@ -126,9 +126,7 @@ void JackRouter::idleCallback()
 
     if (state != JackState::BuzzerAndSerial)
     {
-        if (state == JackState::HeadPhones)
-            numLows++; // we might be driving "mid" high, depending on the shape of sound wave
-        else if (!mid.getDigitalValue(PullMode::Up))
+        if (!mid.getDigitalValue(PullMode::Up))
             numLows++;
     }
 
