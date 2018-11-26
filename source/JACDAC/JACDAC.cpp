@@ -15,6 +15,41 @@
 
 using namespace codal;
 
+/**
+ * Fletchers algorithm, a widely used low-overhead checksum (even used in apple latest file system APFS).
+ *
+ * @param data the data to checksum
+ *
+ * @param len the length of data
+ **/
+uint16_t fletcher16(const uint8_t *data, size_t len)
+{
+    uint32_t c0, c1;
+    unsigned int i;
+
+    for (c0 = c1 = 0; len >= 5802; len -= 5802)
+    {
+        for (i = 0; i < 5802; ++i)
+        {
+                c0 = c0 + *data++;
+                c1 = c1 + c0;
+        }
+        c0 = c0 % 255;
+        c1 = c1 % 255;
+    }
+
+    for (i = 0; i < len; ++i)
+    {
+        c0 = c0 + *data++;
+        c1 = c1 + c0;
+    }
+
+    c0 = c0 % 255;
+    c1 = c1 % 255;
+
+    return (c1 << 8 | c0);
+}
+
 void JACDAC::dmaComplete(Event evt)
 {
     if (evt.value == SWS_EVT_ERROR)
@@ -43,11 +78,19 @@ void JACDAC::dmaComplete(Event evt)
         {
             status &= ~(JD_SERIAL_RECEIVING);
             system_timer_cancel_event(this->id, JD_SERIAL_EVT_RX_TIMEOUT);
-            // move rxbuf to rxQueue and allocate new buffer.
-            addToQueue(&rxQueue, rxBuf);
-            rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
-            Event(id, JD_SERIAL_EVT_DATA_READY);
-            JD_DMESG("DMA RXD");
+            uint8_t* crcPointer = (uint8_t*)&rxBuf->address;
+            uint16_t crc = fletcher16(crcPointer, JD_SERIAL_PACKET_SIZE - 2);
+
+            if (crc == rxBuf->crc)
+            {
+                // move rxbuf to rxQueue and allocate new buffer.
+                addToQueue(&rxQueue, rxBuf);
+                rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
+                Event(id, JD_SERIAL_EVT_DATA_READY);
+                JD_DMESG("DMA RXD");
+            }
+            else
+                JD_DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
         }
 
         if (evt.value == SWS_EVT_DATA_SENT)
@@ -368,6 +411,10 @@ int JACDAC::send(JDPkt* tx)
     memset(pkt, 0, sizeof(JDPkt));
     memcpy(pkt, tx, sizeof(JDPkt));
 
+    // skip the crc.
+    uint8_t* crcPointer = (uint8_t*)&pkt->address;
+    pkt->crc = fletcher16(crcPointer, JD_SERIAL_PACKET_SIZE - 2);
+
     int ret = addToQueue(&txQueue, pkt);
 
     if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
@@ -396,23 +443,13 @@ int JACDAC::send(uint8_t* buf, int len, uint8_t address)
     }
 
     JDPkt pkt;
+    memset(&pkt, 0, sizeof(JDPkt));
 
-    // for variation of crc's
-    memset(&pkt, target_random(256), sizeof(JDPkt));
-
-    // very simple crc
     pkt.crc = 0;
     pkt.address = address;
     pkt.size = len;
 
     memcpy(pkt.data, buf, len);
-
-    // skip the crc.
-    uint8_t* crcPointer = (uint8_t*)&pkt.address;
-
-    // simple crc
-    for (int i = 0; i < JD_SERIAL_PACKET_SIZE - 2; i++)
-        pkt.crc += crcPointer[i];
 
     return send(&pkt);
 }
