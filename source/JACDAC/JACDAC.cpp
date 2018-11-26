@@ -32,7 +32,6 @@ void JACDAC::dmaComplete(Event evt)
         {
             JD_DMESG("DMA RXE");
             status &= ~(JD_SERIAL_RECEIVING);
-            timeoutCounter = 0;
             sws.abortDMA();
             Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
         }
@@ -79,7 +78,6 @@ void JACDAC::onFallingEdge(Event)
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
     sp.getDigitalValue(PullMode::None);
 
-    timeoutCounter = 0;
     status |= (JD_SERIAL_RECEIVING);
 
     sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_PACKET_SIZE);
@@ -209,8 +207,6 @@ JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) 
 
     sp.getDigitalValue(PullMode::None);
 
-    timeoutValue = 0;
-    timeoutCounter = 0;
     baud = baudRate;
 
     sws.setBaud(1000000 / (uint8_t)baudRate);
@@ -470,6 +466,7 @@ int JACDAC::setBaud(JACDACBaudRate baud)
 {
     this->baud = baud;
     sws.setBaud(JD_SERIAL_MAX_BAUD / (uint8_t)baud);
+    return DEVICE_OK;
 }
 
 JACDACBaudRate JACDAC::getBaud()
