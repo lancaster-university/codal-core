@@ -89,6 +89,8 @@ void JACDAC::dmaComplete(Event evt)
                 Event(id, JD_SERIAL_EVT_DATA_READY);
                 JD_DMESG("DMA RXD");
             }
+            // could we do something cool to indicate an incorrect CRC?
+            // i.e. drive the bus low....?
             else
                 JD_DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
         }
@@ -300,7 +302,7 @@ void JACDAC::start()
 
     target_disable_irq();
     status = 0;
-    status |= (DEVICE_COMPONENT_RUNNING | DEVICE_COMPONENT_STATUS_SYSTEM_TICK);
+    status |= DEVICE_COMPONENT_RUNNING;
     target_enable_irq();
 
     configure(true);
@@ -314,7 +316,7 @@ void JACDAC::stop()
     if (!isRunning())
         return;
 
-    status &= ~(DEVICE_COMPONENT_RUNNING | DEVICE_COMPONENT_STATUS_SYSTEM_TICK);
+    status &= ~(DEVICE_COMPONENT_RUNNING);
     if (rxBuf)
     {
         free(rxBuf);
