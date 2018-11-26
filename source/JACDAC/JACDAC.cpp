@@ -254,7 +254,7 @@ JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) 
 
     baud = baudRate;
 
-    sws.setBaud(1000000 / (uint8_t)baudRate);
+    sws.setBaud(JD_SERIAL_MAX_BAUD / (uint8_t)baudRate);
     sws.setDMACompletionHandler(this, &JACDAC::dmaComplete);
 
     if (EventModel::defaultEventBus)
