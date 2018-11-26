@@ -37,14 +37,12 @@ DEALINGS IN THE SOFTWARE.
 // the following defines should really be in separate head files, but circular includes suck.
 
 // BEGIN    JD SERIAL DRIVER FLAGS
-#define JD_DRIVER_EVT_CONNECTED         1
-#define JD_DRIVER_EVT_DISCONNECTED      2
-
-#define JD_DRIVER_EVT_PAIRED            3
-#define JD_DRIVER_EVT_UNPAIRED          4
-
-#define JD_DRIVER_EVT_PAIR_REJECTED     5
-#define JD_DRIVER_EVT_PAIRING_RESPONSE  6
+#define JD_DRIVER_EVT_CONNECTED         65520
+#define JD_DRIVER_EVT_DISCONNECTED      65521
+#define JD_DRIVER_EVT_PAIRED            65522
+#define JD_DRIVER_EVT_UNPAIRED          65523
+#define JD_DRIVER_EVT_PAIR_REJECTED     65524
+#define JD_DRIVER_EVT_PAIRING_RESPONSE  65525
 
 #define JD_DEVICE_FLAGS_LOCAL           0x8000 // on the board
 #define JD_DEVICE_FLAGS_REMOTE          0x4000 // off the board

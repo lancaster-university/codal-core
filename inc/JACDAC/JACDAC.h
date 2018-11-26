@@ -42,6 +42,7 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_EVT_DATA_READY       1
 #define JD_SERIAL_EVT_BUS_ERROR        2
 #define JD_SERIAL_EVT_DRAIN            3
+#define JD_SERIAL_EVT_RX_TIMEOUT       4
 
 #define JD_SERIAL_HEADER_SIZE          4
 #define JD_SERIAL_DATA_SIZE            32
@@ -51,7 +52,9 @@ DEALINGS IN THE SOFTWARE.
 
 #define JD_SERIAL_DMA_TIMEOUT          2   // 2 callback ~8 ms
 
-#define JD_JD_FLAGS_LOSSY             0x01
+#define JD_SERIAL_MAX_BAUD             1000000
+#define JD_SERIAL_TX_MAX_BACKOFF       4000
+#define JD_SERIAL_TX_MIN_BACKOFF       1000
 
 #if CONFIG_ENABLED(JD_DEBUG)
 #define JD_DMESG      codal_dmesg
@@ -127,7 +130,7 @@ namespace codal
 
     protected:
         DMASingleWireSerial&  sws;
-        Pin& sp;
+        Pin&  sp;
 
         uint8_t timeoutCounter;
         uint8_t timeoutValue;
@@ -142,16 +145,14 @@ namespace codal
 
         void sendPacket(Event);
 
+        void rxTimeout(Event);
+
     public:
         JDPkt* rxBuf;
         JDPkt* txBuf;
 
         JDPkt* rxQueue;
         JDPkt* txQueue;
-
-        uint16_t id;
-
-        virtual void periodicCallback();
 
         /**
           * Constructor
@@ -231,6 +232,10 @@ namespace codal
          * * Lo if something is currently pulling the line low.
          **/
         JACDACBusState getState();
+
+        int setBaud(JACDACBaudRate baudRate);
+
+        JACDACBaudRate getBaud();
     };
 } // namespace codal
 
