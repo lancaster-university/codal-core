@@ -39,7 +39,7 @@ const BaudByte baudToByteMap[] =
 };
 
 // https://graphics.stanford.edu/~seander/bithacks.html
- // <3
+// <3
 inline uint32_t ceil_pow2(uint32_t v)
 {
     v--;
@@ -50,7 +50,6 @@ inline uint32_t ceil_pow2(uint32_t v)
     v |= v >> 16;
     v++;
     return v;
-
 }
 
 /**
@@ -93,6 +92,7 @@ void JACDAC::dmaComplete(Event evt)
     if (evt.value == SWS_EVT_ERROR)
     {
         system_timer_cancel_event(this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+
         if (status & JD_SERIAL_TRANSMITTING)
         {
             DMESG("DMA TXE");
@@ -164,7 +164,7 @@ void JACDAC::onLowPulse(Event e)
     ts = ceil(ts / 10);
     ts = ceil_pow2(ts);
 
-    DMESG("TS: %d %d",ts, (int)e.timestamp);
+    DMESG("TS: %d %d", ts, (int)e.timestamp);
 
     // we support 1, 2, 4, 8 as our powers of 2.
     if (ts > 8)
