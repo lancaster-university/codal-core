@@ -31,6 +31,8 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "DMASingleWireSerial.h"
 
+#define JACDAC_VERSION                 1
+
 #define JD_SERIAL_MAX_BUFFERS          10
 
 #define JD_SERIAL_RECEIVING            0x02
