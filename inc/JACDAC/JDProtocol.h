@@ -490,6 +490,13 @@ namespace codal
         uint32_t getClass();
 
         /**
+         * Retrieves the state of the driver.
+         *
+         * @return the internal driver state.
+         **/
+        JDDevice getState();
+
+        /**
          * Retrieves the serial number in use by this driver.
          *
          * @return the serial number

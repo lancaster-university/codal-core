@@ -240,6 +240,11 @@ uint32_t JDDriver::getClass()
     return device.driver_class;
 }
 
+JDDevice JDDriver::getState()
+{
+    return device;
+}
+
 uint32_t JDDriver::getSerialNumber()
 {
     return device.serial_number;
