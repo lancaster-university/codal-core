@@ -513,6 +513,32 @@ bool JACDAC::isRunning()
 }
 
 /**
+ * Returns the current state if the bus.
+ *
+ * @return true if connected, false if there's a bad bus condition.
+ **/
+bool JACDAC::isConnected()
+{
+    if (status & JD_SERIAL_RECEIVING || (status & JD_SERIAL_TRANSMITTING && !(status & JD_SERIAL_BUS_RISE)))
+        return true;
+
+    // this flag is set if the bus is being held lo.
+    if (status & JD_SERIAL_BUS_RISE)
+        return false;
+
+    // if we are neither transmitting or receiving, examine the bus.
+    int busVal = sp.getDigitalValue(PullMode::Up);
+
+    // re-enable events!
+    configure(true);
+
+    if (busVal)
+        return true;
+
+    return false;
+}
+
+/**
  * Returns the current state of the bus, either:
  *
  * * Receiving if the driver is in the process of receiving a packet.

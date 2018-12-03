@@ -238,6 +238,13 @@ namespace codal
         bool isRunning();
 
         /**
+         * Returns the current state if the bus.
+         *
+         * @return true if connected, false if there's a bad bus condition.
+         **/
+        bool isConnected();
+
+        /**
          * Returns the current state of the bus, either:
          *
          * * Receiving if the driver is in the process of receiving a packet.
