@@ -175,6 +175,14 @@ int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end)
     return DEVICE_OK;
 }
 
+uint32_t device_heap_size(uint8_t heap_index)
+{
+    if (heap_index >= heap_count)
+        return 0;    
+    HeapDefinition *h = &heap[heap_index];
+    return (uint8_t*)h->heap_end - (uint8_t*)h->heap_start;
+}
+
 /**
   * Attempt to allocate a given amount of memory from a given heap area.
   *

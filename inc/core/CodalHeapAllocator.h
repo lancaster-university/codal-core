@@ -81,4 +81,13 @@ extern PROCESSOR_WORD_TYPE codal_heap_start;
   */
 int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end);
 
+/**
+ * Returns the size of a given heap.
+ * 
+ * @param heap_index index between 0 and DEVICE_MAXIMUM_HEAPS-1
+ * 
+ * @return the size of heap in bytes, or zero if no such heap exists.
+ */
+uint32_t device_heap_size(uint8_t heap_index);
+
 #endif
