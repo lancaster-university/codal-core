@@ -146,6 +146,10 @@ namespace codal
 
         void rxTimeout(Event);
 
+        void initialise();
+
+        Pin* led;
+
     public:
         JDPkt* rxBuf;
         JDPkt* txBuf;
@@ -161,6 +165,17 @@ namespace codal
           * @param baud Defaults to 1mbaud
           */
         JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baud = JACDACBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
+
+        /**
+          * Constructor
+          *
+          * @param sws an instance of sws.
+          *
+          * @param led an instance of a pin, use to display the state of the bus.
+          *
+          * @param baud Defaults to 1mbaud
+          */
+        JACDAC(DMASingleWireSerial&  sws, Pin& led, JACDACBaudRate baud = JACDACBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
 
         /**
           * Retrieves the first packet on the rxQueue irregardless of the device_class

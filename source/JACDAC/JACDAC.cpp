@@ -127,12 +127,12 @@ void JACDAC::onFallingEdge(Event)
 
     sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_PACKET_SIZE);
     // configure for 1mbaud timeout for now
-    system_timer_event_after((JD_SERIAL_MAX_BAUD / 1) * ((JD_SERIAL_PACKET_SIZE + 8) * 10), this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+    system_timer_event_after(10 * ((JD_SERIAL_PACKET_SIZE + 2)), this->id, JD_SERIAL_EVT_RX_TIMEOUT);
 }
 
 void JACDAC::rxTimeout(Event)
 {
-    DMESG("TIMEOUT");
+    JD_DMESG("TIMEOUT");
     sws.abortDMA();
     Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
     status &= ~(JD_SERIAL_RECEIVING);
@@ -232,14 +232,7 @@ void JACDAC::configure(bool events)
         sp.eventOn(DEVICE_PIN_EVENT_NONE);
 }
 
-/**
- * Constructor
- *
- * @param p the transmission pin to use
- *
- * @param sws an instance of sws created using p.
- */
-JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p)
+void JACDAC::initialise()
 {
     rxBuf = NULL;
     txBuf = NULL;
@@ -247,14 +240,11 @@ JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) 
     rxQueue = NULL;
     txQueue = NULL;
 
-    this->id = id;
     status = 0;
 
     sp.getDigitalValue(PullMode::None);
 
-    baud = baudRate;
-
-    sws.setBaud(JD_SERIAL_MAX_BAUD / (uint8_t)baudRate);
+    sws.setBaud(JD_SERIAL_MAX_BAUD / (uint8_t)baud);
     sws.setDMACompletionHandler(this, &JACDAC::dmaComplete);
 
     if (EventModel::defaultEventBus)
@@ -263,6 +253,34 @@ JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) 
         EventModel::defaultEventBus->listen(this->id, JD_SERIAL_EVT_DRAIN, this, &JACDAC::sendPacket, MESSAGE_BUS_LISTENER_IMMEDIATE);
         EventModel::defaultEventBus->listen(this->id, JD_SERIAL_EVT_RX_TIMEOUT, this, &JACDAC::rxTimeout, MESSAGE_BUS_LISTENER_IMMEDIATE);
     }
+}
+
+/**
+ * Constructor
+ *
+ * @param p the transmission pin to use
+ *
+ * @param sws an instance of sws created using p.
+ */
+JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), led(NULL)
+{
+    this->id = id;
+    this->baud = baudRate;
+    initialise();
+}
+
+/**
+ * Constructor
+ *
+ * @param p the transmission pin to use
+ *
+ * @param sws an instance of sws created using p.
+ */
+JACDAC::JACDAC(DMASingleWireSerial&  sws, Pin& led, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), led(&led)
+{
+    this->id = id;
+    this->baud = baudRate;
+    initialise();
 }
 
 /**
@@ -305,7 +323,11 @@ void JACDAC::start()
     status |= DEVICE_COMPONENT_RUNNING;
     target_enable_irq();
 
+    // check if the bus is lo here and change our led
     configure(true);
+
+    if (led)
+        led->setDigitalValue(1);
 }
 
 /**
@@ -324,22 +346,27 @@ void JACDAC::stop()
     }
 
     configure(false);
+
+    if (led)
+        led->setDigitalValue(0);
 }
 
 void JACDAC::sendPacket(Event)
 {
-    status |= JD_SERIAL_TX_DRAIN_ENABLE;
-    JD_DMESG("SEND");
+    JD_DMESG("SENDP");
     // if we are receiving, randomly back off
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_BUS_RISE))
     {
         if (status & JD_SERIAL_BUS_RISE)
         {
             JD_DMESG("RISE!!");
+            if (led)
+                led->setDigitalValue(1);
+
             status &= ~JD_SERIAL_BUS_RISE;
             EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::sendPacket);
         }
-
+        JD_DMESG("WAIT %s", (status & JD_SERIAL_BUS_RISE) ? "LO" : "REC");
         system_timer_event_after_us(JD_SERIAL_TX_MIN_BACKOFF + target_random(JD_SERIAL_TX_MAX_BACKOFF - JD_SERIAL_TX_MIN_BACKOFF), this->id, JD_SERIAL_EVT_DRAIN);
         return;
     }
@@ -350,6 +377,8 @@ void JACDAC::sendPacket(Event)
         if (sp.getDigitalValue(PullMode::Up) == 0)
         {
             JD_DMESG("BUS LO");
+            if (led)
+                led->setDigitalValue(0);
             // something is holding the bus lo
             configure(true);
             // listen for when it is hi again
@@ -402,12 +431,15 @@ void JACDAC::sendPacket(Event)
  */
 int JACDAC::send(JDPkt* tx)
 {
+    JD_DMESG("SEND");
     if (tx == NULL)
         return DEVICE_INVALID_PARAMETER;
 
     // don't queue packets if jacdac is not running, or the bus is being held LO.
     if (!isRunning() || status & JD_SERIAL_BUS_RISE)
         return DEVICE_INVALID_STATE;
+
+    JD_DMESG("QUEU");
 
     JDPkt* pkt = (JDPkt *)malloc(sizeof(JDPkt));
     memset(pkt, 0, sizeof(JDPkt));
@@ -420,7 +452,13 @@ int JACDAC::send(JDPkt* tx)
     int ret = addToQueue(&txQueue, pkt);
 
     if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
-        system_timer_event_after_us(JD_SERIAL_TX_MIN_BACKOFF + target_random(JD_SERIAL_TX_MAX_BACKOFF - JD_SERIAL_TX_MIN_BACKOFF), this->id, JD_SERIAL_EVT_DRAIN);
+    {
+        JD_DMESG("DR EN");
+        status |= JD_SERIAL_TX_DRAIN_ENABLE;
+        uint32_t t = JD_SERIAL_TX_MIN_BACKOFF + target_random(JD_SERIAL_TX_MAX_BACKOFF - JD_SERIAL_TX_MIN_BACKOFF);
+        JD_DMESG("T: %d", t);
+        system_timer_event_after_us(t, this->id, JD_SERIAL_EVT_DRAIN);
+    }
 
     return ret;
 }
