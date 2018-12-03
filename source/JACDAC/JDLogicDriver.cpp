@@ -51,6 +51,7 @@ void JDLogicDriver::periodicCallback()
                 {
                     JD_DMESG("CONTROL NOT SEEN %d %d", current->device.address, current->device.serial_number);
                     current->deviceRemoved();
+                    Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
                 }
 
                 current->device.flags &= ~(JD_DEVICE_FLAGS_CP_SEEN);
@@ -121,6 +122,7 @@ void JDLogicDriver::periodicCallback()
                     current->device.flags &= ~JD_DEVICE_FLAGS_INITIALISING;
                     current->device.flags |= JD_DEVICE_FLAGS_INITIALISED;
                     current->deviceConnected(current->device);
+                    Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
                 }
             }
             else if (current->device.flags & JD_DEVICE_FLAGS_INITIALISED)
@@ -225,6 +227,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             {
                 // new address will be assigned on next tick.
                 current->deviceRemoved();
+                Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
                 JD_DMESG("REASSIGNING SELF");
                 return DEVICE_OK;
             }
@@ -279,6 +282,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
                 {
                     JD_DMESG("ADD NEW MAP");
                     new JDDriver(JDDevice(cp->address, cp->flags | JD_DEVICE_FLAGS_BROADCAST_MAP | JD_DEVICE_FLAGS_INITIALISED, cp->serial_number, cp->driver_class));
+                    Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
                 }
             }
 
@@ -325,6 +329,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
             JD_DMESG("FOUND NEW: %d %d %d", current->device.address, current->device.serial_number, current->device.driver_class);
             current->handleControlPacket(p);
             current->deviceConnected(JDDevice(cp->address, cp->flags, cp->serial_number, cp->driver_class));
+            Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
             return DEVICE_OK;
         }
     }

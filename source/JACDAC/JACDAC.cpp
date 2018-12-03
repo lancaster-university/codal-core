@@ -341,14 +341,7 @@ void JACDAC::configure(JACDACPinEvents eventType)
     sp.eventOn(eventType);
 }
 
-/**
- * Constructor
- *
- * @param p the transmission pin to use
- *
- * @param sws an instance of sws created using p.
- */
-JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p)
+void JACDAC::initialise()
 {
     rxBuf = NULL;
     txBuf = NULL;
@@ -360,9 +353,7 @@ JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) 
 
     sp.getDigitalValue(PullMode::None);
 
-    baud = baudRate;
-
-    sws.setBaud(baudToByteMap[(uint8_t)baudRate - 1].baud);
+    sws.setBaud(baudToByteMap[(uint8_t)baud - 1].baud);
     sws.setDMACompletionHandler(this, &JACDAC::dmaComplete);
 
     if (EventModel::defaultEventBus)
@@ -373,7 +364,35 @@ JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) 
 }
 
 /**
- * Retrieves the first packet on the rxQueue regardless of the device_class
+ * Constructor
+ *
+ * @param p the transmission pin to use
+ *
+ * @param sws an instance of sws created using p.
+ */
+JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), led(NULL)
+{
+    this->id = id;
+    this->baud = baudRate;
+    initialise();
+}
+
+/**
+ * Constructor
+ *
+ * @param p the transmission pin to use
+ *
+ * @param sws an instance of sws created using p.
+ */
+JACDAC::JACDAC(DMASingleWireSerial&  sws, Pin& led, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), led(&led)
+{
+    this->id = id;
+    this->baud = baudRate;
+    initialise();
+}
+
+/**
+ * Retrieves the first packet on the rxQueue irregardless of the device_class
  *
  * @returns the first packet on the rxQueue or NULL
  */
@@ -400,7 +419,13 @@ void JACDAC::start()
     status |= DEVICE_COMPONENT_RUNNING;
     target_enable_irq();
 
+    // check if the bus is lo here and change our led
     configure(JACDACPinEvents::PulseEvents);
+
+    if (led)
+        led->setDigitalValue(1);
+
+    Event(this->id, JD_SERIAL_EVT_BUS_CONNECTED);
 }
 
 /**
@@ -419,18 +444,26 @@ void JACDAC::stop()
     }
 
     configure(JACDACPinEvents::NoEvents);
+
+    if (led)
+        led->setDigitalValue(0);
+
+    Event(this->id, JD_SERIAL_EVT_BUS_DISCONNECTED);
 }
 
 void JACDAC::sendPacket(Event)
 {
-    status |= JD_SERIAL_TX_DRAIN_ENABLE;
     JD_DMESG("SENDP");
     // if we are receiving, randomly back off
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_BUS_RISE))
     {
+        JD_DMESG("WAIT %s", (status & JD_SERIAL_BUS_RISE) ? "LO" : "REC");
         if (status & JD_SERIAL_BUS_RISE)
         {
             JD_DMESG("RISE!!");
+            if (led)
+                led->setDigitalValue(1);
+
             status &= ~JD_SERIAL_BUS_RISE;
             configure(JACDACPinEvents::PulseEvents);
         }
@@ -449,6 +482,11 @@ void JACDAC::sendPacket(Event)
             configure(JACDACPinEvents::EdgeEvents);
             // listen for when it is hi again
             status |= JD_SERIAL_BUS_RISE;
+
+            if (led)
+                led->setDigitalValue(0);
+
+            Event(this->id, JD_SERIAL_EVT_BUS_DISCONNECTED);
             return;
         }
 
@@ -498,12 +536,15 @@ void JACDAC::sendPacket(Event)
  */
 int JACDAC::send(JDPkt* tx)
 {
+    JD_DMESG("SEND");
     if (tx == NULL)
         return DEVICE_INVALID_PARAMETER;
 
     // don't queue packets if jacdac is not running, or the bus is being held LO.
     if (!isRunning() || status & JD_SERIAL_BUS_RISE)
         return DEVICE_INVALID_STATE;
+
+    JD_DMESG("QUEU");
 
     JDPkt* pkt = (JDPkt *)malloc(sizeof(JDPkt));
     memset(pkt, 0, sizeof(JDPkt));
@@ -516,7 +557,13 @@ int JACDAC::send(JDPkt* tx)
     int ret = addToTxArray(pkt);
 
     if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
-        system_timer_event_after_us(JD_SERIAL_TX_MIN_BACKOFF + target_random(JD_SERIAL_TX_MAX_BACKOFF - JD_SERIAL_TX_MIN_BACKOFF), this->id, JD_SERIAL_EVT_DRAIN);
+    {
+        JD_DMESG("DR EN");
+        status |= JD_SERIAL_TX_DRAIN_ENABLE;
+        uint32_t t = JD_SERIAL_TX_MIN_BACKOFF + target_random(JD_SERIAL_TX_MAX_BACKOFF - JD_SERIAL_TX_MIN_BACKOFF);
+        JD_DMESG("T: %d", t);
+        system_timer_event_after_us(t, this->id, JD_SERIAL_EVT_DRAIN);
+    }
 
     return ret;
 }
@@ -560,6 +607,32 @@ int JACDAC::send(uint8_t* buf, int len, uint8_t address)
 bool JACDAC::isRunning()
 {
     return (status & DEVICE_COMPONENT_RUNNING) ? true : false;
+}
+
+/**
+ * Returns the current state if the bus.
+ *
+ * @return true if connected, false if there's a bad bus condition.
+ **/
+bool JACDAC::isConnected()
+{
+    if (status & JD_SERIAL_RECEIVING || (status & JD_SERIAL_TRANSMITTING && !(status & JD_SERIAL_BUS_RISE)))
+        return true;
+
+    // this flag is set if the bus is being held lo.
+    if (status & JD_SERIAL_BUS_RISE)
+        return false;
+
+    // if we are neither transmitting or receiving, examine the bus.
+    int busVal = sp.getDigitalValue(PullMode::Up);
+
+    // re-enable events!
+    configure(true);
+
+    if (busVal)
+        return true;
+
+    return false;
 }
 
 /**

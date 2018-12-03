@@ -71,6 +71,8 @@ DEALINGS IN THE SOFTWARE.
 #define JD_LOGIC_ADDRESS_ALLOC_TIME        254     // 1,016 ms
 #define JD_LOGIC_DRIVER_CTRLPACKET_TIME    112     // 448 ms
 
+#define JD_LOGIC_DRIVER_EVT_CHANGED             2
+
 #define CONTROL_JD_FLAGS_RESERVED               0x8000
 #define CONTROL_JD_FLAGS_PAIRING_MODE           0x4000 // in pairing mode, control packets aren't forwarded to drivers
 #define CONTROL_JD_FLAGS_PAIRABLE               0x2000 // advertises that a driver can be optionally paired with another
@@ -490,6 +492,13 @@ namespace codal
         uint32_t getClass();
 
         /**
+         * Retrieves the state of the driver.
+         *
+         * @return the internal driver state.
+         **/
+        JDDevice getState();
+
+        /**
          * Retrieves the serial number in use by this driver.
          *
          * @return the serial number
@@ -624,9 +633,6 @@ namespace codal
          **/
         void onPacketReceived(Event);
 
-        // this array holds all drivers on the device
-        static JDDriver* drivers[JD_PROTOCOL_DRIVER_ARRAY_SIZE];
-
         // An instance of our logic driver
         JDLogicDriver logic;
 
@@ -634,6 +640,9 @@ namespace codal
         JDDriver* bridge;
 
         public:
+
+        // this array holds all drivers on the device
+        static JDDriver* drivers[JD_PROTOCOL_DRIVER_ARRAY_SIZE];
 
         // a reference to a JACDAC instance
         JACDAC& bus;

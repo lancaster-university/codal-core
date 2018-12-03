@@ -31,6 +31,8 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "DMASingleWireSerial.h"
 
+#define JACDAC_VERSION                 1
+
 #define JD_SERIAL_MAX_BUFFERS          10
 
 #define JD_SERIAL_RECEIVING            0x02
@@ -43,6 +45,9 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_EVT_BUS_ERROR        2
 #define JD_SERIAL_EVT_DRAIN            3
 #define JD_SERIAL_EVT_RX_TIMEOUT       4
+
+#define JD_SERIAL_EVT_BUS_CONNECTED    5
+#define JD_SERIAL_EVT_BUS_DISCONNECTED 6
 
 #define JD_SERIAL_HEADER_SIZE          4
 #define JD_SERIAL_DATA_SIZE            32
@@ -155,6 +160,10 @@ namespace codal
 
         void rxTimeout(Event);
 
+        void initialise();
+
+        Pin* led;
+
     public:
 
         uint8_t txHead;
@@ -175,6 +184,17 @@ namespace codal
           * @param baud Defaults to 1mbaud
           */
         JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baud = JACDACBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
+
+        /**
+          * Constructor
+          *
+          * @param sws an instance of sws.
+          *
+          * @param led an instance of a pin, use to display the state of the bus.
+          *
+          * @param baud Defaults to 1mbaud
+          */
+        JACDAC(DMASingleWireSerial&  sws, Pin& led, JACDACBaudRate baud = JACDACBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
 
         /**
           * Retrieves the first packet on the rxQueue irregardless of the device_class
@@ -223,6 +243,13 @@ namespace codal
          * @return true if started, false if not.
          **/
         bool isRunning();
+
+        /**
+         * Returns the current state if the bus.
+         *
+         * @return true if connected, false if there's a bad bus condition.
+         **/
+        bool isConnected();
 
         /**
          * Returns the current state of the bus, either:
