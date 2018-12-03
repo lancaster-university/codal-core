@@ -627,7 +627,7 @@ bool JACDAC::isConnected()
     int busVal = sp.getDigitalValue(PullMode::Up);
 
     // re-enable events!
-    configure(true);
+    configure(JACDACPinEvents::PulseEvents);
 
     if (busVal)
         return true;
