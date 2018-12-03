@@ -624,9 +624,6 @@ namespace codal
          **/
         void onPacketReceived(Event);
 
-        // this array holds all drivers on the device
-        static JDDriver* drivers[JD_PROTOCOL_DRIVER_ARRAY_SIZE];
-
         // An instance of our logic driver
         JDLogicDriver logic;
 
@@ -634,6 +631,9 @@ namespace codal
         JDDriver* bridge;
 
         public:
+
+        // this array holds all drivers on the device
+        static JDDriver* drivers[JD_PROTOCOL_DRIVER_ARRAY_SIZE];
 
         // a reference to a JACDAC instance
         JACDAC& bus;
