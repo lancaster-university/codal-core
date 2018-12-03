@@ -56,6 +56,9 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_TX_MAX_BACKOFF       4000
 #define JD_SERIAL_TX_MIN_BACKOFF       1000
 
+#define JD_RX_ARRAY_SIZE               10
+#define JD_TX_ARRAY_SIZE               10
+
 #if CONFIG_ENABLED(JD_DEBUG)
 #define JD_DMESG      codal_dmesg
 #else
@@ -143,20 +146,26 @@ namespace codal
         void configure(JACDACPinEvents event);
         void dmaComplete(Event evt);
 
-        JDPkt* popQueue(JDPkt** queue);
-        int addToQueue(JDPkt** queue, JDPkt* packet);
-        JDPkt* removeFromQueue(JDPkt** queue, uint8_t device_class);
+        JDPkt* popRxArray();
+        JDPkt* popTxArray();
+        int addToTxArray(JDPkt* packet);
+        int addToRxArray(JDPkt* packet);
 
         void sendPacket(Event);
 
         void rxTimeout(Event);
 
     public:
-        JDPkt* rxBuf;
-        JDPkt* txBuf;
 
-        JDPkt* rxQueue;
-        JDPkt* txQueue;
+        uint8_t txHead;
+        uint8_t txTail;
+        uint8_t rxHead;
+        uint8_t rxTail;
+
+        JDPkt* rxBuf; // holds the pointer to the current rx buffer
+        JDPkt* txBuf; // holds the pointer to the current tx buffer
+        JDPkt* rxArray[JD_RX_ARRAY_SIZE];
+        JDPkt* txArray[JD_TX_ARRAY_SIZE];
 
         /**
           * Constructor
@@ -173,15 +182,6 @@ namespace codal
           * @returns the first packet on the rxQueue or NULL
           */
         JDPkt *getPacket();
-
-        /**
-          * Retrieves the first packet on the rxQueue with a matching device_class
-          *
-          * @param address the address filter to apply to packets in the rxQueue
-          *
-          * @returns the first packet on the rxQueue matching the device_class or NULL
-          */
-        JDPkt* getPacket(uint8_t address);
 
         /**
           * Causes this instance of JACDAC to begin listening for packets transmitted on the serial line.
@@ -202,7 +202,7 @@ namespace codal
           *
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
           */
-        virtual int send(JDPkt *JD);
+        virtual int send(JDPkt *p);
 
         /**
           * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
@@ -237,8 +237,20 @@ namespace codal
          **/
         JACDACBusState getState();
 
+        /**
+         * Sets the JACDAC baud rate, and internally sets the single wire serial baud JACDAC is using.
+         *
+         * @param baudRate the desired baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
+         *
+         * @returns DEVICE_OK on success
+         **/
         int setBaud(JACDACBaudRate baudRate);
 
+        /**
+         * Returns the current JACDAC baud rate.
+         *
+         * @returns the enumerated baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
+         **/
         JACDACBaudRate getBaud();
     };
 } // namespace codal

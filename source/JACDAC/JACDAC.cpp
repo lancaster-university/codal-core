@@ -11,7 +11,7 @@
 
 #define CODAL_ASSERT(cond)                                                                         \
     if (!(cond))                                                                                   \
-    target_panic(909)
+    target_panic(0x5AC)
 
 using namespace codal;
 
@@ -95,7 +95,6 @@ void JACDAC::dmaComplete(Event evt)
 
         if (status & JD_SERIAL_TRANSMITTING)
         {
-            DMESG("DMA TXE");
             status &= ~(JD_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
@@ -104,7 +103,6 @@ void JACDAC::dmaComplete(Event evt)
         if (status & JD_SERIAL_RECEIVING)
         {
             error_count++;
-            DMESG("DMA RXE");
             status &= ~(JD_SERIAL_RECEIVING);
             sws.abortDMA();
             Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
@@ -122,8 +120,8 @@ void JACDAC::dmaComplete(Event evt)
 
             if (crc == rxBuf->crc)
             {
-                // move rxbuf to rxQueue and allocate new buffer.
-                addToQueue(&rxQueue, rxBuf);
+                // move rxbuf to rxArray and allocate new buffer.
+                addToRxArray(rxBuf);
                 rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
                 Event(id, JD_SERIAL_EVT_DATA_READY);
                 JD_DMESG("DMA RXD");
@@ -164,7 +162,7 @@ void JACDAC::onLowPulse(Event e)
     ts = ceil(ts / 10);
     ts = ceil_pow2(ts);
 
-    DMESG("TS: %d %d", ts, (int)e.timestamp);
+    JD_DMESG("TS: %d %d", ts, (int)e.timestamp);
 
     // we support 1, 2, 4, 8 as our powers of 2.
     if (ts > 8)
@@ -188,7 +186,7 @@ void JACDAC::onLowPulse(Event e)
 
 void JACDAC::rxTimeout(Event)
 {
-    DMESG("TIMEOUT");
+    JD_DMESG("TIMEOUT");
     error_count++;
     sws.abortDMA();
     Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
@@ -197,83 +195,127 @@ void JACDAC::rxTimeout(Event)
     configure(JACDACPinEvents::PulseEvents);
 }
 
-JDPkt* JACDAC::popQueue(JDPkt** queue)
+/**
+ * Our arrays are FIFO circular buffers.
+ *
+ * Example:
+ * txHead             txTail
+ * [item, item, item, item, NULL, NULL, NULL]
+ *
+ * Remove:
+ *        txHead      txTail
+ * [NULL, item, item, item, NULL, NULL, NULL]
+ *
+ * Add:
+ *        txHead            txTail
+ * [NULL, item, item, item, item, NULL, NULL]
+ **/
+JDPkt* JACDAC::popRxArray()
 {
-    if (*queue == NULL)
+    // nothing to pop
+    if (this->rxTail == this->rxHead)
         return NULL;
 
-    JDPkt *ret = *queue;
-
+    uint8_t nextHead = (this->rxHead + 1) % JD_RX_ARRAY_SIZE;
+    JDPkt* p = rxArray[this->rxHead];
+    this->rxArray[this->rxHead] = NULL;
     target_disable_irq();
-    *queue = (*queue)->next;
+    this->rxHead = nextHead;
     target_enable_irq();
 
-    return ret;
+    return p;
 }
 
-JDPkt* JACDAC::removeFromQueue(JDPkt** queue, uint8_t address)
+/**
+ * Our arrays are FIFO circular buffers.
+ *
+ * Example:
+ * txHead                   txTail
+ * [item, item, item, item, NULL, NULL, NULL]
+ *
+ * Remove:
+ *        txHead            txTail
+ * [NULL, item, item, item, NULL, NULL, NULL]
+ *
+ * Add:
+ *        txHead                  txTail
+ * [NULL, item, item, item, item, NULL, NULL]
+ **/
+JDPkt* JACDAC::popTxArray()
 {
-    if (*queue == NULL)
+    // nothing to pop
+    if (this->txTail == this->txHead)
         return NULL;
 
-    JDPkt* ret = NULL;
-
+    uint8_t nextHead = (this->txHead + 1) % JD_TX_ARRAY_SIZE;
+    JDPkt* p = txArray[this->txHead];
+    this->txArray[this->txHead] = NULL;
     target_disable_irq();
-    JDPkt *p = (*queue)->next;
-    JDPkt *previous = *queue;
-
-    if (address == (*queue)->address)
-    {
-        *queue = p;
-        ret = previous;
-    }
-    else
-    {
-        while (p != NULL)
-        {
-            if (address == p->address)
-            {
-                ret = p;
-                previous->next = p->next;
-                break;
-            }
-
-            previous = p;
-            p = p->next;
-        }
-    }
-
+    this->txHead = nextHead;
     target_enable_irq();
 
-    return ret;
+    return p;
 }
 
-int JACDAC::addToQueue(JDPkt** queue, JDPkt* packet)
+/**
+ * Our arrays are FIFO circular buffers.
+ *
+ * Example:
+ * txHead                   txTail
+ * [item, item, item, item, NULL, NULL, NULL]
+ *
+ * Remove:
+ *        txHead            txTail
+ * [NULL, item, item, item, NULL, NULL, NULL]
+ *
+ * Add:
+ *        txHead                  txTail
+ * [NULL, item, item, item, item, NULL, NULL]
+ **/
+int JACDAC::addToTxArray(JDPkt* packet)
 {
-    int queueDepth = 0;
-    packet->next = NULL;
+     uint8_t nextTail = (this->txTail + 1) % JD_TX_ARRAY_SIZE;
 
+    if (nextTail == this->txHead)
+        return DEVICE_NO_RESOURCES;
+
+    // add our buffer to the array before updating the head
+    // this ensures atomicity.
+    this->txArray[this->txTail] = packet;
     target_disable_irq();
-    if (*queue == NULL)
-        *queue = packet;
-    else
-    {
-        JDPkt *p = *queue;
+    this->txTail = nextTail;
+    target_enable_irq();
 
-        while (p->next != NULL)
-        {
-            p = p->next;
-            queueDepth++;
-        }
+    return DEVICE_OK;
+}
 
-        if (queueDepth >= JD_SERIAL_MAXIMUM_BUFFERS)
-        {
-            free(packet);
-            return DEVICE_NO_RESOURCES;
-        }
+/**
+ * Our arrays are FIFO circular buffers.
+ *
+ * Example:
+ * txHead                   txTail
+ * [item, item, item, item, NULL, NULL, NULL]
+ *
+ * Remove:
+ *        txHead            txTail
+ * [NULL, item, item, item, NULL, NULL, NULL]
+ *
+ * Add:
+ *        txHead                  txTail
+ * [NULL, item, item, item, item, NULL, NULL]
+ **/
+int JACDAC::addToRxArray(JDPkt* packet)
+{
+     uint8_t nextTail = (this->rxTail + 1) % JD_RX_ARRAY_SIZE;
 
-        p->next = packet;
-    }
+    if (nextTail == this->rxHead)
+        return DEVICE_NO_RESOURCES;
+
+    // add our buffer to the array before updating the head
+    // this ensures atomicity.
+    this->rxArray[this->rxTail] = packet;
+    target_disable_irq();
+    this->rxTail = nextTail;
     target_enable_irq();
 
     return DEVICE_OK;
@@ -310,9 +352,8 @@ JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) 
 {
     rxBuf = NULL;
     txBuf = NULL;
-
-    rxQueue = NULL;
-    txQueue = NULL;
+    memset(rxArray, 0, sizeof(JDPkt*) * JD_RX_ARRAY_SIZE);
+    memset(txArray, 0, sizeof(JDPkt*) * JD_TX_ARRAY_SIZE);
 
     this->id = id;
     status = 0;
@@ -338,19 +379,7 @@ JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) 
  */
 JDPkt* JACDAC::getPacket()
 {
-    return popQueue(&rxQueue);
-}
-
-/**
- * Retrieves the first packet on the rxQueue with a matching device_class
- *
- * @param address the address filter to apply to packets in the rxQueue
- *
- * @returns the first packet on the rxQueue matching the device_class or NULL
- */
-JDPkt* JACDAC::getPacket(uint8_t address)
-{
-    return removeFromQueue(&rxQueue, address);
+    return popRxArray();
 }
 
 /**
@@ -395,13 +424,13 @@ void JACDAC::stop()
 void JACDAC::sendPacket(Event)
 {
     status |= JD_SERIAL_TX_DRAIN_ENABLE;
-    JD_DMESG("SEND");
+    JD_DMESG("SENDP");
     // if we are receiving, randomly back off
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_BUS_RISE))
     {
         if (status & JD_SERIAL_BUS_RISE)
         {
-            DMESG("RISE!!");
+            JD_DMESG("RISE!!");
             status &= ~JD_SERIAL_BUS_RISE;
             configure(JACDACPinEvents::PulseEvents);
         }
@@ -415,7 +444,7 @@ void JACDAC::sendPacket(Event)
         // if the bus is lo, we shouldn't transmit
         if (sp.getDigitalValue(PullMode::Up) == 0)
         {
-            DMESG("BUS LO");
+            JD_DMESG("BUS LO");
             // something is holding the bus lo
             configure(JACDACPinEvents::EdgeEvents);
             // listen for when it is hi again
@@ -425,11 +454,11 @@ void JACDAC::sendPacket(Event)
 
         // If we get here, we assume we have control of the bus.
         // if we have stuff in our queue, and we have not triggered a DMA transfer...
-        if (txQueue)
+        if (this->txHead != this->txTail)
         {
             JD_DMESG("TX B");
             status |= JD_SERIAL_TRANSMITTING;
-            txBuf = popQueue(&txQueue);
+            txBuf = popTxArray(); // perhaps only pop after confirmed send?
 
             sp.setDigitalValue(0);
             target_wait_us(10 * (uint8_t)baud);
@@ -442,6 +471,7 @@ void JACDAC::sendPacket(Event)
                 sws.setBaud(baudToByteMap[(uint8_t)baud - 1].baud);
             return;
         }
+        JD_DMESG("txh: %d txt: %d",txHead,txTail);
     }
 
     // we've returned after a DMA transfer has been flagged (above)... start
@@ -483,7 +513,7 @@ int JACDAC::send(JDPkt* tx)
     uint8_t* crcPointer = (uint8_t*)&pkt->address;
     pkt->crc = fletcher16(crcPointer, JD_SERIAL_PACKET_SIZE - 2);
 
-    int ret = addToQueue(&txQueue, pkt);
+    int ret = addToTxArray(pkt);
 
     if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
         system_timer_event_after_us(JD_SERIAL_TX_MIN_BACKOFF + target_random(JD_SERIAL_TX_MAX_BACKOFF - JD_SERIAL_TX_MIN_BACKOFF), this->id, JD_SERIAL_EVT_DRAIN);
