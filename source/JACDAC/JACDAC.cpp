@@ -328,6 +328,8 @@ void JACDAC::start()
 
     if (led)
         led->setDigitalValue(1);
+
+    Event(this->id, JD_SERIAL_EVT_BUS_CONNECTED);
 }
 
 /**
@@ -349,6 +351,7 @@ void JACDAC::stop()
 
     if (led)
         led->setDigitalValue(0);
+    Event(this->id, JD_SERIAL_EVT_BUS_DISCONNECTED);
 }
 
 void JACDAC::sendPacket(Event)
@@ -357,6 +360,7 @@ void JACDAC::sendPacket(Event)
     // if we are receiving, randomly back off
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_BUS_RISE))
     {
+        JD_DMESG("WAIT %s", (status & JD_SERIAL_BUS_RISE) ? "LO" : "REC");
         if (status & JD_SERIAL_BUS_RISE)
         {
             JD_DMESG("RISE!!");
@@ -365,8 +369,9 @@ void JACDAC::sendPacket(Event)
 
             status &= ~JD_SERIAL_BUS_RISE;
             EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::sendPacket);
+            Event(this->id, JD_SERIAL_EVT_BUS_CONNECTED);
         }
-        JD_DMESG("WAIT %s", (status & JD_SERIAL_BUS_RISE) ? "LO" : "REC");
+
         system_timer_event_after_us(JD_SERIAL_TX_MIN_BACKOFF + target_random(JD_SERIAL_TX_MAX_BACKOFF - JD_SERIAL_TX_MIN_BACKOFF), this->id, JD_SERIAL_EVT_DRAIN);
         return;
     }
@@ -377,13 +382,16 @@ void JACDAC::sendPacket(Event)
         if (sp.getDigitalValue(PullMode::Up) == 0)
         {
             JD_DMESG("BUS LO");
-            if (led)
-                led->setDigitalValue(0);
             // something is holding the bus lo
             configure(true);
             // listen for when it is hi again
             status |= JD_SERIAL_BUS_RISE;
             EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::sendPacket);
+
+            if (led)
+                led->setDigitalValue(0);
+
+            Event(this->id, JD_SERIAL_EVT_BUS_DISCONNECTED);
             return;
         }
 
