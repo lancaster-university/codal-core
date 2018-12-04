@@ -459,10 +459,6 @@ int JACDAC::send(JDPkt* tx)
 
     int ret = addToQueue(&txQueue, pkt);
 
-    // in future the queue should be checked before allocing and a bunch of computation...
-    if (ret != DEVICE_OK)
-        free(pkt);
-
     if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
     {
         JD_DMESG("DR EN");
