@@ -31,7 +31,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "DMASingleWireSerial.h"
 
-#define JACDAC_VERSION                 1
+#define JD_VERSION                     2
 
 #define JD_SERIAL_MAX_BUFFERS          10
 
