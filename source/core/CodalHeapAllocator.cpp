@@ -379,8 +379,12 @@ void* calloc (size_t num, size_t size)
 {
     void *mem = malloc(num*size);
 
-    if (mem)
-        memclr(mem, num*size);
+    if (mem) {
+        // without this write, GCC will happily optimize malloc() above into calloc()
+        // and remove the memset
+        ((uint32_t*)mem)[0] = 1;
+        memset(mem, 0, num*size);
+    }
 
     return mem;
 }
