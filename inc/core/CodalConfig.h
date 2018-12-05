@@ -178,6 +178,11 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_WEBUSB                         1
 #endif
 
+// If enabled, use app_alloc() instead of malloc() for many non-ISR allocations
+#ifndef DEVICE_APP_ALLOC
+#define DEVICE_APP_ALLOC                      0
+#endif
+
 //
 // Helper macro used by the codal device runtime to determine if a boolean configuration option is set.
 //
