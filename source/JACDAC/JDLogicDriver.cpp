@@ -167,6 +167,16 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 {
     ControlPacket *cp = (ControlPacket *)p->data;
 
+    if (cp->type == CONTROL_JD_TYPE_PANIC)
+    {
+        ControlPacketPanic* panic = (ControlPacketPanic*)p->data;
+        char name[CONTROL_PACKET_PANIC_NAME_LENGTH + 1] = { 0 };
+        memcpy(name, panic, CONTROL_PACKET_PANIC_NAME_LENGTH);
+        name[CONTROL_PACKET_PANIC_NAME_LENGTH] = 0;
+        DMESG("PANIC: %s, STATUS: %d", name, panic->status);
+        return;
+    }
+
      JD_DMESG("CP A:%d S:%d C:%d p: %d", cp->address, cp->serial_number, cp->driver_class, (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE) ? 1 : 0);
 
     // Logic Driver addressing rules:

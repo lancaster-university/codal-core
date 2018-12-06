@@ -34,6 +34,8 @@ using namespace codal;
 
 JDDriver* JDProtocol::drivers[JD_PROTOCOL_DRIVER_ARRAY_SIZE] = { 0 };
 
+static char jacdac_name[CONTROL_PACKET_PANIC_NAME_LENGTH] = "JACDAC";
+
 JDProtocol* JDProtocol::instance = NULL;
 
 void JDProtocol::onPacketReceived(Event)
@@ -174,6 +176,19 @@ int JDProtocol::send(uint8_t* buf, int len, uint8_t address)
     return DEVICE_NO_RESOURCES;
 }
 
+int JDProtocol::setName(ManagedString s)
+{
+    if (s.length() > CONTROL_PACKET_PANIC_NAME_LENGTH)
+        return DEVICE_INVALID_PARAMETER;
+
+    memcpy(jacdac_name, s.toCharArray(), s.length());
+    return DEVICE_OK;
+}
+
+ManagedString& JDProtocol::getName(ManagedString s)
+{
+    return ManagedString(jacdac_name, CONTROL_PACKET_PANIC_NAME_LENGTH);
+}
 
 void JDProtocol::logState(JackRouter* jr)
 {

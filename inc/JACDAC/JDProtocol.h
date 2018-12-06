@@ -85,6 +85,7 @@ DEALINGS IN THE SOFTWARE.
 
 #define CONTROL_JD_TYPE_HELLO                   0x01
 #define CONTROL_JD_TYPE_PAIRING_REQUEST         0x02
+#define CONTROL_JD_TYPE_PANIC                   0x03
 // END      LOGIC DRIVER FLAGS
 
 
@@ -96,7 +97,8 @@ DEALINGS IN THE SOFTWARE.
 
 // END      JD SERIAL PROTOCOL
 
-#define CONTROL_PACKET_PAYLOAD_SIZE     (JD_SERIAL_DATA_SIZE - 12)
+#define CONTROL_PACKET_PANIC_NAME_LENGTH        6
+#define CONTROL_PACKET_PAYLOAD_SIZE             (JD_SERIAL_DATA_SIZE - 12)
 
 namespace codal
 {
@@ -119,7 +121,14 @@ namespace codal
         uint32_t driver_class;  // the class of the driver
         uint32_t serial_number; // the "unique" serial number of the device.
         uint8_t data[CONTROL_PACKET_PAYLOAD_SIZE];
-    }__attribute((__packed__));
+    } __attribute((__packed__));
+
+    // this struct sits inside the data of a normal contrl packet if the packet_type is set to PANIC.
+    struct ControlPacketPanic
+    {
+        char name[CONTROL_PACKET_PANIC_NAME_LENGTH];
+        int code;
+    } __attribute((__packed__));
 
     // This enumeration specifies that supported configurations that drivers should utilise.
     // Many combinations of flags are supported, but only the ones listed here have been fully implemented.
