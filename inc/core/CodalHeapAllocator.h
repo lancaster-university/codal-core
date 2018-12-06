@@ -107,4 +107,12 @@ extern "C" void* device_malloc(size_t size);
   */
 extern "C" void device_free(void *mem);
 
+/**
+  * Copy existing contents of ptr to a new memory block of given size.
+  *
+  * @param ptr The existing memory block (can be NULL)
+  * @param size The size of new block (can be smaller or larger than the old one)
+  */
+extern "C" void* device_realloc(void* ptr, size_t size);
+
 #endif
