@@ -90,4 +90,20 @@ int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end);
  */
 uint32_t device_heap_size(uint8_t heap_index);
 
+#if CONFIG_ENABLED(DEVICE_APP_ALLOC)
+#include <new>
+
+extern "C" void *app_alloc(int numbytes);
+extern "C" void *app_free(void *ptr);
+
+#define APP_NEW(ClassName, ...) new (app_alloc(sizeof(ClassName))) ClassName(__VA_ARGS__)
+
+#else
+
+#define app_alloc malloc
+#define app_free free
+#define APP_NEW(ClassName, ...) new ClassName(__VA_ARGS__)
+
+#endif
+
 #endif

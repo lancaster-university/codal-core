@@ -34,6 +34,8 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalFiber.h"
 #include "Timer.h"
 #include "codal_target_hal.h"
+#include "CodalHeapAllocator.h"
+#include "CodalDmesg.h"
 
 #define INITIAL_STACK_DEPTH (fiber_initial_stack_base() - 0x04)
 
@@ -90,9 +92,14 @@ static void get_fibers_from(Fiber ***dest, int *sum, Fiber *queue)
 int codal::list_fibers(Fiber **dest)
 {
     int sum = 0;
+
+    // interrupts might move fibers between queues, but should not create new ones
+    target_disable_irq();
     get_fibers_from(&dest, &sum, runQueue);
     get_fibers_from(&dest, &sum, sleepQueue);
     get_fibers_from(&dest, &sum, waitQueue);
+    target_enable_irq();
+
     // idleFiber is used to start event handlers using invoke(),
     // so it may in fact have the user_data set if in FOB context
     if (dest)
@@ -190,7 +197,7 @@ Fiber *getFiberContext()
     }
     else
     {
-        f = new Fiber();
+        f = APP_NEW(Fiber);
 
         if (f == NULL)
             return NULL;
@@ -796,10 +803,10 @@ void codal::verify_stack_size(Fiber *f)
 
         // Release the old memory
         if (f->stack_bottom != 0)
-            free((void *)f->stack_bottom);
+            app_free((void *)f->stack_bottom);
 
         // Allocate a new one of the appropriate size.
-        f->stack_bottom = (PROCESSOR_WORD_TYPE)malloc(bufferSize);
+        f->stack_bottom = (PROCESSOR_WORD_TYPE)app_alloc(bufferSize);
 
         // Recalculate where the top of the stack is and we're done.
         f->stack_top = f->stack_bottom + bufferSize;
@@ -913,7 +920,10 @@ void codal::schedule()
         else
         {
             // Ensure the stack allocation of the fiber being scheduled out is large enough
+            auto tmp = currentFiber;
+            currentFiber = oldFiber;
             verify_stack_size(oldFiber);
+            currentFiber = tmp;
 
             // Schedule in the new fiber.
             swap_context(oldFiber->tcb, oldFiber->stack_top, currentFiber->tcb, currentFiber->stack_top);
