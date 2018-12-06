@@ -30,11 +30,11 @@ DEALINGS IN THE SOFTWARE.
 #include "Timer.h"
 #include "CodalDmesg.h"
 
+static char jacdac_name[CONTROL_PACKET_ERROR_NAME_LENGTH] = {'J', 'A', 'C', 'D', 'A', 'C'};
+
 using namespace codal;
 
 JDDriver* JDProtocol::drivers[JD_PROTOCOL_DRIVER_ARRAY_SIZE] = { 0 };
-
-static char jacdac_name[CONTROL_PACKET_PANIC_NAME_LENGTH] = "JACDAC";
 
 JDProtocol* JDProtocol::instance = NULL;
 
@@ -177,18 +177,18 @@ int JDProtocol::send(uint8_t* buf, int len, uint8_t address)
     return DEVICE_NO_RESOURCES;
 }
 
-int JDProtocol::setName(ManagedString s)
+int JDProtocol::setDebugName(ManagedString s)
 {
-    if (s.length() > CONTROL_PACKET_PANIC_NAME_LENGTH)
+    if (s.length() > CONTROL_PACKET_ERROR_NAME_LENGTH)
         return DEVICE_INVALID_PARAMETER;
 
     memcpy(jacdac_name, s.toCharArray(), s.length());
     return DEVICE_OK;
 }
 
-ManagedString& JDProtocol::getName(ManagedString s)
+ManagedString JDProtocol::getDebugName()
 {
-    return ManagedString(jacdac_name, CONTROL_PACKET_PANIC_NAME_LENGTH);
+    return ManagedString(jacdac_name, CONTROL_PACKET_ERROR_NAME_LENGTH);
 }
 
 void JDProtocol::logState(JackRouter* jr)

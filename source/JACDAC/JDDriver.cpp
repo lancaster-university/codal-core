@@ -80,6 +80,9 @@ int JDDriver::handleLogicPacket(JDPkt* p)
     if (cp->packet_type == CONTROL_JD_TYPE_PAIRING_REQUEST)
         return this->handlePairingPacket(p);
 
+    if (cp->packet_type == CONTROL_JD_TYPE_ERROR)
+        return this->handleErrorPacket(p);
+
     return this->handleControlPacket(p);
 }
 
@@ -280,6 +283,12 @@ void JDDriver::partnerDisconnected(Event)
 
 int JDDriver::handleControlPacket(JDPkt* p)
 {
+    return DEVICE_OK;
+}
+
+int JDDriver::handleErrorPacket(JDPkt* p)
+{
+    Event(this->id, JD_DRIVER_EVT_ERROR);
     return DEVICE_OK;
 }
 

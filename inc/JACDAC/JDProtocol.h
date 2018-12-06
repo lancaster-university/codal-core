@@ -31,6 +31,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "JACDAC.h"
 #include "JackRouter.h"
+#include "ManagedString.h"
 #include "codal_target_hal.h"
 
 
@@ -43,6 +44,7 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DRIVER_EVT_UNPAIRED          65523
 #define JD_DRIVER_EVT_PAIR_REJECTED     65524
 #define JD_DRIVER_EVT_PAIRING_RESPONSE  65525
+#define JD_DRIVER_EVT_ERROR             65526
 
 #define JD_DEVICE_FLAGS_LOCAL           0x8000 // on the board
 #define JD_DEVICE_FLAGS_REMOTE          0x4000 // off the board
@@ -62,6 +64,9 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DEVICE_FLAGS_INITIALISING    0x0040 // a flag to indicate that a control packet has been queued
 #define JD_DEVICE_FLAGS_CP_SEEN         0x0020 // indicates whether a control packet has been seen recently.
 #define JD_DEVICE_FLAGS_BROADCAST_MAP   0x0010 // This driver is held for mapping from bus address to driver class
+
+#define JD_DEVICE_ERROR_MSK             0x000F // the lower 4 bits are reserved for well known errors, these are
+                                               // automatically placed into control packets by the logic driver.
 // END      JD SERIAL DRIVER FLAGS
 
 
@@ -85,7 +90,8 @@ DEALINGS IN THE SOFTWARE.
 
 #define CONTROL_JD_TYPE_HELLO                   0x01
 #define CONTROL_JD_TYPE_PAIRING_REQUEST         0x02
-#define CONTROL_JD_TYPE_PANIC                   0x03
+#define CONTROL_JD_TYPE_ERROR                   0x03 // routed to drivers
+#define CONTROL_JD_TYPE_PANIC                   0xFF
 // END      LOGIC DRIVER FLAGS
 
 
@@ -97,8 +103,8 @@ DEALINGS IN THE SOFTWARE.
 
 // END      JD SERIAL PROTOCOL
 
-#define CONTROL_PACKET_PANIC_NAME_LENGTH        6
 #define CONTROL_PACKET_PAYLOAD_SIZE             (JD_SERIAL_DATA_SIZE - 12)
+#define CONTROL_PACKET_ERROR_NAME_LENGTH        6
 
 namespace codal
 {
@@ -123,10 +129,10 @@ namespace codal
         uint8_t data[CONTROL_PACKET_PAYLOAD_SIZE];
     } __attribute((__packed__));
 
-    // this struct sits inside the data of a normal contrl packet if the packet_type is set to PANIC.
-    struct ControlPacketPanic
+    // this struct sits inside the data of a normal control packet if the packet_type is set to ERROR.
+    struct ControlPacketError
     {
-        char name[CONTROL_PACKET_PANIC_NAME_LENGTH];
+        char name[CONTROL_PACKET_ERROR_NAME_LENGTH];
         int code;
     } __attribute((__packed__));
 
@@ -140,6 +146,13 @@ namespace codal
         PairableHostDriver = JD_DEVICE_FLAGS_PAIRABLE | JD_DEVICE_FLAGS_LOCAL, // the driver is allowed to pair with another driver of the same class
         BroadcastDriver = JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_BROADCAST, // the driver is enumerated with its own address, and receives all packets of the same class (including control packets)
         SnifferDriver = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_BROADCAST, // the driver is not enumerated, and receives all packets of the same class (including control packets)
+    };
+
+    enum DriverErrorCode
+    {
+        STATUS_OK,
+        PERIPHERAL_MALFUNCTION,
+
     };
 
     /**
@@ -239,6 +252,27 @@ namespace codal
                 this->flags |= JD_DEVICE_FLAGS_INITIALISED;
             else
                 this->flags &= ~JD_DEVICE_FLAGS_INITIALISED;
+        }
+
+        /**
+         * Sets the error portion of flags to the given error code
+         *
+         * @param e the error code to place into control packets
+         **/
+        void setError(DriverErrorCode e)
+        {
+            uint32_t flags = this->flags & ~(JD_DEVICE_ERROR_MSK);
+            this->flags = flags | (uint8_t) e;
+        }
+
+        /**
+         * Retrieves the current error code from the error portion of flags.
+         *
+         * @return a JDDeviceErrorCode
+         **/
+        DriverErrorCode getError()
+        {
+            return (DriverErrorCode)(this->flags & JD_DEVICE_ERROR_MSK);
         }
 
         /**
@@ -438,6 +472,18 @@ namespace codal
          *         should continue to search for a driver.
          **/
         virtual int handleControlPacket(JDPkt* p);
+
+        /**
+         * Invoked by the logic driver when a control packet with its type set to error is received.
+         *
+         *
+         * @param p the packet from the serial bus. Drivers should cast p->data to a ControlPacket,
+         *          then ControlPacket->data to ControlPacketError to obtain the error code.
+         *
+         * @return DEVICE_OK to signal that the packet has been handled, or DEVICE_CANCELLED to indicate the logic driver
+         *         should continue to search for a driver.
+         **/
+        virtual int handleErrorPacket(JDPkt* p);
 
         /**
          * Invoked by the logic driver when a pairing packet with the address of the driver is received.
@@ -682,6 +728,22 @@ namespace codal
          *       Ultimately the bridge should punt packets back intro JDProtocol for correct handling.
          **/
         int setBridge(JDDriver* bridge);
+
+        /**
+         * Set the name to use for error codes and panics
+         *
+         * @param s the name to use for error codes and panic's
+         *
+         * @note Must be 6 characters or smaller.
+         **/
+        static int setDebugName(ManagedString s);
+
+        /**
+         * Retrieve the name used for error codes and panics
+         *
+         * @return the name used for error codes and panics
+         **/
+        static ManagedString getDebugName();
 
         /**
          * Adds a driver to the drivers array. The logic driver iterates over this array.
