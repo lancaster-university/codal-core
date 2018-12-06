@@ -90,4 +90,21 @@ int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end);
  */
 uint32_t device_heap_size(uint8_t heap_index);
 
+
+/**
+  * Attempt to allocate a given amount of memory from any of our configured heap areas.
+  *
+  * @param size The amount of memory, in bytes, to allocate.
+  *
+  * @return A pointer to the allocated memory, or NULL if insufficient memory is available.
+  */
+extern "C" void* device_malloc(size_t size);
+
+/**
+  * Release a given area of memory from the heap.
+  *
+  * @param mem The memory area to release.
+  */
+extern "C" void device_free(void *mem);
+
 #endif
