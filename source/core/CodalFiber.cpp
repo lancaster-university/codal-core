@@ -199,8 +199,10 @@ Fiber *getFiberContext()
     {
         f = APP_NEW(Fiber);
 
-        if (f == NULL)
+        if (f == NULL) {
+            target_enable_irq();
             return NULL;
+        }
 
         f->tcb = tcb_allocate();
 

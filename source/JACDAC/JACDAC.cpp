@@ -212,6 +212,7 @@ int JACDAC::addToQueue(JDPkt** queue, JDPkt* packet)
         if (queueDepth >= JD_SERIAL_MAXIMUM_BUFFERS)
         {
             free(packet);
+            target_enable_irq();
             return DEVICE_NO_RESOURCES;
         }
 

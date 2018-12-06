@@ -125,6 +125,7 @@ int JDProtocol::add(JDDriver& driver)
         if (drivers[i] == NULL)
         {
             drivers[i] = &driver;
+            target_enable_irq();
             break;
         }
         target_enable_irq();
