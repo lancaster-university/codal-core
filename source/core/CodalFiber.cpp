@@ -765,6 +765,20 @@ void codal::release_fiber(void)
     // Add ourselves to the list of free fibers
     queue_fiber(currentFiber, &fiberPool);
 
+    // limit the number of fibers in the pool
+    int numFree = 0;
+    for (Fiber *p = fiberPool; p; p = p->next) {
+        if (!p->next && numFree > 3) {
+            p->prev->next = NULL;
+            free(p->tcb);
+            free((void *)p->stack_bottom);
+            memset(p, 0, sizeof(*p));
+            free(p);
+            break;
+        }
+        numFree++;
+    }
+
     // Reset fiber state, to ensure it can be safely reused.
     currentFiber->flags = 0;
     tcb_configure_stack_base(currentFiber->tcb, fiber_initial_stack_base());
