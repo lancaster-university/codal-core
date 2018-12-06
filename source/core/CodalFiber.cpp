@@ -800,6 +800,14 @@ void codal::verify_stack_size(Fiber *f)
     // If we're too small, increase our buffer size.
     if (bufferSize < stackDepth)
     {
+        #if CONFIG_ENABLED(DEVICE_APP_ALLOC)
+        // We are only here, when the current stack is the stack of fiber [f].
+        // Make sure the contents of [currentFiber] variable reflects that, otherwise
+        // scanning fiber stacks (triggered from GC, triggered from app_alloc()) will fail.
+        Fiber *prevCurrFiber = currentFiber;
+        currentFiber = f;
+        #endif
+
         // To ease heap churn, we choose the next largest multple of 32 bytes.
         bufferSize = (stackDepth + 32) & 0xffffffe0;
 
@@ -812,6 +820,10 @@ void codal::verify_stack_size(Fiber *f)
 
         // Recalculate where the top of the stack is and we're done.
         f->stack_top = f->stack_bottom + bufferSize;
+
+        #if CONFIG_ENABLED(DEVICE_APP_ALLOC)
+        currentFiber = prevCurrFiber;
+        #endif
     }
 }
 
@@ -922,10 +934,7 @@ void codal::schedule()
         else
         {
             // Ensure the stack allocation of the fiber being scheduled out is large enough
-            auto tmp = currentFiber;
-            currentFiber = oldFiber;
             verify_stack_size(oldFiber);
-            currentFiber = tmp;
 
             // Schedule in the new fiber.
             swap_context(oldFiber->tcb, oldFiber->stack_top, currentFiber->tcb, currentFiber->stack_top);
