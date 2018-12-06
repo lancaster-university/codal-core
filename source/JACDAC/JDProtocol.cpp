@@ -127,6 +127,7 @@ int JDProtocol::add(JDDriver& driver)
         if (drivers[i] == NULL)
         {
             drivers[i] = &driver;
+            target_enable_irq();
             break;
         }
         target_enable_irq();
@@ -154,9 +155,9 @@ int JDProtocol::remove(JDDriver& driver)
     return DEVICE_OK;
 }
 
-int JDProtocol::setBridge(JDDriver& bridge)
+int JDProtocol::setBridge(JDDriver* bridge)
 {
-    this->bridge = &bridge;
+    this->bridge = bridge;
     return DEVICE_OK;
 }
 

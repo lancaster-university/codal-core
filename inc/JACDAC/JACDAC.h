@@ -31,7 +31,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "DMASingleWireSerial.h"
 
-#define JD_VERSION                     2
+#define JD_VERSION                     3
 
 #define JD_SERIAL_MAX_BUFFERS          10
 
@@ -137,6 +137,9 @@ namespace codal
         DMASingleWireSerial&  sws;
         Pin&  sp;
 
+        Pin* busLED;
+        Pin* commLED;
+
         void onFallingEdge(Event);
         void configure(bool events);
         void dmaComplete(Event evt);
@@ -151,8 +154,6 @@ namespace codal
 
         void initialise();
 
-        Pin* led;
-
     public:
         JDPkt* rxBuf;
         JDPkt* txBuf;
@@ -165,20 +166,13 @@ namespace codal
           *
           * @param sws an instance of sws.
           *
-          * @param baud Defaults to 1mbaud
-          */
-        JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baud = JACDACBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
-
-        /**
-          * Constructor
+          * @param busStateLED an instance of a pin, used to display the state of the bus.
           *
-          * @param sws an instance of sws.
-          *
-          * @param led an instance of a pin, use to display the state of the bus.
+          * @param commStateLED an instance of a pin, used to display the state of the bus.
           *
           * @param baud Defaults to 1mbaud
           */
-        JACDAC(DMASingleWireSerial&  sws, Pin& led, JACDACBaudRate baud = JACDACBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
+        JACDAC(DMASingleWireSerial&  sws, Pin* busStateLED = NULL, Pin* commStateLED = NULL, JACDACBaudRate baud = JACDACBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
 
         /**
           * Retrieves the first packet on the rxQueue irregardless of the device_class
