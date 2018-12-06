@@ -152,9 +152,9 @@ int JDProtocol::remove(JDDriver& driver)
     return DEVICE_OK;
 }
 
-int JDProtocol::setBridge(JDDriver& bridge)
+int JDProtocol::setBridge(JDDriver* bridge)
 {
-    this->bridge = &bridge;
+    this->bridge = bridge;
     return DEVICE_OK;
 }
 
@@ -173,7 +173,6 @@ int JDProtocol::send(uint8_t* buf, int len, uint8_t address)
 
     return DEVICE_NO_RESOURCES;
 }
-
 
 void JDProtocol::logState(JackRouter* jr)
 {

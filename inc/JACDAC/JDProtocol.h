@@ -660,17 +660,19 @@ namespace codal
         JDProtocol(JACDAC& JD, uint16_t id = DEVICE_ID_JACDAC_PROTOCOL);
 
         /**
-         * Sets the bridge member variable to the give JDDriver reference.
+         * Sets the bridge member variable to the given JDDriver pointer.
+         *
          * Bridge drivers are given all packets received on the bus, the idea being that
          * packets can be bridged to another networking medium, i.e. packet radio.
          *
          * @param bridge the driver to forward all packets to another networking medium
-         *        this driver will receive all packets via the handlePacket call.
+         *        this driver will receive all packets via the handlePacket call. If NULL
+         *        is given, the bridge member variable is cleared.
          *
          * @note one limitation is that the bridge driver does not receive packets over the radio itself.
          *       Ultimately the bridge should punt packets back intro JDProtocol for correct handling.
          **/
-        int setBridge(JDDriver& bridge);
+        int setBridge(JDDriver* bridge);
 
         /**
          * Adds a driver to the drivers array. The logic driver iterates over this array.
