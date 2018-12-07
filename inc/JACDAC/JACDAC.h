@@ -107,8 +107,6 @@ namespace codal
 
         // add more stuff
         uint8_t data[JD_SERIAL_DATA_SIZE];
-
-        JDPkt* next;
     } __attribute((__packed__));
 
     enum class JACDACBusState : uint8_t
