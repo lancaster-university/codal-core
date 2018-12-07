@@ -146,7 +146,12 @@ void JACDAC::dmaComplete(Event evt)
                 // could we do something cool to indicate an incorrect CRC?
                 // i.e. drive the bus low....?
                 else
+                {
                     DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
+                    uint8_t* bufPtr = (uint8_t*)rxBuf;
+                    for (int i = 0; i < JD_SERIAL_HEADER_SIZE + 2; i++)
+                        DMESG("%d[%c]",bufPtr[i]);
+                }
             }
         }
 
@@ -176,7 +181,7 @@ void JACDAC::onLowPulse(Event e)
 {
     JD_DMESG("LO: %d %d", (status & JD_SERIAL_RECEIVING) ? 1 : 0, (status & JD_SERIAL_TRANSMITTING) ? 1 : 0);
     // guard against repeat events.
-    if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
+    if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
 
     uint32_t ts = e.timestamp;
@@ -218,7 +223,7 @@ void JACDAC::rxTimeout(Event)
     error_count++;
     sws.abortDMA();
     Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
-    status &= ~(JD_SERIAL_RECEIVING);
+    status &= ~(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER);
     sws.setMode(SingleWireDisconnected);
     configure(JACDACPinEvents::PulseEvents);
 }
@@ -469,7 +474,7 @@ void JACDAC::sendPacket(Event)
 {
     JD_DMESG("SENDP");
     // if we are receiving, randomly back off
-    if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_BUS_RISE))
+    if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_BUS_RISE))
     {
         JD_DMESG("WAIT %s", (status & JD_SERIAL_BUS_RISE) ? "LO" : "REC");
         if (status & JD_SERIAL_BUS_RISE)
