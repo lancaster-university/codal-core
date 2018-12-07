@@ -21,6 +21,22 @@ void JDLogicDriver::populateControlPacket(JDDriver* driver, ControlPacket* cp)
 
     cp->driver_class = driver->device.driver_class;
     cp->serial_number = driver->device.serial_number;
+
+    int error = driver->device.getError();
+
+    // todo: eventually we will swap to variable packet sizes.
+    // This code will need to be updated to return the size of the control packet dependent on cp type...
+    if (error > 0)
+    {
+        cp->packet_type = CONTROL_JD_TYPE_ERROR;
+
+        ControlPacketError* err = (ControlPacketError *)cp->data;
+        memset(err, 0, sizeof(ControlPacketError));
+
+        ManagedString s = JDProtocol::getDebugName();
+        memcpy(err->name,s.toCharArray(),min(s.length(), CONTROL_PACKET_ERROR_NAME_LENGTH));
+        err->code = error;
+    }
 }
 
 void JDLogicDriver::periodicCallback()
@@ -164,6 +180,18 @@ int JDLogicDriver::handleControlPacket(JDPkt* p)
 int JDLogicDriver::handlePacket(JDPkt* p)
 {
     ControlPacket *cp = (ControlPacket *)p->data;
+
+    if (cp->packet_type == CONTROL_JD_TYPE_PANIC)
+    {
+        ControlPacketError* error = (ControlPacketError*)p->data;
+
+        char name[CONTROL_PACKET_ERROR_NAME_LENGTH + 1] = { 0 };
+        memcpy(name, error, CONTROL_PACKET_ERROR_NAME_LENGTH);
+        name[CONTROL_PACKET_ERROR_NAME_LENGTH] = 0;
+
+        DMESG("%s is panicking [%d]", name, error->code);
+        return DEVICE_OK;
+    }
 
      JD_DMESG("CP A:%d S:%d C:%d p: %d", cp->address, cp->serial_number, cp->driver_class, (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE) ? 1 : 0);
 

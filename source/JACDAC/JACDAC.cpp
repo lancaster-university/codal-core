@@ -167,6 +167,9 @@ void JACDAC::dmaComplete(Event evt)
     // also drive the bus high for a little bit.
     sp.setDigitalValue(1);
     configure(JACDACPinEvents::PulseEvents);
+
+    if (commLED)
+        commLED->setDigitalValue(0);
 }
 
 void JACDAC::onLowPulse(Event e)
@@ -204,6 +207,9 @@ void JACDAC::onLowPulse(Event e)
 
     sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_HEADER_SIZE);
     system_timer_event_after(baudToByteMap[ts - 1].time_per_byte * ((JD_SERIAL_HEADER_SIZE + 2)), this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+
+    if (commLED)
+        commLED->setDigitalValue(1);
 }
 
 void JACDAC::rxTimeout(Event)
@@ -393,21 +399,7 @@ void JACDAC::initialise()
  *
  * @param sws an instance of sws created using p.
  */
-JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), led(NULL)
-{
-    this->id = id;
-    this->txBaud = baudRate;
-    initialise();
-}
-
-/**
- * Constructor
- *
- * @param p the transmission pin to use
- *
- * @param sws an instance of sws created using p.
- */
-JACDAC::JACDAC(DMASingleWireSerial&  sws, Pin& led, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), led(&led)
+JACDAC::JACDAC(DMASingleWireSerial&  sws, Pin* busStateLED, Pin* commStateLED, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), busLED(busStateLED), commLED(commStateLED)
 {
     this->id = id;
     this->txBaud = baudRate;
@@ -445,8 +437,8 @@ void JACDAC::start()
     // check if the bus is lo here and change our led
     configure(JACDACPinEvents::PulseEvents);
 
-    if (led)
-        led->setDigitalValue(1);
+    if (busLED)
+        busLED->setDigitalValue(1);
 
     Event(this->id, JD_SERIAL_EVT_BUS_CONNECTED);
 }
@@ -468,9 +460,8 @@ void JACDAC::stop()
 
     configure(JACDACPinEvents::NoEvents);
 
-    if (led)
-        led->setDigitalValue(0);
-
+    if (busLED)
+        busLED->setDigitalValue(0);
     Event(this->id, JD_SERIAL_EVT_BUS_DISCONNECTED);
 }
 
@@ -484,8 +475,8 @@ void JACDAC::sendPacket(Event)
         if (status & JD_SERIAL_BUS_RISE)
         {
             JD_DMESG("RISE!!");
-            if (led)
-                led->setDigitalValue(1);
+            if (busLED)
+                busLED->setDigitalValue(1);
 
             status &= ~JD_SERIAL_BUS_RISE;
             configure(JACDACPinEvents::PulseEvents);
@@ -506,8 +497,11 @@ void JACDAC::sendPacket(Event)
             // listen for when it is hi again
             status |= JD_SERIAL_BUS_RISE;
 
-            if (led)
-                led->setDigitalValue(0);
+            if (busLED)
+                busLED->setDigitalValue(0);
+
+            if (commLED)
+                commLED->setDigitalValue(0);
 
             Event(this->id, JD_SERIAL_EVT_BUS_DISCONNECTED);
             return;
@@ -543,6 +537,8 @@ void JACDAC::sendPacket(Event)
     {
         JD_DMESG("TX S");
         sws.sendDMA((uint8_t *)txBuf, JD_SERIAL_PACKET_SIZE);
+        if (commLED)
+            commLED->setDigitalValue(1);
         return;
     }
 

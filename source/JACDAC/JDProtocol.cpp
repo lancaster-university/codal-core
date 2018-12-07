@@ -30,6 +30,8 @@ DEALINGS IN THE SOFTWARE.
 #include "Timer.h"
 #include "CodalDmesg.h"
 
+static char jacdac_name[CONTROL_PACKET_ERROR_NAME_LENGTH] = {'J', 'A', 'C', 'D', 'A', 'C'};
+
 using namespace codal;
 
 JDDriver* JDProtocol::drivers[JD_PROTOCOL_DRIVER_ARRAY_SIZE] = { 0 };
@@ -125,6 +127,7 @@ int JDProtocol::add(JDDriver& driver)
         if (drivers[i] == NULL)
         {
             drivers[i] = &driver;
+            target_enable_irq();
             break;
         }
         target_enable_irq();
@@ -152,9 +155,9 @@ int JDProtocol::remove(JDDriver& driver)
     return DEVICE_OK;
 }
 
-int JDProtocol::setBridge(JDDriver& bridge)
+int JDProtocol::setBridge(JDDriver* bridge)
 {
-    this->bridge = &bridge;
+    this->bridge = bridge;
     return DEVICE_OK;
 }
 
@@ -174,6 +177,19 @@ int JDProtocol::send(uint8_t* buf, int len, uint8_t address)
     return DEVICE_NO_RESOURCES;
 }
 
+int JDProtocol::setDebugName(ManagedString s)
+{
+    if (s.length() > CONTROL_PACKET_ERROR_NAME_LENGTH)
+        return DEVICE_INVALID_PARAMETER;
+
+    memcpy(jacdac_name, s.toCharArray(), s.length());
+    return DEVICE_OK;
+}
+
+ManagedString JDProtocol::getDebugName()
+{
+    return ManagedString(jacdac_name, CONTROL_PACKET_ERROR_NAME_LENGTH);
+}
 
 void JDProtocol::logState(JackRouter* jr)
 {
