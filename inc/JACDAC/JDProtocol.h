@@ -150,9 +150,27 @@ namespace codal
 
     enum DriverErrorCode
     {
-        STATUS_OK,
-        PERIPHERAL_MALFUNCTION,
+        // No error occurred.
+        DRIVER_OK = 0,
 
+        // Device calibration information
+        DRIVER_CALIBRATION_IN_PROGRESS,
+        DRIVER_CALIBRATION_REQUIRED,
+
+        // The driver has run out of some essential resource (e.g. allocated memory)
+        DRIVER_NO_RESOURCES,
+
+        // The driver operation could not be performed as some essential resource is busy (e.g. the display)
+        DRIVER_BUSY,
+
+        // I2C / SPI Communication error occured
+        DRIVER_COMMS_ERROR,
+
+        // An invalid state was detected (i.e. not initialised)
+        DRIVER_INVALID_STATE,
+
+        // an external peripheral has a malfunction e.g. external circuitry is drawing too much power.
+        DRIVER_PERIPHERAL_MALFUNCTION
     };
 
     /**
