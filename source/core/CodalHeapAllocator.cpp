@@ -191,7 +191,7 @@ uint32_t device_heap_size(uint8_t heap_index)
   *
   * @return A pointer to the allocated memory, or NULL if insufficient memory is available.
   */
-void *device_malloc(size_t size, HeapDefinition &heap)
+void *device_malloc_in(size_t size, HeapDefinition &heap)
 {
     PROCESSOR_WORD_TYPE	blockSize = 0;
     PROCESSOR_WORD_TYPE	blocksNeeded = size % DEVICE_HEAP_BLOCK_SIZE == 0 ? size / DEVICE_HEAP_BLOCK_SIZE : size / DEVICE_HEAP_BLOCK_SIZE + 1;
@@ -281,7 +281,7 @@ void *device_malloc(size_t size, HeapDefinition &heap)
   *
   * @return A pointer to the allocated memory, or NULL if insufficient memory is available.
   */
-void* malloc (size_t size)
+void* device_malloc (size_t size)
 {
     static uint8_t initialised = 0;
     void *p;
@@ -303,12 +303,12 @@ void* malloc (size_t size)
     }
 
 #if (DEVICE_MAXIMUM_HEAPS == 1)
-    p = device_malloc(size, heap[0]);
+    p = device_malloc_in(size, heap[0]);
 #else
     // Assign the memory from the first heap created that has space.
     for (int i=0; i < heap_count; i++)
     {
-        p = device_malloc(size, heap[i]);
+        p = device_malloc_in(size, heap[i]);
         if (p != NULL)
             break;
     }
@@ -340,7 +340,7 @@ void* malloc (size_t size)
   *
   * @param mem The memory area to release.
   */
-void free (void *mem)
+void device_free (void *mem)
 {
     PROCESSOR_WORD_TYPE	*memory = (PROCESSOR_WORD_TYPE *)mem;
     PROCESSOR_WORD_TYPE	*cb = memory-1;
@@ -379,13 +379,17 @@ void* calloc (size_t num, size_t size)
 {
     void *mem = malloc(num*size);
 
-    if (mem)
-        memclr(mem, num*size);
+    if (mem) {
+        // without this write, GCC will happily optimize malloc() above into calloc()
+        // and remove the memset
+        ((uint32_t*)mem)[0] = 1;
+        memset(mem, 0, num*size);
+    }
 
     return mem;
 }
 
-void* realloc (void* ptr, size_t size)
+extern "C" void* device_realloc (void* ptr, size_t size)
 {
     void *mem = malloc(size);
 
@@ -403,6 +407,11 @@ void* realloc (void* ptr, size_t size)
 
     return mem;
 }
+
+void *malloc(size_t sz) __attribute__ ((weak, alias ("device_malloc")));
+void free(void *mem) __attribute__ ((weak, alias ("device_free")));
+void* realloc (void* ptr, size_t size) __attribute__ ((weak, alias ("device_realloc")));
+
 
 // make sure the libc allocator is not pulled in
 void *_malloc_r(struct _reent *, size_t len)

@@ -90,9 +90,14 @@ static void get_fibers_from(Fiber ***dest, int *sum, Fiber *queue)
 int codal::list_fibers(Fiber **dest)
 {
     int sum = 0;
+
+    // interrupts might move fibers between queues, but should not create new ones
+    target_disable_irq();
     get_fibers_from(&dest, &sum, runQueue);
     get_fibers_from(&dest, &sum, sleepQueue);
     get_fibers_from(&dest, &sum, waitQueue);
+    target_enable_irq();
+
     // idleFiber is used to start event handlers using invoke(),
     // so it may in fact have the user_data set if in FOB context
     if (dest)
@@ -760,6 +765,20 @@ void codal::release_fiber(void)
     // Add ourselves to the list of free fibers
     queue_fiber(currentFiber, &fiberPool);
 
+    // limit the number of fibers in the pool
+    int numFree = 0;
+    for (Fiber *p = fiberPool; p; p = p->next) {
+        if (!p->next && numFree > 3) {
+            p->prev->next = NULL;
+            free(p->tcb);
+            free((void *)p->stack_bottom);
+            memset(p, 0, sizeof(*p));
+            free(p);
+            break;
+        }
+        numFree++;
+    }
+
     // Reset fiber state, to ensure it can be safely reused.
     currentFiber->flags = 0;
     tcb_configure_stack_base(currentFiber->tcb, fiber_initial_stack_base());
@@ -793,6 +812,12 @@ void codal::verify_stack_size(Fiber *f)
     // If we're too small, increase our buffer size.
     if (bufferSize < stackDepth)
     {
+        // We are only here, when the current stack is the stack of fiber [f].
+        // Make sure the contents of [currentFiber] variable reflects that, otherwise
+        // an external memory allocator might get confused when scanning fiber stacks.
+        Fiber *prevCurrFiber = currentFiber;
+        currentFiber = f;
+
         // To ease heap churn, we choose the next largest multple of 32 bytes.
         bufferSize = (stackDepth + 32) & 0xffffffe0;
 
@@ -805,6 +830,8 @@ void codal::verify_stack_size(Fiber *f)
 
         // Recalculate where the top of the stack is and we're done.
         f->stack_top = f->stack_bottom + bufferSize;
+
+        currentFiber = prevCurrFiber;
     }
 }
 
