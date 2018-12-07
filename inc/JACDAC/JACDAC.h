@@ -36,10 +36,10 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_MAX_BUFFERS          10
 
 #define JD_SERIAL_RECEIVING            0x02
-#define JD_SERIAL_TRANSMITTING         0x04
-#define JD_SERIAL_TX_DRAIN_ENABLE      0x08
-#define JD_SERIAL_BUS_RISE             0x10
-
+#define JD_SERIAL_RECEIVING_HEADER     0x04
+#define JD_SERIAL_TRANSMITTING         0x08
+#define JD_SERIAL_TX_DRAIN_ENABLE      0x10
+#define JD_SERIAL_BUS_RISE             0x20
 
 #define JD_SERIAL_EVT_DATA_READY       1
 #define JD_SERIAL_EVT_BUS_ERROR        2
@@ -141,7 +141,8 @@ namespace codal
     */
     class JACDAC : public CodalComponent
     {
-        JACDACBaudRate baud;
+        JACDACBaudRate txBaud;
+        JACDACBaudRate currentBaud;
 
     protected:
         DMASingleWireSerial&  sws;

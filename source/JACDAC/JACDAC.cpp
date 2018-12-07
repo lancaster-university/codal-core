@@ -91,6 +91,7 @@ void JACDAC::dmaComplete(Event evt)
 {
     if (evt.value == SWS_EVT_ERROR)
     {
+        // event should be more generic: tx/rx timeout
         system_timer_cancel_event(this->id, JD_SERIAL_EVT_RX_TIMEOUT);
 
         if (status & JD_SERIAL_TRANSMITTING)
@@ -100,10 +101,10 @@ void JACDAC::dmaComplete(Event evt)
             txBuf = NULL;
         }
 
-        if (status & JD_SERIAL_RECEIVING)
+        if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER))
         {
             error_count++;
-            status &= ~(JD_SERIAL_RECEIVING);
+            status &= ~(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER);
             sws.abortDMA();
             Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
         }
@@ -113,23 +114,40 @@ void JACDAC::dmaComplete(Event evt)
         // rx complete, queue packet for later handling
         if (evt.value == SWS_EVT_DATA_RECEIVED)
         {
-            status &= ~(JD_SERIAL_RECEIVING);
-            system_timer_cancel_event(this->id, JD_SERIAL_EVT_RX_TIMEOUT);
-            uint8_t* crcPointer = (uint8_t*)&rxBuf->address;
-            uint16_t crc = fletcher16(crcPointer, JD_SERIAL_PACKET_SIZE - 2);
-
-            if (crc == rxBuf->crc)
+            if (status & JD_SERIAL_RECEIVING_HEADER)
             {
-                // move rxbuf to rxArray and allocate new buffer.
-                addToRxArray(rxBuf);
-                rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
-                Event(id, JD_SERIAL_EVT_DATA_READY);
-                JD_DMESG("DMA RXD");
+
+                status &= ~(JD_SERIAL_RECEIVING_HEADER);
+
+                JDPkt* rx = (JDPkt*)rxBuf;
+                sws.receiveDMA(((uint8_t*)rxBuf) + JD_SERIAL_HEADER_SIZE, rx->size);
+                DMESG("RXH %d",rx->size);
+
+                system_timer_event_after(baudToByteMap[(uint8_t)currentBaud - 1].time_per_byte * (rx->size + 2), this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+
+                status |= JD_SERIAL_RECEIVING;
+                return;
             }
-            // could we do something cool to indicate an incorrect CRC?
-            // i.e. drive the bus low....?
-            else
-                JD_DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
+            else if (status & JD_SERIAL_RECEIVING)
+            {
+                status &= ~(JD_SERIAL_RECEIVING);
+                system_timer_cancel_event(this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+                uint8_t* crcPointer = (uint8_t*)&rxBuf->address;
+                uint16_t crc = fletcher16(crcPointer, rxBuf->size + 2); // include size and address in the checksum.
+
+                if (crc == rxBuf->crc)
+                {
+                    // move rxbuf to rxArray and allocate new buffer.
+                    addToRxArray(rxBuf);
+                    rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
+                    Event(id, JD_SERIAL_EVT_DATA_READY);
+                    DMESG("DMA RXD");
+                }
+                // could we do something cool to indicate an incorrect CRC?
+                // i.e. drive the bus low....?
+                else
+                    DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
+            }
         }
 
         if (evt.value == SWS_EVT_DATA_SENT)
@@ -173,15 +191,19 @@ void JACDAC::onLowPulse(Event e)
     if (ts == 0)
         ts = 1;
 
-    sws.setBaud(baudToByteMap[ts - 1].baud);
+    if ((JACDACBaudRate)ts != this->currentBaud)
+    {
+        sws.setBaud(baudToByteMap[ts - 1].baud);
+        this->currentBaud = (JACDACBaudRate)ts;
+    }
 
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
     sp.getDigitalValue(PullMode::None);
 
-    status |= (JD_SERIAL_RECEIVING);
-    sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_PACKET_SIZE);
+    status |= (JD_SERIAL_RECEIVING_HEADER);
 
-    system_timer_event_after(baudToByteMap[ts - 1].time_per_byte * ((JD_SERIAL_PACKET_SIZE + 2)), this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+    sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_HEADER_SIZE);
+    system_timer_event_after(baudToByteMap[ts - 1].time_per_byte * ((JD_SERIAL_HEADER_SIZE + 2)), this->id, JD_SERIAL_EVT_RX_TIMEOUT);
 }
 
 void JACDAC::rxTimeout(Event)
@@ -353,7 +375,8 @@ void JACDAC::initialise()
 
     sp.getDigitalValue(PullMode::None);
 
-    sws.setBaud(baudToByteMap[(uint8_t)baud - 1].baud);
+    sws.setBaud(baudToByteMap[(uint8_t)txBaud - 1].baud);
+    currentBaud = txBaud;
     sws.setDMACompletionHandler(this, &JACDAC::dmaComplete);
 
     if (EventModel::defaultEventBus)
@@ -373,7 +396,7 @@ void JACDAC::initialise()
 JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), led(NULL)
 {
     this->id = id;
-    this->baud = baudRate;
+    this->txBaud = baudRate;
     initialise();
 }
 
@@ -387,7 +410,7 @@ JACDAC::JACDAC(DMASingleWireSerial&  sws, JACDACBaudRate baudRate, uint16_t id) 
 JACDAC::JACDAC(DMASingleWireSerial&  sws, Pin& led, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), led(&led)
 {
     this->id = id;
-    this->baud = baudRate;
+    this->txBaud = baudRate;
     initialise();
 }
 
@@ -499,14 +522,17 @@ void JACDAC::sendPacket(Event)
             txBuf = popTxArray(); // perhaps only pop after confirmed send?
 
             sp.setDigitalValue(0);
-            target_wait_us(10 * (uint8_t)baud);
+            target_wait_us(baudToByteMap[(uint8_t)txBaud - 1].time_per_byte);
             sp.setDigitalValue(1);
 
             // return after 100 us
             system_timer_event_after_us(100, this->id, JD_SERIAL_EVT_DRAIN);
 
-            if (sws.getBaud() != baudToByteMap[(uint8_t)baud - 1].baud)
-                sws.setBaud(baudToByteMap[(uint8_t)baud - 1].baud);
+            if (txBaud != currentBaud)
+            {
+                sws.setBaud(baudToByteMap[(uint8_t)txBaud - 1].baud);
+                currentBaud = txBaud;
+            }
             return;
         }
         JD_DMESG("txh: %d txt: %d",txHead,txTail);
@@ -672,11 +698,11 @@ JACDACBusState JACDAC::getState()
 
 int JACDAC::setBaud(JACDACBaudRate baud)
 {
-    this->baud = baud;
+    this->txBaud = baud;
     return DEVICE_OK;
 }
 
 JACDACBaudRate JACDAC::getBaud()
 {
-    return baud;
+    return this->txBaud;
 }
