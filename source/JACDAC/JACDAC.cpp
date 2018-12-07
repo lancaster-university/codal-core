@@ -133,7 +133,7 @@ void JACDAC::dmaComplete(Event evt)
                 status &= ~(JD_SERIAL_RECEIVING);
                 system_timer_cancel_event(this->id, JD_SERIAL_EVT_RX_TIMEOUT);
                 uint8_t* crcPointer = (uint8_t*)&rxBuf->address;
-                uint16_t crc = fletcher16(crcPointer, rxBuf->size + 2); // include size and address in the checksum.
+                uint16_t crc = fletcher16(crcPointer, rxBuf->size + JD_SERIAL_CRC_HEADER_SIZE); // include size and address in the checksum.
 
                 if (crc == rxBuf->crc)
                 {
@@ -536,7 +536,7 @@ void JACDAC::sendPacket(Event)
     if (status & JD_SERIAL_TRANSMITTING)
     {
         JD_DMESG("TX S");
-        sws.sendDMA((uint8_t *)txBuf, JD_SERIAL_PACKET_SIZE);
+        sws.sendDMA((uint8_t *)txBuf, txBuf->size + JD_SERIAL_HEADER_SIZE);
         if (commLED)
             commLED->setDigitalValue(1);
         return;
@@ -572,9 +572,11 @@ int JACDAC::send(JDPkt* tx)
     memset(pkt, 0, sizeof(JDPkt));
     memcpy(pkt, tx, sizeof(JDPkt));
 
+    DMESG("QU %d", pkt->size);
+
     // skip the crc.
     uint8_t* crcPointer = (uint8_t*)&pkt->address;
-    pkt->crc = fletcher16(crcPointer, JD_SERIAL_PACKET_SIZE - 2);
+    pkt->crc = fletcher16(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE);
 
     int ret = addToTxArray(pkt);
 
