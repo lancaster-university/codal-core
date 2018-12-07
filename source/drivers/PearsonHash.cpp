@@ -44,7 +44,7 @@ uint32_t PearsonHash::hashN(ManagedString s, uint8_t byteCount)
     while (i < byteCount)
     {
         hash = eightBitHash(buffer);
-        res |= (hash << i);
+        res |= (hash << (i * 8));
         buffer[0] = (buffer[0] + 1) % 255;
         i++;
     }
