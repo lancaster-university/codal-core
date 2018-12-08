@@ -286,7 +286,7 @@ namespace codal
           * }
           *
           * // call onButtonBClicked when ever a click event from buttonB is detected.
-          * uBit.messageBus.listen(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
+          * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
           * @endcode
           */
         int listen(CodalComponent& component, int value, void (*handler)(Event), uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS)
@@ -323,7 +323,7 @@ namespace codal
           * }
           *
           * // call onButtonBClicked when ever a click event from buttonB is detected.
-          * uBit.messageBus.listen(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
+          * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
           * @endcode
           */
         int listen(CodalComponent& component, int value, void (*handler)(Event, void*), void* arg, uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS)
@@ -355,7 +355,7 @@ namespace codal
           *
           * SomeClass s = new SomeClass();
           *
-          * uBit.messageBus.listen(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
+          * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
           * @endcode
           */
         template <typename T>
@@ -479,10 +479,10 @@ namespace codal
           *     //do something
           * }
           *
-          * uBit.messageBus.listen(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
+          * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
           *
           * // the previously created listener is now ignored.
-          * uBit.messageBus.ignore(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
+          * uBit.messageBus.ignore(device.buttonB, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
           * @endcode
           */
         int ignore(CodalComponent& component, int value, void (*handler)(Event))
@@ -508,10 +508,10 @@ namespace codal
           *     //do something
           * }
           *
-          * uBit.messageBus.listen(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
+          * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
           *
           * // the previously created listener is now ignored.
-          * uBit.messageBus.ignore(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
+          * uBit.messageBus.ignore(device.buttonB, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
           * @endcode
           */
         int ignore(CodalComponent& component, int value, void (*handler)(Event, void*))
@@ -539,10 +539,10 @@ namespace codal
           * }
           *
           * SomeClass s = new SomeClass();
-          * uBit.messageBus.listen(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
+          * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
           *
           * // the previously created listener is now ignored.
-          * uBit.messageBus.ignore(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
+          * uBit.messageBus.ignore(device.buttonB, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
           * @endcode
           */
         template <typename T>
@@ -665,10 +665,10 @@ namespace codal
       * }
       *
       * SomeClass s = new SomeClass();
-      * uBit.messageBus.listen(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
+      * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
       *
       * // the previously created listener is now ignored.
-      * uBit.messageBus.ignore(DEVICE_ID_BUTTON_B, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
+      * uBit.messageBus.ignore(device.buttonB, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
       * @endcode
       */
     template <typename T>
