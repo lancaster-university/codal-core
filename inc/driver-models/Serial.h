@@ -225,6 +225,8 @@ namespace codal
           */
         virtual int read(SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE);
 
+        void printf(const char* format, ...);
+
         /**
           * Reads multiple characters from the rxBuff and returns them as a ManagedString
           *
