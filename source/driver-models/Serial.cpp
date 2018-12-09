@@ -1,6 +1,18 @@
 #include "Serial.h"
+#include "NotifyEvents.h"
 
 using namespace codal;
+
+/**
+ *
+ * Remove all rxInUse/txInUse calls, and replace with an event mutex (which will be pretty sexy)
+ *
+ * Define what needs to be implemented, I think all it is so far:
+ *  * tx / rx interrupt enable
+ *  * pin swap
+ *  * putc getc
+ *  * Interrupt that calls datarec / datawritten.
+ **/
 
 void Serial::dataReceived()
 {
@@ -18,7 +30,7 @@ void Serial::dataReceived()
     {
         //fire an event if there is to block any waiting fibers
         if(this->delimeters.charAt(delimeterOffset) == c)
-            Event(DEVICE_ID_SERIAL, CODAL_SERIAL_EVT_DELIM_MATCH);
+            Event(this->id, CODAL_SERIAL_EVT_DELIM_MATCH);
 
         delimeterOffset++;
     }
@@ -37,21 +49,21 @@ void Serial::dataReceived()
             if(rxBuffHead == rxBuffHeadMatch)
             {
                 rxBuffHeadMatch = -1;
-                Event(DEVICE_ID_SERIAL, CODAL_SERIAL_EVT_HEAD_MATCH);
+                Event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
             }
     }
     else
         //otherwise, our buffer is full, send an event to the user...
-        Event(DEVICE_ID_SERIAL, CODAL_SERIAL_EVT_RX_FULL);
+        Event(this->id, CODAL_SERIAL_EVT_RX_FULL);
 }
 
-void Serial::dataWritten()
+void Serial::dataTransmitted()
 {
     if(txBuffTail == txBuffHead || !(status & CODAL_SERIAL_TX_BUFF_INIT))
         return;
 
     //send our current char
-    putc(txBuff[txBuffTail]);
+    putc((char)txBuff[txBuffTail]);
 
     uint16_t nextTail = (txBuffTail + 1) % txBuffSize;
 
@@ -59,7 +71,7 @@ void Serial::dataWritten()
     if(nextTail == txBuffHead)
     {
         Event(DEVICE_ID_NOTIFY, CODAL_SERIAL_EVT_TX_EMPTY);
-        detach(TxInterrupt);
+        disableInterrupt(TxInterrupt);
     }
 
     //update our tail!
@@ -86,7 +98,7 @@ int Serial::setTxInterrupt(uint8_t *string, int len, SerialMode mode)
         fiber_wake_on_event(DEVICE_ID_NOTIFY, CODAL_SERIAL_EVT_TX_EMPTY);
 
     //set the TX interrupt
-    attach(TxInterrupt, &Serial::dataWritten);
+    enableInterrupt(TxInterrupt);
 
     return copiedBytes;
 }
@@ -132,7 +144,7 @@ int Serial::initialiseRx()
     if((status & CODAL_SERIAL_RX_BUFF_INIT))
     {
         //ensure that we receive no interrupts after freeing our buffer
-        detach(RxInterrupt);
+        disableInterrupt(RxInterrupt);
         free(this->rxBuff);
     }
 
@@ -146,7 +158,7 @@ int Serial::initialiseRx()
 
     //set the receive interrupt
     status |= CODAL_SERIAL_RX_BUFF_INIT;
-    attach(RxInterrupt, &Serial::dataReceived);
+    enableInterrupt(RxInterrupt);
 
     return DEVICE_OK;
 }
@@ -160,7 +172,7 @@ int Serial::initialiseTx()
     if((status & CODAL_SERIAL_TX_BUFF_INIT))
     {
         //ensure that we receive no interrupts after freeing our buffer
-        detach(TxInterrupt);
+        disableInterrupt(TxInterrupt);
         free(this->txBuff);
     }
 
@@ -242,8 +254,10 @@ void Serial::circularCopy(uint8_t *circularBuff, uint8_t circularBuffSize, uint8
  *
  *       Buffers aren't allocated until the first send or receive respectively.
  */
-Serial::Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize = CODAL_SERIAL_DEFAULT_BUFFER_SIZE, uint8_t txBufferSize = CODAL_SERIAL_DEFAULT_BUFFER_SIZE) : tx(tx), rx(rx)
+Serial::Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize, uint8_t txBufferSize, uint16_t id) : tx(tx), rx(rx)
 {
+    this->id = id;
+
     // + 1 so there is a usable buffer size, of the size the user requested.
     this->rxBuffSize = rxBufferSize + 1;
     this->txBuffSize = txBufferSize + 1;
@@ -258,8 +272,6 @@ Serial::Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize = CODAL_SERIAL_DEFAULT_BUF
     this->txBuffTail = 0;
 
     this->rxBuffHeadMatch = -1;
-
-    this->baud(CODAL_SERIAL_DEFAULT_BAUD_RATE);
 }
 
 /**
@@ -285,7 +297,7 @@ Serial::Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize = CODAL_SERIAL_DEFAULT_BUF
  * @return the number of bytes written, or CODAL_SERIAL_IN_USE if another fiber
  *         is using the serial instance for transmission.
  */
-int Serial::sendChar(char c, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
+int Serial::sendChar(char c, SerialMode mode)
 {
     if(txInUse())
         return DEVICE_SERIAL_IN_USE;
@@ -336,7 +348,7 @@ int Serial::sendChar(char c, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
  *         is using the serial instance for transmission, DEVICE_INVALID_PARAMETER
  *         if buffer is invalid, or the given bufferLen is <= 0.
  */
-int Serial::send(ManagedString s, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
+int Serial::send(ManagedString s, SerialMode mode)
 {
     return send((uint8_t *)s.toCharArray(), s.length(), mode);
 }
@@ -367,7 +379,7 @@ int Serial::send(ManagedString s, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
  *         is using the serial instance for transmission, DEVICE_INVALID_PARAMETER
  *         if buffer is invalid, or the given bufferLen is <= 0.
  */
-int Serial::send(uint8_t *buffer, int bufferLen, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
+int Serial::send(uint8_t *buffer, int bufferLen, SerialMode mode)
 {
     if(txInUse())
         return DEVICE_SERIAL_IN_USE;
@@ -431,7 +443,7 @@ void Serial::printf(const char* format, ...)
  *         DEVICE_NO_RESOURCES if buffer allocation did not complete successfully, or DEVICE_NO_DATA if
  *         the rx buffer is empty and the mode given is ASYNC.
  */
-int Serial::read(SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
+int Serial::read(SerialMode mode)
 {
     if(rxInUse())
         return DEVICE_SERIAL_IN_USE;
@@ -524,7 +536,7 @@ int Serial::getChar(SerialMode mode)
  *
  * @return A ManagedString, or an empty ManagedString if an error was encountered during the read.
  */
-ManagedString Serial::read(int size, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
+ManagedString Serial::read(int size, SerialMode mode)
 {
     uint8_t buff[size + 1];
 
@@ -565,7 +577,7 @@ ManagedString Serial::read(int size, SerialMode mode = DEVICE_DEFAULT_SERIAL_MOD
  * @return the number of characters read, or CODAL_SERIAL_IN_USE if another fiber
  *         is using the instance for receiving.
  */
-int Serial::read(uint8_t *buffer, int bufferLen, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
+int Serial::read(uint8_t *buffer, int bufferLen, SerialMode mode)
 {
     if(rxInUse())
         return DEVICE_SERIAL_IN_USE;
@@ -649,7 +661,7 @@ int Serial::read(uint8_t *buffer, int bufferLen, SerialMode mode = DEVICE_DEFAUL
  *
  * @note delimeters are matched on a per byte basis.
  */
-ManagedString Serial::readUntil(ManagedString delimeters, SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE)
+ManagedString Serial::readUntil(ManagedString delimeters, SerialMode mode)
 {
     if(rxInUse())
         return ManagedString();
@@ -753,11 +765,12 @@ int Serial::setBaud(int baudrate)
     if(baudrate < 0)
         return DEVICE_INVALID_PARAMETER;
 
-    this->baudrate = baudrate;
+    int ret = setBaudrate((uint32_t)baudrate);
 
-    RawSerial::baud(baudrate);
+    if (ret == DEVICE_OK)
+        this->baudrate = baudrate;
 
-    return DEVICE_OK;
+    return ret;
 }
 
 /**
@@ -778,18 +791,20 @@ int Serial::redirect(Pin& tx, Pin& rx)
     lockRx();
 
     if(txBufferedSize() > 0)
-        detach(TxInterrupt);
+        disableInterrupt(TxInterrupt);
 
-    detach(RxInterrupt);
+    disableInterrupt(RxInterrupt);
 
-    serial_init(&_serial, tx, rx);
+    #warning define API for pin swap...
 
-    attach(RxInterrupt, &Serial::dataReceived);
+    configurePins(tx, rx);
+
+    enableInterrupt(RxInterrupt);
 
     if(txBufferedSize() > 0)
-        attach(TxInterrupt, &Serial::dataWritten);
+        enableInterrupt(TxInterrupt);
 
-    this->baud(this->baudrate);
+    this->setBaud(this->baudrate);
 
     unlockRx();
     unlockTx();
@@ -800,7 +815,7 @@ int Serial::redirect(Pin& tx, Pin& rx)
 /**
  * Configures an event to be fired after "len" characters.
  *
- * Will generate an event with the ID: DEVICE_ID_SERIAL and the value CODAL_SERIAL_EVT_HEAD_MATCH.
+ * Will generate an event with the ID: this->id and the value CODAL_SERIAL_EVT_HEAD_MATCH.
  *
  * @param len the number of characters to wait before triggering the event.
  *
@@ -816,7 +831,7 @@ int Serial::redirect(Pin& tx, Pin& rx)
  *
  * @return DEVICE_INVALID_PARAMETER if the mode given is SYNC_SPINWAIT, otherwise DEVICE_OK.
  */
-int Serial::eventAfter(int len, SerialMode mode = ASYNC)
+int Serial::eventAfter(int len, SerialMode mode)
 {
     if(mode == SYNC_SPINWAIT)
         return DEVICE_INVALID_PARAMETER;
@@ -826,7 +841,7 @@ int Serial::eventAfter(int len, SerialMode mode = ASYNC)
 
     //block!
     if(mode == SYNC_SLEEP)
-        fiber_wait_for_event(DEVICE_ID_SERIAL, CODAL_SERIAL_EVT_HEAD_MATCH);
+        fiber_wait_for_event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
 
     return DEVICE_OK;
 }
@@ -834,7 +849,7 @@ int Serial::eventAfter(int len, SerialMode mode = ASYNC)
 /**
  * Configures an event to be fired on a match with one of the delimeters.
  *
- * Will generate an event with the ID: DEVICE_ID_SERIAL and the value CODAL_SERIAL_EVT_DELIM_MATCH.
+ * Will generate an event with the ID: this->id and the value CODAL_SERIAL_EVT_DELIM_MATCH.
  *
  * @param delimeters the characters to match received characters against e.g. ManagedString("\n")
  *
@@ -852,7 +867,7 @@ int Serial::eventAfter(int len, SerialMode mode = ASYNC)
  *
  * @note delimeters are matched on a per byte basis.
  */
-int Serial::eventOn(ManagedString delimeters, SerialMode mode = ASYNC)
+int Serial::eventOn(ManagedString delimeters, SerialMode mode)
 {
     if(mode == SYNC_SPINWAIT)
         return DEVICE_INVALID_PARAMETER;
@@ -862,7 +877,7 @@ int Serial::eventOn(ManagedString delimeters, SerialMode mode = ASYNC)
 
     //block!
     if(mode == SYNC_SLEEP)
-        fiber_wait_for_event(DEVICE_ID_SERIAL, CODAL_SERIAL_EVT_DELIM_MATCH);
+        fiber_wait_for_event(this->id, CODAL_SERIAL_EVT_DELIM_MATCH);
 
     return DEVICE_OK;
 
@@ -1056,4 +1071,9 @@ int Serial::rxInUse()
 int Serial::txInUse()
 {
     return (status & CODAL_SERIAL_TX_IN_USE);
+}
+
+Serial::~Serial()
+{
+
 }
