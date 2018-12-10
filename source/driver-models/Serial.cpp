@@ -1,5 +1,6 @@
 #include "Serial.h"
 #include "NotifyEvents.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -14,13 +15,10 @@ using namespace codal;
  *  * Interrupt that calls datarec / datawritten.
  **/
 
-void Serial::dataReceived()
+void Serial::dataReceived(char c)
 {
     if(!(status & CODAL_SERIAL_RX_BUFF_INIT))
         return;
-
-    //get the received character
-    char c = getc();
 
     int delimeterOffset = 0;
     int delimLength = this->delimeters.length();
@@ -59,15 +57,15 @@ void Serial::dataReceived()
 
 void Serial::dataTransmitted()
 {
-    if(txBuffTail == txBuffHead || !(status & CODAL_SERIAL_TX_BUFF_INIT))
+    if(!(status & CODAL_SERIAL_TX_BUFF_INIT))
         return;
 
     //send our current char
     putc((char)txBuff[txBuffTail]);
 
+    //unblock any waiting fibers that are waiting for transmission to finish.
     uint16_t nextTail = (txBuffTail + 1) % txBuffSize;
 
-    //unblock any waiting fibers that are waiting for transmission to finish.
     if(nextTail == txBuffHead)
     {
         Event(DEVICE_ID_NOTIFY, CODAL_SERIAL_EVT_TX_EMPTY);

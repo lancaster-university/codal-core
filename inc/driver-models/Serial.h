@@ -111,12 +111,12 @@ namespace codal
 
         void send(SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE);
 
-        void dataTransmitted();
-        void dataReceived();
-
         int setTxInterrupt(uint8_t *string, int len, SerialMode mode);
 
         public:
+
+        void dataTransmitted();
+        void dataReceived(char c);
 
         /**
          * SUB CLASSES / IMPLEMENTATIONS DEFINE THE FOLLOWING METHODS:
