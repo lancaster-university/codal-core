@@ -260,6 +260,109 @@ namespace codal
         int listen(uint16_t id, uint16_t value, T* object, void (T::*handler)(Event), uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS);
 
         /**
+          * Register a listener function.
+          *
+          * An EventModel implementing this interface may optionally choose to override this method,
+          * if that EventModel supports asynchronous callbacks to user code, but there is no
+          * requirement to do so.
+          *
+          * @param component The source component of messages to listen for.
+          *
+          * @param value The value of messages to listen for. Events with any other values will be filtered.
+          * Use DEVICE_EVT_ANY to receive events of any value.
+          *
+          * @param handler The function to call when an event is received.
+          *
+          * @param flags User specified, implementation specific flags, that allow behaviour of this events listener
+          * to be tuned.
+          *
+          * @return DEVICE_OK on success, or any valid error code defined in "ErrNo.h". The default implementation
+          * simply returns DEVICE_NOT_SUPPORTED.
+          *
+          * @code
+          * void onButtonBClicked(Event)
+          * {
+          *     //do something
+          * }
+          *
+          * // call onButtonBClicked when ever a click event from buttonB is detected.
+          * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
+          * @endcode
+          */
+        int listen(CodalComponent& component, int value, void (*handler)(Event), uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS)
+        {
+            return listen(component.id, value, handler, flags);
+        }
+
+        /**
+          * Register a listener function.
+          *
+          * An EventModel implementing this interface may optionally choose to override this method,
+          * if that EventModel supports asynchronous callbacks to user code, but there is no
+          * requirement to do so.
+          *
+          * @param component The source component of messages to listen for.
+          *
+          * @param value The value of messages to listen for. Events with any other values will be filtered.
+          * Use DEVICE_EVT_ANY to receive events of any value.
+          *
+          * @param handler The function to call when an event is received.
+          *
+          * @param arg Provide the callback with in an additional argument.
+          *
+          * @param flags User specified, implementation specific flags, that allow behaviour of this events listener
+          * to be tuned.
+          *
+          * @return DEVICE_OK on success, or any valid error code defined in "ErrNo.h". The default implementation
+          * simply returns DEVICE_NOT_SUPPORTED.
+          *
+          * @code
+          * void onButtonBClicked(Event, void* data)
+          * {
+          *     //do something
+          * }
+          *
+          * // call onButtonBClicked when ever a click event from buttonB is detected.
+          * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
+          * @endcode
+          */
+        int listen(CodalComponent& component, int value, void (*handler)(Event, void*), void* arg, uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS)
+        {
+            return listen(component.id, value, handler, arg, flags);
+        }
+
+        /**
+          * Register a listener function.
+          *
+          * @param component The source component of messages to listen for.
+          *
+          * @param value The value of messages to listen for. Events with any other values will be filtered.
+          * Use DEVICE_EVT_ANY to receive events of any value.
+          *
+          * @param hander The function to call when an event is received.
+          *
+          * @param flags User specified, implementation specific flags, that allow behaviour of this events listener
+          * to be tuned.
+          *
+          * @return DEVICE_OK on success or DEVICE_INVALID_PARAMETER if the handler or object
+          *         pointers are NULL.
+          *
+          * @code
+          * void SomeClass::onButtonBClicked(Event)
+          * {
+          *     //do something
+          * }
+          *
+          * SomeClass s = new SomeClass();
+          *
+          * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
+          * @endcode
+          */
+        template <typename T>
+        int listen(CodalComponent& component, uint16_t value, T* object, void (T::*handler)(Event), uint16_t flags = EVENT_LISTENER_DEFAULT_FLAGS);
+
+
+        /**
           * Unregister a listener function.
           * Listeners are identified by the Event ID, Event value and handler registered using listen().
           *
@@ -358,6 +461,93 @@ namespace codal
         template <typename T>
         int ignore(uint16_t id, uint16_t value, T* object, void (T::*handler)(Event));
 
+        /**
+          * Unregister a listener function.
+          * Listeners are identified by the Event ID, Event value and handler registered using listen().
+          *
+          * @param component The source component used to register the listener
+          * @param value The Event value used to register the listener.
+          * @param handler The function used to register the listener.
+          *
+          * @return DEVICE_OK on success or DEVICE_INVALID_PARAMETER if the handler
+          *         given is NULL.
+          *
+          * Example:
+          * @code
+          * void onButtonBClick(Event)
+          * {
+          *     //do something
+          * }
+          *
+          * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
+          *
+          * // the previously created listener is now ignored.
+          * uBit.messageBus.ignore(device.buttonB, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
+          * @endcode
+          */
+        int ignore(CodalComponent& component, int value, void (*handler)(Event))
+        {
+            return ignore(component.id, value, handler);
+        }
+
+        /**
+          * Unregister a listener function.
+          * Listeners are identified by the Event ID, Event value and handler registered using listen().
+          *
+          * @param component The source component used to register the listener
+          * @param value The Event value used to register the listener.
+          * @param handler The function used to register the listener.
+          *
+          * @return DEVICE_OK on success or DEVICE_INVALID_PARAMETER if the handler
+          *         given is NULL.
+          *
+          * Example:
+          * @code
+          * void onButtonBClick(Event, void* data)
+          * {
+          *     //do something
+          * }
+          *
+          * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
+          *
+          * // the previously created listener is now ignored.
+          * uBit.messageBus.ignore(device.buttonB, DEVICE_BUTTON_EVT_CLICK, onButtonBClick);
+          * @endcode
+          */
+        int ignore(CodalComponent& component, int value, void (*handler)(Event, void*))
+        {
+            return ignore(component.id, value, handler);
+        }
+
+        /**
+          * Unregister a listener function.
+          * Listners are identified by the Event ID, Event value and handler registered using listen().
+          *
+          * @param component The source component used to register the listener
+          * @param value The Event value used to register the listener.
+          * @param handler The function used to register the listener.
+          *
+          * @return DEVICE_OK on success or DEVICE_INVALID_PARAMETER if the handler or object
+          *         pointers are NULL.
+          *
+          * Example:
+          * @code
+          *
+          * void SomeClass::onButtonBClick()
+          * {
+          *     //do something
+          * }
+          *
+          * SomeClass s = new SomeClass();
+          * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
+          *
+          * // the previously created listener is now ignored.
+          * uBit.messageBus.ignore(device.buttonB, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
+          * @endcode
+          */
+        template <typename T>
+        int ignore(CodalComponent& component, uint16_t value, T* object, void (T::*handler)(Event));
+
     };
 
     /**
@@ -396,6 +586,28 @@ namespace codal
     }
 
     /**
+      * A registration function to allow C++ member functions (methods) to be registered as an event
+      * listener.
+      *
+      * @param component The source component of messages to listen for.
+      *
+      * @param value The value of messages to listen for. Events with any other values will be filtered.
+      * Use DEVICE_EVT_ANY to receive events of any value.
+      *
+      * @param object The object on which the method should be invoked.
+      *
+      * @param handler The method to call when an event is received.
+      *
+      * @return DEVICE_OK on success or DEVICE_INVALID_PARAMETER if the handler or object
+      *         pointers are NULL.
+      */
+    template <typename T>
+    int EventModel::listen(CodalComponent& component, uint16_t value, T* object, void (T::*handler)(Event), uint16_t flags)
+    {
+        return listen(component.id, value, object, handler, flags);
+    }
+
+    /**
       * Unregister a listener function.
       * Listners are identified by the Event ID, Event value and handler registered using listen().
       *
@@ -431,6 +643,38 @@ namespace codal
         remove(&listener);
 
         return DEVICE_OK;
+    }
+
+    /**
+      * Unregister a listener function.
+      * Listners are identified by the Event ID, Event value and handler registered using listen().
+      *
+      * @param component The source component used to register the listener
+      * @param value The Event value used to register the listener.
+      * @param handler The function used to register the listener.
+      *
+      * @return DEVICE_OK on success or DEVICE_INVALID_PARAMETER if the handler or object
+      *         pointers are NULL.
+      *
+      * Example:
+      * @code
+      *
+      * void SomeClass::onButtonBClick()
+      * {
+      *     //do something
+      * }
+      *
+      * SomeClass s = new SomeClass();
+      * uBit.messageBus.listen(device.buttonB, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
+      *
+      * // the previously created listener is now ignored.
+      * uBit.messageBus.ignore(device.buttonB, DEVICE_BUTTON_EVT_CLICK, s, &SomeClass::onButtonBClick);
+      * @endcode
+      */
+    template <typename T>
+    int EventModel::ignore(CodalComponent& component, uint16_t value, T* object, void (T::*handler)(Event))
+    {
+        return ignore(component.id, value, object, handler);
     }
 }
 
