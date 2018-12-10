@@ -451,6 +451,7 @@ void CodalUSB::setupRequest(USBSetup &setup)
             sendzlp();
             break;
         case USB_REQ_SET_ADDRESS:
+            usb_set_address_pre(wValue);
             sendzlp();
             usb_set_address(wValue);
             break;

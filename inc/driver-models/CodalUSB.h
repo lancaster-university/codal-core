@@ -211,7 +211,6 @@ public:
 class UsbEndpointOut
 {
     uint8_t buf[USB_MAX_PKT_SIZE];
-    void startRead();
 
 public:
     volatile uint32_t userdata;
@@ -223,12 +222,14 @@ public:
     // when IRQ disabled, endpointRequest() callback will not be called (generally)
     int disableIRQ();
     int enableIRQ();
+    void startRead();
 
     UsbEndpointOut(uint8_t idx, uint8_t type, uint8_t size = USB_MAX_PKT_SIZE);
 };
 
 void usb_configure(uint8_t numEndpoints);
 void usb_set_address(uint16_t wValue);
+void usb_set_address_pre(uint16_t wValue);
 
 class CodalUSBInterface
 {
