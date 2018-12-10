@@ -415,7 +415,60 @@ int Serial::send(uint8_t *buffer, int bufferLen, SerialMode mode)
 
 void Serial::printf(const char* format, ...)
 {
-    // todo.
+    va_list arg;
+    va_start(arg, format);
+
+    const char *end = format;
+
+    // We might want to call disable / enable interrupts on the serial line if print is called from ISR context
+    target_disable_irq();
+    char buff[20];
+    while (*end)
+    {
+        char current = *end++;
+        if (current == '%')
+        {
+            uint32_t val = va_arg(arg, uint32_t);
+            char* str = (char *)((void *)val);
+            char* buffPtr = buff;
+            char c = 0;
+            switch (*end++)
+            {
+
+            case 'c':
+                putc((char)val);
+                break;
+            case 'd':
+                memset(buff, 0, 20);
+                itoa(val, buff);
+                while((c = *buffPtr++) != 0)
+                    putc(c);
+                break;
+
+            case 's':
+                while((c = *str++) != 0)
+                    putc(c);
+                break;
+            case '%':
+                putc('%');
+                break;
+
+            case 'x':
+            case 'p':
+            case 'X':
+            default:
+                putc('?');
+                putc('?');
+                putc('?');
+                break;
+            }
+        }
+        else
+            putc(current);
+    }
+    target_enable_irq();
+
+    va_end(arg);
 }
 
 /**
