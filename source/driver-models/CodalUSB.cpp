@@ -220,21 +220,25 @@ int CodalUSB::sendConfig()
             clen += info->supplementalDescriptorSize;
         }
 
-        EndpointDescriptor epdescIn = {
-            sizeof(EndpointDescriptor),
-            5, // type
-            (uint8_t)(0x80 | iface->in->ep),
-            info->epIn.attr,
-            USB_MAX_PKT_SIZE,
-            info->epIn.interval,
-        };
-        ADD_DESC(epdescIn);
-
-        if (info->iface.numEndpoints == 1)
+        if (info->iface.numEndpoints == 0)
         {
             // OK
         }
-        else if (info->iface.numEndpoints == 2)
+        
+        if (info->iface.numEndpoints >= 1)
+        {
+            EndpointDescriptor epdescIn = {
+                sizeof(EndpointDescriptor),
+                5, // type
+                (uint8_t)(0x80 | iface->in->ep),
+                info->epIn.attr,
+                USB_MAX_PKT_SIZE,
+                info->epIn.interval,
+            };
+            ADD_DESC(epdescIn);
+        }
+        
+        if (info->iface.numEndpoints >= 2)
         {
             EndpointDescriptor epdescOut = {
                 sizeof(EndpointDescriptor),
@@ -246,7 +250,8 @@ int CodalUSB::sendConfig()
             };
             ADD_DESC(epdescOut);
         }
-        else
+
+        if (info->iface.numEndpoints >= 3)
         {
             usb_assert(0);
         }
@@ -551,12 +556,15 @@ void CodalUSB::initEndpoints()
 
         const InterfaceInfo *info = iface->getInterfaceInfo();
 
-        usb_assert(1 <= info->allocateEndpoints && info->allocateEndpoints <= 2);
+        usb_assert(0 <= info->allocateEndpoints && info->allocateEndpoints <= 2);
         usb_assert(info->allocateEndpoints <= info->iface.numEndpoints &&
                    info->iface.numEndpoints <= 2);
 
         if (iface->in)
+        {
             delete iface->in;
+            iface->in = NULL;
+        }
 
         if (iface->out)
         {
@@ -564,11 +572,14 @@ void CodalUSB::initEndpoints()
             iface->out = NULL;
         }
 
-        iface->in = new UsbEndpointIn(endpointCount, info->epIn.attr);
-        if (info->iface.numEndpoints > 1)
+        if (info->iface.numEndpoints > 0)
         {
-            iface->out =
-                new UsbEndpointOut(endpointCount + (info->allocateEndpoints - 1), info->epIn.attr);
+            iface->in = new UsbEndpointIn(endpointCount, info->epIn.attr);
+            if (info->iface.numEndpoints > 1)
+            {
+                iface->out = new UsbEndpointOut(endpointCount + (info->allocateEndpoints - 1),
+                                                info->epIn.attr);
+            }
         }
 
         endpointCount += info->allocateEndpoints;
