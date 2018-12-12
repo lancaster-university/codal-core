@@ -4,6 +4,9 @@
 #include "CodalConfig.h"
 #include "CodalComponent.h"
 
+namespace codal
+{
+
 enum TimerMode
 {
     TimerModeTimer = 0,
@@ -25,7 +28,13 @@ class LowLevelTimer : public CodalComponent
 
     public:
 
-    virtual int setIRQ(void (*timer_pointer) (uint8_t));
+    void (*timer_pointer) (uint8_t);
+
+    virtual int setIRQ(void (*timer_pointer) (uint8_t))
+    {
+        this->timer_pointer = timer_pointer;
+        return DEVICE_OK;
+    }
 
     LowLevelTimer(uint8_t channel_count)
     {
@@ -35,6 +44,8 @@ class LowLevelTimer : public CodalComponent
     virtual int enable() = 0;
 
     virtual int disable() = 0;
+
+    virtual int reset() = 0;
 
     virtual int setMode(TimerMode t) = 0;
 
@@ -46,9 +57,7 @@ class LowLevelTimer : public CodalComponent
 
     virtual uint32_t captureCounter(uint8_t channel) = 0;
 
-    // a better abstraction would be to set the timer tick granularity, us, ms, s etc.
-
-    virtual int setPrescaler(uint16_t prescaleValue) = 0;
+    virtual int setClockSpeed(uint32_t speedKHz);
 
     virtual int setBitMode(TimerBitMode t) = 0;
 
@@ -57,5 +66,7 @@ class LowLevelTimer : public CodalComponent
         return channel_count;
     }
 };
+}
+
 
 #endif
