@@ -408,7 +408,7 @@ int CodalUSB::interfaceRequest(USBSetup &setup, bool isClass)
 
 void CodalUSB::setupRequest(USBSetup &setup)
 {
-    DMESG("SETUP Req=%x type=%x val=%x:%x idx=%x len=%d", setup.bRequest, setup.bmRequestType,
+    LOG("SETUP Req=%x type=%x val=%x:%x idx=%x len=%d", setup.bRequest, setup.bmRequestType,
           setup.wValueH, setup.wValueL, setup.wIndex, setup.wLength);
 
     int status = DEVICE_OK;
