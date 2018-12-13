@@ -28,9 +28,9 @@ class LowLevelTimer : public CodalComponent
 
     public:
 
-    void (*timer_pointer) (uint8_t);
+    void (*timer_pointer) (uint16_t channel_bitmsk);
 
-    virtual int setIRQ(void (*timer_pointer) (uint8_t))
+    virtual int setIRQ(void (*timer_pointer) (uint16_t channel_bitmsk))
     {
         this->timer_pointer = timer_pointer;
         return DEVICE_OK;
