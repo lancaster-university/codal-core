@@ -59,7 +59,7 @@ void JDLogicDriver::periodicCallback()
             current->device.rolling_counter++;
 
         // if the driver is acting as a virtual driver, we don't need to perform any initialisation, just connect / disconnect events.
-        if (current->device.flags & JD_DEVICE_FLAGS_REMOTE)
+        if (current->device.flags & (JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_BROADCAST_MAP))
         {
             if (current->device.rolling_counter == JD_LOGIC_DRIVER_TIMEOUT)
             {
@@ -68,6 +68,13 @@ void JDLogicDriver::periodicCallback()
                     JD_DMESG("CONTROL NOT SEEN %d %d", current->device.address, current->device.serial_number);
                     current->deviceRemoved();
                     Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
+
+                    if (current->device.flags & JD_DEVICE_FLAGS_BROADCAST_MAP)
+                    {
+                        JDProtocol::instance->remove(*current);
+                        delete current;
+                        continue;
+                    }
                 }
 
                 current->device.flags &= ~(JD_DEVICE_FLAGS_CP_SEEN);
