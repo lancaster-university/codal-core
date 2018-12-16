@@ -320,7 +320,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
     {
         JD_DMESG("ADD NEW MAP");
         JD_DMESG("BROADCAST ADD %d", cp->address);
-        new JDDriver(JDDevice(cp->address, JD_DEVICE_FLAGS_BROADCAST | JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN, cp->serial_number, cp->driver_class));
+        new JDBroadcastMap(cp->address, cp->serial_number, cp->driver_class);
         Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
     }
 
