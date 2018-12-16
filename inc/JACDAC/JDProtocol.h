@@ -63,7 +63,6 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DEVICE_FLAGS_INITIALISED     0x0080 // device driver is running
 #define JD_DEVICE_FLAGS_INITIALISING    0x0040 // a flag to indicate that a control packet has been queued
 #define JD_DEVICE_FLAGS_CP_SEEN         0x0020 // indicates whether a control packet has been seen recently.
-#define JD_DEVICE_FLAGS_BROADCAST_MAP   0x0010 // This driver is held for mapping from bus address to driver class
 
 #define JD_DEVICE_ERROR_MSK             0x000F // the lower 4 bits are reserved for well known errors, these are
                                                // automatically placed into control packets by the logic driver.

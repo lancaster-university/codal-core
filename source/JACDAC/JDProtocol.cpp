@@ -61,7 +61,7 @@ void JDProtocol::onPacketReceived(Event)
                     JD_DMESG("DRIV a:%d sn:%d i:%d f %d", this->drivers[i]->device.address, this->drivers[i]->device.serial_number, this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, this->drivers[i]->device.flags);
                     if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED) && this->drivers[i]->device.address == pkt->address)
                     {
-                        if (this->drivers[i]->device.flags & JD_DEVICE_FLAGS_BROADCAST_MAP)
+                        if (this->drivers[i]->device.flags & JD_DEVICE_FLAGS_BROADCAST && this->drivers[i]->device.flags & JD_DEVICE_FLAGS_REMOTE)
                         {
                             JD_DMESG("BROADMAP DETECTED");
                             driver_class = this->drivers[i]->device.driver_class;
