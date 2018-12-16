@@ -795,9 +795,9 @@ namespace codal
     };
 
     /**
-     * This class is a stub of a remote driver that a local driver is paired with.
+     * This class is a simple packet forwarder for broadcast packets.
      *
-     * It simply forwards all standard packets to the paired local driver for processing.
+     * It is responsible for forwarding all packets to other drivers of the same class.
      **/
     class JDBroadcastMap : public JDDriver
     {
