@@ -59,7 +59,7 @@ void JDLogicDriver::periodicCallback()
             current->device.rolling_counter++;
 
         // if the driver is acting as a virtual driver, we don't need to perform any initialisation, just connect / disconnect events.
-        if (current->device.flags & (JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_BROADCAST) && !(current->device.flags & JD_DEVICE_FLAGS_LOCAL))
+        if (current->device.flags & JD_DEVICE_FLAGS_REMOTE)
         {
             if (current->device.rolling_counter == JD_LOGIC_DRIVER_TIMEOUT)
             {
