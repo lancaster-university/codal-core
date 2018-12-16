@@ -63,7 +63,6 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DEVICE_FLAGS_INITIALISED     0x0080 // device driver is running
 #define JD_DEVICE_FLAGS_INITIALISING    0x0040 // a flag to indicate that a control packet has been queued
 #define JD_DEVICE_FLAGS_CP_SEEN         0x0020 // indicates whether a control packet has been seen recently.
-#define JD_DEVICE_FLAGS_BROADCAST_MAP   0x0010 // This driver is held for mapping from bus address to driver class
 
 #define JD_DEVICE_ERROR_MSK             0x000F // the lower 4 bits are reserved for well known errors, these are
                                                // automatically placed into control packets by the logic driver.
@@ -385,6 +384,7 @@ namespace codal
     };
 
     class JDPairedDriver;
+    class JDProtocol;
 
     /**
      * This class presents a common abstraction for all JDDrivers. It also contains some default member functions to perform common operations.
@@ -394,6 +394,7 @@ namespace codal
     {
         friend class JDLogicDriver;
         friend class JDProtocol;
+        friend class JDBroadcastMap;
         // the above need direct access to our member variables and more.
 
         /**
@@ -809,6 +810,45 @@ namespace codal
          * @param jr The jack router in use.
          **/
         void logState(JackRouter* jr = NULL);
+    };
+
+    /**
+     * This class is a simple packet forwarder for broadcast packets.
+     *
+     * It is responsible for forwarding all packets to other drivers of the same class.
+     **/
+    class JDBroadcastMap : public JDDriver
+    {
+        public:
+
+        JDBroadcastMap(uint32_t address, uint8_t serial_number, uint32_t driver_class) :
+            JDDriver(JDDevice(address, JD_DEVICE_FLAGS_BROADCAST | JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN, serial_number, driver_class))
+        {
+        }
+
+        virtual int handleLogicPacket(JDPkt* p)
+        {
+            for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
+            {
+                JDDriver* current = JDProtocol::instance->drivers[i];
+                if (current && current != this && current->device.driver_class == this->device.driver_class)
+                    current->handleLogicPacket(p);
+            }
+
+            return DEVICE_OK;
+        }
+
+        virtual int handlePacket(JDPkt* p)
+        {
+            for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
+            {
+                JDDriver* current = JDProtocol::instance->drivers[i];
+                if (current && current != this && current->device.driver_class == this->device.driver_class)
+                    current->handlePacket(p);
+            }
+
+            return DEVICE_OK;
+        }
     };
 
 } // namespace codal

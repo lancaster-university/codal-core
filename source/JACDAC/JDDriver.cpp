@@ -105,7 +105,7 @@ bool JDDriver::isConnected()
 
 int JDDriver::deviceConnected(JDDevice device)
 {
-    DMESG("CONNECTED a:%d sn:%d cl:%d",device.address,device.serial_number, device.driver_class);
+    // DMESG("CONNB a:%d sn:%d cl:%d",device.address,device.serial_number, device.driver_class);
     this->device.address = device.address;
     this->device.serial_number = device.serial_number;
     this->device.flags |= JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN;
@@ -120,7 +120,7 @@ int JDDriver::deviceConnected(JDDevice device)
 
 int JDDriver::deviceRemoved()
 {
-    DMESG("DISCONN a:%d sn:%d cl: %d",device.address,device.serial_number, device.driver_class);
+    // DMESG("DISCB a:%d sn:%d cl: %d",device.address,device.serial_number, device.driver_class);
     this->device.flags &= ~(JD_DEVICE_FLAGS_INITIALISED);
     this->device.rolling_counter = 0;
     Event(this->id, JD_DRIVER_EVT_DISCONNECTED);
@@ -288,6 +288,9 @@ int JDDriver::handleControlPacket(JDPkt* p)
 
 int JDDriver::handleErrorPacket(JDPkt* p)
 {
+    ControlPacket* cp = (ControlPacket*)p->data;
+    ControlPacketError* err = (ControlPacketError*)cp->data;
+    this->device.setError((DriverErrorCode)err->code);
     Event(this->id, JD_DRIVER_EVT_ERROR);
     return DEVICE_OK;
 }
