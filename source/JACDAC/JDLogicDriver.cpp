@@ -219,7 +219,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
     // first check for any drivers who are associated with this control packet
     bool handled = false; // indicates if the control packet has been handled by a driver.
 
-    bool representation_required = false; // we use this boolean to determine if a new broadcast map needs to be created.
+    int8_t representation_required = 0; // we use this boolean to determine if a new broadcast map needs to be created.
 
     // devices about to enter pairing mode enumerate themselves, so that they have an address on the bus.
     // devices with uncertain addresses cannot be used
@@ -238,10 +238,11 @@ int JDLogicDriver::handlePacket(JDPkt* p)
         // to be created.
         if ((current->device.flags & JD_DEVICE_FLAGS_BROADCAST) && current->device.driver_class == cp->driver_class)
         {
-            if (current->device.address != cp->address)
-                representation_required = true;
+            if (current->device.address != cp->address && representation_required != -1)
+                representation_required = 1;
             else
-                representation_required = false;
+                // the current driver matches the device, set to -1 to prevent duplicates.
+                representation_required = -1;
         }
 
         // We are in charge of local drivers, in this if statement we handle address assignment
@@ -316,7 +317,7 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 
     // only add a broadcast device if it is not already represented in the driver array.
     // we all need good representation, which is apparently very hard in the real world, lets try our best in software ;)
-    if (representation_required)
+    if (representation_required == 1)
     {
         JD_DMESG("ADD NEW MAP");
         JD_DMESG("BROADCAST ADD %d", cp->address);
