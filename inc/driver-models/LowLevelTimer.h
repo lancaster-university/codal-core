@@ -24,6 +24,7 @@ enum TimerBitMode
 class LowLevelTimer : public CodalComponent
 {
     protected:
+    TimerBitMode bitMode;
     uint8_t channel_count;
 
     public:
@@ -43,7 +44,11 @@ class LowLevelTimer : public CodalComponent
 
     virtual int enable() = 0;
 
+    virtual int enableIRQ() = 0;
+
     virtual int disable() = 0;
+
+    virtual int disableIRQ() = 0;
 
     virtual int reset() = 0;
 
@@ -55,11 +60,16 @@ class LowLevelTimer : public CodalComponent
 
     virtual int clearCompare(uint8_t channel);
 
-    virtual uint32_t captureCounter(uint8_t channel) = 0;
+    virtual uint32_t captureCounter() = 0;
 
     virtual int setClockSpeed(uint32_t speedKHz);
 
     virtual int setBitMode(TimerBitMode t) = 0;
+
+    virtual TimerBitMode getBitMode()
+    {
+        return bitMode;
+    }
 
     int getChannelCount()
     {
