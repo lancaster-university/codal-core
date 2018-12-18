@@ -31,7 +31,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "DMASingleWireSerial.h"
 
-#define JD_VERSION                     4
+#define JD_VERSION                     5
 
 #define JD_SERIAL_MAX_BUFFERS          10
 
