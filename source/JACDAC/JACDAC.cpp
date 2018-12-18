@@ -144,6 +144,9 @@ void JACDAC::rxTimeout(Event)
     status &= ~(JD_SERIAL_RECEIVING);
     sws.setMode(SingleWireDisconnected);
     configure(true);
+
+    if (commLED)
+        commLED->setDigitalValue(0);
 }
 
 JDPkt* JACDAC::popQueue(JDPkt** queue)
