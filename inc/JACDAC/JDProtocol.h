@@ -220,7 +220,7 @@ namespace codal
             this->rolling_counter = 0;
             this->flags |= t;
 
-            if (t == VirtualDriver)
+            if (t & JD_DEVICE_FLAGS_REMOTE)
                 this->serial_number = 0;
             else
                 this->serial_number = (target_get_serial() & 0xffffff00) | driver_class;
@@ -810,45 +810,6 @@ namespace codal
          * @param jr The jack router in use.
          **/
         void logState(JackRouter* jr = NULL);
-    };
-
-    /**
-     * This class is a simple packet forwarder for broadcast packets.
-     *
-     * It is responsible for forwarding all packets to other drivers of the same class.
-     **/
-    class JDBroadcastMap : public JDDriver
-    {
-        public:
-
-        JDBroadcastMap(uint32_t address, uint8_t serial_number, uint32_t driver_class) :
-            JDDriver(JDDevice(address, JD_DEVICE_FLAGS_BROADCAST | JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN, serial_number, driver_class))
-        {
-        }
-
-        virtual int handleLogicPacket(JDPkt* p)
-        {
-            for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
-            {
-                JDDriver* current = JDProtocol::instance->drivers[i];
-                if (current && current != this && current->device.driver_class == this->device.driver_class)
-                    current->handleLogicPacket(p);
-            }
-
-            return DEVICE_OK;
-        }
-
-        virtual int handlePacket(JDPkt* p)
-        {
-            for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
-            {
-                JDDriver* current = JDProtocol::instance->drivers[i];
-                if (current && current != this && current->device.driver_class == this->device.driver_class)
-                    current->handlePacket(p);
-            }
-
-            return DEVICE_OK;
-        }
     };
 
 } // namespace codal
