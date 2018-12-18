@@ -315,16 +315,6 @@ int JDLogicDriver::handlePacket(JDPkt* p)
 
     JD_DMESG("OUT: hand %d safe %d", handled, safe);
 
-    // only add a broadcast device if it is not already represented in the driver array.
-    // we all need good representation, which is apparently very hard in the real world, lets try our best in software ;)
-    if (representation_required == 1)
-    {
-        JD_DMESG("ADD NEW MAP");
-        JD_DMESG("BROADCAST ADD %d", cp->address);
-        new JDBroadcastMap(cp->address, cp->serial_number, cp->driver_class);
-        Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
-    }
-
     if (handled || !safe)
     {
         JD_DMESG("HANDLED");
@@ -354,11 +344,24 @@ int JDLogicDriver::handlePacket(JDPkt* p)
                 continue;
 
             JD_DMESG("FOUND NEW: %d %d %d", current->device.address, current->device.serial_number, current->device.driver_class);
-            current->handleControlPacket(p);
+            int ret = current->handleControlPacket(p);
             current->deviceConnected(JDDevice(cp->address, cp->flags, cp->serial_number, cp->driver_class));
             Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
-            return DEVICE_OK;
+
+            // keep going if the driver has returned DEVICE_CANCELLED.
+            if (ret == DEVICE_OK)
+                return DEVICE_OK;
         }
+    }
+
+    // only add a broadcast device if it is not already represented in the driver array.
+    // we all need good representation, which is apparently very hard in the real world, lets try our best in software ;)
+    if (representation_required == 1)
+    {
+        JD_DMESG("ADD NEW MAP");
+        JD_DMESG("BROADCAST ADD %d", cp->address);
+        new JDDriver(JDDevice(cp->address, JD_DEVICE_FLAGS_BROADCAST | JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN, cp->serial_number, cp->driver_class));
+        Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
     }
 
     return DEVICE_OK;

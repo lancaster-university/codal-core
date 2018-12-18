@@ -46,6 +46,8 @@ void JDProtocol::onPacketReceived(Event)
     {
         JD_DMESG("pkt REC ADDR: %d",pkt->address);
 
+        uint32_t driver_class = 0;
+
         // if this packet is destined for our drivers...
         // address 0 will never be filtered.
         if (!logic.filterPacket(pkt->address))
@@ -53,19 +55,45 @@ void JDProtocol::onPacketReceived(Event)
             JD_DMESG("NOT FILTERED");
             for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
             {
-                if (this->drivers[i])
+                JDDriver* driver = this->drivers[i];
+
+                if (driver)
                 {
                     // could be optimised into a single if, but useful for debugging.
-                    JD_DMESG("DRIV a:%d sn:%d i:%d f %d", this->drivers[i]->device.address, this->drivers[i]->device.serial_number, this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, this->drivers[i]->device.flags);
-                    if ((this->drivers[i]->device.flags & JD_DEVICE_FLAGS_INITIALISED) && this->drivers[i]->device.address == pkt->address)
+                    JD_DMESG("DRIV a:%d sn:%d i:%d f %d", driver->device.address, driver->device.serial_number, driver->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, driver->device.flags);
+
+                    // if the address is the same, or we're matching on class...
+                    if (((driver->device.flags & JD_DEVICE_FLAGS_INITIALISED) && driver->device.address == pkt->address) || (driver_class > 0 && driver->device.driver_class == driver_class))
                     {
-                        // DMESG("HANDLED BY LOCAL / REMOTE A: %d", this->drivers[i]->getAddress());
-                        this->drivers[i]->handlePacket(pkt);
-                        break; // only one address per device, lets break early
+                        // DMESG("HANDLED BY LOCAL / REMOTE A: %d", driver->getAddress());
+                        if (driver->device.flags & JD_DEVICE_FLAGS_BROADCAST)
+                        {
+                            JD_DMESG("BROADMAP DETECTED");
+                            driver_class = driver->device.driver_class;
+                            break;
+                        }
+                        // only break if DEVICE_OK is returned (indicates the packet has been handled)
+                        else if (driver->handlePacket(pkt) == DEVICE_OK)
+                            break;
                     }
                 }
             }
+
+            // if we've matched a broadcast driver, it means we need to map a broadcast packet to any driver of the same class.
+            if (driver_class > 0)
+                for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
+                {
+                    JDDriver* driver = this->drivers[i];
+
+                    if (driver && driver->device.driver_class == driver_class)
+                    {
+                        JD_DMESG("HANDLED BY BROADCAST");
+                        driver->handlePacket(pkt);
+                    }
+                }
         }
+
+
 
         if (bridge != NULL)
             bridge->handlePacket(pkt);
