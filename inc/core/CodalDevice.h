@@ -97,7 +97,6 @@ namespace codal
 
         /**
           * Determines a unique 32 bit ID for this device, if provided by the hardware.
-          * default: 0.
           * @return A 32 bit unique identifier.
           */
         virtual uint32_t getSerialNumber()
