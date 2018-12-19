@@ -273,16 +273,20 @@ int DataStream::pullRequest()
     // As there is either space available in the buffer or we want to block, pull the upstream buffer to release resources there.
     ManagedBuffer buffer = upStream->pull();
 
-    // If the buffer is full or we're behind another fiber, then wait for space to become available.
-    if (full() || writers)
-        fiber_wake_on_event(DEVICE_ID_NOTIFY, spaceAvailableEventCode);
+    // If pull is called multiple times in a row (yielding nothing after the first time)
+    // several streams might be woken up, despite the fact that there is no space for them.
+    do {
+        // If the buffer is full or we're behind another fiber, then wait for space to become available.
+        if (full() || writers)
+            fiber_wake_on_event(DEVICE_ID_NOTIFY, spaceAvailableEventCode);
 
-    if (full() || writers)
-    {
-        writers++;
-        schedule();
-        writers--;
-    }
+        if (full() || writers)
+        {
+            writers++;
+            schedule();
+            writers--;
+        }
+    } while (bufferCount >= DATASTREAM_MAXIMUM_BUFFERS);
 
 	stream[bufferCount] = buffer;
 	bufferLength = bufferLength + buffer.length();
