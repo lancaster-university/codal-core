@@ -198,7 +198,7 @@ namespace codal
             address = 0;
             rolling_counter = 0;
             flags = JD_DEVICE_FLAGS_LOCAL;
-            serial_number = (target_get_serial() & 0xffffff00) | driver_class;
+            serial_number = target_get_serial();
             driver_class = driver_class;
         }
 
@@ -223,7 +223,7 @@ namespace codal
             if (t & JD_DEVICE_FLAGS_REMOTE)
                 this->serial_number = 0;
             else
-                this->serial_number = (target_get_serial() & 0xffffff00) | driver_class;
+                this->serial_number = target_get_serial();
 
             this->driver_class = driver_class;
         }
