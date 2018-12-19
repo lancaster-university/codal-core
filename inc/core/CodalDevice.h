@@ -102,7 +102,7 @@ namespace codal
           */
         virtual uint32_t getSerialNumber()
         {
-            return 0;
+            return target_get_serial();
         }
 
         /**
