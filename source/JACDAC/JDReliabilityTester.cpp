@@ -72,7 +72,7 @@ int JDReliabilityTester::start()
 
 int JDReliabilityTester::fillControlPacket(JDPkt* p)
 {
-    ControlPacket* cp = (ControlPacket*)p->data;
+    JDControlPacket* cp = (JDControlPacket*)p->data;
     ReliabilityAdvertisement* ra = (ReliabilityAdvertisement*)cp->data;
     ra->status = this->status;
     ra->max_count = this->max_count;
@@ -81,7 +81,7 @@ int JDReliabilityTester::fillControlPacket(JDPkt* p)
 
 int JDReliabilityTester::handleControlPacket(JDPkt* p)
 {
-    ControlPacket* cp = (ControlPacket*)p->data;
+    JDControlPacket* cp = (JDControlPacket*)p->data;
 
     if (this->device.flags & JD_DEVICE_FLAGS_REMOTE)
     {

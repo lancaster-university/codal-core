@@ -31,29 +31,33 @@ using namespace codal;
 
 uint32_t JDDriver::dynamicId = DEVICE_ID_JD_DYNAMIC_ID;
 
-int JDDriver::fillControlPacket(JDPkt*)
+int JDDriver::populateDriverInfo(JDDriverInfo*, uint8_t)
 {
     // by default, the logic driver will fill in the required information.
     // any additional information should be added here.... (note: cast pkt->data to control packet and fill out data)
-    return DEVICE_OK;
+    return 0;
 }
 
 void JDDriver::pair()
 {
     // create a pairing request control packet.
-    ControlPacket cp;
-    cp.address = this->pairedInstance->getAddress();
-    cp.driver_class = this->pairedInstance->getClass();
-    cp.serial_number = this->pairedInstance->getSerialNumber();
-    cp.packet_type = JD_CONTROL_TYPE_PAIRING_REQUEST;
+    int packetSize = JD_CONTROL_PACKET_HEADER_SIZE + JD_DRIVER_INFO_HEADER_SIZE + sizeof(JDDevice);
+    JDControlPacket* cp = (JDControlPacket *)malloc(packetSize);
+    JDDriverInfo* info = (JDDriverInfo *)cp->data;
+
+    info->address = this->pairedInstance->getAddress();
+    info->driver_class = this->pairedInstance->getClass();
+    cp->serial_number = this->pairedInstance->getSerialNumber();
+    info->type = JD_CONTROL_TYPE_PAIRING_REQUEST;
+    info->size = sizeof(JDDevice);
 
     // put the source address (our address) into the packet (should have plenty of room in a control packet)
-    memcpy(cp.data, (uint8_t*)&this->device, sizeof(JDDevice));
+    memcpy(info->data, (uint8_t*)&this->device, sizeof(JDDevice));
 
-    DMESG("SEND PAIRING REQ: A %d S %d", cp.address, cp.serial_number);
+    DMESG("SEND PAIRING REQ: A %d S %d", info->address, cp->serial_number);
 
     // address the packet to the logic driver.
-    JDProtocol::send((uint8_t*)&cp, sizeof(ControlPacket), 0);
+    JDProtocol::send((uint8_t*)cp, packetSize, 0);
 }
 
 int JDDriver::sendPairingPacket(JDDevice d)
@@ -72,17 +76,28 @@ int JDDriver::sendPairingPacket(JDDevice d)
     return DEVICE_OK;
 }
 
-int JDDriver::handleLogicPacket(JDDriverInfo* info)
+int JDDriver::handleLogicPacket(uint32_t serial_number, JDDriverInfo* info)
 {
+    JDControlPacket* cp = (JDControlPacket*)malloc(sizeof(JDControlPacket) + info->size + JD_DRIVER_INFO_HEADER_SIZE);
+    cp->serial_number = serial_number;
+
+    memcpy(cp->data, info, info->size + JD_DRIVER_INFO_HEADER_SIZE);
+
+    int ret = DEVICE_OK;
+
     // filter out any pairing requests for special handling by drivers.
     if (info->type == JD_CONTROL_TYPE_PAIRING_REQUEST)
-        return this->handlePairingInfo(info);
+        ret = this->handlePairingPacket(cp);
 
     // lower four bits of flags are used for error codes.
-    if (info->flags & 0x000F)
-        return this->handleErrorInfo(info);
+    else if (info->flags & 0x000F)
+        ret = this->handleErrorPacket(cp);
 
-    return this->handleControlInfo(info);
+    else
+        ret = this->handleControlPacket(cp);
+
+    free(cp);
+    return ret;
 }
 
 JDDriver::JDDriver(JDDevice d) : device(d)
@@ -126,98 +141,100 @@ int JDDriver::deviceRemoved()
     return DEVICE_OK;
 }
 
-int JDDriver::handlePairingPacket(JDDriverInfo* p)
+int JDDriver::handlePairingPacket(JDControlPacket* cp)
 {
     DMESG("Pair PKT");
+    JDDriverInfo* info = (JDDriverInfo *)cp->data;
     #warning fix pairing
     // take a local copy of the control packet (don't modify the one we are given as it will be passed onto the next driver.)
     // control packet data for a pairing packet contains the source address of the partner
-    JDDevice d = *((JDDevice*)p->data);
+    JDDevice d = *((JDDevice*)info->data);
 
-    // // if the packet is addressed to us
-    // if (this->device.serial_number == cp.serial_number)
-    // {
-    //     // if we requested to pair
-    //     if (this->device.isPairing())
-    //     {
-    //         DMESG("PAIRING RESPONSE");
-    //         this->device.flags &= ~JD_DEVICE_FLAGS_PAIRING;
+    // if the packet is addressed to us
+    if (this->device.serial_number == cp->serial_number)
+    {
+        // if we requested to pair
+        if (this->device.isPairing())
+        {
+            DMESG("PAIRING RESPONSE");
+            this->device.flags &= ~JD_DEVICE_FLAGS_PAIRING;
 
-    //         if (cp.flags & JD_CONTROL_FLAGS_NACK)
-    //         {
-    //             DMESG("PAIRING REQ DENIED", d.address, d.serial_number);
-    //             if (this->pairedInstance)
-    //             {
-    //                 delete this->pairedInstance;
-    //                 this->pairedInstance = NULL;
-    //             }
+            if (info->flags & JD_CONTROL_FLAGS_NACK)
+            {
+                DMESG("PAIRING REQ DENIED", d.address, d.serial_number);
+                if (this->pairedInstance)
+                {
+                    delete this->pairedInstance;
+                    this->pairedInstance = NULL;
+                }
 
-    //             this->device.setMode(PairedDriver);
-    //             Event(this->id, JD_DRIVER_EVT_PAIR_REJECTED);
-    //         }
-    //         else if (cp.flags & JD_CONTROL_FLAGS_ACK)
-    //         {
-    //             DMESG("PAIRING REQ ACK", d.address, d.serial_number);
-    //             this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
-    //             Event(this->id, JD_DRIVER_EVT_PAIRED);
-    //         }
+                this->device.setMode(PairedDriver);
+                Event(this->id, JD_DRIVER_EVT_PAIR_REJECTED);
+            }
+            else if (info->flags & JD_CONTROL_FLAGS_ACK)
+            {
+                DMESG("PAIRING REQ ACK", d.address, d.serial_number);
+                this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
+                Event(this->id, JD_DRIVER_EVT_PAIRED);
+            }
 
-    //         return DEVICE_OK;
-    //     }
+            return DEVICE_OK;
+        }
 
-    //     // we may reply using the same control packet for ease.
-    //     // populate similar fields.
-    //     cp.address = d.address;
-    //     cp.serial_number = d.serial_number;
-    //     cp.driver_class = d.driver_class;
+        // we may reply using the same control packet for ease.
+        // populate similar fields.
+        info->address = d.address;
+        cp->serial_number = d.serial_number;
+        info->driver_class = d.driver_class;
+        info->size = sizeof(JDDevice);
 
-    //     // copy our device data into the packet for any additional checking (not required at the moment)
-    //     memcpy(cp.data, (uint8_t*)&this->device, sizeof(JDDevice)); // should have plenty of room in a control packet
+        // copy our device data into the packet for any additional checking (not required at the moment)
+        memcpy(info->data, (uint8_t*)&this->device, sizeof(JDDevice)); // should have plenty of room in a control packet
 
-    //     // if we are able to pair...
-    //     if (this->device.isPairable())
-    //     {
-    //         // respond with a packet DIRECTED at the device that sent us the pairing request
-    //         cp.flags |= JD_CONTROL_FLAGS_ACK;
-    //         JDProtocol::send((uint8_t*)&cp, sizeof(ControlPacket), 0);
+        // if we are able to pair...
+        if (this->device.isPairable())
+        {
+            // respond with a packet DIRECTED at the device that sent us the pairing request
+            info->flags |= JD_CONTROL_FLAGS_ACK;
+            JDProtocol::send((uint8_t*)cp, JD_CONTROL_PACKET_HEADER_SIZE + JD_DRIVER_INFO_HEADER_SIZE + sizeof(JDDevice), 0);
 
-    //         DMESG("PAIRING REQ: A %d S %d", d.address, d.serial_number);
-    //         // update our flags
-    //         this->device.flags &= ~JD_DEVICE_FLAGS_PAIRABLE;
-    //         this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
+            DMESG("PAIRING REQ: A %d S %d", d.address, d.serial_number);
+            // update our flags
+            this->device.flags &= ~JD_DEVICE_FLAGS_PAIRABLE;
+            this->device.flags |= JD_DEVICE_FLAGS_PAIRED;
 
-    //         // create a local instance of a remote device so that if the device is disconnected we are informed.
-    //         d.flags = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED;
-    //         this->pairedInstance = new JDPairedDriver(d, *this);
+            // create a local instance of a remote device so that if the device is disconnected we are informed.
+            d.flags = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED;
+            this->pairedInstance = new JDPairedDriver(d, *this);
 
-    //         // listen for disconnection events.
-    //         if (EventModel::defaultEventBus)
-    //             EventModel::defaultEventBus->listen(pairedInstance->id, JD_DRIVER_EVT_DISCONNECTED, this, &JDDriver::partnerDisconnected);
+            // listen for disconnection events.
+            if (EventModel::defaultEventBus)
+                EventModel::defaultEventBus->listen(pairedInstance->id, JD_DRIVER_EVT_DISCONNECTED, this, &JDDriver::partnerDisconnected);
 
-    //         // let applications know we have paired.
-    //         Event(this->id, JD_DRIVER_EVT_PAIRED);
-    //         DMESG("PAIRING DONE");
+            // let applications know we have paired.
+            Event(this->id, JD_DRIVER_EVT_PAIRED);
+            DMESG("PAIRING DONE");
 
-    //         return DEVICE_OK;
-    //     }
-    //     // explicity been asked to unpair.
-    //     else if (device.isPaired() && pairedInstance->device.serial_number == d.serial_number && cp.flags & JD_CONTROL_FLAGS_NACK)
-    //     {
-    //         Event e(0, 0, 0, CREATE_ONLY);
-    //         partnerDisconnected(e);
-    //     }
-    //     else if (device.flags & JD_DEVICE_FLAGS_PAIR)
-    //     {
-    //         // nack only if we're capable of being paired
-    //         DMESG("NACK A %d S %d", d.address, d.serial_number);
+            return DEVICE_OK;
+        }
+        // explicity been asked to unpair.
+        else if (device.isPaired() && pairedInstance->device.serial_number == d.serial_number && info->flags & JD_CONTROL_FLAGS_NACK)
+        {
+            Event e(0, 0, 0, CREATE_ONLY);
+            partnerDisconnected(e);
+        }
+        else if (device.flags & JD_DEVICE_FLAGS_PAIR)
+        {
+            // nack only if we're capable of being paired
+            DMESG("NACK A %d S %d", d.address, d.serial_number);
 
-    //         // respond with a packet DIRECTED at the device that sent us the pairing request
-    //         cp.flags |= JD_CONTROL_FLAGS_NACK;
-    //         JDProtocol::send((uint8_t*)&cp, sizeof(ControlPacket), 0);
-    //         return DEVICE_OK;
-    //     }
+            // respond with a packet DIRECTED at the device that sent us the pairing request
+            info->flags |= JD_CONTROL_FLAGS_NACK;
+            JDProtocol::send((uint8_t*)cp, JD_CONTROL_PACKET_HEADER_SIZE + JD_DRIVER_INFO_HEADER_SIZE + sizeof(JDDevice), 0);
+            return DEVICE_OK;
+        }
 
-    // }
+    }
 
     return DEVICE_CANCELLED;
 }
@@ -280,16 +297,15 @@ void JDDriver::partnerDisconnected(Event)
     Event(this->id, JD_DRIVER_EVT_UNPAIRED);
 }
 
-int JDDriver::handleControlPacket(JDPkt* p)
+int JDDriver::handleControlPacket(JDControlPacket* cp)
 {
     return DEVICE_OK;
 }
 
-int JDDriver::handleErrorPacket(JDPkt* p)
+int JDDriver::handleErrorPacket(JDControlPacket* cp)
 {
-    ControlPacket* cp = (ControlPacket*)p->data;
-    ControlPacketError* err = (ControlPacketError*)cp->data;
-    this->device.setError((DriverErrorCode)err->code);
+    JDDriverInfo* info = (JDDriverInfo *)cp->data;
+    this->device.setError((DriverErrorCode)info->error_code);
     Event(this->id, JD_DRIVER_EVT_ERROR);
     return DEVICE_OK;
 }

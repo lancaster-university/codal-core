@@ -38,19 +38,19 @@ int JDPinDriver::setServoValue(uint32_t value)
     return sendPacket(SetServo, value);
 }
 
-int JDPinDriver::handleControlPacket(JDPkt* p)
+int JDPinDriver::handleControlPacket(JDControlPacket* cp)
 {
-    ControlPacket* cp = (ControlPacket*)p->data;
+    JDDriverInfo* info = (JDDriverInfo*)cp->data;
 
     DMESG("PIN CONTROL PKT!");
 
     if (this->device.isPairedDriver() && !this->device.isPaired())
     {
         DMESG("NEED TO PAIR!");
-        if (cp->flags & CONTROL_JD_FLAGS_PAIRABLE)
+        if (info->flags & JD_CONTROL_FLAGS_PAIRABLE)
         {
             DMESG("PAIR!");
-            sendPairingPacket(JDDevice(cp->address, JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN, cp->serial_number, cp->driver_class));
+            sendPairingPacket(JDDevice(info->address, JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN, cp->serial_number, info->driver_class));
         }
     }
 
