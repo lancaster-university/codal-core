@@ -51,6 +51,7 @@ DEALINGS IN THE SOFTWARE.
 
 #define JD_SERIAL_HEADER_SIZE          4
 #define JD_SERIAL_DATA_SIZE            32
+#define JD_SERIAL_MAX_DATA_SIZE        32 // duplciate above for now
 #define JD_SERIAL_PACKET_SIZE          (JD_SERIAL_HEADER_SIZE + JD_SERIAL_DATA_SIZE)
 
 #define JD_SERIAL_MAXIMUM_BUFFERS      10
@@ -101,7 +102,7 @@ namespace codal
         uint8_t size;
 
         // add more stuff
-        uint8_t data[JD_SERIAL_DATA_SIZE];
+        uint8_t data[JD_SERIAL_MAX_DATA_SIZE];
 
         JDPkt* next;
     } __attribute((__packed__));

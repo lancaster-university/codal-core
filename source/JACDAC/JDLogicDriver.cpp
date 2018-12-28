@@ -4,49 +4,57 @@
 
 using namespace codal;
 
-void JDLogicDriver::populateControlPacket(JDDriver* driver, ControlPacket* cp)
+void JDLogicDriver::populateDriverInfo(JDDriver* driver, JDDriverInfo* info, uint8_t remainingData)
 {
-    cp->packet_type = CONTROL_JD_TYPE_HELLO;
-    cp->address = driver->device.address;
-    cp->flags = 0;
+    info->address = driver->device.address;
+    info->flags = 0;
 
     if (driver->device.isPairing())
-        cp->flags |= CONTROL_JD_FLAGS_PAIRING_MODE;
+        info->flags |= JD_CONTROL_FLAGS_PAIRING_MODE;
 
     if (driver->device.isPaired())
-        cp->flags |= CONTROL_JD_FLAGS_PAIRED;
+        info->flags |= JD_CONTROL_FLAGS_PAIRED;
 
     if (driver->device.isPairable())
-        cp->flags |= CONTROL_JD_FLAGS_PAIRABLE;
+        info->flags |= JD_CONTROL_FLAGS_PAIRABLE;
 
-    cp->driver_class = driver->device.driver_class;
-    cp->serial_number = driver->device.serial_number;
+    info->driver_class = driver->device.driver_class;
+
+    if (remainingData > 0)
+        info->length = driver->populateDriverInfo(info, remainingData)
 
     int error = driver->device.getError();
 
     // todo: eventually we will swap to variable packet sizes.
-    // This code will need to be updated to return the size of the control packet dependent on cp type...
-    if (error > 0)
-    {
-        cp->packet_type = CONTROL_JD_TYPE_ERROR;
+    // This code will need to be updated to return the size of the control packet dependent on info type...
+    // if (error > 0)
+    // {
+#warning this needs to be changed to use flags. error no
+    //     info->packet_type = JD_CONTROL_TYPE_ERROR;
 
-        ControlPacketError* err = (ControlPacketError *)cp->data;
-        memset(err, 0, sizeof(ControlPacketError));
+    //     ControlPacketError* err = (ControlPacketError *)cp->data;
+    //     memset(err, 0, sizeof(ControlPacketError));
 
-        ManagedString s = JDProtocol::getDebugName();
-        memcpy(err->name,s.toCharArray(),min(s.length(), CONTROL_PACKET_ERROR_NAME_LENGTH));
-        err->code = error;
-    }
+    //     ManagedString s = JDProtocol::getDebugName();
+    //     memcpy(err->name,s.toCharArray(),min(s.length(), JD_CONTROL_PACKET_ERROR_NAME_LENGTH));
+    //     err->code = error;
+    // }
 }
-
-void JDLogicDriver::periodicCallback()
+/**
+ * Timer callback every 500 ms
+ **/
+void JDLogicDriver::timerCallback(Event)
 {
     // no sense continuing if we dont have a bus to transmit on...
     if (!JDProtocol::instance || !JDProtocol::instance->bus.isRunning())
         return;
 
-    // for each driver we maintain a rolling counter, used to trigger various timer related events.
-    // uint8_t might not be big enough in the future if the scheduler runs faster...
+    JDPkt pkt;
+    JDControlPacket* controlPacket = pkt->data;
+    controlPacket->serial_number = target_get_serial();
+
+    uint8_t dataOffset = 0;
+
     for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
     {
         JDDriver* current = JDProtocol::instance->drivers[i];
@@ -55,37 +63,38 @@ void JDLogicDriver::periodicCallback()
         if (current == NULL || current == this)
             continue;
 
-        if (current->device.flags & (JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_INITIALISING))
-            current->device.rolling_counter++;
-
         // if the driver is acting as a virtual driver, we don't need to perform any initialisation, just connect / disconnect events.
         if (current->device.flags & JD_DEVICE_FLAGS_REMOTE)
         {
-            if (current->device.rolling_counter == JD_LOGIC_DRIVER_TIMEOUT)
+            // compute the difference
+            uint8_t difference = ((current->device.rolling_counter > this->rolling_counter) ? current->device.rolling_counter - this->rolling_counter : this->rolling_counter - current->device.rolling_counter);
+
+            if (!(current->device.flags & JD_DEVICE_FLAGS_CP_SEEN) && difference > 2)
             {
-                if (!(current->device.flags & JD_DEVICE_FLAGS_CP_SEEN))
+                JD_DMESG("CONTROL NOT SEEN %d %d", current->device.address, current->device.serial_number);
+                current->deviceRemoved();
+                Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
+
+                if (current->device.flags & JD_DEVICE_FLAGS_BROADCAST)
                 {
-                    JD_DMESG("CONTROL NOT SEEN %d %d", current->device.address, current->device.serial_number);
-                    current->deviceRemoved();
-                    Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
-
-                    if (current->device.flags & JD_DEVICE_FLAGS_BROADCAST)
-                    {
-                        JD_DMESG("BROADCAST REM %d", current->device.address);
-                        JDProtocol::instance->remove(*current);
-                        delete current;
-                        continue;
-                    }
+                    JD_DMESG("BROADCAST REM %d", current->device.address);
+                    JDProtocol::instance->remove(*current);
+                    delete current;
+                    continue;
                 }
-
-                current->device.flags &= ~(JD_DEVICE_FLAGS_CP_SEEN);
-                continue;
             }
+            else
+                current->device.rolling_counter = this->rolling_counter;
+
+            current->device.flags &= ~(JD_DEVICE_FLAGS_CP_SEEN);
+            continue;
         }
 
         // local drivers run on the device
         if (current->device.flags & JD_DEVICE_FLAGS_LOCAL)
         {
+            JDDriverInfo* info = (JDDriverInfo *)controlPacket[dataOffset];
+
             // initialise a driver by queuing a control packet with a first reasonable address
             if (!(current->device.flags & (JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_INITIALISING)))
             {
@@ -120,28 +129,18 @@ void JDLogicDriver::periodicCallback()
 
                 JD_DMESG("ALLOC: %d",current->device.address);
 
-                // we queue the first packet, so that drivers don't send driver related packets on a yet unassigned address
-                JDPkt pkt;
-                pkt.address = 0;
-                pkt.size = sizeof(ControlPacket);
-                ControlPacket* cp = (ControlPacket*)pkt.data;
-                memset(cp, target_random(256), sizeof(ControlPacket));
-                populateControlPacket(current, cp);
-
-                // reset the flags after population as drivers should not receive any packets until their address is confirmed.
-                // i.e. pairing flags may be put into the control packet on an uncertain address.
-                cp->flags = 0;
                 // flag our address as uncertain (i.e. not committed / finalised)
-                cp->flags |= CONTROL_JD_FLAGS_UNCERTAIN;
-
+                dataOffset += populateDriverInfo(driver, info, 0);
+                info->flags = JD_CONTROL_FLAGS_UNCERTAIN;
                 current->device.flags |= JD_DEVICE_FLAGS_INITIALISING;
-
-                JDProtocol::send(&pkt);
             }
             else if(current->device.flags & JD_DEVICE_FLAGS_INITIALISING)
             {
                 // if no one has complained in a second, consider our address allocated
-                if (current->device.rolling_counter == JD_LOGIC_ADDRESS_ALLOC_TIME)
+                // what happens if two devices do this? need to track rolling counter when it was set
+                dataOffset += populateDriverInfo(driver, info, 0);
+
+                if (this->rolling_counter == 2)
                 {
                     JD_DMESG("FINISHED");
                     current->device.flags &= ~JD_DEVICE_FLAGS_INITIALISING;
@@ -151,31 +150,25 @@ void JDLogicDriver::periodicCallback()
                 }
             }
             else if (current->device.flags & JD_DEVICE_FLAGS_INITIALISED)
-            {
-                if(current->device.rolling_counter > 0 && (current->device.rolling_counter % JD_LOGIC_DRIVER_CTRLPACKET_TIME) == 0)
-                {
-                    JDPkt pkt;
-                    pkt.address = 0;
-                    pkt.size = sizeof(ControlPacket);
-                    ControlPacket* cp = (ControlPacket*)pkt.data;
-                    memset(cp, target_random(256), sizeof(ControlPacket));
-                    populateControlPacket(current, cp);
-                    current->fillControlPacket(&pkt);
-
-                    JDProtocol::send(&pkt);
-                }
-            }
+                dataOffset += populateDriverInfo(driver, info, JD_SERIAL_MAX_DATA_SIZE - dataOffset);
         }
     }
-}
 
+    if (dataOffset > 0)
+    {
+        JDProtocol::send(pkt);
+        delete pkt;
+    }
+
+    this->rolling_counter++;
+}
 
 JDLogicDriver::JDLogicDriver() : JDDriver(JDDevice(0, JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_INITIALISED, 0, 0))
 {
     this->device.address = 0;
     status = 0;
     memset(this->address_filters, 0, JD_LOGIC_DRIVER_MAX_FILTERS);
-    status |= (DEVICE_COMPONENT_RUNNING | DEVICE_COMPONENT_STATUS_SYSTEM_TICK);
+    status |= (DEVICE_COMPONENT_RUNNING);
 }
 
 int JDLogicDriver::handleControlPacket(JDPkt* p)
@@ -187,181 +180,207 @@ int JDLogicDriver::handleControlPacket(JDPkt* p)
 /**
   * Given a control packet, finds the associated driver, or if no associated device, associates a remote device with a driver.
   **/
-int JDLogicDriver::handlePacket(JDPkt* p)
+int JDLogicDriver::handlePacket(JDPkt* pkt)
 {
-    ControlPacket *cp = (ControlPacket *)p->data;
+    JDControlPacket *cp = (JDControlPacket *)pkt->data;
 
-    if (cp->packet_type == CONTROL_JD_TYPE_PANIC)
+    // special packet types should be handled here.
+    if (cp->packet_type == JD_CONTROL_TYPE_PANIC)
     {
         ControlPacketError* error = (ControlPacketError*)p->data;
 
-        char name[CONTROL_PACKET_ERROR_NAME_LENGTH + 1] = { 0 };
-        memcpy(name, error, CONTROL_PACKET_ERROR_NAME_LENGTH);
-        name[CONTROL_PACKET_ERROR_NAME_LENGTH] = 0;
+        char name[JD_CONTROL_PACKET_ERROR_NAME_LENGTH + 1] = { 0 };
+        memcpy(name, error, JD_CONTROL_PACKET_ERROR_NAME_LENGTH);
+        name[JD_CONTROL_PACKET_ERROR_NAME_LENGTH] = 0;
 
         JD_DMESG("%s is panicking [%d]", name, error->code);
         return DEVICE_OK;
     }
 
-    JD_DMESG("CP A:%d S:%d C:%d p: %d", cp->address, cp->serial_number, cp->driver_class, (cp->flags & CONTROL_JD_FLAGS_PAIRING_MODE) ? 1 : 0);
-
-    // Logic Driver addressing rules:
-    // 1. drivers cannot have the same address and different serial numbers.
-    // 2. if someone has flagged a conflict with you, you must reassign your address.
-
-    // Address assignment rules:
-    // 1. if you are initialising (address unconfirmed), set CONTROL_JD_FLAGS_UNCERTAIN
-    // 2. if an existing, confirmed device spots a packet with the same address and the uncertain flag set, it should respond with
-    //    the same packet, with the CONFLICT flag set.
-    // 2b. if the transmitting device has no uncertain flag set, we reassign ourselves (first CP wins)
-    // 3. upon receiving a packet with the conflict packet set, the receiving device should reassign their address.
-
-    // first check for any drivers who are associated with this control packet
-    bool handled = false; // indicates if the control packet has been handled by a driver.
-
-    int8_t representation_required = 0; // we use this boolean to determine if a new broadcast map needs to be created.
-
-    // devices about to enter pairing mode enumerate themselves, so that they have an address on the bus.
-    // devices with uncertain addresses cannot be used
-    // These two scenarios mean that drivers in this state are unusable, so we determine their packets as unsafe... "dropping" their packets
-    bool safe = (cp->flags & (CONTROL_JD_FLAGS_UNCERTAIN | CONTROL_JD_FLAGS_PAIRING_MODE)) == 0; // the packet it is safe
-
-    for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
+    if (cp->packet_type == JD_CONTROL_TYPE_PAIRING_REQUEST)
     {
-        JDDriver* current = JDProtocol::instance->drivers[i];
-
-        if (current == NULL)
-            continue;
-
-        JD_DMESG("d a %d, s %d, c %d, t %c%c%c", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 'B' : ' ', current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 'L' : ' ', current->device.flags & JD_DEVICE_FLAGS_REMOTE ? 'R' : ' ');
-        // As we're iterating over the array of drivers, we can also determine whether a broadcast broadcast map needs
-        // to be created.
-        if ((current->device.flags & JD_DEVICE_FLAGS_BROADCAST) && current->device.driver_class == cp->driver_class)
-        {
-            if (current->device.address != cp->address && representation_required != -1)
-                representation_required = 1;
-            else
-                // the current driver matches the device, set to -1 to prevent duplicates.
-                representation_required = -1;
-        }
-
-        // We are in charge of local drivers, in this if statement we handle address assignment
-        if ((current->device.flags & JD_DEVICE_FLAGS_LOCAL) && current->device.address == cp->address)
-        {
-            JD_DMESG("ADDR MATCH");
-            // a different device is using our address!!
-            if (current->device.serial_number != cp->serial_number && !(cp->flags & CONTROL_JD_FLAGS_CONFLICT))
-            {
-                JD_DMESG("SERIAL_DIFF");
-                // if we're initialised, this means that someone else is about to use our address, reject.
-                // see 2. above.
-                if ((current->device.flags & JD_DEVICE_FLAGS_INITIALISED) && (cp->flags & CONTROL_JD_FLAGS_UNCERTAIN))
-                {
-                    cp->flags |= CONTROL_JD_FLAGS_CONFLICT;
-                    JDProtocol::send((uint8_t*)cp, sizeof(ControlPacket), 0);
-                    JD_DMESG("ASK OTHER TO REASSIGN");
-                }
-                // the other device is initialised and has transmitted the CP first, we lose.
-                else
-                {
-                    // new address will be assigned on next tick.
-                    current->device.address = 0;
-                    current->device.flags &= ~(JD_DEVICE_FLAGS_INITIALISING | JD_DEVICE_FLAGS_INITIALISED);
-                    JD_DMESG("INIT REASSIGNING SELF");
-                }
-
-                return DEVICE_OK;
-            }
-            // someone has flagged a conflict with this initialised device
-            else if (cp->flags & CONTROL_JD_FLAGS_CONFLICT)
-            {
-                // new address will be assigned on next tick.
-                current->deviceRemoved();
-                Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
-                JD_DMESG("REASSIGNING SELF");
-                return DEVICE_OK;
-            }
-
-            // if we get here it means that:
-                // 1) address is the same as we expect
-                // 2) the serial_number is the same as we expect
-                // 3) we are not conflicting with another device.
-                // 4) someone external has addressed a packet to us.
-            JD_DMESG("FOUND LOCAL");
-            if (safe && current->handleLogicPacket(p) == DEVICE_OK)
-            {
-                handled = true;
-                JD_DMESG("LOC CP ABSORBED %d", current->device.address);
-                continue;
-            }
-        }
-
-        // for remote drivers, we aren't in charge, so we track the serial_number in the control packets,
-        // and silently update the driver.
-        else if (current->device.flags & JD_DEVICE_FLAGS_REMOTE && current->device.flags & JD_DEVICE_FLAGS_INITIALISED && current->device.serial_number == cp->serial_number)
-        {
-            current->device.address = cp->address;
-            current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
-            JD_DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
-
-            if (safe && current->handleLogicPacket(p) == DEVICE_OK)
-            {
-                handled = true;
-                JD_DMESG("REM CP ABSORBED %d", current->device.address);
-                continue;
-            }
-        }
-    }
-
-    JD_DMESG("OUT: hand %d safe %d", handled, safe);
-
-    if (handled || !safe)
-    {
-        JD_DMESG("HANDLED");
+        #warning fix pairing
         return DEVICE_OK;
     }
 
-    bool filtered = filterPacket(cp->address);
+    uint8_t* dataPointer = cp->data;
 
-    // if it's paired with a driver and it's not us, we can just ignore
-    if (!filtered && cp->flags & CONTROL_JD_FLAGS_PAIRED)
-        return addToFilter(cp->address);
-
-    // if it was previously paired with another device, we remove the filter.
-    else if (filtered && !(cp->flags & CONTROL_JD_FLAGS_PAIRED))
-        removeFromFilter(cp->address);
-
-    // if we reach here, there is no associated device, find a free remote instance in the drivers array
-    for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
+    while (dataPointer < cp->data + (pkt->size - (JD_SERIAL_HEADER_SIZE - 2) - JD_CONTROL_PACKET_HEADER_SIZE))
     {
-        JDDriver* current = JDProtocol::instance->drivers[i];
-        JD_DMESG("FIND DRIVER");
-        if (current && current->device.flags & JD_DEVICE_FLAGS_REMOTE && current->device.driver_class == cp->driver_class)
+        JDDriverInfo* driverInfo = (JDDriverInfo *)dataPointer;
+
+        JD_DMESG("DI A:%d S:%d C:%d p: %d", driverInfo->address, driverInfo->serial_number, driverInfo->driver_class, (driverInfo->flags & JD_CONTROL_FLAGS_PAIRING_MODE) ? 1 : 0);
+
+        // Logic Driver addressing rules:
+        // 1. drivers cannot have the same address and different serial numbers.
+        // 2. if someone has flagged a conflict with you, you must reassign your address.
+
+        // Address assignment rules:
+        // 1. if you are initialising (address unconfirmed), set JD_CONTROL_FLAGS_UNCERTAIN
+        // 2. if an existing, confirmed device spots a packet with the same address and the uncertain flag set, it should respond with
+        //    the same packet, with the CONFLICT flag set.
+        // 2b. if the transmitting device has no uncertain flag set, we reassign ourselves (first CP wins)
+        // 3. upon receiving a packet with the conflict packet set, the receiving device should reassign their address.
+
+        // first check for any drivers who are associated with this control packet
+        bool handled = false; // indicates if the control packet has been handled by a driver.
+
+        int8_t representation_required = 0; // we use this variable to determine if a new broadcast map needs to be created.
+
+        // devices about to enter pairing mode enumerate themselves, so that they have an address on the bus.
+        // devices with uncertain addresses cannot be used
+        // These two scenarios mean that drivers in this state are unusable, so we determine their packets as unsafe... "dropping" their packets
+        bool safe = (driverInfo->flags & (JD_CONTROL_FLAGS_UNCERTAIN | JD_CONTROL_FLAGS_PAIRING_MODE)) == 0; // the packet it is safe
+
+        for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
         {
-            JD_DMESG("ITER a %d, s %d, c %d, t %c%c%c", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 'B' : ' ', current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 'L' : ' ', current->device.flags & JD_DEVICE_FLAGS_REMOTE ? 'R' : ' ');
-            // this driver instance is looking for a specific serial number
-            if (current->device.serial_number > 0 && current->device.serial_number != cp->serial_number)
+            JDDriver* current = JDProtocol::instance->drivers[i];
+
+            if (current == NULL)
                 continue;
 
-            JD_DMESG("FOUND NEW: %d %d %d", current->device.address, current->device.serial_number, current->device.driver_class);
-            int ret = current->handleControlPacket(p);
-            current->deviceConnected(JDDevice(cp->address, cp->flags, cp->serial_number, cp->driver_class));
-            Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
+            JD_DMESG("d a %d, s %d, c %d, t %c%c%c", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 'B' : ' ', current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 'L' : ' ', current->device.flags & JD_DEVICE_FLAGS_REMOTE ? 'R' : ' ');
+            // As we're iterating over the array of drivers, we can also determine whether a broadcast broadcast map needs
+            // to be created.
+            if ((current->device.flags & JD_DEVICE_FLAGS_BROADCAST) && current->device.driver_class == driverInfo->driver_class)
+            {
+                if (current->device.address != driverInfo->address && representation_required != -1)
+                    representation_required = 1;
+                else
+                    // the current driver matches the device, set to -1 to prevent duplicates.
+                    representation_required = -1;
+            }
 
-            // keep going if the driver has returned DEVICE_CANCELLED.
-            if (ret == DEVICE_OK)
-                return DEVICE_OK;
+            // We are in charge of local drivers, in this if statement we handle address assignment
+            if ((current->device.flags & JD_DEVICE_FLAGS_LOCAL) && current->device.address == driverInfo->address)
+            {
+                JD_DMESG("ADDR MATCH");
+                // a different device is using our address!!
+                if (target_get_serial() != cp->serial_number && !(driverInfo->flags & JD_CONTROL_FLAGS_CONFLICT))
+                {
+                    JD_DMESG("SERIAL_DIFF");
+                    // if we're initialised, this means that someone else is about to use our address, reject.
+                    // see 2. above.
+                    if ((current->device.flags & JD_DEVICE_FLAGS_INITIALISED) && (driverInfo->flags & JD_CONTROL_FLAGS_UNCERTAIN))
+                    {
+                        driverInfo->flags |= JD_CONTROL_FLAGS_CONFLICT;
+                        JDProtocol::send((uint8_t*)driverInfo, sizeof(JDControlPacket), 0);
+                        JD_DMESG("ASK OTHER TO REASSIGN");
+                    }
+                    // the other device is initialised and has transmitted the CP first, we lose.
+                    else
+                    {
+                        // new address will be assigned on next tick.
+                        current->device.address = 0;
+                        current->device.flags &= ~(JD_DEVICE_FLAGS_INITIALISING | JD_DEVICE_FLAGS_INITIALISED);
+                        JD_DMESG("INIT REASSIGNING SELF");
+                    }
+
+                    break;
+                }
+                // someone has flagged a conflict with this initialised device
+                else if (driverInfo->flags & JD_CONTROL_FLAGS_CONFLICT)
+                {
+                    // new address will be assigned on next tick.
+                    current->deviceRemoved();
+                    Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
+                    JD_DMESG("REASSIGNING SELF");
+                    break;
+                }
+
+                // if we get here it means that:
+                    // 1) address is the same as we expect
+                    // 2) the serial_number is the same as we expect
+                    // 3) we are not conflicting with another device.
+                    // 4) someone external has addressed a packet to us.
+                JD_DMESG("FOUND LOCAL");
+                #warning its easier just to ship control packets with a payload... this is flipping messy.
+                if (safe && current->handleLogicPacket(cp->packet_type, driverInfo) == DEVICE_OK)
+                {
+                    handled = true;
+                    JD_DMESG("LOC CP ABSORBED %d", current->device.address);
+                    continue;
+                }
+            }
+
+            // for remote drivers, we aren't in charge, so we track the serial_number in the control packets,
+            // and silently update the driver.
+            else if (current->device.flags & JD_DEVICE_FLAGS_REMOTE && current->device.flags & JD_DEVICE_FLAGS_INITIALISED)
+            {
+                current->device.address = driverInfo->address;
+                current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
+                JD_DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
+
+                if (safe && current->handleLogicPacket(cp->packet_type, driverInfo) == DEVICE_OK)
+                {
+                    handled = true;
+                    JD_DMESG("REM CP ABSORBED %d", current->device.address);
+                    continue;
+                }
+            }
         }
-    }
 
-    // only add a broadcast device if it is not already represented in the driver array.
-    // we all need good representation, which is apparently very hard in the real world, lets try our best in software ;)
-    if (representation_required == 1)
-    {
-        JD_DMESG("ADD NEW MAP");
-        JD_DMESG("BROADCAST ADD %d", cp->address);
-        new JDDriver(JDDevice(cp->address, JD_DEVICE_FLAGS_BROADCAST | JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN, cp->serial_number, cp->driver_class));
-        Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
+        JD_DMESG("OUT: hand %d safe %d", handled, safe);
+
+        if (handled || !safe)
+            JD_DMESG("HANDLED");
+        else
+        {
+            bool filtered = filterPacket(driverInfo->address);
+
+            // if it's paired with a driver and it's not us, we can just ignore
+            if (!filtered && driverInfo->flags & JD_CONTROL_FLAGS_PAIRED)
+                addToFilter(driverInfo->address);
+
+            // if it was previously paired with another device, we remove the filter.
+            else if (filtered && !(driverInfo->flags & JD_CONTROL_FLAGS_PAIRED))
+                removeFromFilter(driverInfo->address);
+
+            else
+            {
+                // if we reach here, there is no associated device, find a free remote instance in the drivers array
+                for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
+                {
+                    JDDriver* current = JDProtocol::instance->drivers[i];
+                    JD_DMESG("FIND DRIVER");
+                    if (current && current->device.flags & JD_DEVICE_FLAGS_REMOTE && current->device.driver_class == driverInfo->driver_class)
+                    {
+                        JD_DMESG("ITER a %d, s %d, c %d, t %c%c%c", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 'B' : ' ', current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 'L' : ' ', current->device.flags & JD_DEVICE_FLAGS_REMOTE ? 'R' : ' ');
+                        // this driver instance is looking for a specific serial number
+                        #warning how does a driver specify a serial number? How does it get the received serial number? Perhaps an internal type is required.
+                        // if (current->device.serial_number > 0 && current->device.serial_number != driverInfo->serial_number)
+                            // continue;
+
+                        JD_DMESG("FOUND NEW: %d %d %d", current->device.address, current->device.driver_class);
+                        int ret = current->handleLogicPacket(cp->packet_type, driverInfo);
+
+                        if (ret == DEVICE_OK)
+                        {
+                            current->deviceConnected(JDDevice(driverInfo->address, driverInfo->flags, driverInfo->driver_class));
+                            Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
+                        }
+
+
+                        // keep going if the driver has returned DEVICE_CANCELLED.
+                        if (ret == DEVICE_OK)
+                            break;
+                    }
+                }
+
+                // only add a broadcast device if it is not already represented in the driver array.
+                // we all need good representation, which is apparently very hard in the real world, lets try our best in software ;)
+                if (representation_required == 1)
+                {
+                    JD_DMESG("ADD NEW MAP");
+                    JD_DMESG("BROADCAST ADD %d", driverInfo->address);
+                    new JDDriver(JDDevice(driverInfo->address, JD_DEVICE_FLAGS_BROADCAST | JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN, driverInfo->driver_class));
+                    Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
+                }
+            }
+
+        }
+
+        dataPointer += JD_DRIVER_INFO_HEADER_SIZE + driverInfo->size;
     }
 
     return DEVICE_OK;

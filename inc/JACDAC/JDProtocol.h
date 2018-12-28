@@ -70,40 +70,37 @@ DEALINGS IN THE SOFTWARE.
 
 
 // BEGIN    LOGIC DRIVER FLAGS
-#define JD_LOGIC_DRIVER_MAX_FILTERS        20
-#define JD_LOGIC_DRIVER_TIMEOUT            254     // 1,016 ms
-#define JD_LOGIC_ADDRESS_ALLOC_TIME        254     // 1,016 ms
-#define JD_LOGIC_DRIVER_CTRLPACKET_TIME    112     // 448 ms
+#define JD_LOGIC_DRIVER_MAX_FILTERS                 20
+#define JD_LOGIC_DRIVER_EVT_CHANGED                 2
 
-#define JD_LOGIC_DRIVER_EVT_CHANGED             2
+#define JD_CONTROL_FLAGS_RESERVED                   0x8000
+#define JD_CONTROL_FLAGS_PAIRING_MODE               0x4000 // in pairing mode, control packets aren't forwarded to drivers
+#define JD_CONTROL_FLAGS_PAIRABLE                   0x2000 // advertises that a driver can be optionally paired with another
+#define JD_CONTROL_FLAGS_PAIRED                     0x1000 // advertises that a driver is already paired with another.
 
-#define CONTROL_JD_FLAGS_RESERVED               0x8000
-#define CONTROL_JD_FLAGS_PAIRING_MODE           0x4000 // in pairing mode, control packets aren't forwarded to drivers
-#define CONTROL_JD_FLAGS_PAIRABLE               0x2000 // advertises that a driver can be optionally paired with another
-#define CONTROL_JD_FLAGS_PAIRED                 0x1000 // advertises that a driver is already paired with another.
+#define JD_CONTROL_FLAGS_CONFLICT                   0x0800
+#define JD_CONTROL_FLAGS_UNCERTAIN                  0x0400
+#define JD_CONTROL_FLAGS_NACK                       0x0200
+#define JD_CONTROL_FLAGS_ACK                        0x0100
+#define JD_CONTROL_FLAGS_RESERVED2                  0x00FF
 
-#define CONTROL_JD_FLAGS_CONFLICT               0x0800
-#define CONTROL_JD_FLAGS_UNCERTAIN              0x0400
-#define CONTROL_JD_FLAGS_NACK                   0x0200
-#define CONTROL_JD_FLAGS_ACK                    0x0100
-
-#define CONTROL_JD_TYPE_HELLO                   0x01
-#define CONTROL_JD_TYPE_PAIRING_REQUEST         0x02
-#define CONTROL_JD_TYPE_ERROR                   0x03 // routed to drivers
-#define CONTROL_JD_TYPE_PANIC                   0xFF
+#define JD_CONTROL_TYPE_HELLO                       0x01
+#define JD_CONTROL_TYPE_PAIRING_REQUEST             0x02
+#define JD_CONTROL_TYPE_PANIC                       0xFF
 // END      LOGIC DRIVER FLAGS
 
 
 // BEGIN    JD SERIAL PROTOCOL
-#define JD_PROTOCOL_EVT_SEND_CONTROL            1
-#define JD_PROTOCOL_DRIVER_ARRAY_SIZE           20
+#define JD_PROTOCOL_EVT_SEND_CONTROL                1
+#define JD_PROTOCOL_DRIVER_ARRAY_SIZE               20
 
 #include "JDClasses.h"
 
 // END      JD SERIAL PROTOCOL
+#define JD_CONTROL_PACKET_ERROR_NAME_LENGTH         6
 
-#define CONTROL_PACKET_PAYLOAD_SIZE             (JD_SERIAL_DATA_SIZE - 12)
-#define CONTROL_PACKET_ERROR_NAME_LENGTH        6
+#define JD_DRIVER_INFO_HEADER_SIZE                  8
+#define JD_CONTROL_PACKET_HEADER_SIZE               5
 
 namespace codal
 {
@@ -118,21 +115,20 @@ namespace codal
      * CONTROL_JD_TYPE_HELLO - Which broadcasts the availablity of a driver
      * CONTROL_JD_TYPE_PAIRING_REQUEST - Used when drivers are pairing to one another.
      **/
-    struct ControlPacket
+    struct JDControlPacket
     {
         uint8_t packet_type;    // indicates the type of the packet, normally just HELLO
+        uint32_t serial_number; // the "unique" serial number of the device.
+        uint8_t data[];
+    } __attribute((__packed__));
+
+    struct JDDriverInfo
+    {
+        uint8_t size;
         uint8_t address;        // the address assigned by the logic driver
         uint16_t flags;         // various flags, upper eight bits are reserved for control usage, lower 8 remain free for driver use.
         uint32_t driver_class;  // the class of the driver
-        uint32_t serial_number; // the "unique" serial number of the device.
-        uint8_t data[CONTROL_PACKET_PAYLOAD_SIZE];
-    } __attribute((__packed__));
-
-    // this struct sits inside the data of a normal control packet if the packet_type is set to ERROR.
-    struct ControlPacketError
-    {
-        char name[CONTROL_PACKET_ERROR_NAME_LENGTH];
-        int code;
+        uint8_t data[]; // optional additional data
     } __attribute((__packed__));
 
     // This enumeration specifies that supported configurations that drivers should utilise.
@@ -183,7 +179,6 @@ namespace codal
         uint8_t address; // the address assigned by the logic driver.
         uint8_t rolling_counter; // used to trigger various time related events
         uint16_t flags; // various flags indicating the state of the driver
-        uint32_t serial_number; // the serial number used to "uniquely" identify a device
         uint32_t driver_class; // the class of the driver, created or selected from the list in JDClasses.h
 
         /**
@@ -198,7 +193,6 @@ namespace codal
             address = 0;
             rolling_counter = 0;
             flags = JD_DEVICE_FLAGS_LOCAL;
-            serial_number = (target_get_serial() & 0xffffff00) | driver_class;
             driver_class = driver_class;
         }
 
@@ -219,12 +213,6 @@ namespace codal
             this->address = 0;
             this->rolling_counter = 0;
             this->flags |= t;
-
-            if (t & JD_DEVICE_FLAGS_REMOTE)
-                this->serial_number = 0;
-            else
-                this->serial_number = (target_get_serial() & 0xffffff00) | driver_class;
-
             this->driver_class = driver_class;
         }
 
@@ -244,12 +232,11 @@ namespace codal
          *
          * @note you are responsible for any weirdness you achieve using this constructor.
          **/
-        JDDevice(uint8_t address, uint16_t flags, uint32_t serial_number, uint32_t driver_class)
+        JDDevice(uint8_t address, uint16_t flags, uint32_t driver_class)
         {
             this->address = address;
             this->rolling_counter = 0;
             this->flags = flags;
-            this->serial_number = serial_number;
             this->driver_class = driver_class;
         }
 
@@ -477,7 +464,7 @@ namespace codal
          *
          * @return DEVICE_OK on success
          **/
-        virtual int fillControlPacket(JDPkt* p);
+        virtual int populateDriverInfo(JDDriverInfo* info, uint8_t bytesRemaining);
 
         /**
          * Invoked by the logic driver when a control packet with the address of the driver is received.
@@ -490,7 +477,7 @@ namespace codal
          * @return DEVICE_OK to signal that the packet has been handled, or DEVICE_CANCELLED to indicate the logic driver
          *         should continue to search for a driver.
          **/
-        virtual int handleControlPacket(JDPkt* p);
+        virtual int handleControlInfo(JDDriverInfo* info);
 
         /**
          * Invoked by the logic driver when a control packet with its type set to error is received.
@@ -502,7 +489,7 @@ namespace codal
          * @return DEVICE_OK to signal that the packet has been handled, or DEVICE_CANCELLED to indicate the logic driver
          *         should continue to search for a driver.
          **/
-        virtual int handleErrorPacket(JDPkt* p);
+        virtual int handleErrorInfo(JDDriverInfo* info);
 
         /**
          * Invoked by the logic driver when a pairing packet with the address of the driver is received.
@@ -518,7 +505,7 @@ namespace codal
          * @return DEVICE_OK to signal that the packet has been handled, or DEVICE_CANCELLED to indicate the logic driver
          *         should continue to search for a driver.
          **/
-        virtual int handlePairingPacket(JDPkt* p);
+        virtual int handlePairingInfo(JDDriverInfo* p);
 
         /**
          * Invoked by the Protocol driver when a standard packet with the address of the driver is received.
@@ -623,9 +610,11 @@ namespace codal
          *
          * @param driver the driver whose information will fill the control packet.
          *
-         * @param cp the allocated control packet to fill.
+         * @param info the allocated driver info struct (embedded inside a control packet) to fill.
+         *
+         * @param remainingData the remaining data available for the driver to add additional payload to.
          **/
-        void populateControlPacket(JDDriver* driver, ControlPacket* cp);
+        void populateDriverInfo(JDDriver* driver, JDDriverInfo* info, uint8_t remainingData);
 
         public:
 
