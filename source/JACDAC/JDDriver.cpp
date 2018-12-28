@@ -89,8 +89,8 @@ int JDDriver::handleLogicPacket(uint32_t serial_number, JDDriverInfo* info)
     if (info->type == JD_CONTROL_TYPE_PAIRING_REQUEST)
         ret = this->handlePairingPacket(cp);
 
-    // lower four bits of flags are used for error codes.
-    else if (info->flags & 0x000F)
+    // if an error is present invoke the error handler instead
+    else if (info->error_code > 0)
         ret = this->handleErrorPacket(cp);
 
     else
