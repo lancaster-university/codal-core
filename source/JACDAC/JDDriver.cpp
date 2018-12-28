@@ -34,7 +34,7 @@ uint32_t JDDriver::dynamicId = DEVICE_ID_JD_DYNAMIC_ID;
 int JDDriver::populateDriverInfo(JDDriverInfo*, uint8_t)
 {
     // by default, the logic driver will fill in the required information.
-    // any additional information should be added here.... (note: cast pkt->data to control packet and fill out data)
+    // any additional information should be added here....
     return 0;
 }
 

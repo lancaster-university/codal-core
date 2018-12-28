@@ -70,7 +70,7 @@ int JDReliabilityTester::start()
     return this->max_count;
 }
 
-int JDReliabilityTester::fillControlPacket(JDPkt* p)
+int JDReliabilityTester::populateDriverInfo(JDDriverInfo* p)
 {
     JDControlPacket* cp = (JDControlPacket*)p->data;
     ReliabilityAdvertisement* ra = (ReliabilityAdvertisement*)cp->data;
@@ -79,7 +79,7 @@ int JDReliabilityTester::fillControlPacket(JDPkt* p)
     return DEVICE_OK;
 }
 
-int JDReliabilityTester::handleControlPacket(JDPkt* p)
+int JDReliabilityTester::handleControlPacket(JDControlPacket* p)
 {
     JDControlPacket* cp = (JDControlPacket*)p->data;
 

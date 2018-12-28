@@ -647,7 +647,7 @@ namespace codal
         /**
          * Overrided for future use. It might be useful to control the behaviour of the logic driver in the future.
          **/
-        virtual int handleControlPacket(JDPkt* p);
+        virtual int handleControlPacket(JDControlPacket* p);
 
         /**
          * Called by the JDProtocol when a data packet has address 0.

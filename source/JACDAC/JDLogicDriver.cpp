@@ -23,22 +23,7 @@ int JDLogicDriver::populateDriverInfo(JDDriver* driver, JDDriverInfo* info, uint
     if (bytesRemaining > 0)
         info->size = driver->populateDriverInfo(info, bytesRemaining);
 
-    int error = driver->device.getError();
-
-    // todo: eventually we will swap to variable packet sizes.
-    // This code will need to be updated to return the size of the control packet dependent on info type...
-    // if (error > 0)
-    // {
-#warning this needs to be changed to use flags. error no
-    //     info->packet_type = JD_CONTROL_TYPE_ERROR;
-
-    //     ControlPacketError* err = (ControlPacketError *)cp->data;
-    //     memset(err, 0, sizeof(ControlPacketError));
-
-    //     ManagedString s = JDProtocol::getDebugName();
-    //     memcpy(err->name,s.toCharArray(),min(s.length(), JD_CONTROL_PACKET_ERROR_NAME_LENGTH));
-    //     err->code = error;
-    // }
+    info->error_code = driver->device.getError();
 
     return info->size + JD_DRIVER_INFO_HEADER_SIZE;
 }
@@ -96,7 +81,7 @@ void JDLogicDriver::timerCallback(Event)
         // local drivers run on the device
         if (current->device.flags & JD_DEVICE_FLAGS_LOCAL)
         {
-            JDDriverInfo* info = (JDDriverInfo *)cp->data[dataOffset];
+            JDDriverInfo* info = (JDDriverInfo *)(cp->data + dataOffset);
 
             // initialise a driver by queuing a control packet with a first reasonable address
             if (!(current->device.flags & (JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_INITIALISING)))
@@ -179,7 +164,7 @@ JDLogicDriver::JDLogicDriver() : JDDriver(JDDevice(0, JD_DEVICE_FLAGS_LOCAL | JD
     }
 }
 
-int JDLogicDriver::handleControlPacket(JDPkt* p)
+int JDLogicDriver::handleControlPacket(JDControlPacket* p)
 {
     // nop for now... could be useful in the future for controlling the mode of the logic driver?
     return DEVICE_OK;
@@ -272,8 +257,11 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
                     if ((current->device.flags & JD_DEVICE_FLAGS_INITIALISED) && (driverInfo->flags & JD_CONTROL_FLAGS_UNCERTAIN))
                     {
                         driverInfo->flags |= JD_CONTROL_FLAGS_CONFLICT;
-                        #warning fix this size
-                        JDProtocol::send((uint8_t*)driverInfo, sizeof(JDControlPacket), 0);
+                        JDControlPacket* cp = (JDControlPacket*)malloc(JD_CONTROL_PACKET_HEADER_SIZE + JD_CONTROL_PACKET_HEADER_SIZE);
+                        memcpy(cp->data, driverInfo, JD_DRIVER_INFO_HEADER_SIZE);
+                        driverInfo->size = 0;
+                        JDProtocol::send((uint8_t*)driverInfo, JD_CONTROL_PACKET_HEADER_SIZE + JD_CONTROL_PACKET_HEADER_SIZE, 0);
+                        free(cp);
                         JD_DMESG("ASK OTHER TO REASSIGN");
                     }
                     // the other device is initialised and has transmitted the CP first, we lose.
@@ -303,7 +291,6 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
                     // 3) we are not conflicting with another device.
                     // 4) someone external has addressed a packet to us.
                 JD_DMESG("FOUND LOCAL");
-                #warning its easier just to ship control packets with a payload... this is flipping messy.
                 if (safe && current->handleLogicPacket(cp->serial_number, driverInfo) == DEVICE_OK)
                 {
                     handled = true;

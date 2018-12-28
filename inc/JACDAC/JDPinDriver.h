@@ -33,7 +33,7 @@ namespace codal
         int setDigitalValue(uint32_t value);
         int setServoValue(uint32_t value);
 
-        virtual int handleControlPacket(JDPkt* cp);
+        virtual int handleControlPacket(JDControlPacket* cp);
 
         virtual int handlePacket(JDPkt* p);
     };
