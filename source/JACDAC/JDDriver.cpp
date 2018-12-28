@@ -72,10 +72,10 @@ int JDDriver::sendPairingPacket(JDDevice d)
     return DEVICE_OK;
 }
 
-int JDDriver::handleLogicPacket(uint8_t packet_type, JDDriverInfo* info)
+int JDDriver::handleLogicPacket(JDDriverInfo* info)
 {
     // filter out any pairing requests for special handling by drivers.
-    if (packet_type == JD_CONTROL_TYPE_PAIRING_REQUEST)
+    if (info->type == JD_CONTROL_TYPE_PAIRING_REQUEST)
         return this->handlePairingInfo(info);
 
     // lower four bits of flags are used for error codes.
@@ -130,10 +130,9 @@ int JDDriver::handlePairingPacket(JDDriverInfo* p)
 {
     DMESG("Pair PKT");
     #warning fix pairing
-    // // take a local copy of the control packet (don't modify the one we are given as it will be passed onto the next driver.)
-    // ControlPacket cp = *((ControlPacket *)p->data);
-    // // control packet data for a pairing packet contains the source address of the partner
-    // JDDevice d = *((JDDevice*)cp.data);
+    // take a local copy of the control packet (don't modify the one we are given as it will be passed onto the next driver.)
+    // control packet data for a pairing packet contains the source address of the partner
+    JDDevice d = *((JDDevice*)p->data);
 
     // // if the packet is addressed to us
     // if (this->device.serial_number == cp.serial_number)

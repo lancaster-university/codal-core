@@ -117,7 +117,6 @@ namespace codal
      **/
     struct JDControlPacket
     {
-        uint8_t packet_type;    // indicates the type of the packet, normally just HELLO
         uint32_t serial_number; // the "unique" serial number of the device.
         uint8_t data[];
     } __attribute((__packed__));
@@ -126,7 +125,7 @@ namespace codal
     {
         uint8_t size;
         uint8_t address;        // the address assigned by the logic driver
-        uint16_t flags;         // various flags, upper eight bits are reserved for control usage, lower 8 remain free for driver use.
+        uint16_t flags: 8, error_code: 4, type: 4; // various flags, upper eight bits are reserved for control usage, error code, then driver info type
         uint32_t driver_class;  // the class of the driver
         uint8_t data[]; // optional additional data
     } __attribute((__packed__));

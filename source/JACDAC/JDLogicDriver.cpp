@@ -185,23 +185,23 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
     JDControlPacket *cp = (JDControlPacket *)pkt->data;
 
     // special packet types should be handled here.
-    if (cp->packet_type == JD_CONTROL_TYPE_PANIC)
-    {
-        ControlPacketError* error = (ControlPacketError*)p->data;
+    // if (cp->packet_type == JD_CONTROL_TYPE_PANIC)
+    // {
+    //     ControlPacketError* error = (ControlPacketError*)p->data;
 
-        char name[JD_CONTROL_PACKET_ERROR_NAME_LENGTH + 1] = { 0 };
-        memcpy(name, error, JD_CONTROL_PACKET_ERROR_NAME_LENGTH);
-        name[JD_CONTROL_PACKET_ERROR_NAME_LENGTH] = 0;
+    //     char name[JD_CONTROL_PACKET_ERROR_NAME_LENGTH + 1] = { 0 };
+    //     memcpy(name, error, JD_CONTROL_PACKET_ERROR_NAME_LENGTH);
+    //     name[JD_CONTROL_PACKET_ERROR_NAME_LENGTH] = 0;
 
-        JD_DMESG("%s is panicking [%d]", name, error->code);
-        return DEVICE_OK;
-    }
+    //     JD_DMESG("%s is panicking [%d]", name, error->code);
+    //     return DEVICE_OK;
+    // }
 
-    if (cp->packet_type == JD_CONTROL_TYPE_PAIRING_REQUEST)
-    {
-        #warning fix pairing
-        return DEVICE_OK;
-    }
+    // if (cp->packet_type == JD_CONTROL_TYPE_PAIRING_REQUEST)
+    // {
+    //     #warning fix pairing
+    //     return DEVICE_OK;
+    // }
 
     uint8_t* dataPointer = cp->data;
 
@@ -264,6 +264,7 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
                     if ((current->device.flags & JD_DEVICE_FLAGS_INITIALISED) && (driverInfo->flags & JD_CONTROL_FLAGS_UNCERTAIN))
                     {
                         driverInfo->flags |= JD_CONTROL_FLAGS_CONFLICT;
+                        #warning fix this size
                         JDProtocol::send((uint8_t*)driverInfo, sizeof(JDControlPacket), 0);
                         JD_DMESG("ASK OTHER TO REASSIGN");
                     }
@@ -295,7 +296,7 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
                     // 4) someone external has addressed a packet to us.
                 JD_DMESG("FOUND LOCAL");
                 #warning its easier just to ship control packets with a payload... this is flipping messy.
-                if (safe && current->handleLogicPacket(cp->packet_type, driverInfo) == DEVICE_OK)
+                if (safe && current->handleLogicPacket(driverInfo) == DEVICE_OK)
                 {
                     handled = true;
                     JD_DMESG("LOC CP ABSORBED %d", current->device.address);
@@ -311,7 +312,7 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
                 current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
                 JD_DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
 
-                if (safe && current->handleLogicPacket(cp->packet_type, driverInfo) == DEVICE_OK)
+                if (safe && current->handleLogicPacket(driverInfo) == DEVICE_OK)
                 {
                     handled = true;
                     JD_DMESG("REM CP ABSORBED %d", current->device.address);
@@ -352,7 +353,7 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
                             // continue;
 
                         JD_DMESG("FOUND NEW: %d %d %d", current->device.address, current->device.driver_class);
-                        int ret = current->handleLogicPacket(cp->packet_type, driverInfo);
+                        int ret = current->handleLogicPacket(driverInfo);
 
                         if (ret == DEVICE_OK)
                         {
