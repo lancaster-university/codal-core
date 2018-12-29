@@ -6,17 +6,19 @@ using namespace codal;
 
 int JDLogicDriver::populateDriverInfo(JDDriver* driver, JDDriverInfo* info, uint8_t bytesRemaining)
 {
+    info->type = JD_DRIVER_INFO_TYPE_HELLO;
+
     info->address = driver->device.address;
     info->flags = 0;
 
     if (driver->device.isPairing())
-        info->flags |= JD_CONTROL_FLAGS_PAIRING_MODE;
+        info->flags |= JD_DRIVER_INFO_FLAGS_PAIRING_MODE;
 
     if (driver->device.isPaired())
-        info->flags |= JD_CONTROL_FLAGS_PAIRED;
+        info->flags |= JD_DRIVER_INFO_FLAGS_PAIRED;
 
     if (driver->device.isPairable())
-        info->flags |= JD_CONTROL_FLAGS_PAIRABLE;
+        info->flags |= JD_DRIVER_INFO_FLAGS_PAIRABLE;
 
     info->driver_class = driver->device.driver_class;
 
@@ -24,6 +26,9 @@ int JDLogicDriver::populateDriverInfo(JDDriver* driver, JDDriverInfo* info, uint
         info->size = driver->populateDriverInfo(info, bytesRemaining);
 
     info->error_code = driver->device.getError();
+
+    if (info->error_code > 0)
+        info->type = JD_DRIVER_INFO_TYPE_ERROR;
 
     return info->size + JD_DRIVER_INFO_HEADER_SIZE;
 }
@@ -119,7 +124,7 @@ void JDLogicDriver::timerCallback(Event)
 
                 // flag our address as uncertain (i.e. not committed / finalised)
                 dataOffset += populateDriverInfo(current, info, 0);
-                info->flags = JD_CONTROL_FLAGS_UNCERTAIN;
+                info->flags = JD_DRIVER_INFO_FLAGS_UNCERTAIN;
                 current->device.flags |= JD_DEVICE_FLAGS_INITIALISING;
             }
             else if(current->device.flags & JD_DEVICE_FLAGS_INITIALISING)
@@ -178,7 +183,7 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
     JDControlPacket *cp = (JDControlPacket *)pkt->data;
 
     // special packet types should be handled here.
-    // if (cp->packet_type == JD_CONTROL_TYPE_PANIC)
+    // if (cp->packet_type == JD_DRIVER_INFO_TYPE_PANIC)
     // {
     //     ControlPacketError* error = (ControlPacketError*)p->data;
 
@@ -190,7 +195,7 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
     //     return DEVICE_OK;
     // }
 
-    // if (cp->packet_type == JD_CONTROL_TYPE_PAIRING_REQUEST)
+    // if (cp->packet_type == JD_DRIVER_INFO_TYPE_PAIRING_REQUEST)
     // {
     //     #warning fix pairing
     //     return DEVICE_OK;
@@ -202,14 +207,14 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
     {
         JDDriverInfo* driverInfo = (JDDriverInfo *)dataPointer;
 
-        JD_DMESG("DI A:%d S:%d C:%d p: %d", driverInfo->address, driverInfo->serial_number, driverInfo->driver_class, (driverInfo->flags & JD_CONTROL_FLAGS_PAIRING_MODE) ? 1 : 0);
+        JD_DMESG("DI A:%d S:%d C:%d p: %d", driverInfo->address, driverInfo->serial_number, driverInfo->driver_class, (driverInfo->flags & JD_DRIVER_INFO_FLAGS_PAIRING_MODE) ? 1 : 0);
 
         // Logic Driver addressing rules:
         // 1. drivers cannot have the same address and different serial numbers.
         // 2. if someone has flagged a conflict with you, you must reassign your address.
 
         // Address assignment rules:
-        // 1. if you are initialising (address unconfirmed), set JD_CONTROL_FLAGS_UNCERTAIN
+        // 1. if you are initialising (address unconfirmed), set JD_DRIVER_INFO_FLAGS_UNCERTAIN
         // 2. if an existing, confirmed device spots a packet with the same address and the uncertain flag set, it should respond with
         //    the same packet, with the CONFLICT flag set.
         // 2b. if the transmitting device has no uncertain flag set, we reassign ourselves (first CP wins)
@@ -223,7 +228,7 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
         // devices about to enter pairing mode enumerate themselves, so that they have an address on the bus.
         // devices with uncertain addresses cannot be used
         // These two scenarios mean that drivers in this state are unusable, so we determine their packets as unsafe... "dropping" their packets
-        bool safe = (driverInfo->flags & (JD_CONTROL_FLAGS_UNCERTAIN | JD_CONTROL_FLAGS_PAIRING_MODE)) == 0; // the packet it is safe
+        bool safe = (driverInfo->flags & (JD_DRIVER_INFO_FLAGS_UNCERTAIN | JD_DRIVER_INFO_FLAGS_PAIRING_MODE)) == 0; // the packet it is safe
 
         for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
         {
@@ -249,14 +254,14 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
             {
                 JD_DMESG("ADDR MATCH");
                 // a different device is using our address!!
-                if (target_get_serial() != cp->serial_number && !(driverInfo->flags & JD_CONTROL_FLAGS_CONFLICT))
+                if (target_get_serial() != cp->serial_number && !(driverInfo->flags & JD_DRIVER_INFO_FLAGS_CONFLICT))
                 {
                     JD_DMESG("SERIAL_DIFF");
                     // if we're initialised, this means that someone else is about to use our address, reject.
                     // see 2. above.
-                    if ((current->device.flags & JD_DEVICE_FLAGS_INITIALISED) && (driverInfo->flags & JD_CONTROL_FLAGS_UNCERTAIN))
+                    if ((current->device.flags & JD_DEVICE_FLAGS_INITIALISED) && (driverInfo->flags & JD_DRIVER_INFO_FLAGS_UNCERTAIN))
                     {
-                        driverInfo->flags |= JD_CONTROL_FLAGS_CONFLICT;
+                        driverInfo->flags |= JD_DRIVER_INFO_FLAGS_CONFLICT;
                         JDControlPacket* cp = (JDControlPacket*)malloc(JD_CONTROL_PACKET_HEADER_SIZE + JD_CONTROL_PACKET_HEADER_SIZE);
                         memcpy(cp->data, driverInfo, JD_DRIVER_INFO_HEADER_SIZE);
                         driverInfo->size = 0;
@@ -276,7 +281,7 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
                     break;
                 }
                 // someone has flagged a conflict with this initialised device
-                else if (driverInfo->flags & JD_CONTROL_FLAGS_CONFLICT)
+                else if (driverInfo->flags & JD_DRIVER_INFO_FLAGS_CONFLICT)
                 {
                     // new address will be assigned on next tick.
                     current->deviceRemoved();
@@ -325,11 +330,11 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
             bool filtered = filterPacket(driverInfo->address);
 
             // if it's paired with a driver and it's not us, we can just ignore
-            if (!filtered && driverInfo->flags & JD_CONTROL_FLAGS_PAIRED)
+            if (!filtered && driverInfo->flags & JD_DRIVER_INFO_FLAGS_PAIRED)
                 addToFilter(driverInfo->address);
 
             // if it was previously paired with another device, we remove the filter.
-            else if (filtered && !(driverInfo->flags & JD_CONTROL_FLAGS_PAIRED))
+            else if (filtered && !(driverInfo->flags & JD_DRIVER_INFO_FLAGS_PAIRED))
                 removeFromFilter(driverInfo->address);
 
             else

@@ -47,7 +47,7 @@ int JDPinDriver::handleControlPacket(JDControlPacket* cp)
     if (this->device.isPairedDriver() && !this->device.isPaired())
     {
         DMESG("NEED TO PAIR!");
-        if (info->flags & JD_CONTROL_FLAGS_PAIRABLE)
+        if (info->flags & JD_DRIVER_INFO_FLAGS_PAIRABLE)
         {
             DMESG("PAIR!");
             sendPairingPacket(JDDevice(info->address, JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN, cp->serial_number, info->driver_class));

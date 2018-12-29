@@ -70,23 +70,24 @@ DEALINGS IN THE SOFTWARE.
 
 
 // BEGIN    LOGIC DRIVER FLAGS
-#define JD_LOGIC_DRIVER_MAX_FILTERS                 20
-#define JD_LOGIC_DRIVER_EVT_CHANGED                 2
-#define JD_LOGIC_DRIVER_EVT_TIMER_CALLBACK          3
+#define JD_LOGIC_DRIVER_MAX_FILTERS                     20
+#define JD_LOGIC_DRIVER_EVT_CHANGED                     2
+#define JD_LOGIC_DRIVER_EVT_TIMER_CALLBACK              3
 
-#define JD_CONTROL_FLAGS_RESERVED                   0x80
-#define JD_CONTROL_FLAGS_PAIRING_MODE               0x40 // in pairing mode, control packets aren't forwarded to drivers
-#define JD_CONTROL_FLAGS_PAIRABLE                   0x20 // advertises that a driver can be optionally paired with another
-#define JD_CONTROL_FLAGS_PAIRED                     0x10 // advertises that a driver is already paired with another.
+#define JD_DRIVER_INFO_FLAGS_RESERVED                   0x80
+#define JD_DRIVER_INFO_FLAGS_PAIRING_MODE               0x40 // in pairing mode, control packets aren't forwarded to drivers
+#define JD_DRIVER_INFO_FLAGS_PAIRABLE                   0x20 // advertises that a driver can be optionally paired with another
+#define JD_DRIVER_INFO_FLAGS_PAIRED                     0x10 // advertises that a driver is already paired with another.
 
-#define JD_CONTROL_FLAGS_CONFLICT                   0x08
-#define JD_CONTROL_FLAGS_UNCERTAIN                  0x04
-#define JD_CONTROL_FLAGS_NACK                       0x02
-#define JD_CONTROL_FLAGS_ACK                        0x01
+#define JD_DRIVER_INFO_FLAGS_CONFLICT                   0x08
+#define JD_DRIVER_INFO_FLAGS_UNCERTAIN                  0x04
+#define JD_DRIVER_INFO_FLAGS_NACK                       0x02
+#define JD_DRIVER_INFO_FLAGS_ACK                        0x01
 
-#define JD_CONTROL_TYPE_HELLO                       0x01
-#define JD_CONTROL_TYPE_PAIRING_REQUEST             0x02
-#define JD_CONTROL_TYPE_PANIC                       0xFF
+#define JD_DRIVER_INFO_TYPE_HELLO                       0x1
+#define JD_DRIVER_INFO_TYPE_PAIRING_REQUEST             0x2
+#define JD_DRIVER_INFO_TYPE_ERROR                       0x3
+#define JD_DRIVER_INFO_TYPE_PANIC                       0xF
 // END      LOGIC DRIVER FLAGS
 
 
