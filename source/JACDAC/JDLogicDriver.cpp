@@ -245,6 +245,10 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
             if (current == NULL || current->device.driver_class != driverInfo->driver_class)
                 continue;
 
+            bool address_check = current->device.address == driverInfo->address;
+            // bool class_check = true; // unused
+            bool serial_check = cp->serial_number == current->device.serial_number;
+
             JD_DMESG("d a %d, s %d, c %d, t %c%c%c", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 'B' : ' ', current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 'L' : ' ', current->device.flags & JD_DEVICE_FLAGS_REMOTE ? 'R' : ' ');
             // As we're iterating over the array of drivers, we can also determine whether a broadcast broadcast map needs
             // to be created.
@@ -255,16 +259,19 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
                 else
                     // the current driver matches the device, set to -1 to prevent duplicates.
                     representation_required = -1;
+
+                // we can have host broadcast drivers with their own address, so override any address check so that matching is performed instead by class
+                address_check = true;
             }
 
             // We are in charge of local drivers, in this if statement we handle address assignment
-            if (current->device.address == driverInfo->address && current->device.flags & JD_DEVICE_FLAGS_INITIALISED)
+            if (address_check && current->device.flags & JD_DEVICE_FLAGS_INITIALISED)
             {
                 JD_DMESG("ADDR MATCH");
                 if (current->device.flags & JD_DEVICE_FLAGS_LOCAL)
                 {
                     // a different device is using our address!!
-                    if (target_get_serial() != cp->serial_number && !(driverInfo->flags & JD_DRIVER_INFO_FLAGS_CONFLICT))
+                    if (!serial_check && !(driverInfo->flags & JD_DRIVER_INFO_FLAGS_CONFLICT))
                     {
                         JD_DMESG("SERIAL_DIFF");
                         // if we're initialised, this means that someone else is about to use our address, reject.
@@ -319,7 +326,7 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
                 {
                     // if the serial numbers differ, but the address is the same, it means that our original remote has gone...
                     // uninitialise.
-                    if (cp->serial_number != current->device.serial_number)
+                    if (!serial_check)
                     {
                         current->deviceRemoved();
                         break;
