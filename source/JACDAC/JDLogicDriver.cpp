@@ -398,7 +398,6 @@ int JDLogicDriver::handlePacket(JDPkt* pkt)
                     Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
                 }
             }
-
         }
 
         dataPointer += JD_DRIVER_INFO_HEADER_SIZE + driverInfo->size;

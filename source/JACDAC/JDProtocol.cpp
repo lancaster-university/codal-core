@@ -44,7 +44,7 @@ void JDProtocol::onPacketReceived(Event)
 
     while((pkt = bus.getPacket()) != NULL)
     {
-        DMESG("pkt REC AD: %d SZ:%d",pkt->address, pkt->size);
+        JD_DMESG("pkt REC AD: %d SZ:%d",pkt->address, pkt->size);
 
         uint32_t driver_class = 0;
 
@@ -60,7 +60,7 @@ void JDProtocol::onPacketReceived(Event)
                 if (driver)
                 {
                     // the above could be optimised into a single if, but useful for debugging.
-                    DMESG("DRIV a:%d sn:%d c:%d i:%d f %d", driver->device.address, driver->device.serial_number, driver->device.driver_class, driver->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, driver->device.flags);
+                    JD_DMESG("DRIV a:%d sn:%d c:%d i:%d f %d", driver->device.address, driver->device.serial_number, driver->device.driver_class, driver->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, driver->device.flags);
 
                     // if the address is the same, or we're matching on class...
                     if ((driver->device.flags & JD_DEVICE_FLAGS_INITIALISED) && driver->device.address == pkt->address)
