@@ -43,7 +43,7 @@ static uint8_t usb_status = 0;
 // static uint8_t usb_suspended = 0; // copy of UDINT to check SUSPI and WAKEUPI bits
 static uint8_t usb_configured = 0;
 
-static const ConfigDescriptor static_config = {9, 2, 0, 0, 1, 0, USB_CONFIG_BUS_POWERED, 50};
+static const ConfigDescriptor static_config = {9, 2, 0, 0, 1, 0, USB_CONFIG_BUS_POWERED, 250};
 
 static const DeviceDescriptor default_device_desc = {
     0x12, // bLength
@@ -146,7 +146,7 @@ static const uint8_t msOS20Descriptor[] = {
     '{', 0, '9', 0, '2', 0, 'C', 0, 'E', 0, '6', 0, '4', 0, '6', 0, '2', 0, '-', 0, '9', 0, 'C', 0,
     '7', 0, '7', 0, '-', 0, '4', 0, '6', 0, 'F', 0, 'E', 0, '-', 0, '9', 0, '3', 0, '3', 0, 'B', 0,
     '-', 0, '3', 0, '1', 0, 'C', 0, 'B', 0, '9', 0, 'C', 0, '5', 0, 'A', 0, 'A', 0, '3', 0, 'B', 0,
-    '9', 0, '}', 0, 0, 0, 0, 0};
+    'A', 0, '}', 0, 0, 0, 0, 0};
 #endif
 
 CodalUSB::CodalUSB()
