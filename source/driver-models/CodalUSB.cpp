@@ -337,6 +337,7 @@ int CodalUSB::add(CodalUSBInterface &interface)
     usb_assert(!usb_configured);
 
     uint8_t epsConsumed = interface.getInterfaceInfo()->allocateEndpoints;
+    if (epsConsumed > 1) epsConsumed = 1;
 
     if (endpointsUsed + epsConsumed > DEVICE_USB_ENDPOINTS)
         return DEVICE_NO_RESOURCES;
@@ -565,8 +566,14 @@ void CodalUSB::initEndpoints()
 
         const InterfaceInfo *info = iface->getInterfaceInfo();
 
-        usb_assert(0 <= info->allocateEndpoints && info->allocateEndpoints <= 2);
-        usb_assert(info->allocateEndpoints <= info->iface.numEndpoints &&
+        int alloc = info->allocateEndpoints;
+        
+        #ifdef STM32F4
+        if (alloc == 2) alloc = 1;
+        #endif
+
+        usb_assert(0 <= alloc && alloc <= 2);
+        usb_assert(alloc <= info->iface.numEndpoints &&
                    info->iface.numEndpoints <= 2);
 
         if (iface->in)
@@ -586,12 +593,12 @@ void CodalUSB::initEndpoints()
             iface->in = new UsbEndpointIn(endpointCount, info->epIn.attr);
             if (info->iface.numEndpoints > 1)
             {
-                iface->out = new UsbEndpointOut(endpointCount + (info->allocateEndpoints - 1),
+                iface->out = new UsbEndpointOut(endpointCount + (alloc - 1),
                                                 info->epIn.attr);
             }
         }
 
-        endpointCount += info->allocateEndpoints;
+        endpointCount += alloc;
     }
 
     usb_assert(endpointsUsed == endpointCount);
