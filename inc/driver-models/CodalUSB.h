@@ -243,7 +243,7 @@ public:
     {
         in = 0;
         out = 0;
-        interfaceIdx = 0;
+        interfaceIdx = 0xff;
         next = NULL;
     }
 
@@ -260,6 +260,8 @@ class CodalUSB
 {
     uint8_t endpointsUsed;
     uint8_t startDelayCount;
+    // This is really for WinUSB; in fact we should have one WinUSB descriptor
+    // per WebUSB interface, but we only send it out for the first one.
     uint8_t firstWebUSBInterfaceIdx;
 
     int sendConfig();
