@@ -48,10 +48,28 @@ using namespace codal;
 //
 Timer* codal::system_timer = NULL;
 
+void timer_callback(uint16_t chan)
+{
+    if (system_timer)
+    {
+        if (chan & (1 << system_timer->ccPeriodChannel))
+            system_timer->trigger(true);
+        else
+            system_timer->trigger(false);
+    }
+}
+
+void Timer::triggerIn(CODAL_TIMESTAMP t)
+{
+    timer.disableIRQ();
+    timer.setCompare(this->ccEventChannel, timer.captureCounter() + t);
+    timer.enableIRQ();
+}
+
 TimerEvent *Timer::getTimerEvent()
 {
     // Find the first unused slot, and assign it.
-    for (int i=0; i<eventListSize; i++)
+    for (int i=0; i < eventListSize; i++)
     {
         if (timerEventList[i].id == 0)
             return &timerEventList[i];
@@ -71,10 +89,13 @@ void Timer::releaseTimerEvent(TimerEvent *event)
 /**
  * Constructor for a generic system clock interface.
  */
-Timer::Timer()
+Timer::Timer(LowLevelTimer& t, uint8_t ccPeriodChannel, uint8_t ccEventChannel) : timer(t)
 {
     // Register ourselves as the defualt timer - most recent timer wins.
     system_timer = this;
+
+    this->ccPeriodChannel = ccPeriodChannel;
+    this->ccEventChannel = ccEventChannel;
 
     // Create an empty event list of the default size.
     eventListSize = CODAL_TIMER_DEFAULT_EVENT_LIST_SIZE;
@@ -85,6 +106,10 @@ Timer::Timer()
     // Reset clock
     currentTime = 0;
     currentTimeUs = 0;
+
+    timer.setIRQ(timer_callback);
+    timer.setCompare(ccPeriodChannel, 10000000);
+    timer.enable();
 }
 
 /**
@@ -95,7 +120,7 @@ Timer::Timer()
  */
 CODAL_TIMESTAMP Timer::getTime()
 {
-    syncRequest();
+    sync();
     return currentTime;
 }
 
@@ -107,19 +132,19 @@ CODAL_TIMESTAMP Timer::getTime()
  */
 CODAL_TIMESTAMP Timer::getTimeUs()
 {
-    syncRequest();
+    sync();
     return currentTimeUs;
 }
 
 int Timer::disableInterrupts()
 {
-    target_disable_irq();
+    timer.disableIRQ();
     return DEVICE_OK;
 }
 
 int Timer::enableInterrupts()
 {
-    target_enable_irq();
+    timer.enableIRQ();
     return DEVICE_OK;
 }
 
@@ -131,7 +156,7 @@ int Timer::setEvent(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, bool re
 
     evt->set(getTimeUs() + period, repeat ? period: 0, id, value);
 
-    disableInterrupts();
+    target_disable_irq();
 
     if (nextTimerEvent == NULL || evt->timestamp < nextTimerEvent->timestamp)
     {
@@ -139,7 +164,7 @@ int Timer::setEvent(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, bool re
         triggerIn(period);
     }
 
-    enableInterrupts();
+    target_enable_irq();
 
     return DEVICE_OK;
 }
@@ -232,27 +257,57 @@ int Timer::eventEveryUs(CODAL_TIMESTAMP period, uint16_t id, uint16_t value)
  * Callback from physical timer implementation code.
  * @param t Indication that t time units (typically microsends) have elapsed.
  */
-void Timer::sync(CODAL_TIMESTAMP t)
+void Timer::sync()
 {
-    // First, update our timestamps.
-    currentTimeUs += t;
-    overflow += t;
+    timer.disableIRQ();
 
-    while(overflow >= 1000)
+    uint32_t val = timer.captureCounter();
+    uint32_t elapsed = 0;
+
+    if (val > sigma)
+        elapsed = val - sigma;
+    else
     {
-        overflow -= 1000;
-        currentTime += 1;
+        TimerBitMode t = timer.getBitMode();
+
+        uint32_t maxValue = 0;
+
+        switch (t)
+        {
+            case BitMode8:
+                maxValue = 0xFF;
+                break;
+            case BitMode16:
+                maxValue = 0xFFFF;
+                break;
+            case BitMode24:
+                maxValue = 0xFFFFFF;
+                break;
+            case BitMode32:
+                maxValue = 0xFFFFFFFF;
+                break;
+        }
+
+        elapsed = (maxValue - sigma) + val;
     }
+
+    sigma = val;
+    currentTimeUs += elapsed;
+    currentTime = currentTimeUs / 1000;
+    timer.enableIRQ();
 }
 
 /**
  * Callback from physical timer implementation code.
  */
-void Timer::trigger()
+void Timer::trigger(bool isFallback)
 {
+    if (isFallback)
+        timer.setCompare(ccPeriodChannel, timer.captureCounter() + 10000000);
+
     int eventsFired;
 
-    syncRequest();
+    sync();
 
     // Now, walk the list and trigger any events that are pending.
     do
@@ -260,7 +315,7 @@ void Timer::trigger()
         eventsFired = 0;
         TimerEvent *e = timerEventList;
 
-        for (int i=0; i<eventListSize; i++)
+        for (int i = 0; i<eventListSize; i++)
         {
             if (e->id != 0 && currentTimeUs >= e->timestamp)
             {
@@ -290,7 +345,7 @@ void Timer::trigger()
     TimerEvent *e = timerEventList;
 
     // Find the next most recent and schedule it.
-    for (int i=0; i<eventListSize; i++)
+    for (int i = 0; i < eventListSize; i++)
     {
         if (e->id != 0 && (nextTimerEvent == NULL || (e->timestamp < nextTimerEvent->timestamp)))
             nextTimerEvent = e;

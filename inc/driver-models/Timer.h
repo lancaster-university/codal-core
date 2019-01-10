@@ -27,6 +27,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 #include "ErrorNo.h"
+#include "LowLevelTimer.h"
 
 #ifndef CODAL_TIMER_DEFAULT_EVENT_LIST_SIZE
 #define CODAL_TIMER_DEFAULT_EVENT_LIST_SIZE     10
@@ -52,12 +53,36 @@ namespace codal
 
     class Timer
     {
+        uint32_t sigma;
+        LowLevelTimer& timer;
+
+        /**
+          * Synchronises low level timer counter with ours.
+          */
+        void sync();
+
+        /**
+         * request to the physical timer implementation code to provide a trigger callback at the given time.
+         * @note it is perfectly legitimate for the implementation to trigger before this time if convenient.
+         * @param t Indication that t time units (typically microsends) have elapsed.
+         */
+        void triggerIn(CODAL_TIMESTAMP t);
+
     public:
+
+        uint8_t ccPeriodChannel;
+        uint8_t ccEventChannel;
 
         /**
           * Constructor for a generic system clock interface.
+          *
+          * @param t A low-level timer instance that wraps a hardware timer.
+          *
+          * @param ccPeriodChannel The channel to use a a periodic interrupt as a fallback
+          *
+          * @param ccEventChannel The channel to use as the next TimerEvents' interrupt.
           */
-        Timer();
+        Timer(LowLevelTimer& t, uint8_t ccPeriodChannel = 0, uint8_t ccEventChannel = 1);
 
         /**
           * Retrieves the current time tracked by this Timer instance
@@ -138,27 +163,9 @@ namespace codal
         ~Timer();
 
         /**
-         * Callback from physical timer implementation code.
-         * @param t Indication that t time units (typically microsends) have elapsed.
-         */
-        void sync(CODAL_TIMESTAMP t);
-
-        /**
          * Callback from physical timer implementation code, indicating a requested time span *may* have been completed.
          */
-        void trigger();
-
-        /**
-         * request to the physical timer implementation code to provide a trigger callback at the given time.
-         * note: it is perfectly legitimate for the implementation to trigger before this time if convenient.
-         * @param t Indication that t time units (typically microsends) have elapsed.
-         */
-        virtual void triggerIn(CODAL_TIMESTAMP t) = 0;
-
-        /**
-         * request to the physical timer implementation code to trigger immediately.
-         */
-        virtual void syncRequest() = 0;
+        void trigger(bool isFallback);
 
         /**
           * Enables interrupts for this timer instance.

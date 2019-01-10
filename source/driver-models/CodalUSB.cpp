@@ -43,7 +43,7 @@ static uint8_t usb_status = 0;
 // static uint8_t usb_suspended = 0; // copy of UDINT to check SUSPI and WAKEUPI bits
 static uint8_t usb_configured = 0;
 
-static const ConfigDescriptor static_config = {9, 2, 0, 0, 1, 0, USB_CONFIG_BUS_POWERED, 50};
+static const ConfigDescriptor static_config = {9, 2, 0, 0, 1, 0, USB_CONFIG_BUS_POWERED, 250};
 
 static const DeviceDescriptor default_device_desc = {
     0x12, // bLength
@@ -146,7 +146,7 @@ static const uint8_t msOS20Descriptor[] = {
     '{', 0, '9', 0, '2', 0, 'C', 0, 'E', 0, '6', 0, '4', 0, '6', 0, '2', 0, '-', 0, '9', 0, 'C', 0,
     '7', 0, '7', 0, '-', 0, '4', 0, '6', 0, 'F', 0, 'E', 0, '-', 0, '9', 0, '3', 0, '3', 0, 'B', 0,
     '-', 0, '3', 0, '1', 0, 'C', 0, 'B', 0, '9', 0, 'C', 0, '5', 0, 'A', 0, 'A', 0, '3', 0, 'B', 0,
-    '9', 0, '}', 0, 0, 0, 0, 0};
+    'A', 0, '}', 0, 0, 0, 0, 0};
 #endif
 
 CodalUSB::CodalUSB()
@@ -220,21 +220,25 @@ int CodalUSB::sendConfig()
             clen += info->supplementalDescriptorSize;
         }
 
-        EndpointDescriptor epdescIn = {
-            sizeof(EndpointDescriptor),
-            5, // type
-            (uint8_t)(0x80 | iface->in->ep),
-            info->epIn.attr,
-            USB_MAX_PKT_SIZE,
-            info->epIn.interval,
-        };
-        ADD_DESC(epdescIn);
-
-        if (info->iface.numEndpoints == 1)
+        if (info->iface.numEndpoints == 0)
         {
             // OK
         }
-        else if (info->iface.numEndpoints == 2)
+        
+        if (info->iface.numEndpoints >= 1)
+        {
+            EndpointDescriptor epdescIn = {
+                sizeof(EndpointDescriptor),
+                5, // type
+                (uint8_t)(0x80 | iface->in->ep),
+                info->epIn.attr,
+                USB_MAX_PKT_SIZE,
+                info->epIn.interval,
+            };
+            ADD_DESC(epdescIn);
+        }
+        
+        if (info->iface.numEndpoints >= 2)
         {
             EndpointDescriptor epdescOut = {
                 sizeof(EndpointDescriptor),
@@ -246,7 +250,8 @@ int CodalUSB::sendConfig()
             };
             ADD_DESC(epdescOut);
         }
-        else
+
+        if (info->iface.numEndpoints >= 3)
         {
             usb_assert(0);
         }
@@ -403,7 +408,7 @@ int CodalUSB::interfaceRequest(USBSetup &setup, bool isClass)
 
 void CodalUSB::setupRequest(USBSetup &setup)
 {
-    DMESG("SETUP Req=%x type=%x val=%x:%x idx=%x len=%d", setup.bRequest, setup.bmRequestType,
+    LOG("SETUP Req=%x type=%x val=%x:%x idx=%x len=%d", setup.bRequest, setup.bmRequestType,
           setup.wValueH, setup.wValueL, setup.wIndex, setup.wLength);
 
     int status = DEVICE_OK;
@@ -451,6 +456,7 @@ void CodalUSB::setupRequest(USBSetup &setup)
             sendzlp();
             break;
         case USB_REQ_SET_ADDRESS:
+            usb_set_address_pre(wValue);
             sendzlp();
             usb_set_address(wValue);
             break;
@@ -550,12 +556,15 @@ void CodalUSB::initEndpoints()
 
         const InterfaceInfo *info = iface->getInterfaceInfo();
 
-        usb_assert(1 <= info->allocateEndpoints && info->allocateEndpoints <= 2);
+        usb_assert(0 <= info->allocateEndpoints && info->allocateEndpoints <= 2);
         usb_assert(info->allocateEndpoints <= info->iface.numEndpoints &&
                    info->iface.numEndpoints <= 2);
 
         if (iface->in)
+        {
             delete iface->in;
+            iface->in = NULL;
+        }
 
         if (iface->out)
         {
@@ -563,11 +572,14 @@ void CodalUSB::initEndpoints()
             iface->out = NULL;
         }
 
-        iface->in = new UsbEndpointIn(endpointCount, info->epIn.attr);
-        if (info->iface.numEndpoints > 1)
+        if (info->iface.numEndpoints > 0)
         {
-            iface->out =
-                new UsbEndpointOut(endpointCount + (info->allocateEndpoints - 1), info->epIn.attr);
+            iface->in = new UsbEndpointIn(endpointCount, info->epIn.attr);
+            if (info->iface.numEndpoints > 1)
+            {
+                iface->out = new UsbEndpointOut(endpointCount + (info->allocateEndpoints - 1),
+                                                info->epIn.attr);
+            }
         }
 
         endpointCount += info->allocateEndpoints;
