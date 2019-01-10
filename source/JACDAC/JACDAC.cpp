@@ -11,9 +11,46 @@
 
 #define CODAL_ASSERT(cond)                                                                         \
     if (!(cond))                                                                                   \
-    target_panic(909)
+    target_panic(0x5AC)
 
 using namespace codal;
+
+uint32_t error_count = 0;
+
+struct BaudByte
+{
+    uint32_t baud;
+    uint32_t time_per_byte;
+};
+
+/**
+ * A simple look up for getting the time per byte given a baud rate.
+ *
+ * JACDACBaudRate index - 1 should be used to index this array.
+ *
+ * i.e. baudToByteMap[(uint8_t)Baud1M - 1].baud = 1000000
+ **/
+const BaudByte baudToByteMap[] =
+{
+    {1000000, 10},
+    {500000, 20},
+    {250000, 40},
+    {125000, 80},
+};
+
+// https://graphics.stanford.edu/~seander/bithacks.html
+// <3
+inline uint32_t ceil_pow2(uint32_t v)
+{
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
+}
 
 /**
  * Fletchers algorithm, a widely used low-overhead checksum (even used in apple latest file system APFS).
@@ -54,19 +91,20 @@ void JACDAC::dmaComplete(Event evt)
 {
     if (evt.value == SWS_EVT_ERROR)
     {
+        // event should be more generic: tx/rx timeout
         system_timer_cancel_event(this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+
         if (status & JD_SERIAL_TRANSMITTING)
         {
-            JD_DMESG("DMA TXE");
             status &= ~(JD_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
         }
 
-        if (status & JD_SERIAL_RECEIVING)
+        if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER))
         {
-            JD_DMESG("DMA RXE");
-            status &= ~(JD_SERIAL_RECEIVING);
+            error_count++;
+            status &= ~(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER);
             sws.abortDMA();
             Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
         }
@@ -76,23 +114,45 @@ void JACDAC::dmaComplete(Event evt)
         // rx complete, queue packet for later handling
         if (evt.value == SWS_EVT_DATA_RECEIVED)
         {
-            status &= ~(JD_SERIAL_RECEIVING);
-            system_timer_cancel_event(this->id, JD_SERIAL_EVT_RX_TIMEOUT);
-            uint8_t* crcPointer = (uint8_t*)&rxBuf->address;
-            uint16_t crc = fletcher16(crcPointer, JD_SERIAL_PACKET_SIZE - 2);
-
-            if (crc == rxBuf->crc)
+            if (status & JD_SERIAL_RECEIVING_HEADER)
             {
-                // move rxbuf to rxQueue and allocate new buffer.
-                addToQueue(&rxQueue, rxBuf);
-                rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
-                Event(id, JD_SERIAL_EVT_DATA_READY);
-                JD_DMESG("DMA RXD");
+
+                status &= ~(JD_SERIAL_RECEIVING_HEADER);
+
+                JDPkt* rx = (JDPkt*)rxBuf;
+                sws.receiveDMA(((uint8_t*)rxBuf) + JD_SERIAL_HEADER_SIZE, rx->size);
+                DMESG("RXH %d",rx->size);
+
+                system_timer_event_after(baudToByteMap[(uint8_t)currentBaud - 1].time_per_byte * (rx->size + 2), this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+
+                status |= JD_SERIAL_RECEIVING;
+                return;
             }
-            // could we do something cool to indicate an incorrect CRC?
-            // i.e. drive the bus low....?
-            else
-                JD_DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
+            else if (status & JD_SERIAL_RECEIVING)
+            {
+                status &= ~(JD_SERIAL_RECEIVING);
+                system_timer_cancel_event(this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+                uint8_t* crcPointer = (uint8_t*)&rxBuf->address;
+                uint16_t crc = fletcher16(crcPointer, rxBuf->size + JD_SERIAL_CRC_HEADER_SIZE); // include size and address in the checksum.
+
+                if (crc == rxBuf->crc)
+                {
+                    // move rxbuf to rxArray and allocate new buffer.
+                    addToRxArray(rxBuf);
+                    rxBuf = (JDPkt*)malloc(sizeof(JDPkt));
+                    Event(id, JD_SERIAL_EVT_DATA_READY);
+                    DMESG("DMA RXD");
+                }
+                // could we do something cool to indicate an incorrect CRC?
+                // i.e. drive the bus low....?
+                else
+                {
+                    DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
+                    uint8_t* bufPtr = (uint8_t*)rxBuf;
+                    for (int i = 0; i < JD_SERIAL_HEADER_SIZE + 2; i++)
+                        DMESG("%d[%c]",bufPtr[i]);
+                }
+            }
         }
 
         if (evt.value == SWS_EVT_DATA_SENT)
@@ -109,28 +169,49 @@ void JACDAC::dmaComplete(Event evt)
     sws.setMode(SingleWireDisconnected);
 
     // force transition to output so that the pin is reconfigured.
+    // also drive the bus high for a little bit.
     sp.setDigitalValue(1);
-    configure(true);
+    configure(JACDACPinEvents::PulseEvents);
 
     if (commLED)
         commLED->setDigitalValue(0);
 }
 
-void JACDAC::onFallingEdge(Event)
+void JACDAC::onLowPulse(Event e)
 {
-    JD_DMESG("FALL: %d %d", (status & JD_SERIAL_RECEIVING) ? 1 : 0, (status & JD_SERIAL_TRANSMITTING) ? 1 : 0);
+    JD_DMESG("LO: %d %d", (status & JD_SERIAL_RECEIVING) ? 1 : 0, (status & JD_SERIAL_TRANSMITTING) ? 1 : 0);
     // guard against repeat events.
-    if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
+    if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
+
+    uint32_t ts = e.timestamp;
+    ts = ceil(ts / 10);
+    ts = ceil_pow2(ts);
+
+    JD_DMESG("TS: %d %d", ts, (int)e.timestamp);
+
+    // we support 1, 2, 4, 8 as our powers of 2.
+    if (ts > 8)
+        return;
+
+    // if zero round to 1 (to prevent div by 0)
+    // it is assumed that the transaction is at 1 mbaud
+    if (ts == 0)
+        ts = 1;
+
+    if ((JACDACBaudRate)ts != this->currentBaud)
+    {
+        sws.setBaud(baudToByteMap[ts - 1].baud);
+        this->currentBaud = (JACDACBaudRate)ts;
+    }
 
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
     sp.getDigitalValue(PullMode::None);
 
-    status |= (JD_SERIAL_RECEIVING);
+    status |= (JD_SERIAL_RECEIVING_HEADER);
 
-    sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_PACKET_SIZE);
-    // configure for 1mbaud timeout for now
-    system_timer_event_after(10 * ((JD_SERIAL_PACKET_SIZE + 2)), this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+    sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_HEADER_SIZE);
+    system_timer_event_after(baudToByteMap[ts - 1].time_per_byte * ((JD_SERIAL_HEADER_SIZE + 2)), this->id, JD_SERIAL_EVT_RX_TIMEOUT);
 
     if (commLED)
         commLED->setDigitalValue(1);
@@ -139,127 +220,180 @@ void JACDAC::onFallingEdge(Event)
 void JACDAC::rxTimeout(Event)
 {
     JD_DMESG("TIMEOUT");
+    error_count++;
     sws.abortDMA();
     Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
-    status &= ~(JD_SERIAL_RECEIVING);
+    status &= ~(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER);
     sws.setMode(SingleWireDisconnected);
-    configure(true);
-
+    configure(JACDACPinEvents::PulseEvents);
     if (commLED)
         commLED->setDigitalValue(0);
 }
 
-JDPkt* JACDAC::popQueue(JDPkt** queue)
+/**
+ * Our arrays are FIFO circular buffers.
+ *
+ * Example:
+ * txHead             txTail
+ * [item, item, item, item, NULL, NULL, NULL]
+ *
+ * Remove:
+ *        txHead      txTail
+ * [NULL, item, item, item, NULL, NULL, NULL]
+ *
+ * Add:
+ *        txHead            txTail
+ * [NULL, item, item, item, item, NULL, NULL]
+ **/
+JDPkt* JACDAC::popRxArray()
 {
-    if (*queue == NULL)
+    // nothing to pop
+    if (this->rxTail == this->rxHead)
         return NULL;
 
-    JDPkt *ret = *queue;
-
+    uint8_t nextHead = (this->rxHead + 1) % JD_RX_ARRAY_SIZE;
+    JDPkt* p = rxArray[this->rxHead];
+    this->rxArray[this->rxHead] = NULL;
     target_disable_irq();
-    *queue = (*queue)->next;
+    this->rxHead = nextHead;
     target_enable_irq();
 
-    return ret;
+    return p;
 }
 
-JDPkt* JACDAC::removeFromQueue(JDPkt** queue, uint8_t address)
+/**
+ * Our arrays are FIFO circular buffers.
+ *
+ * Example:
+ * txHead                   txTail
+ * [item, item, item, item, NULL, NULL, NULL]
+ *
+ * Remove:
+ *        txHead            txTail
+ * [NULL, item, item, item, NULL, NULL, NULL]
+ *
+ * Add:
+ *        txHead                  txTail
+ * [NULL, item, item, item, item, NULL, NULL]
+ **/
+JDPkt* JACDAC::popTxArray()
 {
-    if (*queue == NULL)
+    // nothing to pop
+    if (this->txTail == this->txHead)
         return NULL;
 
-    JDPkt* ret = NULL;
-
+    uint8_t nextHead = (this->txHead + 1) % JD_TX_ARRAY_SIZE;
+    JDPkt* p = txArray[this->txHead];
+    this->txArray[this->txHead] = NULL;
     target_disable_irq();
-    JDPkt *p = (*queue)->next;
-    JDPkt *previous = *queue;
-
-    if (address == (*queue)->address)
-    {
-        *queue = p;
-        ret = previous;
-    }
-    else
-    {
-        while (p != NULL)
-        {
-            if (address == p->address)
-            {
-                ret = p;
-                previous->next = p->next;
-                break;
-            }
-
-            previous = p;
-            p = p->next;
-        }
-    }
-
+    this->txHead = nextHead;
     target_enable_irq();
 
-    return ret;
+    return p;
 }
 
-int JACDAC::addToQueue(JDPkt** queue, JDPkt* packet)
+/**
+ * Our arrays are FIFO circular buffers.
+ *
+ * Example:
+ * txHead                   txTail
+ * [item, item, item, item, NULL, NULL, NULL]
+ *
+ * Remove:
+ *        txHead            txTail
+ * [NULL, item, item, item, NULL, NULL, NULL]
+ *
+ * Add:
+ *        txHead                  txTail
+ * [NULL, item, item, item, item, NULL, NULL]
+ **/
+int JACDAC::addToTxArray(JDPkt* packet)
 {
-    int queueDepth = 0;
-    packet->next = NULL;
+     uint8_t nextTail = (this->txTail + 1) % JD_TX_ARRAY_SIZE;
 
+    if (nextTail == this->txHead)
+        return DEVICE_NO_RESOURCES;
+
+    // add our buffer to the array before updating the head
+    // this ensures atomicity.
+    this->txArray[this->txTail] = packet;
     target_disable_irq();
-    if (*queue == NULL)
-        *queue = packet;
-    else
-    {
-        JDPkt *p = *queue;
-
-        while (p->next != NULL)
-        {
-            p = p->next;
-            queueDepth++;
-        }
-
-        if (queueDepth >= JD_SERIAL_MAXIMUM_BUFFERS)
-        {
-            free(packet);
-            target_enable_irq();
-            return DEVICE_NO_RESOURCES;
-        }
-
-        p->next = packet;
-    }
+    this->txTail = nextTail;
     target_enable_irq();
 
     return DEVICE_OK;
 }
 
-void JACDAC::configure(bool events)
+/**
+ * Our arrays are FIFO circular buffers.
+ *
+ * Example:
+ * txHead                   txTail
+ * [item, item, item, item, NULL, NULL, NULL]
+ *
+ * Remove:
+ *        txHead            txTail
+ * [NULL, item, item, item, NULL, NULL, NULL]
+ *
+ * Add:
+ *        txHead                  txTail
+ * [NULL, item, item, item, item, NULL, NULL]
+ **/
+int JACDAC::addToRxArray(JDPkt* packet)
+{
+     uint8_t nextTail = (this->rxTail + 1) % JD_RX_ARRAY_SIZE;
+
+    if (nextTail == this->rxHead)
+        return DEVICE_NO_RESOURCES;
+
+    // add our buffer to the array before updating the head
+    // this ensures atomicity.
+    this->rxArray[this->rxTail] = packet;
+    target_disable_irq();
+    this->rxTail = nextTail;
+    target_enable_irq();
+
+    return DEVICE_OK;
+}
+
+void JACDAC::configure(JACDACPinEvents eventType)
 {
     sp.getDigitalValue(PullMode::Up);
 
-    if (events)
-        sp.eventOn(DEVICE_PIN_EVENT_ON_EDGE);
-    else
-        sp.eventOn(DEVICE_PIN_EVENT_NONE);
+    // to ensure atomicity of the state machine, we disable one event and enable the other.
+    if (eventType == PulseEvents)
+    {
+        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_PULSE_LO, this, &JACDAC::onLowPulse, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::sendPacket);
+    }
+
+    if (eventType == EdgeEvents)
+    {
+        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::sendPacket);
+        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_PULSE_LO, this, &JACDAC::onLowPulse);
+    }
+
+    sp.eventOn(eventType);
 }
 
 void JACDAC::initialise()
 {
     rxBuf = NULL;
     txBuf = NULL;
+    memset(rxArray, 0, sizeof(JDPkt*) * JD_RX_ARRAY_SIZE);
+    memset(txArray, 0, sizeof(JDPkt*) * JD_TX_ARRAY_SIZE);
 
-    rxQueue = NULL;
-    txQueue = NULL;
-
+    this->id = id;
     status = 0;
 
     sp.getDigitalValue(PullMode::None);
 
-    sws.setBaud(JD_SERIAL_MAX_BAUD / (uint8_t)baud);
+    sws.setBaud(baudToByteMap[(uint8_t)txBaud - 1].baud);
+    currentBaud = txBaud;
     sws.setDMACompletionHandler(this, &JACDAC::dmaComplete);
 
     if (EventModel::defaultEventBus)
     {
-        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_FALL, this, &JACDAC::onFallingEdge, MESSAGE_BUS_LISTENER_IMMEDIATE);
         EventModel::defaultEventBus->listen(this->id, JD_SERIAL_EVT_DRAIN, this, &JACDAC::sendPacket, MESSAGE_BUS_LISTENER_IMMEDIATE);
         EventModel::defaultEventBus->listen(this->id, JD_SERIAL_EVT_RX_TIMEOUT, this, &JACDAC::rxTimeout, MESSAGE_BUS_LISTENER_IMMEDIATE);
     }
@@ -275,7 +409,7 @@ void JACDAC::initialise()
 JACDAC::JACDAC(DMASingleWireSerial&  sws, Pin* busStateLED, Pin* commStateLED, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), busLED(busStateLED), commLED(commStateLED)
 {
     this->id = id;
-    this->baud = baudRate;
+    this->txBaud = baudRate;
     initialise();
 }
 
@@ -286,19 +420,7 @@ JACDAC::JACDAC(DMASingleWireSerial&  sws, Pin* busStateLED, Pin* commStateLED, J
  */
 JDPkt* JACDAC::getPacket()
 {
-    return popQueue(&rxQueue);
-}
-
-/**
- * Retrieves the first packet on the rxQueue with a matching device_class
- *
- * @param address the address filter to apply to packets in the rxQueue
- *
- * @returns the first packet on the rxQueue matching the device_class or NULL
- */
-JDPkt* JACDAC::getPacket(uint8_t address)
-{
-    return removeFromQueue(&rxQueue, address);
+    return popRxArray();
 }
 
 /**
@@ -319,8 +441,8 @@ void JACDAC::start()
     status |= DEVICE_COMPONENT_RUNNING;
     target_enable_irq();
 
-    // check if the bus is lo here and change our busLED
-    configure(true);
+    // check if the bus is lo here and change our led
+    configure(JACDACPinEvents::PulseEvents);
 
     if (busLED)
         busLED->setDigitalValue(1);
@@ -343,7 +465,7 @@ void JACDAC::stop()
         rxBuf = NULL;
     }
 
-    configure(false);
+    configure(JACDACPinEvents::NoEvents);
 
     if (busLED)
         busLED->setDigitalValue(0);
@@ -354,7 +476,7 @@ void JACDAC::sendPacket(Event)
 {
     JD_DMESG("SENDP");
     // if we are receiving, randomly back off
-    if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_BUS_RISE))
+    if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_BUS_RISE))
     {
         JD_DMESG("WAIT %s", (status & JD_SERIAL_BUS_RISE) ? "LO" : "REC");
         if (status & JD_SERIAL_BUS_RISE)
@@ -364,8 +486,7 @@ void JACDAC::sendPacket(Event)
                 busLED->setDigitalValue(1);
 
             status &= ~JD_SERIAL_BUS_RISE;
-            EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::sendPacket);
-            Event(this->id, JD_SERIAL_EVT_BUS_CONNECTED);
+            configure(JACDACPinEvents::PulseEvents);
         }
 
         system_timer_event_after_us(JD_SERIAL_TX_MIN_BACKOFF + target_random(JD_SERIAL_TX_MAX_BACKOFF - JD_SERIAL_TX_MIN_BACKOFF), this->id, JD_SERIAL_EVT_DRAIN);
@@ -379,10 +500,9 @@ void JACDAC::sendPacket(Event)
         {
             JD_DMESG("BUS LO");
             // something is holding the bus lo
-            configure(true);
+            configure(JACDACPinEvents::EdgeEvents);
             // listen for when it is hi again
             status |= JD_SERIAL_BUS_RISE;
-            EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::sendPacket);
 
             if (busLED)
                 busLED->setDigitalValue(0);
@@ -394,31 +514,36 @@ void JACDAC::sendPacket(Event)
             return;
         }
 
-        // performing the above digital read will disable fall events... re-enable
-        configure(true);
-
+        // If we get here, we assume we have control of the bus.
         // if we have stuff in our queue, and we have not triggered a DMA transfer...
-        if (txQueue)
+        if (this->txHead != this->txTail)
         {
             JD_DMESG("TX B");
             status |= JD_SERIAL_TRANSMITTING;
-            txBuf = popQueue(&txQueue);
+            txBuf = popTxArray(); // perhaps only pop after confirmed send?
 
             sp.setDigitalValue(0);
-            target_wait_us(10);
+            target_wait_us(baudToByteMap[(uint8_t)txBaud - 1].time_per_byte);
             sp.setDigitalValue(1);
 
             // return after 100 us
             system_timer_event_after_us(100, this->id, JD_SERIAL_EVT_DRAIN);
+
+            if (txBaud != currentBaud)
+            {
+                sws.setBaud(baudToByteMap[(uint8_t)txBaud - 1].baud);
+                currentBaud = txBaud;
+            }
             return;
         }
+        JD_DMESG("txh: %d txt: %d",txHead,txTail);
     }
 
     // we've returned after a DMA transfer has been flagged (above)... start
     if (status & JD_SERIAL_TRANSMITTING)
     {
         JD_DMESG("TX S");
-        sws.sendDMA((uint8_t *)txBuf, JD_SERIAL_PACKET_SIZE);
+        sws.sendDMA((uint8_t *)txBuf, txBuf->size + JD_SERIAL_HEADER_SIZE);
         if (commLED)
             commLED->setDigitalValue(1);
         return;
@@ -454,11 +579,13 @@ int JACDAC::send(JDPkt* tx)
     memset(pkt, 0, sizeof(JDPkt));
     memcpy(pkt, tx, sizeof(JDPkt));
 
+    DMESG("QU %d", pkt->size);
+
     // skip the crc.
     uint8_t* crcPointer = (uint8_t*)&pkt->address;
-    pkt->crc = fletcher16(crcPointer, JD_SERIAL_PACKET_SIZE - 2);
+    pkt->crc = fletcher16(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE);
 
-    int ret = addToQueue(&txQueue, pkt);
+    int ret = addToTxArray(pkt);
 
     if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
     {
@@ -531,7 +658,7 @@ bool JACDAC::isConnected()
     int busVal = sp.getDigitalValue(PullMode::Up);
 
     // re-enable events!
-    configure(true);
+    configure(JACDACPinEvents::PulseEvents);
 
     if (busVal)
         return true;
@@ -565,7 +692,7 @@ JACDACBusState JACDAC::getState()
     // if we are neither transmitting or receiving, examine the bus.
     int busVal = sp.getDigitalValue(PullMode::Up);
     // re-enable events!
-    configure(true);
+    configure(JACDACPinEvents::PulseEvents);
 
     if (busVal)
         return JACDACBusState::High;
@@ -576,12 +703,11 @@ JACDACBusState JACDAC::getState()
 
 int JACDAC::setBaud(JACDACBaudRate baud)
 {
-    this->baud = baud;
-    sws.setBaud(JD_SERIAL_MAX_BAUD / (uint8_t)baud);
+    this->txBaud = baud;
     return DEVICE_OK;
 }
 
 JACDACBaudRate JACDAC::getBaud()
 {
-    return baud;
+    return this->txBaud;
 }

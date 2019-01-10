@@ -147,7 +147,7 @@ void JDLogicDriver::timerCallback(Event)
                 JD_DMESG("DIFFERENCE %d ", difference);
             }
             else if (current->device.flags & JD_DEVICE_FLAGS_INITIALISED)
-                dataOffset += populateDriverInfo(current, info, JD_SERIAL_MAX_DATA_SIZE - dataOffset);
+                dataOffset += populateDriverInfo(current, info, JD_SERIAL_MAX_PAYLOAD_SIZE - dataOffset);
         }
     }
 

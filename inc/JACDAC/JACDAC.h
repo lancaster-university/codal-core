@@ -36,10 +36,10 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_MAX_BUFFERS          10
 
 #define JD_SERIAL_RECEIVING            0x02
-#define JD_SERIAL_TRANSMITTING         0x04
-#define JD_SERIAL_TX_DRAIN_ENABLE      0x08
-#define JD_SERIAL_BUS_RISE             0x10
-
+#define JD_SERIAL_RECEIVING_HEADER     0x04
+#define JD_SERIAL_TRANSMITTING         0x08
+#define JD_SERIAL_TX_DRAIN_ENABLE      0x10
+#define JD_SERIAL_BUS_RISE             0x20
 
 #define JD_SERIAL_EVT_DATA_READY       1
 #define JD_SERIAL_EVT_BUS_ERROR        2
@@ -50,8 +50,9 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_EVT_BUS_DISCONNECTED 6
 
 #define JD_SERIAL_HEADER_SIZE          4
+#define JD_SERIAL_CRC_HEADER_SIZE      2 // when computing CRC, we skip the CRC field, so the header size decreases by two.
 #define JD_SERIAL_DATA_SIZE            32
-#define JD_SERIAL_MAX_DATA_SIZE        32 // duplciate above for now
+#define JD_SERIAL_MAX_PAYLOAD_SIZE     (255 - JD_SERIAL_HEADER_SIZE)
 #define JD_SERIAL_PACKET_SIZE          (JD_SERIAL_HEADER_SIZE + JD_SERIAL_DATA_SIZE)
 
 #define JD_SERIAL_MAXIMUM_BUFFERS      10
@@ -61,6 +62,9 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_MAX_BAUD             1000000
 #define JD_SERIAL_TX_MAX_BACKOFF       4000
 #define JD_SERIAL_TX_MIN_BACKOFF       1000
+
+#define JD_RX_ARRAY_SIZE               10
+#define JD_TX_ARRAY_SIZE               10
 
 #if CONFIG_ENABLED(JD_DEBUG)
 #define JD_DMESG      codal_dmesg
@@ -102,9 +106,7 @@ namespace codal
         uint8_t size; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.
 
         // add more stuff
-        uint8_t data[JD_SERIAL_MAX_DATA_SIZE];
-
-        JDPkt* next;
+        uint8_t data[JD_SERIAL_MAX_PAYLOAD_SIZE];
     } __attribute((__packed__));
 
     enum class JACDACBusState : uint8_t
@@ -127,12 +129,20 @@ namespace codal
         Baud125K = 8
     };
 
+    enum JACDACPinEvents : uint16_t
+    {
+        NoEvents = DEVICE_PIN_EVENT_NONE,
+        EdgeEvents = DEVICE_PIN_EVENT_ON_EDGE,
+        PulseEvents = DEVICE_PIN_EVENT_ON_PULSE,
+    };
+
     /**
     * Class definition for a JACDAC interface.
     */
     class JACDAC : public CodalComponent
     {
-        JACDACBaudRate baud;
+        JACDACBaudRate txBaud;
+        JACDACBaudRate currentBaud;
 
     protected:
         DMASingleWireSerial&  sws;
@@ -141,13 +151,14 @@ namespace codal
         Pin* busLED;
         Pin* commLED;
 
-        void onFallingEdge(Event);
-        void configure(bool events);
+        void onLowPulse(Event);
+        void configure(JACDACPinEvents event);
         void dmaComplete(Event evt);
 
-        JDPkt* popQueue(JDPkt** queue);
-        int addToQueue(JDPkt** queue, JDPkt* packet);
-        JDPkt* removeFromQueue(JDPkt** queue, uint8_t device_class);
+        JDPkt* popRxArray();
+        JDPkt* popTxArray();
+        int addToTxArray(JDPkt* packet);
+        int addToRxArray(JDPkt* packet);
 
         void sendPacket(Event);
 
@@ -156,11 +167,16 @@ namespace codal
         void initialise();
 
     public:
-        JDPkt* rxBuf;
-        JDPkt* txBuf;
 
-        JDPkt* rxQueue;
-        JDPkt* txQueue;
+        uint8_t txHead;
+        uint8_t txTail;
+        uint8_t rxHead;
+        uint8_t rxTail;
+
+        JDPkt* rxBuf; // holds the pointer to the current rx buffer
+        JDPkt* txBuf; // holds the pointer to the current tx buffer
+        JDPkt* rxArray[JD_RX_ARRAY_SIZE];
+        JDPkt* txArray[JD_TX_ARRAY_SIZE];
 
         /**
           * Constructor
@@ -183,15 +199,6 @@ namespace codal
         JDPkt *getPacket();
 
         /**
-          * Retrieves the first packet on the rxQueue with a matching device_class
-          *
-          * @param address the address filter to apply to packets in the rxQueue
-          *
-          * @returns the first packet on the rxQueue matching the device_class or NULL
-          */
-        JDPkt* getPacket(uint8_t address);
-
-        /**
           * Causes this instance of JACDAC to begin listening for packets transmitted on the serial line.
           */
         virtual void start();
@@ -210,7 +217,7 @@ namespace codal
           *
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
           */
-        virtual int send(JDPkt *JD);
+        virtual int send(JDPkt *p);
 
         /**
           * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
@@ -252,8 +259,20 @@ namespace codal
          **/
         JACDACBusState getState();
 
+        /**
+         * Sets the JACDAC baud rate, and internally sets the single wire serial baud JACDAC is using.
+         *
+         * @param baudRate the desired baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
+         *
+         * @returns DEVICE_OK on success
+         **/
         int setBaud(JACDACBaudRate baudRate);
 
+        /**
+         * Returns the current JACDAC baud rate.
+         *
+         * @returns the enumerated baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
+         **/
         JACDACBaudRate getBaud();
     };
 } // namespace codal
