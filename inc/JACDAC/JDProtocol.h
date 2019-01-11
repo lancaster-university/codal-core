@@ -96,7 +96,6 @@ DEALINGS IN THE SOFTWARE.
 // BEGIN    JD SERIAL PROTOCOL
 #define JD_PROTOCOL_EVT_SEND_CONTROL                1
 #define JD_PROTOCOL_DRIVER_ARRAY_SIZE               20
-#define JD_PROTOCOL_VERSION                         0
 
 #include "JDClasses.h"
 

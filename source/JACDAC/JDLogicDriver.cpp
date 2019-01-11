@@ -44,9 +44,6 @@ void JDLogicDriver::timerCallback(Event)
         return;
 
     JDPacket* pkt = (JDPacket *)malloc(JD_MAX_PACKET_SIZE);
-
-    // reuse the pkt flags field to hold our protocol version
-    pkt->flags = JD_PROTOCOL_VERSION;
     pkt->address = 0;
 
     JDControlPacket* cp = (JDControlPacket *)pkt->data;
@@ -194,7 +191,7 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
     JDControlPacket *cp = (JDControlPacket *)pkt->data;
 
     // incompatible version
-    if (pkt->flags != JD_PROTOCOL_VERSION)
+    if (pkt->jacdac_version != JD_VERSION)
         return DEVICE_OK;
 
     uint8_t* dataPointer = cp->data;

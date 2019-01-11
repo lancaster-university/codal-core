@@ -101,7 +101,7 @@ namespace codal
      * or none at all.
      **/
     struct JDPacket {
-        uint8_t jacdac_version: 4, flags: 4;
+        uint8_t jacdac_version;
         uint16_t crc;
         uint8_t address; // control is 0, devices are allocated address in the range 1 - 255
         uint8_t size; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.
