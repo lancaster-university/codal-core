@@ -76,13 +76,9 @@ int JDDriver::sendPairingPacket(JDDevice d)
     return DEVICE_OK;
 }
 
-int JDDriver::handleLogicPacket(uint32_t serial_number, JDDriverInfo* info)
+int JDDriver::handleLogicPacket(JDControlPacket* cp)
 {
-    JDControlPacket* cp = (JDControlPacket*)malloc(sizeof(JDControlPacket) + info->size + JD_DRIVER_INFO_HEADER_SIZE);
-    cp->serial_number = serial_number;
-
-    memcpy(cp->data, info, info->size + JD_DRIVER_INFO_HEADER_SIZE);
-
+    JDDriverInfo* info = (JDDriverInfo *)cp->data;
     int ret = DEVICE_OK;
 
     // filter out any pairing requests for special handling by drivers.
@@ -96,7 +92,6 @@ int JDDriver::handleLogicPacket(uint32_t serial_number, JDDriverInfo* info)
     else
         ret = this->handleControlPacket(cp);
 
-    free(cp);
     return ret;
 }
 

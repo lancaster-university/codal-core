@@ -42,7 +42,7 @@ namespace codal
 
         int start();
 
-        virtual int populateDriverInfo(JDDriverInfo* cp);
+        virtual int populateDriverInfo(JDDriverInfo* cp, uint8_t bytesRemaining);
 
         virtual int handleControlPacket(JDControlPacket* cp);
 

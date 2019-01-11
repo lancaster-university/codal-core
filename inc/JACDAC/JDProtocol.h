@@ -423,7 +423,7 @@ namespace codal
          *
          * i.e. it switches the type of the logic packet, and redirects it to handleControlPacket or handlePairingPacket accordingly.
          **/
-        int handleLogicPacket(uint32_t serial_number, JDDriverInfo* info);
+        int handleLogicPacket(JDControlPacket* cp);
 
         /**
          * Called by the logic driver when a new device is connected to the serial bus
@@ -615,6 +615,9 @@ namespace codal
      **/
     class JDLogicDriver : public JDDriver
     {
+        JDControlPacket* rxControlPacket; // given to drivers upon receiving a control packet from another device.
+        JDPacket* txControlPacket; // used to transmit this devices' information (more optimal than repeat allocing)
+
         // this array is used to filter paired driver packets from consuming unneccessary processing cycles
         // on jacdac devices.
         uint8_t address_filters[JD_LOGIC_DRIVER_MAX_FILTERS];

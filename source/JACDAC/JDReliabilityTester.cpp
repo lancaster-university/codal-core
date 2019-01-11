@@ -70,13 +70,17 @@ int JDReliabilityTester::start()
     return this->max_count;
 }
 
-int JDReliabilityTester::populateDriverInfo(JDDriverInfo* p)
+int JDReliabilityTester::populateDriverInfo(JDDriverInfo* p, uint8_t bytesRemaining)
 {
+    if (bytesRemaining < sizeof(ReliabilityAdvertisement))
+        return 0;
+
     JDControlPacket* cp = (JDControlPacket*)p->data;
     ReliabilityAdvertisement* ra = (ReliabilityAdvertisement*)cp->data;
     ra->status = this->status;
     ra->max_count = this->max_count;
-    return DEVICE_OK;
+
+    return sizeof(ReliabilityAdvertisement);
 }
 
 int JDReliabilityTester::handleControlPacket(JDControlPacket* p)

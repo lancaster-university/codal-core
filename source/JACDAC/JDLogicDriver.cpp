@@ -46,10 +46,9 @@ void JDLogicDriver::timerCallback(Event)
     if (!JDProtocol::instance || !JDProtocol::instance->bus.isRunning())
         return;
 
-    JDPacket* pkt = (JDPacket *)malloc(JD_MAX_PACKET_SIZE);
-    pkt->address = 0;
+    txControlPacket->address = 0;
 
-    JDControlPacket* cp = (JDControlPacket *)pkt->data;
+    JDControlPacket* cp = (JDControlPacket *)txControlPacket->data;
     cp->serial_number = target_get_serial();
 
     uint8_t dataOffset = 0;
@@ -155,13 +154,12 @@ void JDLogicDriver::timerCallback(Event)
         }
     }
 
+    // only transmit if we have DriverInformation to send.
     if (dataOffset > 0)
     {
-        pkt->size = JD_CONTROL_PACKET_HEADER_SIZE + dataOffset;
-        JDProtocol::send(pkt);
+        txControlPacket->size = JD_CONTROL_PACKET_HEADER_SIZE + dataOffset;
+        JDProtocol::send(txControlPacket);
     }
-
-    free(pkt);
 
     this->rolling_counter++;
 }
@@ -169,6 +167,10 @@ void JDLogicDriver::timerCallback(Event)
 JDLogicDriver::JDLogicDriver() : JDDriver(JDDevice(0, JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_INITIALISED, 0, 0))
 {
     this->device.address = 0;
+
+    this->rxControlPacket = (JDControlPacket *)malloc(sizeof(JDControlPacket) + sizeof(JDDriverInfo) + JD_DRIVER_INFO_MAX_PAYLOAD_SIZE);
+    this->txControlPacket = (JDPacket *)malloc(sizeof(JDPacket));
+
     status = 0;
     memset(this->address_filters, 0, JD_LOGIC_DRIVER_MAX_FILTERS);
     status |= (DEVICE_COMPONENT_RUNNING);
@@ -199,11 +201,19 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
 
     uint8_t* dataPointer = cp->data;
 
+    // set the serial_number of our statically allocated rx control packet (which is given to every driver)
+    rxControlPacket->serial_number = cp->serial_number;
+
     JD_DMESG("CP size:%d wh:%d", pkt->size, (pkt->size - JD_CONTROL_PACKET_HEADER_SIZE));
 
     while (dataPointer < cp->data + (pkt->size - JD_CONTROL_PACKET_HEADER_SIZE))
     {
         JDDriverInfo* driverInfo = (JDDriverInfo *)dataPointer;
+
+        // presumably we will eventually pass this control packet to a driver.
+        // copy the driver information into our statically allocated control packet.
+        if (driverInfo->size > 0 && driverInfo->size <= JD_DRIVER_INFO_MAX_PAYLOAD_SIZE)
+            memcpy(rxControlPacket->data, driverInfo, JD_DRIVER_INFO_HEADER_SIZE + driverInfo->size);
 
         // special packet types should be handled here.
         if (driverInfo->type == JD_DRIVER_INFO_TYPE_PANIC)
@@ -314,7 +324,7 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                         // 3) we are not conflicting with another device.
                         // 4) someone external has addressed a packet to us.
                     JD_DMESG("FOUND LOCAL");
-                    if (safe && current->handleLogicPacket(cp->serial_number, driverInfo) == DEVICE_OK)
+                    if (safe && current->handleLogicPacket(rxControlPacket) == DEVICE_OK)
                     {
                         handled = true;
                         JD_DMESG("L ABSORBED %d", current->device.address);
@@ -338,7 +348,7 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                         current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
                         JD_DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
 
-                        if (safe && current->handleLogicPacket(cp->serial_number, driverInfo) == DEVICE_OK)
+                        if (safe && current->handleLogicPacket(rxControlPacket) == DEVICE_OK)
                         {
                             handled = true;
                             JD_DMESG("R ABSORBED %d", current->device.address);
@@ -383,7 +393,7 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                             continue;
 
                         JD_DMESG("FOUND NEW: %d %d %d", current->device.address, current->device.driver_class);
-                        int ret = current->handleLogicPacket(cp->serial_number, driverInfo);
+                        int ret = current->handleLogicPacket(rxControlPacket);
 
                         if (ret == DEVICE_OK)
                         {
