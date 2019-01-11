@@ -31,7 +31,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "DMASingleWireSerial.h"
 
-#define JD_VERSION                     5
+#define JD_VERSION                     0
 
 #define JD_SERIAL_MAX_BUFFERS          10
 
@@ -49,8 +49,8 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_EVT_BUS_CONNECTED    5
 #define JD_SERIAL_EVT_BUS_DISCONNECTED 6
 
-#define JD_SERIAL_HEADER_SIZE          4
-#define JD_SERIAL_CRC_HEADER_SIZE      2 // when computing CRC, we skip the CRC field, so the header size decreases by two.
+#define JD_SERIAL_HEADER_SIZE          5
+#define JD_SERIAL_CRC_HEADER_SIZE      3 // when computing CRC, we skip the CRC and version fields, so the header size decreases by three.
 #define JD_SERIAL_DATA_SIZE            32
 #define JD_SERIAL_MAX_PAYLOAD_SIZE     (255 - JD_SERIAL_HEADER_SIZE)
 #define JD_SERIAL_PACKET_SIZE          (JD_SERIAL_HEADER_SIZE + JD_SERIAL_DATA_SIZE)
@@ -101,6 +101,7 @@ namespace codal
      * or none at all.
      **/
     struct JDPkt {
+        uint8_t jacdac_version: 4, flags: 4;
         uint16_t crc;
         uint8_t address; // control is 0, devices are allocated address in the range 1 - 255
         uint8_t size; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.
@@ -159,11 +160,8 @@ namespace codal
         JDPkt* popTxArray();
         int addToTxArray(JDPkt* packet);
         int addToRxArray(JDPkt* packet);
-
         void sendPacket(Event);
-
         void rxTimeout(Event);
-
         void initialise();
 
     public:

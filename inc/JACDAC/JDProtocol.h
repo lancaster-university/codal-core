@@ -88,12 +88,15 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DRIVER_INFO_TYPE_PAIRING_REQUEST             0x2
 #define JD_DRIVER_INFO_TYPE_ERROR                       0x3
 #define JD_DRIVER_INFO_TYPE_PANIC                       0xF
+
+#define JD_DRIVER_INFO_MAX_PAYLOAD_SIZE                 16
 // END      LOGIC DRIVER FLAGS
 
 
 // BEGIN    JD SERIAL PROTOCOL
 #define JD_PROTOCOL_EVT_SEND_CONTROL                1
 #define JD_PROTOCOL_DRIVER_ARRAY_SIZE               20
+#define JD_PROTOCOL_VERSION                         0
 
 #include "JDClasses.h"
 
@@ -130,7 +133,7 @@ namespace codal
         uint8_t address;        // the address assigned by the logic driver
         uint16_t flags: 8, error_code: 4, type: 4; // various flags, upper eight bits are reserved for control usage, error code, then driver info type
         uint32_t driver_class;  // the class of the driver
-        uint8_t data[]; // optional additional data
+        uint8_t data[]; // optional additional data, maximum of 16 bytes
     } __attribute((__packed__));
 
     // This enumeration specifies that supported configurations that drivers should utilise.

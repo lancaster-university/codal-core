@@ -135,7 +135,7 @@ void JACDAC::dmaComplete(Event evt)
                 uint8_t* crcPointer = (uint8_t*)&rxBuf->address;
                 uint16_t crc = fletcher16(crcPointer, rxBuf->size + JD_SERIAL_CRC_HEADER_SIZE); // include size and address in the checksum.
 
-                if (crc == rxBuf->crc)
+                if (crc == rxBuf->crc && rxBuf->jacdac_version == JD_VERSION)
                 {
                     // move rxbuf to rxArray and allocate new buffer.
                     addToRxArray(rxBuf);
@@ -583,6 +583,7 @@ int JACDAC::send(JDPkt* tx)
 
     // skip the crc.
     uint8_t* crcPointer = (uint8_t*)&pkt->address;
+    pkt->jacdac_version = JD_VERSION;
     pkt->crc = fletcher16(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE);
 
     int ret = addToTxArray(pkt);

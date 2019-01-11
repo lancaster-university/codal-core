@@ -44,7 +44,11 @@ void JDLogicDriver::timerCallback(Event)
         return;
 
     JDPkt* pkt = (JDPkt *)malloc(JD_MAX_PACKET_SIZE);
+
+    // reuse the pkt flags field to hold our protocol version
+    pkt->flags = JD_PROTOCOL_VERSION;
     pkt->address = 0;
+
     JDControlPacket* cp = (JDControlPacket *)pkt->data;
     cp->serial_number = target_get_serial();
 
@@ -188,6 +192,10 @@ int JDLogicDriver::handleControlPacket(JDControlPacket* p)
 int JDLogicDriver::handlePacket(JDPkt* pkt)
 {
     JDControlPacket *cp = (JDControlPacket *)pkt->data;
+
+    // incompatible version
+    if (pkt->flags != JD_PROTOCOL_VERSION)
+        return DEVICE_OK;
 
     uint8_t* dataPointer = cp->data;
 
