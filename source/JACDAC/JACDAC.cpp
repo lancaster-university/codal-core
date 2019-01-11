@@ -149,8 +149,8 @@ void JACDAC::dmaComplete(Event evt)
                 {
                     DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
                     uint8_t* bufPtr = (uint8_t*)rxBuf;
-                    for (int i = 0; i < JD_SERIAL_HEADER_SIZE + 2; i++)
-                        DMESG("%d[%c]",bufPtr[i]);
+                    // for (int i = 0; i < JD_SERIAL_HEADER_SIZE + 2; i++)
+                    //     DMESG("%d[%c]",bufPtr[i]);
                 }
             }
         }
@@ -226,6 +226,7 @@ void JACDAC::rxTimeout(Event)
     status &= ~(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER);
     sws.setMode(SingleWireDisconnected);
     configure(JACDACPinEvents::PulseEvents);
+
     if (commLED)
         commLED->setDigitalValue(0);
 }

@@ -24,7 +24,10 @@ int JDLogicDriver::populateDriverInfo(JDDriver* driver, JDDriverInfo* info, uint
     info->driver_class = driver->device.driver_class;
 
     if (bytesRemaining > 0)
-        info->size = driver->populateDriverInfo(info, bytesRemaining);
+    {
+        int payloadSize = driver->populateDriverInfo(info, min(bytesRemaining, JD_DRIVER_INFO_MAX_PAYLOAD_SIZE));
+        info->size = min(payloadSize, JD_DRIVER_INFO_MAX_PAYLOAD_SIZE);
+    }
 
     info->error_code = driver->device.getError();
 
