@@ -531,7 +531,7 @@ namespace codal
          * @return DEVICE_OK to signal that the packet has been handled, or DEVICE_CANCELLED to indicate the logic driver
          *         should continue to search for a driver.
          **/
-        virtual int handlePacket(JDPkt* p);
+        virtual int handlePacket(JDPacket* p);
 
         /**
          * Returns the current connected state of this driver instance.
@@ -603,7 +603,7 @@ namespace codal
         {
         }
 
-        virtual int handlePacket(JDPkt* p)
+        virtual int handlePacket(JDPacket* p)
         {
             return other.handlePacket(p);
         }
@@ -661,7 +661,7 @@ namespace codal
          *
          * @param p the packet from the serial bus.
          **/
-        virtual int handlePacket(JDPkt* p);
+        virtual int handlePacket(JDPacket* p);
 
         /**
          * This function provides the ability to ignore specific packets. For instance,
@@ -788,16 +788,16 @@ namespace codal
         virtual int remove(JDDriver& device);
 
         /**
-         * A static method to send an entire, premade JDPkt on the bus. Used by the logic driver.
+         * A static method to send an entire, premade JDPacket on the bus. Used by the logic driver.
          *
          * @param pkt the packet to send.
          *
          * @return DEVICE_OK on success.
          **/
-        static int send(JDPkt* pkt);
+        static int send(JDPacket* pkt);
 
         /**
-         * A static method to send a buffer on the bus. The buffer is placed in a JDPkt and sent.
+         * A static method to send a buffer on the bus. The buffer is placed in a JDPacket and sent.
          *
          * @param buf a pointer to the data to send
          *

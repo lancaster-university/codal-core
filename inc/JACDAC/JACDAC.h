@@ -75,7 +75,7 @@ DEALINGS IN THE SOFTWARE.
 namespace codal
 {
     /**
-     * A JDPkt contains: a crc for error checking, the size of the packet
+     * A JDPacket contains: a crc for error checking, the size of the packet
      * and an address.
      *
      * An address of a packet can be the drivers own address, or another drivers address.
@@ -100,7 +100,7 @@ namespace codal
      * allows any packet addressed to a class to be received. Broadcast drivers can be combined with either mode above,
      * or none at all.
      **/
-    struct JDPkt {
+    struct JDPacket {
         uint8_t jacdac_version: 4, flags: 4;
         uint16_t crc;
         uint8_t address; // control is 0, devices are allocated address in the range 1 - 255
@@ -156,10 +156,10 @@ namespace codal
         void configure(JACDACPinEvents event);
         void dmaComplete(Event evt);
 
-        JDPkt* popRxArray();
-        JDPkt* popTxArray();
-        int addToTxArray(JDPkt* packet);
-        int addToRxArray(JDPkt* packet);
+        JDPacket* popRxArray();
+        JDPacket* popTxArray();
+        int addToTxArray(JDPacket* packet);
+        int addToRxArray(JDPacket* packet);
         void sendPacket(Event);
         void rxTimeout(Event);
         void initialise();
@@ -171,10 +171,10 @@ namespace codal
         uint8_t rxHead;
         uint8_t rxTail;
 
-        JDPkt* rxBuf; // holds the pointer to the current rx buffer
-        JDPkt* txBuf; // holds the pointer to the current tx buffer
-        JDPkt* rxArray[JD_RX_ARRAY_SIZE];
-        JDPkt* txArray[JD_TX_ARRAY_SIZE];
+        JDPacket* rxBuf; // holds the pointer to the current rx buffer
+        JDPacket* txBuf; // holds the pointer to the current tx buffer
+        JDPacket* rxArray[JD_RX_ARRAY_SIZE];
+        JDPacket* txArray[JD_TX_ARRAY_SIZE];
 
         /**
           * Constructor
@@ -194,7 +194,7 @@ namespace codal
           *
           * @returns the first packet on the rxQueue or NULL
           */
-        JDPkt *getPacket();
+        JDPacket *getPacket();
 
         /**
           * Causes this instance of JACDAC to begin listening for packets transmitted on the serial line.
@@ -215,7 +215,7 @@ namespace codal
           *
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
           */
-        virtual int send(JDPkt *p);
+        virtual int send(JDPacket *p);
 
         /**
           * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.

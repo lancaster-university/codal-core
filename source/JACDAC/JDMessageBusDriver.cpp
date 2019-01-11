@@ -97,7 +97,7 @@ int JDMessageBusDriver::ignore(uint16_t id, uint16_t value, EventModel &eventBus
   *
   * This function process this packet, and fires the event contained inside onto the default EventModel.
   */
-int JDMessageBusDriver::handlePacket(JDPkt* p)
+int JDMessageBusDriver::handlePacket(JDPacket* p)
 {
     Event *e = (Event *) p->data;
 
@@ -108,7 +108,7 @@ int JDMessageBusDriver::handlePacket(JDPkt* p)
     return DEVICE_OK;
 }
 
-int JDMessageBusDriver::handleControlPacket(JDPkt*)
+int JDMessageBusDriver::handleControlPacket(JDPacket*)
 {
     return DEVICE_OK;
 }

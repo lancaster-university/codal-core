@@ -35,7 +35,7 @@ namespace codal
 
         virtual int handleControlPacket(JDControlPacket* cp);
 
-        virtual int handlePacket(JDPkt* p);
+        virtual int handlePacket(JDPacket* p);
     };
 }
 

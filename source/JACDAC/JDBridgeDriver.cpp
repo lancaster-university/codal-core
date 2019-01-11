@@ -52,7 +52,7 @@ void JDBridgeDriver::forwardPacket(Event)
 
     DMESG("length: %d", packet.length());
 
-    JDPkt* pkt = (JDPkt *)packet.getBytes();
+    JDPacket* pkt = (JDPacket *)packet.getBytes();
     uint32_t id = pkt->address << 16 | pkt->crc;
 
     // if (checkHistory(id))
@@ -69,12 +69,12 @@ void JDBridgeDriver::forwardPacket(Event)
     JDProtocol::send(pkt);
 }
 
-int JDBridgeDriver::handleControlPacket(JDPkt* cp)
+int JDBridgeDriver::handleControlPacket(JDPacket* cp)
 {
     return DEVICE_OK;
 }
 
-int JDBridgeDriver::handlePacket(JDPkt* p)
+int JDBridgeDriver::handlePacket(JDPacket* p)
 {
     uint32_t id = p->address << 16 | p->crc;
 

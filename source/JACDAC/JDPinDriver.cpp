@@ -57,7 +57,7 @@ int JDPinDriver::handleControlPacket(JDControlPacket* cp)
     return DEVICE_OK;
 }
 
-int JDPinDriver::handlePacket(JDPkt* p)
+int JDPinDriver::handlePacket(JDPacket* p)
 {
     PinPacket* pinData = (PinPacket*)p->data;
 

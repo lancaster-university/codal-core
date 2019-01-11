@@ -105,7 +105,7 @@ int JDReliabilityTester::handleControlPacket(JDControlPacket* p)
     return DEVICE_OK;
 }
 
-int JDReliabilityTester::handlePacket(JDPkt* p)
+int JDReliabilityTester::handlePacket(JDPacket* p)
 {
     ReliabilityPacket* pinData = (ReliabilityPacket*)p->data;
 

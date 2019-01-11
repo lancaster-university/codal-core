@@ -40,7 +40,7 @@ JDProtocol* JDProtocol::instance = NULL;
 
 void JDProtocol::onPacketReceived(Event)
 {
-    JDPkt* pkt = NULL;
+    JDPacket* pkt = NULL;
 
     while((pkt = bus.getPacket()) != NULL)
     {
@@ -158,7 +158,7 @@ int JDProtocol::setBridge(JDDriver* bridge)
     return DEVICE_OK;
 }
 
-int JDProtocol::send(JDPkt* pkt)
+int JDProtocol::send(JDPacket* pkt)
 {
     if (instance)
         return instance->bus.send(pkt);

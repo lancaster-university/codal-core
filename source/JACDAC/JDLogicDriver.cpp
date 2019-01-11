@@ -43,7 +43,7 @@ void JDLogicDriver::timerCallback(Event)
     if (!JDProtocol::instance || !JDProtocol::instance->bus.isRunning())
         return;
 
-    JDPkt* pkt = (JDPkt *)malloc(JD_MAX_PACKET_SIZE);
+    JDPacket* pkt = (JDPacket *)malloc(JD_MAX_PACKET_SIZE);
 
     // reuse the pkt flags field to hold our protocol version
     pkt->flags = JD_PROTOCOL_VERSION;
@@ -189,7 +189,7 @@ int JDLogicDriver::handleControlPacket(JDControlPacket* p)
 /**
   * Given a control packet, finds the associated driver, or if no associated device, associates a remote device with a driver.
   **/
-int JDLogicDriver::handlePacket(JDPkt* pkt)
+int JDLogicDriver::handlePacket(JDPacket* pkt)
 {
     JDControlPacket *cp = (JDControlPacket *)pkt->data;
 

@@ -310,7 +310,7 @@ int JDDriver::handleErrorPacket(JDControlPacket* cp)
     return DEVICE_OK;
 }
 
-int JDDriver::handlePacket(JDPkt* p)
+int JDDriver::handlePacket(JDPacket* p)
 {
     return DEVICE_OK;
 }
