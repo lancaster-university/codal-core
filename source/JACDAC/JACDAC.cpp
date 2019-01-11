@@ -613,7 +613,7 @@ int JACDAC::send(JDPacket* tx)
  */
 int JACDAC::send(uint8_t* buf, int len, uint8_t address)
 {
-    if (buf == NULL || len <= 0 || len > JD_SERIAL_DATA_SIZE)
+    if (buf == NULL || len <= 0 || len > JD_SERIAL_MAX_PAYLOAD_SIZE)
     {
         JD_DMESG("pkt TOO BIG: %d ",len);
         return DEVICE_INVALID_PARAMETER;

@@ -83,7 +83,7 @@ int JDBridgeDriver::handlePacket(JDPacket* p)
     {
         addToHistory(id);
 
-        ManagedBuffer b((uint8_t*)p, JD_SERIAL_PACKET_SIZE);
+        ManagedBuffer b((uint8_t*)p, p->size + JD_SERIAL_HEADER_SIZE);
         int ret = networkInstance->sendBuffer(b);
 
         // if (ret != DEVICE_OK)
