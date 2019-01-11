@@ -66,8 +66,10 @@ void JDProtocol::onPacketReceived(Event)
                     if ((driver->device.flags & JD_DEVICE_FLAGS_INITIALISED) && driver->device.address == pkt->address)
                     {
                         driver_class = driver->device.driver_class;
-                        // only break if DEVICE_OK is returned (indicates the packet has been handled)
-                        if (driver->handlePacket(pkt) == DEVICE_OK)
+
+                        // break if the device is a broadcast to prevent duplicate receptions
+                        // break if DEVICE_OK is returned (indicates the packet has been handled)
+                        if (driver->device.flags & JD_DEVICE_FLAGS_BROADCAST || driver->handlePacket(pkt) == DEVICE_OK)
                             break;
                     }
                 }
