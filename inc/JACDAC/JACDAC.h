@@ -110,7 +110,7 @@ namespace codal
         uint8_t data[JD_SERIAL_MAX_PAYLOAD_SIZE];
     } __attribute((__packed__));
 
-    enum class JACDACBusState : uint8_t
+    enum class JDBusState : uint8_t
     {
         Receiving,
         Transmitting,
@@ -255,7 +255,7 @@ namespace codal
          * * High, if the line is currently floating high.
          * * Lo if something is currently pulling the line low.
          **/
-        JACDACBusState getState();
+        JDBusState getState();
 
         /**
          * Sets the JACDAC baud rate, and internally sets the single wire serial baud JACDAC is using.

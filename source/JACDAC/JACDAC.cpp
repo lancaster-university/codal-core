@@ -678,17 +678,17 @@ bool JACDAC::isConnected()
  * * High, if the line is currently floating high.
  * * Lo if something is currently pulling the line low.
  **/
-JACDACBusState JACDAC::getState()
+JDBusState JACDAC::getState()
 {
     if (status & JD_SERIAL_RECEIVING)
-        return JACDACBusState::Receiving;
+        return JDBusState::Receiving;
 
     if (status & JD_SERIAL_TRANSMITTING)
-        return JACDACBusState::Transmitting;
+        return JDBusState::Transmitting;
 
     // this flag is set if the bus is being held lo.
     if (status & JD_SERIAL_BUS_RISE)
-        return JACDACBusState::Low;
+        return JDBusState::Low;
 
     // if we are neither transmitting or receiving, examine the bus.
     int busVal = sp.getDigitalValue(PullMode::Up);
@@ -696,9 +696,9 @@ JACDACBusState JACDAC::getState()
     configure(JACDACPinEvents::PulseEvents);
 
     if (busVal)
-        return JACDACBusState::High;
+        return JDBusState::High;
 
-    return JACDACBusState::Low;
+    return JDBusState::Low;
 }
 
 

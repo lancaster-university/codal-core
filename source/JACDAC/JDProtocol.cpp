@@ -196,25 +196,25 @@ void JDProtocol::logState(JackRouter* jr)
     DMESG("Enabled: %d", JDProtocol::instance->bus.isRunning());
 
 
-    JACDACBusState busState = JDProtocol::instance->bus.getState();
+    JDBusState busState = JDProtocol::instance->bus.getState();
 
     const char* busStateStr = "";
 
     switch(busState)
     {
-        case JACDACBusState::Receiving:
+        case JDBusState::Receiving:
             busStateStr = "Receiving";
             break;
 
-        case JACDACBusState::Transmitting:
+        case JDBusState::Transmitting:
             busStateStr = "Transmitting";
             break;
 
-        case JACDACBusState::High:
+        case JDBusState::High:
             busStateStr = "High";
             break;
 
-        case JACDACBusState::Low:
+        case JDBusState::Low:
             busStateStr = "Low";
             break;
     }
