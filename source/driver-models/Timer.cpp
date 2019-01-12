@@ -61,9 +61,10 @@ void timer_callback(uint16_t chan)
 
 void Timer::triggerIn(CODAL_TIMESTAMP t)
 {
-    timer.disableIRQ();
+    // Just in case, disable all IRQs
+    target_disable_irq();
     timer.setCompare(this->ccEventChannel, timer.captureCounter() + t);
-    timer.enableIRQ();
+    target_enable_irq();
 }
 
 TimerEvent *Timer::getTimerEvent()
@@ -259,7 +260,9 @@ int Timer::eventEveryUs(CODAL_TIMESTAMP period, uint16_t id, uint16_t value)
  */
 void Timer::sync()
 {
-    timer.disableIRQ();
+    // Need to disable all IRQs - for example if SPI IRQ is triggered during
+    // sync(), it might call into getTimeUs(), which would call sync()
+    target_disable_irq();
 
     uint32_t val = timer.captureCounter();
     uint32_t elapsed = 0;
@@ -294,7 +297,8 @@ void Timer::sync()
     sigma = val;
     currentTimeUs += elapsed;
     currentTime = currentTimeUs / 1000;
-    timer.enableIRQ();
+
+    target_enable_irq();
 }
 
 /**
