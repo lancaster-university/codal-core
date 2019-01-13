@@ -111,6 +111,9 @@ Timer::Timer(LowLevelTimer& t, uint8_t ccPeriodChannel, uint8_t ccEventChannel) 
     timer.setIRQ(timer_callback);
     timer.setCompare(ccPeriodChannel, 10000000);
     timer.enable();
+
+    delta = 0;
+    sigma = timer.captureCounter();
 }
 
 /**
@@ -267,36 +270,20 @@ void Timer::sync()
     uint32_t val = timer.captureCounter();
     uint32_t elapsed = 0;
 
-    if (val > sigma)
-        elapsed = val - sigma;
-    else
-    {
-        TimerBitMode t = timer.getBitMode();
-
-        uint32_t maxValue = 0;
-
-        switch (t)
-        {
-            case BitMode8:
-                maxValue = 0xFF;
-                break;
-            case BitMode16:
-                maxValue = 0xFFFF;
-                break;
-            case BitMode24:
-                maxValue = 0xFFFFFF;
-                break;
-            case BitMode32:
-                maxValue = 0xFFFFFFFF;
-                break;
-        }
-
-        elapsed = (maxValue - sigma) + val;
-    }
-
+    // assume at least 16 bit counter; note that this also works when the timer overflows
+    elapsed = (uint16_t)(val - sigma);
     sigma = val;
+
+    // advance main timer
     currentTimeUs += elapsed;
-    currentTime = currentTimeUs / 1000;
+
+    // the 64 bit division is ~150 cycles
+    // this is called at least every few ms, and quite possibly much more often
+    delta += elapsed;
+    while (delta >= 1000) {
+        currentTime++;
+        delta -= 1000;
+    }
 
     target_enable_irq();
 }

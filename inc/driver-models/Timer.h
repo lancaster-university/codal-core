@@ -53,7 +53,8 @@ namespace codal
 
     class Timer
     {
-        uint32_t sigma;
+        uint16_t sigma;
+        uint16_t delta;
         LowLevelTimer& timer;
 
         /**
