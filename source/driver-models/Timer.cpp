@@ -61,9 +61,10 @@ void timer_callback(uint16_t chan)
 
 void Timer::triggerIn(CODAL_TIMESTAMP t)
 {
-    timer.disableIRQ();
+    // Just in case, disable all IRQs
+    target_disable_irq();
     timer.setCompare(this->ccEventChannel, timer.captureCounter() + t);
-    timer.enableIRQ();
+    target_enable_irq();
 }
 
 TimerEvent *Timer::getTimerEvent()
@@ -110,6 +111,9 @@ Timer::Timer(LowLevelTimer& t, uint8_t ccPeriodChannel, uint8_t ccEventChannel) 
     timer.setIRQ(timer_callback);
     timer.setCompare(ccPeriodChannel, 10000000);
     timer.enable();
+
+    delta = 0;
+    sigma = timer.captureCounter();
 }
 
 /**
@@ -259,42 +263,29 @@ int Timer::eventEveryUs(CODAL_TIMESTAMP period, uint16_t id, uint16_t value)
  */
 void Timer::sync()
 {
-    timer.disableIRQ();
+    // Need to disable all IRQs - for example if SPI IRQ is triggered during
+    // sync(), it might call into getTimeUs(), which would call sync()
+    target_disable_irq();
 
     uint32_t val = timer.captureCounter();
     uint32_t elapsed = 0;
 
-    if (val > sigma)
-        elapsed = val - sigma;
-    else
-    {
-        TimerBitMode t = timer.getBitMode();
+    // assume at least 16 bit counter; note that this also works when the timer overflows
+    elapsed = (uint16_t)(val - sigma);
+    sigma = val;
 
-        uint32_t maxValue = 0;
+    // advance main timer
+    currentTimeUs += elapsed;
 
-        switch (t)
-        {
-            case BitMode8:
-                maxValue = 0xFF;
-                break;
-            case BitMode16:
-                maxValue = 0xFFFF;
-                break;
-            case BitMode24:
-                maxValue = 0xFFFFFF;
-                break;
-            case BitMode32:
-                maxValue = 0xFFFFFFFF;
-                break;
-        }
-
-        elapsed = (maxValue - sigma) + val;
+    // the 64 bit division is ~150 cycles
+    // this is called at least every few ms, and quite possibly much more often
+    delta += elapsed;
+    while (delta >= 1000) {
+        currentTime++;
+        delta -= 1000;
     }
 
-    sigma = val;
-    currentTimeUs += elapsed;
-    currentTime = currentTimeUs / 1000;
-    timer.enableIRQ();
+    target_enable_irq();
 }
 
 /**
