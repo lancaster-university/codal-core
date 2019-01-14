@@ -148,7 +148,7 @@ void JACDAC::dmaComplete(Event evt)
                 else
                 {
                     DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
-                    uint8_t* bufPtr = (uint8_t*)rxBuf;
+                    // uint8_t* bufPtr = (uint8_t*)rxBuf;
                     // for (int i = 0; i < JD_SERIAL_HEADER_SIZE + 2; i++)
                     //     DMESG("%d[%c]",bufPtr[i]);
                 }

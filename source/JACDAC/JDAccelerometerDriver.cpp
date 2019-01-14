@@ -60,7 +60,7 @@ int JDAccelerometerDriver::getZ()
     return latest.z;
 }
 
-int JDAccelerometerDriver::handleControlPacket(JDPacket* cp)
+int JDAccelerometerDriver::handleControlPacket(JDControlPacket* cp)
 {
     return DEVICE_OK;
 }

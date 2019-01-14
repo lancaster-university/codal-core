@@ -80,7 +80,7 @@ namespace codal
          */
         int ignore(uint16_t id, uint16_t value, EventModel &eventBus);
 
-        virtual int handleControlPacket(JDPacket* cp);
+        virtual int handleControlPacket(JDControlPacket* cp);
 
         virtual int handlePacket(JDPacket* p);
     };

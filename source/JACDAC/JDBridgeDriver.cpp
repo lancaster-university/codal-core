@@ -69,7 +69,7 @@ void JDBridgeDriver::forwardPacket(Event)
     JDProtocol::send(pkt);
 }
 
-int JDBridgeDriver::handleControlPacket(JDPacket* cp)
+int JDBridgeDriver::handleControlPacket(JDControlPacket* cp)
 {
     return DEVICE_OK;
 }

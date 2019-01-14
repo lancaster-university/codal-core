@@ -108,7 +108,7 @@ int JDMessageBusDriver::handlePacket(JDPacket* p)
     return DEVICE_OK;
 }
 
-int JDMessageBusDriver::handleControlPacket(JDPacket*)
+int JDMessageBusDriver::handleControlPacket(JDControlPacket*)
 {
     return DEVICE_OK;
 }

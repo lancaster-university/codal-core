@@ -39,7 +39,7 @@ namespace codal
         int getY();
         int getZ();
 
-        virtual int handleControlPacket(JDPacket* cp);
+        virtual int handleControlPacket(JDControlPacket* cp);
 
         virtual int handlePacket(JDPacket* p);
     };
