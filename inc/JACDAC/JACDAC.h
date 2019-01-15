@@ -210,9 +210,11 @@ namespace codal
           *
           * @param JD the packet to send.
           *
+          * @param compute_crc default = true. When true, the crc is calculated in this member function... if set to false, the crc field is left untouched.
+          *
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
           */
-        virtual int send(JDPacket *p);
+        virtual int send(JDPacket *p, bool compute_crc = true);
 
         /**
           * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.

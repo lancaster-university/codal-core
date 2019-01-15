@@ -121,7 +121,7 @@ void JACDAC::dmaComplete(Event evt)
 
                 JDPacket* rx = (JDPacket*)rxBuf;
                 sws.receiveDMA(((uint8_t*)rxBuf) + JD_SERIAL_HEADER_SIZE, rx->size);
-                DMESG("RXH %d",rx->size);
+                JD_DMESG("RXH %d",rx->size);
 
                 system_timer_event_after(baudToByteMap[(uint8_t)currentBaud - 1].time_per_byte * (rx->size + 2), this->id, JD_SERIAL_EVT_RX_TIMEOUT);
 
@@ -141,16 +141,16 @@ void JACDAC::dmaComplete(Event evt)
                     addToRxArray(rxBuf);
                     rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
                     Event(id, JD_SERIAL_EVT_DATA_READY);
-                    DMESG("DMA RXD");
+                    JD_DMESG("DMA RXD");
                 }
                 // could we do something cool to indicate an incorrect CRC?
                 // i.e. drive the bus low....?
                 else
                 {
-                    DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
+                    JD_DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
                     // uint8_t* bufPtr = (uint8_t*)rxBuf;
                     // for (int i = 0; i < JD_SERIAL_HEADER_SIZE + 2; i++)
-                    //     DMESG("%d[%c]",bufPtr[i]);
+                    //     JD_DMESG("%d[%c]",bufPtr[i]);
                 }
             }
         }
@@ -370,7 +370,7 @@ void JACDAC::configure(JACDACPinEvents eventType)
 
     if (eventType == EdgeEvents)
     {
-        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::sendPacket);
+        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::sendPacket, MESSAGE_BUS_LISTENER_IMMEDIATE);
         EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_PULSE_LO, this, &JACDAC::onLowPulse);
     }
 
@@ -564,9 +564,10 @@ void JACDAC::sendPacket(Event)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int JACDAC::send(JDPacket* tx)
+int JACDAC::send(JDPacket* tx, bool compute_crc)
 {
     JD_DMESG("SEND");
+    // if checks is not set, we skip error checking.
     if (tx == NULL)
         return DEVICE_INVALID_PARAMETER;
 
@@ -580,12 +581,17 @@ int JACDAC::send(JDPacket* tx)
     memset(pkt, 0, sizeof(JDPacket));
     memcpy(pkt, tx, sizeof(JDPacket));
 
-    DMESG("QU %d", pkt->size);
+    JD_DMESG("QU %d", pkt->size);
 
-    // skip the crc.
-    uint8_t* crcPointer = (uint8_t*)&pkt->address;
     pkt->jacdac_version = JD_VERSION;
-    pkt->crc = fletcher16(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE);
+
+    // if compute_crc is not set, we assume the user is competent enough to use their own crc mechanisms.
+    if (compute_crc)
+    {
+        // crc is calculated from the address field onwards
+        uint8_t* crcPointer = (uint8_t*)&pkt->address;
+        pkt->crc = fletcher16(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE);
+    }
 
     int ret = addToTxArray(pkt);
 
