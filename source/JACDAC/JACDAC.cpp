@@ -26,7 +26,7 @@ struct BaudByte
 /**
  * A simple look up for getting the time per byte given a baud rate.
  *
- * JACDACBaudRate index - 1 should be used to index this array.
+ * JDBaudRate index - 1 should be used to index this array.
  *
  * i.e. baudToByteMap[(uint8_t)Baud1M - 1].baud = 1000000
  **/
@@ -171,7 +171,7 @@ void JACDAC::dmaComplete(Event evt)
     // force transition to output so that the pin is reconfigured.
     // also drive the bus high for a little bit.
     sp.setDigitalValue(1);
-    configure(JACDACPinEvents::PulseEvents);
+    configure(JDPinEvents::PulseEvents);
 
     if (commLED)
         commLED->setDigitalValue(0);
@@ -199,10 +199,10 @@ void JACDAC::onLowPulse(Event e)
     if (ts == 0)
         ts = 1;
 
-    if ((JACDACBaudRate)ts != this->currentBaud)
+    if ((JDBaudRate)ts != this->currentBaud)
     {
         sws.setBaud(baudToByteMap[ts - 1].baud);
-        this->currentBaud = (JACDACBaudRate)ts;
+        this->currentBaud = (JDBaudRate)ts;
     }
 
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
@@ -225,7 +225,7 @@ void JACDAC::rxTimeout(Event)
     Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
     status &= ~(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER);
     sws.setMode(SingleWireDisconnected);
-    configure(JACDACPinEvents::PulseEvents);
+    configure(JDPinEvents::PulseEvents);
 
     if (commLED)
         commLED->setDigitalValue(0);
@@ -357,7 +357,7 @@ int JACDAC::addToRxArray(JDPacket* packet)
     return DEVICE_OK;
 }
 
-void JACDAC::configure(JACDACPinEvents eventType)
+void JACDAC::configure(JDPinEvents eventType)
 {
     sp.getDigitalValue(PullMode::Up);
 
@@ -407,7 +407,7 @@ void JACDAC::initialise()
  *
  * @param sws an instance of sws created using p.
  */
-JACDAC::JACDAC(DMASingleWireSerial&  sws, Pin* busStateLED, Pin* commStateLED, JACDACBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), busLED(busStateLED), commLED(commStateLED)
+JACDAC::JACDAC(DMASingleWireSerial&  sws, Pin* busStateLED, Pin* commStateLED, JDBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), busLED(busStateLED), commLED(commStateLED)
 {
     this->id = id;
     this->txBaud = baudRate;
@@ -441,7 +441,7 @@ void JACDAC::start()
     status |= DEVICE_COMPONENT_RUNNING;
 
     // check if the bus is lo here and change our led
-    configure(JACDACPinEvents::PulseEvents);
+    configure(JDPinEvents::PulseEvents);
 
     if (busLED)
         busLED->setDigitalValue(1);
@@ -464,7 +464,7 @@ void JACDAC::stop()
         rxBuf = NULL;
     }
 
-    configure(JACDACPinEvents::NoEvents);
+    configure(JDPinEvents::NoEvents);
 
     if (busLED)
         busLED->setDigitalValue(0);
@@ -485,7 +485,7 @@ void JACDAC::sendPacket(Event)
                 busLED->setDigitalValue(1);
 
             status &= ~JD_SERIAL_BUS_RISE;
-            configure(JACDACPinEvents::PulseEvents);
+            configure(JDPinEvents::PulseEvents);
         }
 
         system_timer_event_after_us(JD_SERIAL_TX_MIN_BACKOFF + target_random(JD_SERIAL_TX_MAX_BACKOFF - JD_SERIAL_TX_MIN_BACKOFF), this->id, JD_SERIAL_EVT_DRAIN);
@@ -499,7 +499,7 @@ void JACDAC::sendPacket(Event)
         {
             JD_DMESG("BUS LO");
             // something is holding the bus lo
-            configure(JACDACPinEvents::EdgeEvents);
+            configure(JDPinEvents::EdgeEvents);
             // listen for when it is hi again
             status |= JD_SERIAL_BUS_RISE;
 
@@ -664,7 +664,7 @@ bool JACDAC::isConnected()
     int busVal = sp.getDigitalValue(PullMode::Up);
 
     // re-enable events!
-    configure(JACDACPinEvents::PulseEvents);
+    configure(JDPinEvents::PulseEvents);
 
     if (busVal)
         return true;
@@ -698,7 +698,7 @@ JDBusState JACDAC::getState()
     // if we are neither transmitting or receiving, examine the bus.
     int busVal = sp.getDigitalValue(PullMode::Up);
     // re-enable events!
-    configure(JACDACPinEvents::PulseEvents);
+    configure(JDPinEvents::PulseEvents);
 
     if (busVal)
         return JDBusState::High;
@@ -707,13 +707,13 @@ JDBusState JACDAC::getState()
 }
 
 
-int JACDAC::setBaud(JACDACBaudRate baud)
+int JACDAC::setBaud(JDBaudRate baud)
 {
     this->txBaud = baud;
     return DEVICE_OK;
 }
 
-JACDACBaudRate JACDAC::getBaud()
+JDBaudRate JACDAC::getBaud()
 {
     return this->txBaud;
 }

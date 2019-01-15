@@ -119,7 +119,7 @@ namespace codal
      * This enumeration defines the low time of the tx pulse, and the transmission speed of
      * this JACDAC device on the bus.
      **/
-    enum class JACDACBaudRate : uint8_t
+    enum class JDBaudRate : uint8_t
     {
         Baud1M = 1,
         Baud500K = 2,
@@ -127,7 +127,7 @@ namespace codal
         Baud125K = 8
     };
 
-    enum JACDACPinEvents : uint16_t
+    enum JDPinEvents : uint16_t
     {
         NoEvents = DEVICE_PIN_EVENT_NONE,
         EdgeEvents = DEVICE_PIN_EVENT_ON_EDGE,
@@ -139,8 +139,8 @@ namespace codal
     */
     class JACDAC : public CodalComponent
     {
-        JACDACBaudRate txBaud;
-        JACDACBaudRate currentBaud;
+        JDBaudRate txBaud;
+        JDBaudRate currentBaud;
 
     protected:
         DMASingleWireSerial&  sws;
@@ -150,7 +150,7 @@ namespace codal
         Pin* commLED;
 
         void onLowPulse(Event);
-        void configure(JACDACPinEvents event);
+        void configure(JDPinEvents event);
         void dmaComplete(Event evt);
 
         JDPacket* popRxArray();
@@ -184,7 +184,7 @@ namespace codal
           *
           * @param baud Defaults to 1mbaud
           */
-        JACDAC(DMASingleWireSerial&  sws, Pin* busStateLED = NULL, Pin* commStateLED = NULL, JACDACBaudRate baud = JACDACBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
+        JACDAC(DMASingleWireSerial&  sws, Pin* busStateLED = NULL, Pin* commStateLED = NULL, JDBaudRate baud = JDBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
 
         /**
           * Retrieves the first packet on the rxQueue irregardless of the device_class
@@ -263,14 +263,14 @@ namespace codal
          *
          * @returns DEVICE_OK on success
          **/
-        int setBaud(JACDACBaudRate baudRate);
+        int setBaud(JDBaudRate baudRate);
 
         /**
          * Returns the current JACDAC baud rate.
          *
          * @returns the enumerated baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
          **/
-        JACDACBaudRate getBaud();
+        JDBaudRate getBaud();
     };
 } // namespace codal
 
