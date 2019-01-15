@@ -407,7 +407,7 @@ void JACDAC::initialise()
  *
  * @param sws an instance of sws created using p.
  */
-JACDAC::JACDAC(DMASingleWireSerial&  sws, Pin* busStateLED, Pin* commStateLED, JDBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), busLED(busStateLED), commLED(commStateLED)
+JACDAC::JACDAC(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busStateLED, Pin* commStateLED, JDBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), timer(timer), busLED(busStateLED), commLED(commStateLED)
 {
     this->id = id;
     this->txBaud = baudRate;

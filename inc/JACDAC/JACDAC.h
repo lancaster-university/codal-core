@@ -30,6 +30,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Pin.h"
 #include "Event.h"
 #include "DMASingleWireSerial.h"
+#include "LowLevelTimer.h"
 
 #define JD_VERSION                     0
 
@@ -145,6 +146,7 @@ namespace codal
     protected:
         DMASingleWireSerial&  sws;
         Pin&  sp;
+        LowLevelTimer& timer;
 
         Pin* busLED;
         Pin* commLED;
@@ -184,7 +186,7 @@ namespace codal
           *
           * @param baud Defaults to 1mbaud
           */
-        JACDAC(DMASingleWireSerial&  sws, Pin* busStateLED = NULL, Pin* commStateLED = NULL, JDBaudRate baud = JDBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
+        JACDAC(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busStateLED = NULL, Pin* commStateLED = NULL, JDBaudRate baud = JDBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
 
         /**
           * Retrieves the first packet on the rxQueue irregardless of the device_class
