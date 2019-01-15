@@ -50,7 +50,7 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_EVT_BUS_DISCONNECTED 6
 
 #define JD_SERIAL_HEADER_SIZE          5
-#define JD_SERIAL_CRC_HEADER_SIZE      3 // when computing CRC, we skip the CRC and version fields, so the header size decreases by three.
+#define JD_SERIAL_CRC_HEADER_SIZE      2  // when computing CRC, we skip the CRC and version fields, so the header size decreases by three.
 #define JD_SERIAL_MAX_PAYLOAD_SIZE     255
 
 #define JD_SERIAL_MAXIMUM_BUFFERS      10

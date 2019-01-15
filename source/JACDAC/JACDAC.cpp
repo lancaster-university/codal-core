@@ -437,10 +437,8 @@ void JACDAC::start()
 
     JD_DMESG("JD START");
 
-    target_disable_irq();
     status = 0;
     status |= DEVICE_COMPONENT_RUNNING;
-    target_enable_irq();
 
     // check if the bus is lo here and change our led
     configure(JACDACPinEvents::PulseEvents);
