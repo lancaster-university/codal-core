@@ -50,6 +50,9 @@ namespace codal
         virtual int setBaud(uint32_t baud) = 0;
         virtual uint32_t getBaud() = 0;
 
+        virtual int getBytesReceived() = 0;
+        virtual int getBytesTransmitted() = 0;
+
         virtual int setMode(SingleWireMode sw)
         {
             if (sw == SingleWireRx)
