@@ -34,13 +34,30 @@ DEALINGS IN THE SOFTWARE.
 
 #define JD_VERSION                     0
 
+// various timings in microseconds
+// the maximum permitted time between bytes
+#define JD_MAX_INTERBYTE_SPACING        72
+// the minimum permitted time between the data packets
+#define JD_MIN_INTERFRAME_SPACING       (2 * JD_MAX_INTERBYTE_SPACING)
+// the maximum permitted time between the low pulse and data being received
+#define JD_MAX_LO_DATA_SPACING          (3 * JD_MAX_INTERBYTE_SPACING)
+// the time it takes for the bus to be considered in a normal state
+#define JD_BUS_NORMALITY_PERIOD         JD_MIN_INTERFRAME_SPACING
+
 #define JD_SERIAL_MAX_BUFFERS          10
 
-#define JD_SERIAL_RECEIVING            0x02
-#define JD_SERIAL_RECEIVING_HEADER     0x04
-#define JD_SERIAL_TRANSMITTING         0x08
-#define JD_SERIAL_TX_DRAIN_ENABLE      0x10
-#define JD_SERIAL_BUS_RISE             0x20
+#define JD_SERIAL_RECEIVING             0x0002
+#define JD_SERIAL_RECEIVING_HEADER      0x0004
+#define JD_SERIAL_TRANSMITTING          0x0008
+#define JD_SERIAL_TX_DRAIN_ENABLE       0x0010
+
+#define JD_SERIAL_BUS_LO_ERROR          0x0020
+#define JD_SERIAL_BUS_TIMEOUT_ERROR     0x0040
+#define JD_SERIAL_BUS_UART_ERROR        0x0080
+
+#define JD_SERIAL_BUS_LO                0x0100
+#define JD_SERIAL_BUS_HI                0x0200
+#define JD_SERIAL_BUS_TOGGLED           0x0400
 
 #define JD_SERIAL_EVT_DATA_READY       1
 #define JD_SERIAL_EVT_BUS_ERROR        2
@@ -59,8 +76,7 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_DMA_TIMEOUT          2   // 2 callback ~8 ms
 
 #define JD_SERIAL_MAX_BAUD             1000000
-#define JD_SERIAL_TX_MAX_BACKOFF       4000
-#define JD_SERIAL_TX_MIN_BACKOFF       1000
+#define JD_SERIAL_TX_MAX_BACKOFF       1000
 
 #define JD_RX_ARRAY_SIZE               10
 #define JD_TX_ARRAY_SIZE               10
@@ -130,9 +146,17 @@ namespace codal
 
     enum JDPinEvents : uint16_t
     {
-        NoEvents = DEVICE_PIN_EVENT_NONE,
-        EdgeEvents = DEVICE_PIN_EVENT_ON_EDGE,
-        PulseEvents = DEVICE_PIN_EVENT_ON_PULSE,
+        Off = DEVICE_PIN_EVENT_NONE,
+        DetectBusEdge = DEVICE_PIN_EVENT_ON_EDGE,
+        ListeningForPulse = DEVICE_PIN_EVENT_ON_PULSE,
+    };
+
+    enum JDBusErrorState : uint16_t
+    {
+        Continuation = 0,
+        BusLoError = JD_SERIAL_BUS_LO_ERROR,
+        BusTimeoutError = JD_SERIAL_BUS_TIMEOUT_ERROR,
+        BusUARTError = BusTimeoutError // a different error code, but we want the same behaviour.
     };
 
     /**
@@ -142,6 +166,7 @@ namespace codal
     {
         JDBaudRate txBaud;
         JDBaudRate currentBaud;
+        uint8_t bufferOffset;
 
     protected:
         DMASingleWireSerial&  sws;
@@ -151,7 +176,11 @@ namespace codal
         Pin* busLED;
         Pin* commLED;
 
+        uint32_t startTime;
+        uint32_t lastBufferedCount;
+
         void onLowPulse(Event);
+        void onRiseFall(Event e);
         void configure(JDPinEvents event);
         void dmaComplete(Event evt);
 
@@ -159,11 +188,13 @@ namespace codal
         JDPacket* popTxArray();
         int addToTxArray(JDPacket* packet);
         int addToRxArray(JDPacket* packet);
-        void sendPacket(Event);
-        void rxTimeout(Event);
+        void sendPacket();
         void initialise();
+        void errorState(JDBusErrorState);
 
     public:
+
+        static JACDAC* instance;
 
         uint8_t txHead;
         uint8_t txTail;
@@ -273,6 +304,8 @@ namespace codal
          * @returns the enumerated baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
          **/
         JDBaudRate getBaud();
+
+        void _timerCallback(uint16_t channels);
     };
 } // namespace codal
 

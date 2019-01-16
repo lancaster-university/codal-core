@@ -7,6 +7,14 @@
 #include "SingleWireSerial.h"
 #include "Timer.h"
 
+#define MAXIMUM_INTERBYTE_CC        0
+#define MINIMUM_INTERFRAME_CC       1
+#define MAXIMUM_LO_DATA_CC          2
+
+#define TIMER_CHANNELS_REQUIRED     3
+
+#define JD_MAGIC_BUFFER_VALUE       0x1a
+
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
 #define CODAL_ASSERT(cond)                                                                         \
@@ -16,6 +24,7 @@
 using namespace codal;
 
 uint32_t error_count = 0;
+JACDAC* JACDAC::instance = NULL;
 
 struct BaudByte
 {
@@ -87,27 +96,76 @@ uint16_t fletcher16(const uint8_t *data, size_t len)
     return (c1 << 8 | c0);
 }
 
+void jacdac_timer_irq(uint16_t channels)
+{
+    if (JACDAC::instance)
+        JACDAC::instance->_timerCallback(channels);
+}
+
+void JACDAC::_timerCallback(uint16_t channels)
+{
+    if (status & (JD_SERIAL_BUS_TIMEOUT_ERROR | JD_SERIAL_BUS_LO_ERROR))
+    {
+        errorState(JDBusErrorState::Continuation);
+        return;
+    }
+
+    if (channels & (1 << MAXIMUM_INTERBYTE_CC))
+    {
+        if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER))
+        {
+            uint16_t buffered = sws.getBytesReceived();
+
+            if (buffered == lastBufferedCount)
+                errorState(JDBusErrorState::BusTimeoutError);
+            else
+            {
+                lastBufferedCount = buffered;
+                timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + JD_MAX_INTERBYTE_SPACING);
+            }
+        }
+    }
+
+    if (channels & (1 << MINIMUM_INTERFRAME_CC))
+    {
+        sendPacket();
+    }
+
+    if (channels & (1 << MAXIMUM_LO_DATA_CC))
+    {
+        uint32_t endTime = timer.captureCounter();
+
+        // if we've received data, swap to checking the framing of individual bytes.
+        if (sws.getBytesReceived() > 0)
+            timer.setCompare(MAXIMUM_INTERBYTE_CC, endTime + JD_MAX_INTERBYTE_SPACING);
+
+        // the maximum lo -> data spacing has been exceed
+        // enter the error state.
+        else if (endTime - startTime > JD_MAX_LO_DATA_SPACING)
+            errorState(JDBusErrorState::BusTimeoutError);
+
+        // no data has been received and we haven't yet exceed lo -> data spacing
+        else
+        {
+            startTime = endTime;
+            timer.setCompare(MAXIMUM_LO_DATA_CC, endTime + JD_MAX_INTERBYTE_SPACING);
+        }
+
+        return;
+    }
+}
+
 void JACDAC::dmaComplete(Event evt)
 {
     if (evt.value == SWS_EVT_ERROR)
     {
         // event should be more generic: tx/rx timeout
-        system_timer_cancel_event(this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+        timer.clearCompare(MAXIMUM_INTERBYTE_CC);
 
-        if (status & JD_SERIAL_TRANSMITTING)
-        {
-            status &= ~(JD_SERIAL_TRANSMITTING);
-            free(txBuf);
-            txBuf = NULL;
-        }
-
-        if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER))
-        {
-            error_count++;
-            status &= ~(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER);
-            sws.abortDMA();
-            Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
-        }
+        error_count++;
+        status &= ~(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING);
+        errorState(JDBusErrorState::BusUARTError);
+        return;
     }
     else
     {
@@ -121,9 +179,8 @@ void JACDAC::dmaComplete(Event evt)
 
                 JDPacket* rx = (JDPacket*)rxBuf;
                 sws.receiveDMA(((uint8_t*)rxBuf) + JD_SERIAL_HEADER_SIZE, rx->size);
+                timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + JD_MAX_INTERBYTE_SPACING);
                 JD_DMESG("RXH %d",rx->size);
-
-                system_timer_event_after(baudToByteMap[(uint8_t)currentBaud - 1].time_per_byte * (rx->size + 2), this->id, JD_SERIAL_EVT_RX_TIMEOUT);
 
                 status |= JD_SERIAL_RECEIVING;
                 return;
@@ -140,6 +197,7 @@ void JACDAC::dmaComplete(Event evt)
                     // move rxbuf to rxArray and allocate new buffer.
                     addToRxArray(rxBuf);
                     rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
+                    memset(rxBuf, JD_MAGIC_BUFFER_VALUE, sizeof(JDPacket));
                     Event(id, JD_SERIAL_EVT_DATA_READY);
                     JD_DMESG("DMA RXD");
                 }
@@ -160,8 +218,6 @@ void JACDAC::dmaComplete(Event evt)
             status &= ~(JD_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
-            // we've finished sending... trigger an event in random us (in some cases this might not be necessary, but it's not too much overhead).
-            system_timer_event_after_us(JD_SERIAL_TX_MIN_BACKOFF + target_random(JD_SERIAL_TX_MAX_BACKOFF - JD_SERIAL_TX_MIN_BACKOFF), this->id, JD_SERIAL_EVT_DRAIN);  // should be random
             JD_DMESG("DMA TXD");
         }
     }
@@ -171,7 +227,9 @@ void JACDAC::dmaComplete(Event evt)
     // force transition to output so that the pin is reconfigured.
     // also drive the bus high for a little bit.
     sp.setDigitalValue(1);
-    configure(JDPinEvents::PulseEvents);
+    configure(JDPinEvents::ListeningForPulse);
+
+    timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
 
     if (commLED)
         commLED->setDigitalValue(0);
@@ -210,25 +268,452 @@ void JACDAC::onLowPulse(Event e)
 
     status |= (JD_SERIAL_RECEIVING_HEADER);
 
+    bufferOffset = 0;
     sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_HEADER_SIZE);
-    system_timer_event_after(baudToByteMap[ts - 1].time_per_byte * ((JD_SERIAL_HEADER_SIZE + 2)), this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+
+    startTime = timer.captureCounter();
+    timer.setCompare(MAXIMUM_LO_DATA_CC, startTime + JD_MAX_INTERBYTE_SPACING);
 
     if (commLED)
         commLED->setDigitalValue(1);
 }
 
-void JACDAC::rxTimeout(Event)
+void JACDAC::configure(JDPinEvents eventType)
 {
-    JD_DMESG("TIMEOUT");
-    error_count++;
-    sws.abortDMA();
-    Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
-    status &= ~(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER);
-    sws.setMode(SingleWireDisconnected);
-    configure(JDPinEvents::PulseEvents);
+    sp.getDigitalValue(PullMode::Up);
 
-    if (commLED)
-        commLED->setDigitalValue(0);
+    // to ensure atomicity of the state machine, we disable one set of event and enable the other.
+    if (eventType == ListeningForPulse)
+    {
+        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_PULSE_LO, this, &JACDAC::onLowPulse, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::onRiseFall);
+        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_FALL, this, &JACDAC::onRiseFall);
+    }
+
+    if (eventType == DetectBusEdge)
+    {
+        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::onRiseFall, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_FALL, this, &JACDAC::onRiseFall, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_PULSE_LO, this, &JACDAC::onLowPulse);
+    }
+
+    if (eventType == Off)
+    {
+        // remove all active listeners too
+        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_PULSE_LO, this, &JACDAC::onLowPulse);
+        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::onRiseFall);
+        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_FALL, this, &JACDAC::onRiseFall);
+    }
+
+    sp.eventOn(eventType);
+}
+
+void JACDAC::initialise()
+{
+    rxBuf = NULL;
+    txBuf = NULL;
+    memset(rxArray, 0, sizeof(JDPacket*) * JD_RX_ARRAY_SIZE);
+    memset(txArray, 0, sizeof(JDPacket*) * JD_TX_ARRAY_SIZE);
+
+    this->id = id;
+    status = 0;
+
+    // 32 bit 1 us timer.
+    timer.setBitMode(BitMode32);
+    timer.setClockSpeed(1000);
+    timer.setIRQ(jacdac_timer_irq);
+    timer.enable();
+
+    sp.getDigitalValue(PullMode::None);
+
+    sws.setBaud(baudToByteMap[(uint8_t)txBaud - 1].baud);
+    currentBaud = txBaud;
+    sws.setDMACompletionHandler(this, &JACDAC::dmaComplete);
+}
+
+/**
+ * Constructor
+ *
+ * @param p the transmission pin to use
+ *
+ * @param sws an instance of sws created using p.
+ */
+JACDAC::JACDAC(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busLED, Pin* commStateLED, JDBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), timer(timer), busLED(busLED), commLED(commStateLED)
+{
+    this->id = id;
+    this->txBaud = baudRate;
+    instance = this;
+
+    // at least three channels are required.
+    CODAL_ASSERT(timer.getChannelCount() >= TIMER_CHANNELS_REQUIRED);
+
+    initialise();
+}
+
+/**
+ * Retrieves the first packet on the rxQueue irregardless of the device_class
+ *
+ * @returns the first packet on the rxQueue or NULL
+ */
+JDPacket* JACDAC::getPacket()
+{
+    return popRxArray();
+}
+
+/**
+ * Causes this instance of JACDAC to begin listening for packets transmitted on the serial line.
+ */
+void JACDAC::start()
+{
+    if (isRunning())
+        return;
+
+    if (rxBuf == NULL)
+        rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
+
+    JD_DMESG("JD START");
+
+    status = 0;
+    status |= DEVICE_COMPONENT_RUNNING;
+
+    // check if the bus is lo here and change our led
+    configure(JDPinEvents::ListeningForPulse);
+
+    if (busLED)
+        busLED->setDigitalValue(1);
+
+    Event(this->id, JD_SERIAL_EVT_BUS_CONNECTED);
+}
+
+/**
+ * Causes this instance of JACDAC to stop listening for packets transmitted on the serial line.
+ */
+void JACDAC::stop()
+{
+    if (!isRunning())
+        return;
+
+    status &= ~(DEVICE_COMPONENT_RUNNING);
+    if (rxBuf)
+    {
+        free(rxBuf);
+        rxBuf = NULL;
+    }
+
+    configure(JDPinEvents::Off);
+
+    if (busLED)
+        busLED->setDigitalValue(0);
+    Event(this->id, JD_SERIAL_EVT_BUS_DISCONNECTED);
+}
+
+void JACDAC::onRiseFall(Event e)
+{
+    bool toggle = false;
+    if (e.value == DEVICE_PIN_EVT_RISE)
+    {
+        // Lo to hi transition?
+        if (status & JD_SERIAL_BUS_LO)
+            toggle = true;
+
+        status |= (JD_SERIAL_BUS_HI | ((toggle) ? JD_SERIAL_BUS_TOGGLED : 0));
+    }
+    else
+    {
+        // Hi to lo transition?
+        if (status & JD_SERIAL_BUS_HI)
+            toggle = true;
+
+        status |= (JD_SERIAL_BUS_LO | ((toggle) ? JD_SERIAL_BUS_TOGGLED : 0));
+    }
+}
+
+void JACDAC::errorState(JDBusErrorState es)
+{
+    // first time entering the error state?
+    if (es != JDBusErrorState::Continuation && !(status & es))
+    {
+        status &= ~(JD_SERIAL_BUS_LO | JD_SERIAL_BUS_HI | JD_SERIAL_BUS_TOGGLED);
+
+        if (es == JD_SERIAL_BUS_TIMEOUT_ERROR || es == JD_SERIAL_BUS_UART_ERROR)
+        {
+            error_count++;
+            sws.abortDMA();
+            sws.setMode(SingleWireDisconnected);
+
+            if (commLED)
+                commLED->setDigitalValue(0);
+        }
+
+        status |= es;
+
+        configure(JDPinEvents::DetectBusEdge);
+
+        Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
+
+        startTime = timer.captureCounter();
+        timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + JD_MAX_INTERBYTE_SPACING);
+        return;
+    }
+
+    // in error mode we detect if there is activity on the bus (we do this by flagging when the bus is toggled,
+    // until the bus becomes idle defined by a period of JD_BUS_NORMALITY_PERIOD where there is no toggling)
+
+    // if the bus has not been toggled...
+    if (!(status & JD_SERIAL_BUS_TOGGLED))
+    {
+        uint32_t endTime = timer.captureCounter();
+
+        if (endTime - startTime >= JD_BUS_NORMALITY_PERIOD && sp.getDigitalValue(PullMode::Up))
+        {
+            if (status & JD_SERIAL_BUS_LO_ERROR && busLED)
+                busLED->setDigitalValue(1);
+
+            status &= ~(JD_SERIAL_BUS_TIMEOUT_ERROR | JD_SERIAL_BUS_LO_ERROR);
+
+            // resume normality
+            configure(JDPinEvents::ListeningForPulse);
+
+            timer.setCompare(MINIMUM_INTERFRAME_CC,  + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
+            return;
+        }
+    }
+
+    // otherwise come back in JD_MAX_INTERBYTE_SPACING us.
+    startTime = timer.captureCounter();
+    timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + JD_MAX_INTERBYTE_SPACING);
+}
+
+void JACDAC::sendPacket()
+{
+    JD_DMESG("SENDP");
+    // if we are receiving, the tx timer will be resumed upon reception.
+    if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER))
+    {
+        JD_DMESG("RXing ret");
+        return;
+    }
+    if (!(status & JD_SERIAL_TRANSMITTING))
+    {
+        // if the bus is lo, we shouldn't transmit
+        if (sp.getDigitalValue(PullMode::Up) == 0)
+        {
+            JD_DMESG("BUS LO");
+
+            if (busLED)
+                busLED->setDigitalValue(0);
+
+            if (commLED)
+                commLED->setDigitalValue(0);
+
+            errorState(JDBusErrorState::BusLoError);
+            return;
+        }
+
+        // If we get here, we assume we have control of the bus.
+        // check if we have stuff to send, txBuf will be set if a previous send failed.
+        if (this->txHead != this->txTail || txBuf)
+        {
+            JD_DMESG("TX B");
+            status |= JD_SERIAL_TRANSMITTING;
+
+            // we may have a packet that we previously tried to send, but was aborted for some reason.
+            if (txBuf == NULL)
+                txBuf = popTxArray();
+
+            sp.setDigitalValue(0);
+            target_wait_us(baudToByteMap[(uint8_t)txBaud - 1].time_per_byte);
+            sp.setDigitalValue(1);
+
+            // return after 100 us
+            system_timer_event_after_us(100, this->id, JD_SERIAL_EVT_DRAIN);
+
+            if (txBaud != currentBaud)
+            {
+                sws.setBaud(baudToByteMap[(uint8_t)txBaud - 1].baud);
+                currentBaud = txBaud;
+            }
+            return;
+        }
+        JD_DMESG("txh: %d txt: %d",txHead,txTail);
+    }
+
+    // we've returned after a DMA transfer has been flagged (above)... start
+    if (status & JD_SERIAL_TRANSMITTING)
+    {
+        JD_DMESG("TX S");
+        sws.sendDMA((uint8_t *)txBuf, txBuf->size + JD_SERIAL_HEADER_SIZE);
+        if (commLED)
+            commLED->setDigitalValue(1);
+        return;
+    }
+
+    // if we get here, there's no more to transmit
+    status &= ~(JD_SERIAL_TX_DRAIN_ENABLE);
+    return;
+}
+
+/**
+ * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
+ * If an ongoing asynchronous transmission is happening, JD is added to the txQueue. If this is the first packet in a while
+ * asynchronous transmission is begun.
+ *
+ * @param JD the packet to send.
+ *
+ * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
+ */
+int JACDAC::send(JDPacket* tx, bool compute_crc)
+{
+    JD_DMESG("SEND");
+    // if checks is not set, we skip error checking.
+    if (tx == NULL)
+        return DEVICE_INVALID_PARAMETER;
+
+    // don't queue packets if jacdac is not running, or the bus is being held LO.
+    if (!isRunning() || status & JD_SERIAL_BUS_LO_ERROR)
+        return DEVICE_INVALID_STATE;
+
+    JD_DMESG("QUEU");
+
+    JDPacket* pkt = (JDPacket *)malloc(sizeof(JDPacket));
+    memset(pkt, 0, sizeof(JDPacket));
+    memcpy(pkt, tx, sizeof(JDPacket));
+
+    JD_DMESG("QU %d", pkt->size);
+
+    pkt->jacdac_version = JD_VERSION;
+
+    // if compute_crc is not set, we assume the user is competent enough to use their own crc mechanisms.
+    if (compute_crc)
+    {
+        // crc is calculated from the address field onwards
+        uint8_t* crcPointer = (uint8_t*)&pkt->address;
+        pkt->crc = fletcher16(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE);
+    }
+
+    int ret = addToTxArray(pkt);
+
+    if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
+    {
+        JD_DMESG("DR EN");
+        status |= JD_SERIAL_TX_DRAIN_ENABLE;
+        timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
+    }
+
+    return ret;
+}
+
+/**
+ * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
+ * If an ongoing asynchronous transmission is happening, pkt is added to the txQueue. If this is the first packet in a while
+ * asynchronous transmission is begun.
+ *
+ * @param buf the buffer to send.
+ *
+ * @param len the length of the buffer to send.
+ *
+ * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
+ */
+int JACDAC::send(uint8_t* buf, int len, uint8_t address)
+{
+    if (buf == NULL || len <= 0 || len > JD_SERIAL_MAX_PAYLOAD_SIZE)
+    {
+        JD_DMESG("pkt TOO BIG: %d ",len);
+        return DEVICE_INVALID_PARAMETER;
+    }
+
+    JDPacket pkt;
+    memset(&pkt, 0, sizeof(JDPacket));
+
+    pkt.crc = 0;
+    pkt.address = address;
+    pkt.size = len;
+
+    memcpy(pkt.data, buf, len);
+
+    return send(&pkt);
+}
+
+/**
+ * Returns a bool indicating whether the JACDAC driver has been started.
+ *
+ * @return true if started, false if not.
+ **/
+bool JACDAC::isRunning()
+{
+    return (status & DEVICE_COMPONENT_RUNNING) ? true : false;
+}
+
+/**
+ * Returns the current state if the bus.
+ *
+ * @return true if connected, false if there's a bad bus condition.
+ **/
+bool JACDAC::isConnected()
+{
+    if (status & JD_SERIAL_RECEIVING || (status & JD_SERIAL_TRANSMITTING && !(status & JD_SERIAL_BUS_LO_ERROR)))
+        return true;
+
+    // this flag is set if the bus is being held lo.
+    if (status & JD_SERIAL_BUS_LO_ERROR)
+        return false;
+
+    // if we are neither transmitting or receiving, examine the bus.
+    int busVal = sp.getDigitalValue(PullMode::Up);
+
+    // re-enable events!
+    configure(JDPinEvents::ListeningForPulse);
+
+    if (busVal)
+        return true;
+
+    return false;
+}
+
+/**
+ * Returns the current state of the bus, either:
+ *
+ * * Receiving if the driver is in the process of receiving a packet.
+ * * Transmitting if the driver is communicating a packet on the bus.
+ *
+ * If neither of the previous states are true, then the driver looks at the bus and returns the bus state:
+ *
+ * * High, if the line is currently floating high.
+ * * Lo if something is currently pulling the line low.
+ **/
+JDBusState JACDAC::getState()
+{
+    if (status & JD_SERIAL_RECEIVING)
+        return JDBusState::Receiving;
+
+    if (status & JD_SERIAL_TRANSMITTING)
+        return JDBusState::Transmitting;
+
+    // this flag is set if the bus is being held lo.
+    if (status & JD_SERIAL_BUS_LO_ERROR)
+        return JDBusState::Low;
+
+    // if we are neither transmitting or receiving, examine the bus.
+    int busVal = sp.getDigitalValue(PullMode::Up);
+    // re-enable events!
+    configure(JDPinEvents::ListeningForPulse);
+
+    if (busVal)
+        return JDBusState::High;
+
+    return JDBusState::Low;
+}
+
+
+int JACDAC::setBaud(JDBaudRate baud)
+{
+    this->txBaud = baud;
+    return DEVICE_OK;
+}
+
+JDBaudRate JACDAC::getBaud()
+{
+    return this->txBaud;
 }
 
 /**
@@ -355,365 +840,4 @@ int JACDAC::addToRxArray(JDPacket* packet)
     target_enable_irq();
 
     return DEVICE_OK;
-}
-
-void JACDAC::configure(JDPinEvents eventType)
-{
-    sp.getDigitalValue(PullMode::Up);
-
-    // to ensure atomicity of the state machine, we disable one event and enable the other.
-    if (eventType == PulseEvents)
-    {
-        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_PULSE_LO, this, &JACDAC::onLowPulse, MESSAGE_BUS_LISTENER_IMMEDIATE);
-        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::sendPacket);
-    }
-
-    if (eventType == EdgeEvents)
-    {
-        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::sendPacket, MESSAGE_BUS_LISTENER_IMMEDIATE);
-        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_PULSE_LO, this, &JACDAC::onLowPulse);
-    }
-
-    sp.eventOn(eventType);
-}
-
-void JACDAC::initialise()
-{
-    rxBuf = NULL;
-    txBuf = NULL;
-    memset(rxArray, 0, sizeof(JDPacket*) * JD_RX_ARRAY_SIZE);
-    memset(txArray, 0, sizeof(JDPacket*) * JD_TX_ARRAY_SIZE);
-
-    this->id = id;
-    status = 0;
-
-    sp.getDigitalValue(PullMode::None);
-
-    sws.setBaud(baudToByteMap[(uint8_t)txBaud - 1].baud);
-    currentBaud = txBaud;
-    sws.setDMACompletionHandler(this, &JACDAC::dmaComplete);
-
-    if (EventModel::defaultEventBus)
-    {
-        EventModel::defaultEventBus->listen(this->id, JD_SERIAL_EVT_DRAIN, this, &JACDAC::sendPacket, MESSAGE_BUS_LISTENER_IMMEDIATE);
-        EventModel::defaultEventBus->listen(this->id, JD_SERIAL_EVT_RX_TIMEOUT, this, &JACDAC::rxTimeout, MESSAGE_BUS_LISTENER_IMMEDIATE);
-    }
-}
-
-/**
- * Constructor
- *
- * @param p the transmission pin to use
- *
- * @param sws an instance of sws created using p.
- */
-JACDAC::JACDAC(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busStateLED, Pin* commStateLED, JDBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), timer(timer), busLED(busStateLED), commLED(commStateLED)
-{
-    this->id = id;
-    this->txBaud = baudRate;
-    initialise();
-}
-
-/**
- * Retrieves the first packet on the rxQueue irregardless of the device_class
- *
- * @returns the first packet on the rxQueue or NULL
- */
-JDPacket* JACDAC::getPacket()
-{
-    return popRxArray();
-}
-
-/**
- * Causes this instance of JACDAC to begin listening for packets transmitted on the serial line.
- */
-void JACDAC::start()
-{
-    if (isRunning())
-        return;
-
-    if (rxBuf == NULL)
-        rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
-
-    JD_DMESG("JD START");
-
-    status = 0;
-    status |= DEVICE_COMPONENT_RUNNING;
-
-    // check if the bus is lo here and change our led
-    configure(JDPinEvents::PulseEvents);
-
-    if (busLED)
-        busLED->setDigitalValue(1);
-
-    Event(this->id, JD_SERIAL_EVT_BUS_CONNECTED);
-}
-
-/**
- * Causes this instance of JACDAC to stop listening for packets transmitted on the serial line.
- */
-void JACDAC::stop()
-{
-    if (!isRunning())
-        return;
-
-    status &= ~(DEVICE_COMPONENT_RUNNING);
-    if (rxBuf)
-    {
-        free(rxBuf);
-        rxBuf = NULL;
-    }
-
-    configure(JDPinEvents::NoEvents);
-
-    if (busLED)
-        busLED->setDigitalValue(0);
-    Event(this->id, JD_SERIAL_EVT_BUS_DISCONNECTED);
-}
-
-void JACDAC::sendPacket(Event)
-{
-    JD_DMESG("SENDP");
-    // if we are receiving, randomly back off
-    if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_BUS_RISE))
-    {
-        JD_DMESG("WAIT %s", (status & JD_SERIAL_BUS_RISE) ? "LO" : "REC");
-        if (status & JD_SERIAL_BUS_RISE)
-        {
-            JD_DMESG("RISE!!");
-            if (busLED)
-                busLED->setDigitalValue(1);
-
-            status &= ~JD_SERIAL_BUS_RISE;
-            configure(JDPinEvents::PulseEvents);
-        }
-
-        system_timer_event_after_us(JD_SERIAL_TX_MIN_BACKOFF + target_random(JD_SERIAL_TX_MAX_BACKOFF - JD_SERIAL_TX_MIN_BACKOFF), this->id, JD_SERIAL_EVT_DRAIN);
-        return;
-    }
-
-    if (!(status & JD_SERIAL_TRANSMITTING))
-    {
-        // if the bus is lo, we shouldn't transmit
-        if (sp.getDigitalValue(PullMode::Up) == 0)
-        {
-            JD_DMESG("BUS LO");
-            // something is holding the bus lo
-            configure(JDPinEvents::EdgeEvents);
-            // listen for when it is hi again
-            status |= JD_SERIAL_BUS_RISE;
-
-            if (busLED)
-                busLED->setDigitalValue(0);
-
-            if (commLED)
-                commLED->setDigitalValue(0);
-
-            Event(this->id, JD_SERIAL_EVT_BUS_DISCONNECTED);
-            return;
-        }
-
-        // If we get here, we assume we have control of the bus.
-        // if we have stuff in our queue, and we have not triggered a DMA transfer...
-        if (this->txHead != this->txTail)
-        {
-            JD_DMESG("TX B");
-            status |= JD_SERIAL_TRANSMITTING;
-            txBuf = popTxArray(); // perhaps only pop after confirmed send?
-
-            sp.setDigitalValue(0);
-            target_wait_us(baudToByteMap[(uint8_t)txBaud - 1].time_per_byte);
-            sp.setDigitalValue(1);
-
-            // return after 100 us
-            system_timer_event_after_us(100, this->id, JD_SERIAL_EVT_DRAIN);
-
-            if (txBaud != currentBaud)
-            {
-                sws.setBaud(baudToByteMap[(uint8_t)txBaud - 1].baud);
-                currentBaud = txBaud;
-            }
-            return;
-        }
-        JD_DMESG("txh: %d txt: %d",txHead,txTail);
-    }
-
-    // we've returned after a DMA transfer has been flagged (above)... start
-    if (status & JD_SERIAL_TRANSMITTING)
-    {
-        JD_DMESG("TX S");
-        sws.sendDMA((uint8_t *)txBuf, txBuf->size + JD_SERIAL_HEADER_SIZE);
-        if (commLED)
-            commLED->setDigitalValue(1);
-        return;
-    }
-
-    // if we get here, there's no more to transmit
-    status &= ~(JD_SERIAL_TX_DRAIN_ENABLE);
-    return;
-}
-
-/**
- * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
- * If an ongoing asynchronous transmission is happening, JD is added to the txQueue. If this is the first packet in a while
- * asynchronous transmission is begun.
- *
- * @param JD the packet to send.
- *
- * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
- */
-int JACDAC::send(JDPacket* tx, bool compute_crc)
-{
-    JD_DMESG("SEND");
-    // if checks is not set, we skip error checking.
-    if (tx == NULL)
-        return DEVICE_INVALID_PARAMETER;
-
-    // don't queue packets if jacdac is not running, or the bus is being held LO.
-    if (!isRunning() || status & JD_SERIAL_BUS_RISE)
-        return DEVICE_INVALID_STATE;
-
-    JD_DMESG("QUEU");
-
-    JDPacket* pkt = (JDPacket *)malloc(sizeof(JDPacket));
-    memset(pkt, 0, sizeof(JDPacket));
-    memcpy(pkt, tx, sizeof(JDPacket));
-
-    JD_DMESG("QU %d", pkt->size);
-
-    pkt->jacdac_version = JD_VERSION;
-
-    // if compute_crc is not set, we assume the user is competent enough to use their own crc mechanisms.
-    if (compute_crc)
-    {
-        // crc is calculated from the address field onwards
-        uint8_t* crcPointer = (uint8_t*)&pkt->address;
-        pkt->crc = fletcher16(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE);
-    }
-
-    int ret = addToTxArray(pkt);
-
-    if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
-    {
-        JD_DMESG("DR EN");
-        status |= JD_SERIAL_TX_DRAIN_ENABLE;
-        uint32_t t = JD_SERIAL_TX_MIN_BACKOFF + target_random(JD_SERIAL_TX_MAX_BACKOFF - JD_SERIAL_TX_MIN_BACKOFF);
-        JD_DMESG("T: %d", t);
-        system_timer_event_after_us(t, this->id, JD_SERIAL_EVT_DRAIN);
-    }
-
-    return ret;
-}
-
-/**
- * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
- * If an ongoing asynchronous transmission is happening, pkt is added to the txQueue. If this is the first packet in a while
- * asynchronous transmission is begun.
- *
- * @param buf the buffer to send.
- *
- * @param len the length of the buffer to send.
- *
- * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
- */
-int JACDAC::send(uint8_t* buf, int len, uint8_t address)
-{
-    if (buf == NULL || len <= 0 || len > JD_SERIAL_MAX_PAYLOAD_SIZE)
-    {
-        JD_DMESG("pkt TOO BIG: %d ",len);
-        return DEVICE_INVALID_PARAMETER;
-    }
-
-    JDPacket pkt;
-    memset(&pkt, 0, sizeof(JDPacket));
-
-    pkt.crc = 0;
-    pkt.address = address;
-    pkt.size = len;
-
-    memcpy(pkt.data, buf, len);
-
-    return send(&pkt);
-}
-
-/**
- * Returns a bool indicating whether the JACDAC driver has been started.
- *
- * @return true if started, false if not.
- **/
-bool JACDAC::isRunning()
-{
-    return (status & DEVICE_COMPONENT_RUNNING) ? true : false;
-}
-
-/**
- * Returns the current state if the bus.
- *
- * @return true if connected, false if there's a bad bus condition.
- **/
-bool JACDAC::isConnected()
-{
-    if (status & JD_SERIAL_RECEIVING || (status & JD_SERIAL_TRANSMITTING && !(status & JD_SERIAL_BUS_RISE)))
-        return true;
-
-    // this flag is set if the bus is being held lo.
-    if (status & JD_SERIAL_BUS_RISE)
-        return false;
-
-    // if we are neither transmitting or receiving, examine the bus.
-    int busVal = sp.getDigitalValue(PullMode::Up);
-
-    // re-enable events!
-    configure(JDPinEvents::PulseEvents);
-
-    if (busVal)
-        return true;
-
-    return false;
-}
-
-/**
- * Returns the current state of the bus, either:
- *
- * * Receiving if the driver is in the process of receiving a packet.
- * * Transmitting if the driver is communicating a packet on the bus.
- *
- * If neither of the previous states are true, then the driver looks at the bus and returns the bus state:
- *
- * * High, if the line is currently floating high.
- * * Lo if something is currently pulling the line low.
- **/
-JDBusState JACDAC::getState()
-{
-    if (status & JD_SERIAL_RECEIVING)
-        return JDBusState::Receiving;
-
-    if (status & JD_SERIAL_TRANSMITTING)
-        return JDBusState::Transmitting;
-
-    // this flag is set if the bus is being held lo.
-    if (status & JD_SERIAL_BUS_RISE)
-        return JDBusState::Low;
-
-    // if we are neither transmitting or receiving, examine the bus.
-    int busVal = sp.getDigitalValue(PullMode::Up);
-    // re-enable events!
-    configure(JDPinEvents::PulseEvents);
-
-    if (busVal)
-        return JDBusState::High;
-
-    return JDBusState::Low;
-}
-
-
-int JACDAC::setBaud(JDBaudRate baud)
-{
-    this->txBaud = baud;
-    return DEVICE_OK;
-}
-
-JDBaudRate JACDAC::getBaud()
-{
-    return this->txBaud;
 }
