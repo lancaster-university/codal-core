@@ -476,10 +476,26 @@ int codal::system_timer_cancel_event(uint16_t id, uint16_t value)
 }
 
 /**
- * Spin wait for a given number of microseconds.
+ * Spin wait for a given number of cycles.
  *
- * @param period the interval between events
+ * @param cycles the number of nops to execute
+ * @return DEVICE_OK
+ */
+int codal::system_timer_wait_cycles(uint32_t cycles)
+{
+    for (uint32_t i = 0; i < cycles; ++i) __asm__ __volatile__ ("nop");
+    return DEVICE_OK;
+}
+
+/**
+ * Spin wait using the timer for a given number of microseconds.
+ *
+ * @param period the period to wait for.
+ *
  * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
+ *
+ * @note this provides a good starting point for non-timing critical applications. For more accurate timings,
+ * please use a cycle-based wait approach (see system_timer_wait_cycles)
  */
 int codal::system_timer_wait_us(CODAL_TIMESTAMP period)
 {
@@ -497,6 +513,8 @@ int codal::system_timer_wait_us(CODAL_TIMESTAMP period)
  *
  * @param period the interval between events
  * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
+ * @note this provides a good starting point for non-timing critical applications. For more accurate timings,
+ * please use a cycle-based wait approach (see system_timer_wait_cycles)
  */
 int codal::system_timer_wait_ms(CODAL_TIMESTAMP period)
 {

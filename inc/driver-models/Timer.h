@@ -266,6 +266,14 @@ namespace codal
     int system_timer_cancel_event(uint16_t id, uint16_t value);
 
     /**
+     * Spin wait for a given number of cycles.
+     *
+     * @param cycles the number of nops to execute
+     * @return DEVICE_OK
+     */
+    int system_timer_wait_cycles(uint32_t cycles);
+
+    /**
      * Spin wait for a given number of microseconds.
      *
      * @param period the interval between events
