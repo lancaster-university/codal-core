@@ -510,7 +510,7 @@ void codal::system_timer_wait_cycles(uint32_t cycles)
 {
     __asm__ __volatile__(
         "1:              \n"
-        "   sub %0, #1   \n" // subtract 1 from %0 (n)
+        "   subs %0, #1   \n" // subtract 1 from %0 (n)
         "   bne 1b       \n" // if result is not 0 jump to 1
         : "+r" (cycles)           // '%0' is n variable with RW constraints
         :                    // no input
