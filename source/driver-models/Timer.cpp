@@ -115,6 +115,8 @@ Timer::Timer(LowLevelTimer& t, uint8_t ccPeriodChannel, uint8_t ccEventChannel) 
 
     delta = 0;
     sigma = timer.captureCounter();
+
+    system_timer_calibrate_cycles();
 }
 
 /**
