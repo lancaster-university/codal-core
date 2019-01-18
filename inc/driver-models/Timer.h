@@ -266,20 +266,37 @@ namespace codal
     int system_timer_cancel_event(uint16_t id, uint16_t value);
 
     /**
+      * An auto calibration method that uses the hardware timer to compute the number of cycles
+      * per us.
+      *
+      * The result of this method is then used to compute accurate us waits using instruction counting in system_timer_wait_us.
+      *
+      * If this method is not called, a less accurate timer implementation is used in system_timer_wait_us.
+      *
+      * @return DEVICE_OK on success, and DEVICE_NOT_SUPPORTED if no system_timer yet exists.
+      */
+    int system_timer_calibrate_cycles();
+
+    /**
      * Spin wait for a given number of cycles.
      *
      * @param cycles the number of nops to execute
      * @return DEVICE_OK
+     *
+     * @note the amount of cycles per iteration will vary between CPUs.
      */
-    int system_timer_wait_cycles(uint32_t cycles);
+    void system_timer_wait_cycles(uint32_t cycles);
 
     /**
      * Spin wait for a given number of microseconds.
      *
      * @param period the interval between events
      * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
+     *
+     * @note if system_timer_calibrate_cycles is not called, a hardware timer implementation will be used instead
+     * which is far less accurate than instruction counting.
      */
-    int system_timer_wait_us(CODAL_TIMESTAMP period);
+    int system_timer_wait_us(uint32_t period);
 
     /**
      * Spin wait for a given number of milliseconds.
@@ -287,7 +304,7 @@ namespace codal
      * @param period the interval between events
      * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
      */
-    int system_timer_wait_ms(CODAL_TIMESTAMP period);
+    int system_timer_wait_ms(uint32_t period);
 
     extern Timer* system_timer;
 }
