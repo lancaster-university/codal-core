@@ -193,6 +193,8 @@ void JACDAC::dmaComplete(Event evt)
 
                 if (crc == rxBuf->crc && rxBuf->jacdac_version == JD_VERSION)
                 {
+                    rxBuf->communication_rate = (uint8_t)currentBaud;
+
                     // move rxbuf to rxArray and allocate new buffer.
                     addToRxArray(rxBuf);
                     rxBuf = (JDPacket*)malloc(sizeof(JDPacket));

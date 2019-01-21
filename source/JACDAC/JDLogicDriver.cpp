@@ -289,12 +289,11 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                         // see 2. above.
                         if ((current->device.flags & JD_DEVICE_FLAGS_INITIALISED) && (driverInfo->flags & JD_DRIVER_INFO_FLAGS_UNCERTAIN))
                         {
-                            driverInfo->flags |= JD_DRIVER_INFO_FLAGS_CONFLICT;
-                            JDControlPacket* cp = (JDControlPacket*)malloc(JD_CONTROL_PACKET_HEADER_SIZE + JD_CONTROL_PACKET_HEADER_SIZE);
-                            memcpy(cp->data, driverInfo, JD_DRIVER_INFO_HEADER_SIZE);
-                            driverInfo->size = 0;
-                            JDProtocol::send((uint8_t*)driverInfo, JD_CONTROL_PACKET_HEADER_SIZE + JD_CONTROL_PACKET_HEADER_SIZE, 0);
-                            free(cp);
+                            memcpy(rxControlPacket->data, driverInfo, JD_DRIVER_INFO_HEADER_SIZE);
+                            JDDriverInfo* di = (JDDriverInfo*) cp->data;
+                            di->flags |= JD_DRIVER_INFO_FLAGS_CONFLICT;
+                            di->size = 0;
+                            JDProtocol::send((uint8_t*)rxControlPacket, JD_CONTROL_PACKET_HEADER_SIZE + JD_CONTROL_PACKET_HEADER_SIZE, 0);
                             JD_DMESG("ASK OTHER TO REASSIGN");
                         }
                         // the other device is initialised and has transmitted the CP first, we lose.
@@ -324,6 +323,8 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                         // 3) we are not conflicting with another device.
                         // 4) someone external has addressed a packet to us.
                     JD_DMESG("FOUND LOCAL");
+                    // communication rate values start from one, we only use 3 bits in our flags field for the comm rate.
+                    current->device.flags |= (pkt->communication_rate - 1) << JD_DEVICE_COMM_RATE_POS;
                     if (safe && current->handleLogicPacket(rxControlPacket) == DEVICE_OK)
                     {
                         handled = true;
@@ -345,6 +346,8 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                     else
                     {
                         // all is good, flag the device so that it is not removed.
+                        // communication rate values start from one, we only use 3 bits in our flags field for the comm rate.
+                        current->device.flags |= (pkt->communication_rate - 1) << JD_DEVICE_COMM_RATE_POS;
                         current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
                         JD_DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
 
@@ -393,6 +396,8 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                             continue;
 
                         JD_DMESG("FOUND NEW: %d %d %d", current->device.address, current->device.driver_class);
+                        // communication rate values start from one, we only use 3 bits in our flags field for the comm rate.
+                        current->device.flags |= (pkt->communication_rate - 1) << JD_DEVICE_COMM_RATE_POS;
                         int ret = current->handleLogicPacket(rxControlPacket);
 
                         if (ret == DEVICE_OK)

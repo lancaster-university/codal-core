@@ -60,9 +60,12 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DEVICE_FLAGS_PAIRED          0x0400 // this flag indicates that a driver is paired with another
 #define JD_DEVICE_FLAGS_PAIRING         0x0200 // this flag indicates that a driver is paired with another
 
-#define JD_DEVICE_FLAGS_INITIALISED     0x0080 // device driver is running
-#define JD_DEVICE_FLAGS_INITIALISING    0x0040 // a flag to indicate that a control packet has been queued
-#define JD_DEVICE_FLAGS_CP_SEEN         0x0020 // indicates whether a control packet has been seen recently.
+#define JD_DEVICE_FLAGS_INITIALISED     0x0100 // device driver is running
+#define JD_DEVICE_FLAGS_INITIALISING    0x0080 // a flag to indicate that a control packet has been queued
+#define JD_DEVICE_FLAGS_CP_SEEN         0x0040 // indicates whether a control packet has been seen recently.
+
+#define JD_DEVICE_COMM_RATE_MSK         0x0030 // these bits indicate the current comm rate of the driver
+#define JD_DEVICE_COMM_RATE_POS         16     // the position of the comm rate msk in the flags field.
 
 #define JD_DEVICE_ERROR_MSK             0x000F // the lower 4 bits are reserved for well known errors, these are
                                                // automatically placed into control packets by the logic driver.
