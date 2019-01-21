@@ -139,9 +139,9 @@ void JACDAC::_timerCallback(uint16_t channels)
         if (sws.getBytesReceived() > 0)
             timer.setCompare(MAXIMUM_INTERBYTE_CC, endTime + JD_MAX_INTERBYTE_SPACING);
 
-        // the maximum lo -> data spacing has been exceed
+        // the maximum lo -> data spacing has been exceeded
         // enter the error state.
-        else if (endTime - startTime > JD_MAX_LO_DATA_SPACING)
+        else if (endTime - startTime >= baudToByteMap[(uint8_t)currentBaud - 1].time_per_byte * JD_INTERLODATA_SPACING_MULTIPLIER)
             errorState(JDBusErrorState::BusTimeoutError);
 
         // no data has been received and we haven't yet exceed lo -> data spacing
@@ -272,7 +272,7 @@ void JACDAC::onLowPulse(Event e)
     sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_HEADER_SIZE);
 
     startTime = timer.captureCounter();
-    timer.setCompare(MAXIMUM_LO_DATA_CC, startTime + JD_MAX_INTERBYTE_SPACING);
+    timer.setCompare(MAXIMUM_LO_DATA_CC, baudToByteMap[(uint8_t)currentBaud - 1].time_per_byte * JD_INTERLODATA_SPACING_MULTIPLIER);
 
     if (commLED)
         commLED->setDigitalValue(1);
@@ -525,15 +525,13 @@ void JACDAC::sendPacket()
             target_wait_us(baudToByteMap[(uint8_t)txBaud - 1].time_per_byte);
             sp.setDigitalValue(1);
 
-            // return after 100 us
-            system_timer_event_after_us(100, this->id, JD_SERIAL_EVT_DRAIN);
+            target_wait_us(baudToByteMap[(uint8_t)txBaud - 1].time_per_byte * (JD_INTERLODATA_SPACING_MULTIPLIER / 2));
 
             if (txBaud != currentBaud)
             {
                 sws.setBaud(baudToByteMap[(uint8_t)txBaud - 1].baud);
                 currentBaud = txBaud;
             }
-            return;
         }
         JD_DMESG("txh: %d txt: %d",txHead,txTail);
     }

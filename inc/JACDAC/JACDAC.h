@@ -35,14 +35,16 @@ DEALINGS IN THE SOFTWARE.
 #define JD_VERSION                     0
 
 // various timings in microseconds
+// 8 data bits, 1 start bit, 1 stop bit.
+#define JD_BYTE_AT_125KBAUD                                 80
 // the maximum permitted time between bytes
-#define JD_MAX_INTERBYTE_SPACING        72
+#define JD_MAX_INTERBYTE_SPACING                            (2 * JD_BYTE_AT_125KBAUD)
 // the minimum permitted time between the data packets
-#define JD_MIN_INTERFRAME_SPACING       (2 * JD_MAX_INTERBYTE_SPACING)
-// the maximum permitted time between the low pulse and data being received
-#define JD_MAX_LO_DATA_SPACING          (3 * JD_MAX_INTERBYTE_SPACING)
+#define JD_MIN_INTERFRAME_SPACING                           (2 * JD_BYTE_AT_125KBAUD)
 // the time it takes for the bus to be considered in a normal state
-#define JD_BUS_NORMALITY_PERIOD         JD_MIN_INTERFRAME_SPACING
+#define JD_BUS_NORMALITY_PERIOD                             (2 * JD_BYTE_AT_125KBAUD)
+// the maximum permitted time between the low pulse and data being received is 2 times 1 byte at the current baud rate.
+#define JD_INTERLODATA_SPACING_MULTIPLIER               2
 
 #define JD_SERIAL_MAX_BUFFERS          10
 
