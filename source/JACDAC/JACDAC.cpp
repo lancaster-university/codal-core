@@ -258,7 +258,7 @@ void JACDAC::onLowPulse(Event e)
     if (ts == 0)
         ts = 1;
 
-    if ((JDBaudRate)ts > this->maxBaud)
+    if (ts < (uint8_t)this->maxBaud)
         // we can't receive at this baud rate
         errorState(JDBusErrorState::BusUARTError);
 
@@ -578,7 +578,7 @@ int JACDAC::send(JDPacket* tx, bool compute_crc)
     memset(pkt, 0, sizeof(JDPacket));
     memcpy(pkt, tx, sizeof(JDPacket));
 
-    if (pkt->communication_rate == 0 || pkt->communication_rate > (uint8_t) maxBaud)
+    if (pkt->communication_rate < (uint8_t) maxBaud)
         pkt->communication_rate = (uint8_t)maxBaud;
 
     JD_DMESG("QU %d", pkt->size);
