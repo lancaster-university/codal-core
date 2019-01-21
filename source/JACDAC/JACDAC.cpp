@@ -8,10 +8,10 @@
 #include "Timer.h"
 
 #define MAXIMUM_INTERBYTE_CC        0
+#define MAXIMUM_LO_DATA_CC          0 // reuse the above channel
 #define MINIMUM_INTERFRAME_CC       1
-#define MAXIMUM_LO_DATA_CC          2
 
-#define TIMER_CHANNELS_REQUIRED     3
+#define TIMER_CHANNELS_REQUIRED     2
 
 #define JD_MAGIC_BUFFER_VALUE       0x1a
 
@@ -112,7 +112,29 @@ void JACDAC::_timerCallback(uint16_t channels)
 
     if (channels & (1 << MAXIMUM_INTERBYTE_CC))
     {
-        if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER))
+        if (status & JD_SERIAL_RECEIVING_HEADER)
+        {
+            uint32_t endTime = timer.captureCounter();
+
+            // if we've received data, swap to checking the framing of individual bytes.
+            if (sws.getBytesReceived() > 0)
+                timer.setCompare(MAXIMUM_LO_DATA_CC, endTime + JD_MAX_INTERBYTE_SPACING);
+
+            // the maximum lo -> data spacing has been exceeded
+            // enter the error state.
+            else if (endTime - startTime >= baudToByteMap[(uint8_t)currentBaud - 1].time_per_byte * JD_INTERLODATA_SPACING_MULTIPLIER)
+                errorState(JDBusErrorState::BusTimeoutError);
+
+            // no data has been received and we haven't yet exceed lo -> data spacing
+            else
+            {
+                startTime = endTime;
+                timer.setCompare(MAXIMUM_LO_DATA_CC, endTime + JD_MAX_INTERBYTE_SPACING);
+            }
+
+            return;
+        }
+        else if (status & JD_SERIAL_RECEIVING)
         {
             uint16_t buffered = sws.getBytesReceived();
 
@@ -131,36 +153,12 @@ void JACDAC::_timerCallback(uint16_t channels)
     {
         sendPacket();
     }
-
-    if (channels & (1 << MAXIMUM_LO_DATA_CC))
-    {
-        uint32_t endTime = timer.captureCounter();
-
-        // if we've received data, swap to checking the framing of individual bytes.
-        if (sws.getBytesReceived() > 0)
-            timer.setCompare(MAXIMUM_INTERBYTE_CC, endTime + JD_MAX_INTERBYTE_SPACING);
-
-        // the maximum lo -> data spacing has been exceeded
-        // enter the error state.
-        else if (endTime - startTime >= baudToByteMap[(uint8_t)currentBaud - 1].time_per_byte * JD_INTERLODATA_SPACING_MULTIPLIER)
-            errorState(JDBusErrorState::BusTimeoutError);
-
-        // no data has been received and we haven't yet exceed lo -> data spacing
-        else
-        {
-            startTime = endTime;
-            timer.setCompare(MAXIMUM_LO_DATA_CC, endTime + JD_MAX_INTERBYTE_SPACING);
-        }
-
-        return;
-    }
 }
 
 void JACDAC::dmaComplete(Event evt)
 {
     if (evt.value == SWS_EVT_ERROR)
     {
-        // event should be more generic: tx/rx timeout
         timer.clearCompare(MAXIMUM_INTERBYTE_CC);
 
         error_count++;
@@ -175,7 +173,6 @@ void JACDAC::dmaComplete(Event evt)
         {
             if (status & JD_SERIAL_RECEIVING_HEADER)
             {
-
                 status &= ~(JD_SERIAL_RECEIVING_HEADER);
 
                 JDPacket* rx = (JDPacket*)rxBuf;
