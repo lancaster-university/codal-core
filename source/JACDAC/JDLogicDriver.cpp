@@ -293,7 +293,7 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                             JDDriverInfo* di = (JDDriverInfo*) cp->data;
                             di->flags |= JD_DRIVER_INFO_FLAGS_CONFLICT;
                             di->size = 0;
-                            JDProtocol::send((uint8_t*)rxControlPacket, JD_CONTROL_PACKET_HEADER_SIZE + JD_CONTROL_PACKET_HEADER_SIZE, 0);
+                            send((uint8_t*)rxControlPacket, JD_CONTROL_PACKET_HEADER_SIZE + JD_CONTROL_PACKET_HEADER_SIZE);
                             JD_DMESG("ASK OTHER TO REASSIGN");
                         }
                         // the other device is initialised and has transmitted the CP first, we lose.
@@ -324,7 +324,7 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                         // 4) someone external has addressed a packet to us.
                     JD_DMESG("FOUND LOCAL");
 
-                    current->device.setBaudRate(pkt->communication_rate);
+                    current->device.setBaudRate((JDBaudRate)pkt->communication_rate);
                     if (safe && current->handleLogicPacket(rxControlPacket) == DEVICE_OK)
                     {
                         handled = true;
@@ -346,7 +346,7 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                     else
                     {
                         // all is good, flag the device so that it is not removed.
-                        current->device.setBaudRate(pkt->communication_rate);
+                        current->device.setBaudRate((JDBaudRate)pkt->communication_rate);
                         current->device.flags |= JD_DEVICE_FLAGS_CP_SEEN;
                         JD_DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->device.address, current->device.serial_number, current->device.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0);
 
@@ -395,7 +395,7 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                             continue;
 
                         JD_DMESG("FOUND NEW: %d %d %d", current->device.address, current->device.driver_class);
-                        current->device.setBaudRate(pkt->communication_rate);
+                        current->device.setBaudRate((JDBaudRate)pkt->communication_rate);
                         int ret = current->handleLogicPacket(rxControlPacket);
 
                         if (ret == DEVICE_OK)

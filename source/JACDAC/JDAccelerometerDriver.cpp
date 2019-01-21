@@ -16,7 +16,7 @@ void JDAccelerometerDriver::sendData(Event)
     p.y = latest.y;
     p.z = latest.z;
 
-    JDProtocol::send((uint8_t*)&p, sizeof(AccelerometerPacket), this->device.address);
+    send((uint8_t*)&p, sizeof(AccelerometerPacket));
 }
 
 void JDAccelerometerDriver::forwardEvent(Event evt)
@@ -29,7 +29,7 @@ void JDAccelerometerDriver::forwardEvent(Event evt)
     p.packet_type = 1;
     p.event_value = evt.value;
 
-    JDProtocol::send((uint8_t*)&p, sizeof(AccelerometerGesturePacket), this->device.address);
+    send((uint8_t*)&p, sizeof(AccelerometerGesturePacket));
 }
 
 JDAccelerometerDriver::JDAccelerometerDriver(Accelerometer& accel) : JDDriver(JDDevice(HostDriver, JD_DRIVER_CLASS_ACCELEROMETER)), accelerometer(&accel)

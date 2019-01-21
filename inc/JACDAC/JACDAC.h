@@ -166,7 +166,7 @@ namespace codal
     */
     class JACDAC : public CodalComponent
     {
-        JDBaudRate txBaud;
+        JDBaudRate maxBaud;
         JDBaudRate currentBaud;
         uint8_t bufferOffset;
 
@@ -262,7 +262,7 @@ namespace codal
           *
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
           */
-        virtual int send(uint8_t* buf, int len, uint8_t address);
+        virtual int send(uint8_t* buf, int len, uint8_t address, JDBaudRate communicationRate);
 
         /**
          * Returns a bool indicating whether the JACDAC driver has been started.
@@ -292,20 +292,21 @@ namespace codal
         JDBusState getState();
 
         /**
-         * Sets the JACDAC baud rate, and internally sets the single wire serial baud JACDAC is using.
+         * Sets the maximum baud rate which is used as a default (if no communication rate is given in any packet), and as
+         * a maximum reception rate.
          *
          * @param baudRate the desired baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
          *
          * @returns DEVICE_OK on success
          **/
-        int setBaud(JDBaudRate baudRate);
+        int setMaximumBaud(JDBaudRate baudRate);
 
         /**
-         * Returns the current JACDAC baud rate.
+         * Returns the current maximum baud rate.
          *
          * @returns the enumerated baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
          **/
-        JDBaudRate getBaud();
+        JDBaudRate getMaximumBaud();
 
         void _timerCallback(uint16_t channels);
     };

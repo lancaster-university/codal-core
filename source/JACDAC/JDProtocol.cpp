@@ -168,14 +168,6 @@ int JDProtocol::send(JDPacket* pkt)
     return DEVICE_NO_RESOURCES;
 }
 
-int JDProtocol::send(uint8_t* buf, int len, uint8_t address)
-{
-    if (instance)
-        return instance->bus.send(buf, len, address);
-
-    return DEVICE_NO_RESOURCES;
-}
-
 int JDProtocol::setDebugName(ManagedString s)
 {
     if (s.length() > JD_CONTROL_PACKET_ERROR_NAME_LENGTH)

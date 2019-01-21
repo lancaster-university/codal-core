@@ -270,9 +270,9 @@ namespace codal
          **/
         void setBaudRate(JDBaudRate br)
         {
-            current->device.flags &= ~JD_DEVICE_COMM_RATE_MSK;
+            this->flags &= ~JD_DEVICE_COMM_RATE_MSK;
             // JDBaudRate values start from one, we only use 3 bits in our flags field for the comm rate... subtract one
-            current->device.flags |= ((uint8_t)br - 1) << JD_DEVICE_COMM_RATE_POS;
+            this->flags |= ((uint8_t)br - 1) << JD_DEVICE_COMM_RATE_POS;
         }
 
         /**
@@ -482,6 +482,16 @@ namespace codal
          * using the drivers id, and the event code JD_DRIVER_EVT_UNPAIRED.
          **/
         void partnerDisconnected(Event);
+
+        /**
+         * A convenience function that calls JACDAC->send with parameters supplied from this instances' JDDevice
+         *
+         * @param buf the data to send
+         * @param len the length of the data.
+         *
+         * @return DEVICE_OK on success.
+         **/
+        int send(uint8_t* buf, int len);
 
         public:
 
@@ -819,19 +829,6 @@ namespace codal
          * @return DEVICE_OK on success.
          **/
         static int send(JDPacket* pkt);
-
-        /**
-         * A static method to send a buffer on the bus. The buffer is placed in a JDPacket and sent.
-         *
-         * @param buf a pointer to the data to send
-         *
-         * @param len the length of the buffer
-         *
-         * @param address the address to use when sending the packet
-         *
-         * @return DEVICE_OK on success.
-         **/
-        static int send(uint8_t* buf, int len, uint8_t address);
 
         /**
          * Logs the current state of JACDAC, drivers, and the jackrouter (if provided).

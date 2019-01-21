@@ -258,6 +258,10 @@ void JACDAC::onLowPulse(Event e)
     if (ts == 0)
         ts = 1;
 
+    if ((JDBaudRate)ts > this->maxBaud)
+        // we can't receive at this baud rate
+        errorState(JDBusErrorState::BusUARTError);
+
     if ((JDBaudRate)ts != this->currentBaud)
     {
         sws.setBaud(baudToByteMap[ts - 1].baud);
@@ -326,9 +330,6 @@ void JACDAC::initialise()
     timer.enable();
 
     sp.getDigitalValue(PullMode::None);
-
-    sws.setBaud(baudToByteMap[(uint8_t)txBaud - 1].baud);
-    currentBaud = txBaud;
     sws.setDMACompletionHandler(this, &JACDAC::dmaComplete);
 }
 
@@ -339,10 +340,10 @@ void JACDAC::initialise()
  *
  * @param sws an instance of sws created using p.
  */
-JACDAC::JACDAC(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busLED, Pin* commStateLED, JDBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), timer(timer), busLED(busLED), commLED(commStateLED)
+JACDAC::JACDAC(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busLED, Pin* commStateLED, JDBaudRate maxBaudRate, uint16_t id) : sws(sws), sp(sws.p), timer(timer), busLED(busLED), commLED(commStateLED)
 {
     this->id = id;
-    this->txBaud = baudRate;
+    this->maxBaud = maxBaudRate;
     instance = this;
 
     // at least three channels are required.
@@ -524,15 +525,13 @@ void JACDAC::sendPacket()
                 txBuf = popTxArray();
 
             sp.setDigitalValue(0);
-            target_wait_us(baudToByteMap[(uint8_t)txBaud - 1].time_per_byte);
+            target_wait_us(baudToByteMap[(uint8_t)txBuf->communication_rate - 1].time_per_byte);
             sp.setDigitalValue(1);
 
-            target_wait_us(baudToByteMap[(uint8_t)txBaud - 1].time_per_byte * (JD_INTERLODATA_SPACING_MULTIPLIER / 2));
-
-            if (txBaud != currentBaud)
+            if (txBuf->communication_rate != (uint8_t)currentBaud)
             {
-                sws.setBaud(baudToByteMap[(uint8_t)txBaud - 1].baud);
-                currentBaud = txBaud;
+                sws.setBaud(baudToByteMap[(uint8_t)txBuf->communication_rate - 1].baud);
+                currentBaud = (JDBaudRate)txBuf->communication_rate;
             }
         }
         JD_DMESG("txh: %d txt: %d",txHead,txTail);
@@ -579,6 +578,9 @@ int JACDAC::send(JDPacket* tx, bool compute_crc)
     memset(pkt, 0, sizeof(JDPacket));
     memcpy(pkt, tx, sizeof(JDPacket));
 
+    if (pkt->communication_rate == 0 || pkt->communication_rate > (uint8_t) maxBaud)
+        pkt->communication_rate = (uint8_t)maxBaud;
+
     JD_DMESG("QU %d", pkt->size);
 
     pkt->jacdac_version = JD_VERSION;
@@ -614,7 +616,7 @@ int JACDAC::send(JDPacket* tx, bool compute_crc)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int JACDAC::send(uint8_t* buf, int len, uint8_t address)
+int JACDAC::send(uint8_t* buf, int len, uint8_t address, JDBaudRate br)
 {
     if (buf == NULL || len <= 0 || len > JD_SERIAL_MAX_PAYLOAD_SIZE)
     {
@@ -628,6 +630,7 @@ int JACDAC::send(uint8_t* buf, int len, uint8_t address)
     pkt.crc = 0;
     pkt.address = address;
     pkt.size = len;
+    pkt.communication_rate = (uint8_t)br;
 
     memcpy(pkt.data, buf, len);
 
@@ -705,15 +708,15 @@ JDBusState JACDAC::getState()
 }
 
 
-int JACDAC::setBaud(JDBaudRate baud)
+int JACDAC::setMaximumBaud(JDBaudRate baud)
 {
-    this->txBaud = baud;
+    this->maxBaud = baud;
     return DEVICE_OK;
 }
 
-JDBaudRate JACDAC::getBaud()
+JDBaudRate JACDAC::getMaximumBaud()
 {
-    return this->txBaud;
+    return this->maxBaud;
 }
 
 /**

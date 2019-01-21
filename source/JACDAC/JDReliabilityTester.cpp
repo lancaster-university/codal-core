@@ -25,7 +25,7 @@ int JDReliabilityTester::sendPacket(uint8_t value)
     p.value = value;
     p.count = count++;
 
-    return JDProtocol::send((uint8_t*)&p, sizeof(ReliabilityPacket), this->device.address);
+    return send((uint8_t*)&p, sizeof(ReliabilityPacket));
 }
 
 int JDReliabilityTester::start()
