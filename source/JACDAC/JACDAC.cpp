@@ -415,18 +415,19 @@ void JACDAC::onRiseFall(Event e)
     if (e.value == DEVICE_PIN_EVT_RISE)
     {
         // Lo to hi transition?
-        if (status & JD_SERIAL_BUS_LO)
+        if (!(status & JD_SERIAL_BUS_STATE))
             toggle = true;
 
-        status |= (JD_SERIAL_BUS_HI | ((toggle) ? JD_SERIAL_BUS_TOGGLED : 0));
+        status |= (JD_SERIAL_BUS_STATE | ((toggle) ? JD_SERIAL_BUS_TOGGLED : 0));
     }
     else
     {
         // Hi to lo transition?
-        if (status & JD_SERIAL_BUS_HI)
+        if (status & JD_SERIAL_BUS_STATE)
             toggle = true;
 
-        status |= (JD_SERIAL_BUS_LO | ((toggle) ? JD_SERIAL_BUS_TOGGLED : 0));
+        status &= ~JD_SERIAL_BUS_STATE;
+        status |= (toggle) ? JD_SERIAL_BUS_TOGGLED : 0;
     }
 }
 
@@ -435,7 +436,7 @@ void JACDAC::errorState(JDBusErrorState es)
     // first time entering the error state?
     if (es != JDBusErrorState::Continuation && !(status & es))
     {
-        status &= ~(JD_SERIAL_BUS_LO | JD_SERIAL_BUS_HI | JD_SERIAL_BUS_TOGGLED);
+        status &= ~(JD_SERIAL_BUS_STATE | JD_SERIAL_BUS_TOGGLED);
 
         if (es == JD_SERIAL_BUS_TIMEOUT_ERROR || es == JD_SERIAL_BUS_UART_ERROR)
         {

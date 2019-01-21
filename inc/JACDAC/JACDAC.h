@@ -57,9 +57,8 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_BUS_TIMEOUT_ERROR     0x0040
 #define JD_SERIAL_BUS_UART_ERROR        0x0080
 
-#define JD_SERIAL_BUS_LO                0x0100
-#define JD_SERIAL_BUS_HI                0x0200
-#define JD_SERIAL_BUS_TOGGLED           0x0400
+#define JD_SERIAL_BUS_STATE             0x0100
+#define JD_SERIAL_BUS_TOGGLED           0x0200
 
 #define JD_SERIAL_EVT_DATA_READY       1
 #define JD_SERIAL_EVT_BUS_ERROR        2
