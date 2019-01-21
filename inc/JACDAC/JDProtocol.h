@@ -257,6 +257,25 @@ namespace codal
         }
 
         /**
+         * Returns the communication rate of this driver.
+         **/
+        JDBaudRate getBaudRate()
+        {
+            uint32_t r = ((this->flags & JD_DEVICE_COMM_RATE_MSK) >> JD_DEVICE_COMM_RATE_POS) + 1;
+            return (JDBaudRate)r;
+        }
+
+        /**
+         * Returns the communication rate of this driver.
+         **/
+        void setBaudRate(JDBaudRate br)
+        {
+            current->device.flags &= ~JD_DEVICE_COMM_RATE_MSK;
+            // JDBaudRate values start from one, we only use 3 bits in our flags field for the comm rate... subtract one
+            current->device.flags |= ((uint8_t)br - 1) << JD_DEVICE_COMM_RATE_POS;
+        }
+
+        /**
          * Sets the mode to the given DriverType
          *
          * @param m the new mode the driver should move to.
