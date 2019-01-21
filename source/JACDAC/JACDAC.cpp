@@ -121,7 +121,8 @@ void JACDAC::_timerCallback(uint16_t channels)
             else
             {
                 lastBufferedCount = buffered;
-                timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + JD_MAX_INTERBYTE_SPACING);
+                // 2x interbyte, because it would be overkill to check every 160 us
+                timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() +  (2 * JD_MAX_INTERBYTE_SPACING));
             }
         }
     }
@@ -179,7 +180,7 @@ void JACDAC::dmaComplete(Event evt)
 
                 JDPacket* rx = (JDPacket*)rxBuf;
                 sws.receiveDMA(((uint8_t*)rxBuf) + JD_SERIAL_HEADER_SIZE, rx->size);
-                timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + JD_MAX_INTERBYTE_SPACING);
+                timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + (2 * JD_MAX_INTERBYTE_SPACING));
                 JD_DMESG("RXH %d",rx->size);
 
                 status |= JD_SERIAL_RECEIVING;
@@ -188,7 +189,8 @@ void JACDAC::dmaComplete(Event evt)
             else if (status & JD_SERIAL_RECEIVING)
             {
                 status &= ~(JD_SERIAL_RECEIVING);
-                system_timer_cancel_event(this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+                timer.clearCompare(MAXIMUM_INTERBYTE_CC);
+
                 uint8_t* crcPointer = (uint8_t*)&rxBuf->address;
                 uint16_t crc = fletcher16(crcPointer, rxBuf->size + JD_SERIAL_CRC_HEADER_SIZE); // include size and address in the checksum.
 
