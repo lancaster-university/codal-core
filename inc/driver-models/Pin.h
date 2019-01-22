@@ -387,7 +387,7 @@ namespace codal
         virtual int setIRQ(void (*gpio_interrupt)(int))
         {
             this->gpio_irq = gpio_interrupt;
-            return this->eventOn(DEVICE_PIN_INTERRUPT_ON_EDGE);
+            return DEVICE_OK;
         }
 
         /**
