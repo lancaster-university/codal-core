@@ -49,6 +49,7 @@ class ST7735
     Pin &dc;
     uint8_t cmdBuf[20];
     ST7735WorkBuffer *work;
+    bool inSleepMode;
 
     void sendCmd(uint8_t *buf, int len);
     void sendCmdSeq(const uint8_t *buf);
@@ -84,6 +85,11 @@ public:
      * Waits for the previous sendIndexedImage() operation to complete (it normally executes in background).
      */
     void waitForSendDone();
+
+    /**
+     * Puts the display in (or out of) sleep mode.
+     */
+    void setSleep(bool sleepMode);
 };
 
 }

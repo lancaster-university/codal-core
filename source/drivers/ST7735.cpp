@@ -185,7 +185,8 @@ void ST7735::sendColorsStep(ST7735 *st)
 {
     ST7735WorkBuffer *work = st->work;
 
-    if (work->paletteTable) {
+    if (work->paletteTable)
+    {
         auto palette = work->paletteTable;
         work->paletteTable = NULL;
         memset(work->dataBuf, 0, sizeof(work->dataBuf));
@@ -261,6 +262,27 @@ void ST7735::waitForSendDone()
         fiber_wait_for_event(DEVICE_ID_DISPLAY, 101);
 }
 
+void ST7735::setSleep(bool sleepMode)
+{
+    if (sleepMode == this->inSleepMode)
+        return;
+
+    if (sleepMode)
+    {
+        uint8_t cmd = ST7735_SLPIN;
+        this->inSleepMode = true;
+        waitForSendDone();
+        sendCmd(&cmd, 1);
+    }
+    else
+    {
+        uint8_t cmd = ST7735_SLPOUT;
+        sendCmd(&cmd, 1);
+        fiber_sleep(120);
+        this->inSleepMode = false;
+    }
+}
+
 int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height, uint32_t *palette)
 {
     if (!work)
@@ -268,11 +290,11 @@ int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height
         work = new ST7735WorkBuffer;
         memset(work, 0, sizeof(*work));
         for (int i = 0; i < 256; ++i)
-            work->expPalette[i] = 0x1011 * (i & 0xf) | (0x110100 * (i>>4));
+            work->expPalette[i] = 0x1011 * (i & 0xf) | (0x110100 * (i >> 4));
         EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, 100, this, &ST7735::sendDone);
     }
 
-    if (work->inProgress)
+    if (work->inProgress || inSleepMode)
         return DEVICE_BUSY;
 
     work->paletteTable = palette;
@@ -342,11 +364,13 @@ void ST7735::init()
     sendCmdSeq(initCmds);
 }
 
-void ST7735::configure(uint8_t madctl, uint32_t frmctr1) {
+void ST7735::configure(uint8_t madctl, uint32_t frmctr1)
+{
     uint8_t cmd0[] = {ST7735_MADCTL, madctl};
-    uint8_t cmd1[] = {ST7735_FRMCTR1, (uint8_t)(frmctr1 >> 16), (uint8_t)(frmctr1 >> 8), (uint8_t)frmctr1};
+    uint8_t cmd1[] = {ST7735_FRMCTR1, (uint8_t)(frmctr1 >> 16), (uint8_t)(frmctr1 >> 8),
+                      (uint8_t)frmctr1};
     sendCmd(cmd0, sizeof(cmd0));
     sendCmd(cmd1, cmd1[3] == 0xff ? 3 : 4);
 }
 
-}
+} // namespace codal
