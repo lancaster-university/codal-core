@@ -38,6 +38,14 @@ int JDDriver::populateDriverInfo(JDDriverInfo*, uint8_t)
     return 0;
 }
 
+int JDDriver::send(uint8_t* buf, int len)
+{
+    if (JDProtocol::instance)
+        return JDProtocol::instance->bus.send(buf, len, this->device.address, this->device.getBaudRate());
+
+    return DEVICE_NO_RESOURCES;
+}
+
 void JDDriver::pair()
 {
     // create a pairing request control packet.
@@ -57,7 +65,7 @@ void JDDriver::pair()
     DMESG("SEND PAIRING REQ: A %d S %d", info->address, cp->serial_number);
 
     // address the packet to the logic driver.
-    JDProtocol::send((uint8_t*)cp, packetSize, 0);
+    send((uint8_t*)cp, packetSize);
 }
 
 int JDDriver::sendPairingPacket(JDDevice d)
@@ -191,7 +199,7 @@ int JDDriver::handlePairingPacket(JDControlPacket* cp)
         {
             // respond with a packet DIRECTED at the device that sent us the pairing request
             info->flags |= JD_DRIVER_INFO_FLAGS_ACK;
-            JDProtocol::send((uint8_t*)cp, JD_CONTROL_PACKET_HEADER_SIZE + JD_DRIVER_INFO_HEADER_SIZE + sizeof(JDDevice), 0);
+            send((uint8_t*)cp, JD_CONTROL_PACKET_HEADER_SIZE + JD_DRIVER_INFO_HEADER_SIZE + sizeof(JDDevice));
 
             DMESG("PAIRING REQ: A %d S %d", d.address, d.serial_number);
             // update our flags
@@ -225,7 +233,7 @@ int JDDriver::handlePairingPacket(JDControlPacket* cp)
 
             // respond with a packet DIRECTED at the device that sent us the pairing request
             info->flags |= JD_DRIVER_INFO_FLAGS_NACK;
-            JDProtocol::send((uint8_t*)cp, JD_CONTROL_PACKET_HEADER_SIZE + JD_DRIVER_INFO_HEADER_SIZE + sizeof(JDDevice), 0);
+            send((uint8_t*)cp, JD_CONTROL_PACKET_HEADER_SIZE + JD_DRIVER_INFO_HEADER_SIZE + sizeof(JDDevice));
             return DEVICE_OK;
         }
 

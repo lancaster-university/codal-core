@@ -35,14 +35,16 @@ DEALINGS IN THE SOFTWARE.
 #define JD_VERSION                     0
 
 // various timings in microseconds
+// 8 data bits, 1 start bit, 1 stop bit.
+#define JD_BYTE_AT_125KBAUD                                 80
 // the maximum permitted time between bytes
-#define JD_MAX_INTERBYTE_SPACING        72
+#define JD_MAX_INTERBYTE_SPACING                            (2 * JD_BYTE_AT_125KBAUD)
 // the minimum permitted time between the data packets
-#define JD_MIN_INTERFRAME_SPACING       (2 * JD_MAX_INTERBYTE_SPACING)
-// the maximum permitted time between the low pulse and data being received
-#define JD_MAX_LO_DATA_SPACING          (3 * JD_MAX_INTERBYTE_SPACING)
+#define JD_MIN_INTERFRAME_SPACING                           (2 * JD_BYTE_AT_125KBAUD)
 // the time it takes for the bus to be considered in a normal state
-#define JD_BUS_NORMALITY_PERIOD         JD_MIN_INTERFRAME_SPACING
+#define JD_BUS_NORMALITY_PERIOD                             (2 * JD_BYTE_AT_125KBAUD)
+// the maximum permitted time between the low pulse and data being received is 2 times 1 byte at the current baud rate.
+#define JD_INTERLODATA_SPACING_MULTIPLIER               2
 
 #define JD_SERIAL_MAX_BUFFERS          10
 
@@ -55,9 +57,8 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_BUS_TIMEOUT_ERROR     0x0040
 #define JD_SERIAL_BUS_UART_ERROR        0x0080
 
-#define JD_SERIAL_BUS_LO                0x0100
-#define JD_SERIAL_BUS_HI                0x0200
-#define JD_SERIAL_BUS_TOGGLED           0x0400
+#define JD_SERIAL_BUS_STATE             0x0100
+#define JD_SERIAL_BUS_TOGGLED           0x0200
 
 #define JD_SERIAL_EVT_DATA_READY       1
 #define JD_SERIAL_EVT_BUS_ERROR        2
@@ -122,6 +123,7 @@ namespace codal
         uint8_t size; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.
         // add more stuff
         uint8_t data[JD_SERIAL_MAX_PAYLOAD_SIZE];
+        uint8_t communication_rate;
     } __attribute((__packed__));
 
     enum class JDBusState : uint8_t
@@ -164,7 +166,7 @@ namespace codal
     */
     class JACDAC : public CodalComponent
     {
-        JDBaudRate txBaud;
+        JDBaudRate maxBaud;
         JDBaudRate currentBaud;
         uint8_t bufferOffset;
 
@@ -260,7 +262,7 @@ namespace codal
           *
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
           */
-        virtual int send(uint8_t* buf, int len, uint8_t address);
+        virtual int send(uint8_t* buf, int len, uint8_t address, JDBaudRate communicationRate);
 
         /**
          * Returns a bool indicating whether the JACDAC driver has been started.
@@ -290,20 +292,21 @@ namespace codal
         JDBusState getState();
 
         /**
-         * Sets the JACDAC baud rate, and internally sets the single wire serial baud JACDAC is using.
+         * Sets the maximum baud rate which is used as a default (if no communication rate is given in any packet), and as
+         * a maximum reception rate.
          *
          * @param baudRate the desired baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
          *
          * @returns DEVICE_OK on success
          **/
-        int setBaud(JDBaudRate baudRate);
+        int setMaximumBaud(JDBaudRate baudRate);
 
         /**
-         * Returns the current JACDAC baud rate.
+         * Returns the current maximum baud rate.
          *
          * @returns the enumerated baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
          **/
-        JDBaudRate getBaud();
+        JDBaudRate getMaximumBaud();
 
         void _timerCallback(uint16_t channels);
     };

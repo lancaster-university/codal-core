@@ -8,10 +8,10 @@
 #include "Timer.h"
 
 #define MAXIMUM_INTERBYTE_CC        0
+#define MAXIMUM_LO_DATA_CC          0 // reuse the above channel
 #define MINIMUM_INTERFRAME_CC       1
-#define MAXIMUM_LO_DATA_CC          2
 
-#define TIMER_CHANNELS_REQUIRED     3
+#define TIMER_CHANNELS_REQUIRED     2
 
 #define JD_MAGIC_BUFFER_VALUE       0x1a
 
@@ -112,7 +112,29 @@ void JACDAC::_timerCallback(uint16_t channels)
 
     if (channels & (1 << MAXIMUM_INTERBYTE_CC))
     {
-        if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER))
+        if (status & JD_SERIAL_RECEIVING_HEADER)
+        {
+            uint32_t endTime = timer.captureCounter();
+
+            // if we've received data, swap to checking the framing of individual bytes.
+            if (sws.getBytesReceived() > 0)
+                timer.setCompare(MAXIMUM_LO_DATA_CC, endTime + JD_MAX_INTERBYTE_SPACING);
+
+            // the maximum lo -> data spacing has been exceeded
+            // enter the error state.
+            else if (endTime - startTime >= baudToByteMap[(uint8_t)currentBaud - 1].time_per_byte * JD_INTERLODATA_SPACING_MULTIPLIER)
+                errorState(JDBusErrorState::BusTimeoutError);
+
+            // no data has been received and we haven't yet exceed lo -> data spacing
+            else
+            {
+                startTime = endTime;
+                timer.setCompare(MAXIMUM_LO_DATA_CC, endTime + JD_MAX_INTERBYTE_SPACING);
+            }
+
+            return;
+        }
+        else if (status & JD_SERIAL_RECEIVING)
         {
             uint16_t buffered = sws.getBytesReceived();
 
@@ -121,7 +143,8 @@ void JACDAC::_timerCallback(uint16_t channels)
             else
             {
                 lastBufferedCount = buffered;
-                timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + JD_MAX_INTERBYTE_SPACING);
+                // 2x interbyte, because it would be overkill to check every 160 us
+                timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() +  (2 * JD_MAX_INTERBYTE_SPACING));
             }
         }
     }
@@ -130,36 +153,12 @@ void JACDAC::_timerCallback(uint16_t channels)
     {
         sendPacket();
     }
-
-    if (channels & (1 << MAXIMUM_LO_DATA_CC))
-    {
-        uint32_t endTime = timer.captureCounter();
-
-        // if we've received data, swap to checking the framing of individual bytes.
-        if (sws.getBytesReceived() > 0)
-            timer.setCompare(MAXIMUM_INTERBYTE_CC, endTime + JD_MAX_INTERBYTE_SPACING);
-
-        // the maximum lo -> data spacing has been exceed
-        // enter the error state.
-        else if (endTime - startTime > JD_MAX_LO_DATA_SPACING)
-            errorState(JDBusErrorState::BusTimeoutError);
-
-        // no data has been received and we haven't yet exceed lo -> data spacing
-        else
-        {
-            startTime = endTime;
-            timer.setCompare(MAXIMUM_LO_DATA_CC, endTime + JD_MAX_INTERBYTE_SPACING);
-        }
-
-        return;
-    }
 }
 
 void JACDAC::dmaComplete(Event evt)
 {
     if (evt.value == SWS_EVT_ERROR)
     {
-        // event should be more generic: tx/rx timeout
         timer.clearCompare(MAXIMUM_INTERBYTE_CC);
 
         error_count++;
@@ -174,12 +173,11 @@ void JACDAC::dmaComplete(Event evt)
         {
             if (status & JD_SERIAL_RECEIVING_HEADER)
             {
-
                 status &= ~(JD_SERIAL_RECEIVING_HEADER);
 
                 JDPacket* rx = (JDPacket*)rxBuf;
                 sws.receiveDMA(((uint8_t*)rxBuf) + JD_SERIAL_HEADER_SIZE, rx->size);
-                timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + JD_MAX_INTERBYTE_SPACING);
+                timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + (2 * JD_MAX_INTERBYTE_SPACING));
                 JD_DMESG("RXH %d",rx->size);
 
                 status |= JD_SERIAL_RECEIVING;
@@ -188,12 +186,15 @@ void JACDAC::dmaComplete(Event evt)
             else if (status & JD_SERIAL_RECEIVING)
             {
                 status &= ~(JD_SERIAL_RECEIVING);
-                system_timer_cancel_event(this->id, JD_SERIAL_EVT_RX_TIMEOUT);
+                timer.clearCompare(MAXIMUM_INTERBYTE_CC);
+
                 uint8_t* crcPointer = (uint8_t*)&rxBuf->address;
                 uint16_t crc = fletcher16(crcPointer, rxBuf->size + JD_SERIAL_CRC_HEADER_SIZE); // include size and address in the checksum.
 
                 if (crc == rxBuf->crc && rxBuf->jacdac_version == JD_VERSION)
                 {
+                    rxBuf->communication_rate = (uint8_t)currentBaud;
+
                     // move rxbuf to rxArray and allocate new buffer.
                     addToRxArray(rxBuf);
                     rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
@@ -257,6 +258,10 @@ void JACDAC::onLowPulse(Event e)
     if (ts == 0)
         ts = 1;
 
+    if (ts < (uint8_t)this->maxBaud)
+        // we can't receive at this baud rate
+        errorState(JDBusErrorState::BusUARTError);
+
     if ((JDBaudRate)ts != this->currentBaud)
     {
         sws.setBaud(baudToByteMap[ts - 1].baud);
@@ -272,7 +277,7 @@ void JACDAC::onLowPulse(Event e)
     sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_HEADER_SIZE);
 
     startTime = timer.captureCounter();
-    timer.setCompare(MAXIMUM_LO_DATA_CC, startTime + JD_MAX_INTERBYTE_SPACING);
+    timer.setCompare(MAXIMUM_LO_DATA_CC, baudToByteMap[(uint8_t)currentBaud - 1].time_per_byte * JD_INTERLODATA_SPACING_MULTIPLIER);
 
     if (commLED)
         commLED->setDigitalValue(1);
@@ -325,9 +330,6 @@ void JACDAC::initialise()
     timer.enable();
 
     sp.getDigitalValue(PullMode::None);
-
-    sws.setBaud(baudToByteMap[(uint8_t)txBaud - 1].baud);
-    currentBaud = txBaud;
     sws.setDMACompletionHandler(this, &JACDAC::dmaComplete);
 }
 
@@ -338,10 +340,10 @@ void JACDAC::initialise()
  *
  * @param sws an instance of sws created using p.
  */
-JACDAC::JACDAC(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busLED, Pin* commStateLED, JDBaudRate baudRate, uint16_t id) : sws(sws), sp(sws.p), timer(timer), busLED(busLED), commLED(commStateLED)
+JACDAC::JACDAC(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busLED, Pin* commStateLED, JDBaudRate maxBaudRate, uint16_t id) : sws(sws), sp(sws.p), timer(timer), busLED(busLED), commLED(commStateLED)
 {
     this->id = id;
-    this->txBaud = baudRate;
+    this->maxBaud = maxBaudRate;
     instance = this;
 
     // at least three channels are required.
@@ -413,18 +415,19 @@ void JACDAC::onRiseFall(Event e)
     if (e.value == DEVICE_PIN_EVT_RISE)
     {
         // Lo to hi transition?
-        if (status & JD_SERIAL_BUS_LO)
+        if (!(status & JD_SERIAL_BUS_STATE))
             toggle = true;
 
-        status |= (JD_SERIAL_BUS_HI | ((toggle) ? JD_SERIAL_BUS_TOGGLED : 0));
+        status |= (JD_SERIAL_BUS_STATE | ((toggle) ? JD_SERIAL_BUS_TOGGLED : 0));
     }
     else
     {
         // Hi to lo transition?
-        if (status & JD_SERIAL_BUS_HI)
+        if (status & JD_SERIAL_BUS_STATE)
             toggle = true;
 
-        status |= (JD_SERIAL_BUS_LO | ((toggle) ? JD_SERIAL_BUS_TOGGLED : 0));
+        status &= ~JD_SERIAL_BUS_STATE;
+        status |= (toggle) ? JD_SERIAL_BUS_TOGGLED : 0;
     }
 }
 
@@ -433,7 +436,7 @@ void JACDAC::errorState(JDBusErrorState es)
     // first time entering the error state?
     if (es != JDBusErrorState::Continuation && !(status & es))
     {
-        status &= ~(JD_SERIAL_BUS_LO | JD_SERIAL_BUS_HI | JD_SERIAL_BUS_TOGGLED);
+        status &= ~(JD_SERIAL_BUS_STATE | JD_SERIAL_BUS_TOGGLED);
 
         if (es == JD_SERIAL_BUS_TIMEOUT_ERROR || es == JD_SERIAL_BUS_UART_ERROR)
         {
@@ -522,18 +525,14 @@ void JACDAC::sendPacket()
                 txBuf = popTxArray();
 
             sp.setDigitalValue(0);
-            target_wait_us(baudToByteMap[(uint8_t)txBaud - 1].time_per_byte);
+            target_wait_us(baudToByteMap[(uint8_t)txBuf->communication_rate - 1].time_per_byte);
             sp.setDigitalValue(1);
 
-            // return after 100 us
-            system_timer_event_after_us(100, this->id, JD_SERIAL_EVT_DRAIN);
-
-            if (txBaud != currentBaud)
+            if (txBuf->communication_rate != (uint8_t)currentBaud)
             {
-                sws.setBaud(baudToByteMap[(uint8_t)txBaud - 1].baud);
-                currentBaud = txBaud;
+                sws.setBaud(baudToByteMap[(uint8_t)txBuf->communication_rate - 1].baud);
+                currentBaud = (JDBaudRate)txBuf->communication_rate;
             }
-            return;
         }
         JD_DMESG("txh: %d txt: %d",txHead,txTail);
     }
@@ -579,6 +578,9 @@ int JACDAC::send(JDPacket* tx, bool compute_crc)
     memset(pkt, 0, sizeof(JDPacket));
     memcpy(pkt, tx, sizeof(JDPacket));
 
+    if (pkt->communication_rate < (uint8_t) maxBaud)
+        pkt->communication_rate = (uint8_t)maxBaud;
+
     JD_DMESG("QU %d", pkt->size);
 
     pkt->jacdac_version = JD_VERSION;
@@ -614,7 +616,7 @@ int JACDAC::send(JDPacket* tx, bool compute_crc)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int JACDAC::send(uint8_t* buf, int len, uint8_t address)
+int JACDAC::send(uint8_t* buf, int len, uint8_t address, JDBaudRate br)
 {
     if (buf == NULL || len <= 0 || len > JD_SERIAL_MAX_PAYLOAD_SIZE)
     {
@@ -628,6 +630,7 @@ int JACDAC::send(uint8_t* buf, int len, uint8_t address)
     pkt.crc = 0;
     pkt.address = address;
     pkt.size = len;
+    pkt.communication_rate = (uint8_t)br;
 
     memcpy(pkt.data, buf, len);
 
@@ -705,15 +708,15 @@ JDBusState JACDAC::getState()
 }
 
 
-int JACDAC::setBaud(JDBaudRate baud)
+int JACDAC::setMaximumBaud(JDBaudRate baud)
 {
-    this->txBaud = baud;
+    this->maxBaud = baud;
     return DEVICE_OK;
 }
 
-JDBaudRate JACDAC::getBaud()
+JDBaudRate JACDAC::getMaximumBaud()
 {
-    return this->txBaud;
+    return this->maxBaud;
 }
 
 /**

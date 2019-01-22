@@ -60,9 +60,12 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DEVICE_FLAGS_PAIRED          0x0400 // this flag indicates that a driver is paired with another
 #define JD_DEVICE_FLAGS_PAIRING         0x0200 // this flag indicates that a driver is paired with another
 
-#define JD_DEVICE_FLAGS_INITIALISED     0x0080 // device driver is running
-#define JD_DEVICE_FLAGS_INITIALISING    0x0040 // a flag to indicate that a control packet has been queued
-#define JD_DEVICE_FLAGS_CP_SEEN         0x0020 // indicates whether a control packet has been seen recently.
+#define JD_DEVICE_FLAGS_INITIALISED     0x0100 // device driver is running
+#define JD_DEVICE_FLAGS_INITIALISING    0x0080 // a flag to indicate that a control packet has been queued
+#define JD_DEVICE_FLAGS_CP_SEEN         0x0040 // indicates whether a control packet has been seen recently.
+
+#define JD_DEVICE_COMM_RATE_MSK         0x0030 // these bits indicate the current comm rate of the driver
+#define JD_DEVICE_COMM_RATE_POS         16     // the position of the comm rate msk in the flags field.
 
 #define JD_DEVICE_ERROR_MSK             0x000F // the lower 4 bits are reserved for well known errors, these are
                                                // automatically placed into control packets by the logic driver.
@@ -251,6 +254,25 @@ namespace codal
             this->flags = flags;
             this->serial_number = serial_number;
             this->driver_class = driver_class;
+        }
+
+        /**
+         * Returns the communication rate of this driver.
+         **/
+        JDBaudRate getBaudRate()
+        {
+            uint32_t r = ((this->flags & JD_DEVICE_COMM_RATE_MSK) >> JD_DEVICE_COMM_RATE_POS) + 1;
+            return (JDBaudRate)r;
+        }
+
+        /**
+         * Returns the communication rate of this driver.
+         **/
+        void setBaudRate(JDBaudRate br)
+        {
+            this->flags &= ~JD_DEVICE_COMM_RATE_MSK;
+            // JDBaudRate values start from one, we only use 3 bits in our flags field for the comm rate... subtract one
+            this->flags |= ((uint8_t)br - 1) << JD_DEVICE_COMM_RATE_POS;
         }
 
         /**
@@ -460,6 +482,16 @@ namespace codal
          * using the drivers id, and the event code JD_DRIVER_EVT_UNPAIRED.
          **/
         void partnerDisconnected(Event);
+
+        /**
+         * A convenience function that calls JACDAC->send with parameters supplied from this instances' JDDevice
+         *
+         * @param buf the data to send
+         * @param len the length of the data.
+         *
+         * @return DEVICE_OK on success.
+         **/
+        int send(uint8_t* buf, int len);
 
         public:
 
@@ -797,19 +829,6 @@ namespace codal
          * @return DEVICE_OK on success.
          **/
         static int send(JDPacket* pkt);
-
-        /**
-         * A static method to send a buffer on the bus. The buffer is placed in a JDPacket and sent.
-         *
-         * @param buf a pointer to the data to send
-         *
-         * @param len the length of the buffer
-         *
-         * @param address the address to use when sending the packet
-         *
-         * @return DEVICE_OK on success.
-         **/
-        static int send(uint8_t* buf, int len, uint8_t address);
 
         /**
          * Logs the current state of JACDAC, drivers, and the jackrouter (if provided).
