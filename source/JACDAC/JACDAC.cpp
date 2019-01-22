@@ -95,6 +95,12 @@ uint16_t fletcher16(const uint8_t *data, size_t len)
 
     return (c1 << 8 | c0);
 }
+void jacdac_pin_irq(int state)
+{
+    if (JACDAC::instance)
+        JACDAC::instance->_gpioCallback(state);
+}
+
 
 void jacdac_timer_irq(uint16_t channels)
 {
@@ -102,9 +108,25 @@ void jacdac_timer_irq(uint16_t channels)
         JACDAC::instance->_timerCallback(channels);
 }
 
+void JACDAC::_gpioCallback(int state)
+{
+    if (!(status & JD_SERIAL_LO_PULSE_START))
+    {
+        status |= JD_SERIAL_LO_PULSE_START;
+        startTime = timer.captureCounter();
+        timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + baudToByteMap[(uint8_t)JDBaudRate::Baud125K - 1].time_per_byte);
+    }
+    else
+    {
+        timer.clearCompare(MAXIMUM_INTERBYTE_CC);
+        uint32_t end = timer.captureCounter();
+        loPulseDetected((end > startTime) ? end - startTime : startTime - end);
+    }
+}
+
 void JACDAC::_timerCallback(uint16_t channels)
 {
-    if (status & (JD_SERIAL_BUS_TIMEOUT_ERROR | JD_SERIAL_BUS_LO_ERROR))
+    if (status & (JD_SERIAL_BUS_TIMEOUT_ERROR | JD_SERIAL_BUS_LO_ERROR | JD_SERIAL_BUS_UART_ERROR))
     {
         errorState(JDBusErrorState::Continuation);
         return;
@@ -112,7 +134,13 @@ void JACDAC::_timerCallback(uint16_t channels)
 
     if (channels & (1 << MAXIMUM_INTERBYTE_CC))
     {
-        if (status & JD_SERIAL_RECEIVING_HEADER)
+        if (status & JD_SERIAL_LO_PULSE_START)
+        {
+            status &= ~JD_SERIAL_LO_PULSE_START;
+            errorState(JDBusErrorState::BusLoError);
+            return;
+        }
+        else if (status & JD_SERIAL_RECEIVING_HEADER)
         {
             uint32_t endTime = timer.captureCounter();
 
@@ -236,36 +264,35 @@ void JACDAC::dmaComplete(Event evt)
         commLED->setDigitalValue(0);
 }
 
-void JACDAC::onLowPulse(Event e)
+void JACDAC::loPulseDetected(uint32_t pulseTime)
 {
     JD_DMESG("LO: %d %d", (status & JD_SERIAL_RECEIVING) ? 1 : 0, (status & JD_SERIAL_TRANSMITTING) ? 1 : 0);
     // guard against repeat events.
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
 
-    uint32_t ts = e.timestamp;
-    ts = ceil(ts / 10);
-    ts = ceil_pow2(ts);
+    pulseTime = ceil(pulseTime / 10);
+    pulseTime = ceil_pow2(pulseTime);
 
-    JD_DMESG("TS: %d %d", ts, (int)e.timestamp);
+    JD_DMESG("TS: %d", pulseTime);
 
     // we support 1, 2, 4, 8 as our powers of 2.
-    if (ts > 8)
+    if (pulseTime > 8)
         return;
 
     // if zero round to 1 (to prevent div by 0)
     // it is assumed that the transaction is at 1 mbaud
-    if (ts == 0)
-        ts = 1;
+    if (pulseTime == 0)
+        pulseTime = 1;
 
-    if (ts < (uint8_t)this->maxBaud)
+    if (pulseTime < (uint8_t)this->maxBaud)
         // we can't receive at this baud rate
         errorState(JDBusErrorState::BusUARTError);
 
-    if ((JDBaudRate)ts != this->currentBaud)
+    if ((JDBaudRate)pulseTime != this->currentBaud)
     {
-        sws.setBaud(baudToByteMap[ts - 1].baud);
-        this->currentBaud = (JDBaudRate)ts;
+        sws.setBaud(baudToByteMap[pulseTime - 1].baud);
+        this->currentBaud = (JDBaudRate)pulseTime;
     }
 
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
@@ -290,7 +317,6 @@ void JACDAC::configure(JDPinEvents eventType)
     // to ensure atomicity of the state machine, we disable one set of event and enable the other.
     if (eventType == ListeningForPulse)
     {
-        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_PULSE_LO, this, &JACDAC::onLowPulse, MESSAGE_BUS_LISTENER_IMMEDIATE);
         EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::onRiseFall);
         EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_FALL, this, &JACDAC::onRiseFall);
     }
@@ -299,13 +325,11 @@ void JACDAC::configure(JDPinEvents eventType)
     {
         EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::onRiseFall, MESSAGE_BUS_LISTENER_IMMEDIATE);
         EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_FALL, this, &JACDAC::onRiseFall, MESSAGE_BUS_LISTENER_IMMEDIATE);
-        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_PULSE_LO, this, &JACDAC::onLowPulse);
     }
 
     if (eventType == Off)
     {
         // remove all active listeners too
-        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_PULSE_LO, this, &JACDAC::onLowPulse);
         EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::onRiseFall);
         EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_FALL, this, &JACDAC::onRiseFall);
     }

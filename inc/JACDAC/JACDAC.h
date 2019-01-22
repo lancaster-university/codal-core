@@ -59,6 +59,7 @@ DEALINGS IN THE SOFTWARE.
 
 #define JD_SERIAL_BUS_STATE             0x0100
 #define JD_SERIAL_BUS_TOGGLED           0x0200
+#define JD_SERIAL_LO_PULSE_START        0x0400
 
 #define JD_SERIAL_EVT_DATA_READY       1
 #define JD_SERIAL_EVT_BUS_ERROR        2
@@ -150,7 +151,7 @@ namespace codal
     {
         Off = DEVICE_PIN_EVENT_NONE,
         DetectBusEdge = DEVICE_PIN_EVENT_ON_EDGE,
-        ListeningForPulse = DEVICE_PIN_EVENT_ON_PULSE,
+        ListeningForPulse = DEVICE_PIN_INTERRUPT_ON_EDGE,
     };
 
     enum JDBusErrorState : uint16_t
@@ -181,7 +182,7 @@ namespace codal
         uint32_t startTime;
         uint32_t lastBufferedCount;
 
-        void onLowPulse(Event);
+        void loPulseDetected(uint32_t);
         void onRiseFall(Event e);
         void configure(JDPinEvents event);
         void dmaComplete(Event evt);
@@ -309,6 +310,7 @@ namespace codal
         JDBaudRate getMaximumBaud();
 
         void _timerCallback(uint16_t channels);
+        void _gpioCallback(int state);
     };
 } // namespace codal
 
