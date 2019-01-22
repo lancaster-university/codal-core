@@ -223,6 +223,14 @@ void MMA8653::idleCallback()
     requestUpdate();
 }
 
+int MMA8653::setSleep(bool sleepMode)
+{
+    if (sleepMode)
+        return i2c.writeRegister(this->address, MMA8653_CTRL_REG1, 0x00);
+    else
+        return configure();
+}
+
 
 const MMA8653SampleRangeConfig MMA8653SampleRange[MMA8653_SAMPLE_RANGES] = {
     {2, 0},
