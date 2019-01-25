@@ -43,8 +43,10 @@ DEALINGS IN THE SOFTWARE.
 #define JD_MIN_INTERFRAME_SPACING                           (2 * JD_BYTE_AT_125KBAUD)
 // the time it takes for the bus to be considered in a normal state
 #define JD_BUS_NORMALITY_PERIOD                             (2 * JD_BYTE_AT_125KBAUD)
-// the maximum permitted time between the low pulse and data being received is 2 times 1 byte at the current baud rate.
-#define JD_INTERLODATA_SPACING_MULTIPLIER               2
+// the minimum permitted time between the low pulse and data being received is 2 times 1 byte at the current baud rate.
+#define JD_INTERLODATA_SPACING_MULTIPLIER                   2
+// max spacing is 3 times 1 byte at minimum baud rate (240 us)
+#define JD_MAX_INTERLODATA_SPACING                          (3 * JD_BYTE_AT_125KBAUD)
 
 #define JD_SERIAL_MAX_BUFFERS          10
 
