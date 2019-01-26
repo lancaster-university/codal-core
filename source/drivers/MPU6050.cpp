@@ -47,6 +47,7 @@ int MPU6050::whoAmI()
 {
     uint8_t data;
     int result;
+    // the default whoami should return 0x68
     result = i2c.readRegister(address, MPU6050_WHOAMI, &data, 1, false);
     if (result !=0)
         return 0xffff;
@@ -57,7 +58,6 @@ int MPU6050::whoAmI()
 int MPU6050::requestUpdate()
 {
     updateSample();
-    DMESG("update mpu6050\r\n");
     return DEVICE_OK;
 }
 
@@ -71,7 +71,6 @@ int MPU6050::updateSample()
 
     if(int1.getDigitalValue() == 1) {
         result = i2c.readRegister(address, 0x3B, (uint8_t *) i2cData, 14, false);
-        DMESG("I2C read %d\r\n", result);
 
         i2c.readRegister(address, 0x3A, &irqsrc, 1, false);
         if (result != 0)
@@ -90,26 +89,10 @@ int MPU6050::updateSample()
     return DEVICE_OK;
 };
 
-int MPU6050::setPeriod(int period)
-{
-    samplePeriod = period;
-    return configure();
-}
-
-int MPU6050::getPeriod()
-{
-    return (int)samplePeriod;
-}
-
 int MPU6050::setRange(int range)
 {
     sampleRange = range;
     return configure();
-}
-
-int MPU6050::getRange()
-{
-    return (int)sampleRange;
 }
 
 Sample3D MPU6050::getSample()
@@ -119,7 +102,7 @@ Sample3D MPU6050::getSample()
 
 void MPU6050::idleCallback()
 {
-    // updateSample();
+
 }
 
 MPU6050::~MPU6050()

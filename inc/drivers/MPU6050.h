@@ -47,13 +47,6 @@ namespace codal{
         int setPeriod(int period);
 
         /**
-          * Reads the currently configured sample rate of the accelerometer.
-          *
-          * @return The time between samples, in milliseconds.
-          */
-        virtual int getPeriod();
-
-        /**
           * Attempts to set the sample range of the accelerometer to the specified value (in g).
           *
           * @param range The requested sample range of samples, in g.
@@ -69,13 +62,6 @@ namespace codal{
           * nearest lower range is chosen.
           */
         int setRange(int range);
-
-        /**
-          * Reads the currently configured sample range of the accelerometer.
-          *
-          * @return The sample range, in g.
-          */
-        virtual int getRange();
 
         /**
           * Attempts to read the 8 bit ID from the accelerometer, this can be used for
