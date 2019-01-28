@@ -257,6 +257,9 @@ void JACDAC::errorState(JDBusErrorState es)
 
         startTime = timer.captureCounter();
         timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + JD_BYTE_AT_125KBAUD);
+
+        if (busLED)
+            busLED->setDigitalValue(0);
         return;
     }
 
@@ -272,7 +275,7 @@ void JACDAC::errorState(JDBusErrorState es)
 
         if (endTime - startTime >= JD_BUS_NORMALITY_PERIOD)
         {
-            if (status & JD_SERIAL_BUS_LO_ERROR && busLED)
+            if (busLED)
                 busLED->setDigitalValue(1);
 
             status &= ~(JD_SERIAL_ERR_MSK);//~(JD_SERIAL_BUS_TIMEOUT_ERROR | JD_SERIAL_BUS_LO_ERROR | JD_SERIAL_BUS_UART_ERROR);
