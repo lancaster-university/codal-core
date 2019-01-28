@@ -58,6 +58,7 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_BUS_LO_ERROR          0x0020
 #define JD_SERIAL_BUS_TIMEOUT_ERROR     0x0040
 #define JD_SERIAL_BUS_UART_ERROR        0x0080
+#define JD_SERIAL_ERR_MSK               0x00E0
 
 #define JD_SERIAL_BUS_STATE             0x0100
 #define JD_SERIAL_BUS_TOGGLED           0x0200
@@ -65,8 +66,9 @@ DEALINGS IN THE SOFTWARE.
 
 #define JD_SERIAL_EVT_DATA_READY       1
 #define JD_SERIAL_EVT_BUS_ERROR        2
-#define JD_SERIAL_EVT_DRAIN            3
-#define JD_SERIAL_EVT_RX_TIMEOUT       4
+#define JD_SERIAL_EVT_CRC_ERROR        3
+#define JD_SERIAL_EVT_DRAIN            4
+#define JD_SERIAL_EVT_RX_TIMEOUT       5
 
 #define JD_SERIAL_EVT_BUS_CONNECTED    5
 #define JD_SERIAL_EVT_BUS_DISCONNECTED 6
@@ -137,6 +139,13 @@ namespace codal
         Low
     };
 
+    enum class JDSerialState : uint8_t
+    {
+        ListeningForPulse,
+        ErrorRecovery,
+        Off
+    };
+
     /**
      * This enumeration defines the low time of the tx pulse, and the transmission speed of
      * this JACDAC device on the bus.
@@ -147,13 +156,6 @@ namespace codal
         Baud500K = 2,
         Baud250K = 4,
         Baud125K = 8
-    };
-
-    enum JDPinEvents : uint16_t
-    {
-        Off = DEVICE_PIN_EVENT_NONE,
-        DetectBusEdge = DEVICE_PIN_EVENT_ON_EDGE,
-        ListeningForPulse = DEVICE_PIN_INTERRUPT_ON_EDGE,
     };
 
     enum JDBusErrorState : uint16_t
@@ -181,12 +183,14 @@ namespace codal
         Pin* busLED;
         Pin* commLED;
 
+        JDSerialState state;
+
         uint32_t startTime;
         uint32_t lastBufferedCount;
 
+
         void loPulseDetected(uint32_t);
-        void onRiseFall(Event e);
-        void configure(JDPinEvents event);
+        void setState(JDSerialState s);
         void dmaComplete(Event evt);
 
         JDPacket* popRxArray();

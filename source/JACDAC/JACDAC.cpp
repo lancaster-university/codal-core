@@ -43,7 +43,11 @@ const BaudByte baudToByteMap[] =
 {
     {1000000, 10},
     {500000, 20},
+    {0, 0},
     {250000, 40},
+    {0, 0},
+    {0, 0},
+    {0, 0},
     {125000, 80},
 };
 
@@ -108,21 +112,55 @@ void jacdac_timer_irq(uint16_t channels)
         JACDAC::instance->_timerCallback(channels);
 }
 
+extern void set_gpio(int);
+extern void set_gpio2(int);
 void JACDAC::_gpioCallback(int state)
 {
-    JD_DMESG("%d",state);
-    if (!(status & JD_SERIAL_LO_PULSE_START))
+    // DMESG("%d",state);
+
+    if (status & JD_SERIAL_ERR_MSK)
     {
-        status |= JD_SERIAL_LO_PULSE_START;
-        startTime = timer.captureCounter();
-        timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + baudToByteMap[(uint8_t)JDBaudRate::Baud125K - 1].time_per_byte);
+        // TODO: if we're in error mode, just set start time on every toggle, callback in 80 us for errorState?
+        // set_gpio2(1);
+        bool toggle = false;
+        if (state)
+        {
+            // Lo to hi transition?
+            if (!(status & JD_SERIAL_BUS_STATE))
+                toggle = true;
+
+            status |= (JD_SERIAL_BUS_STATE | ((toggle) ? JD_SERIAL_BUS_TOGGLED : 0));
+        }
+        else
+        {
+            // Hi to lo transition?
+            if (status & JD_SERIAL_BUS_STATE)
+                toggle = true;
+
+            status &= ~JD_SERIAL_BUS_STATE;
+            status |= (toggle) ? JD_SERIAL_BUS_TOGGLED : 0;
+        }
+        // set_gpio2(0);
     }
     else
     {
-        status &= ~JD_SERIAL_LO_PULSE_START;
-        timer.clearCompare(MAXIMUM_INTERBYTE_CC);
-        uint32_t end = timer.captureCounter();
-        loPulseDetected((end > startTime) ? end - startTime : startTime - end);
+        if (!state)
+        {
+            set_gpio(1);
+            status |= JD_SERIAL_LO_PULSE_START;
+            startTime = timer.captureCounter();
+            timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + baudToByteMap[(uint8_t)JDBaudRate::Baud125K - 1].time_per_byte);
+            set_gpio(0);
+        }
+        else if (status & JD_SERIAL_LO_PULSE_START)
+        {
+            set_gpio2(1);
+            status &= ~JD_SERIAL_LO_PULSE_START;
+            timer.clearCompare(MAXIMUM_INTERBYTE_CC);
+            uint32_t end = timer.captureCounter();
+            loPulseDetected((end > startTime) ? end - startTime : startTime - end);
+            set_gpio2(0);
+        }
     }
 }
 
@@ -130,6 +168,7 @@ void JACDAC::_timerCallback(uint16_t channels)
 {
     if (status & (JD_SERIAL_BUS_TIMEOUT_ERROR | JD_SERIAL_BUS_LO_ERROR | JD_SERIAL_BUS_UART_ERROR))
     {
+        DMESG("CONT ERR");
         errorState(JDBusErrorState::Continuation);
         return;
     }
@@ -139,6 +178,7 @@ void JACDAC::_timerCallback(uint16_t channels)
         if (status & JD_SERIAL_LO_PULSE_START)
         {
             status &= ~JD_SERIAL_LO_PULSE_START;
+            DMESG("BL ERR");
             errorState(JDBusErrorState::BusLoError);
             return;
         }
@@ -153,7 +193,10 @@ void JACDAC::_timerCallback(uint16_t channels)
             // the maximum lo -> data spacing has been exceeded
             // enter the error state.
             else if (endTime - startTime >= JD_MAX_INTERLODATA_SPACING)
+            {
+                DMESG("BTO ERR");
                 errorState(JDBusErrorState::BusTimeoutError);
+            }
 
             // no data has been received and we haven't yet exceed lo -> data spacing
             else
@@ -169,7 +212,10 @@ void JACDAC::_timerCallback(uint16_t channels)
             uint16_t buffered = sws.getBytesReceived();
 
             if (buffered == lastBufferedCount)
+            {
+                DMESG("BTO1 ERR");
                 errorState(JDBusErrorState::BusTimeoutError);
+            }
             else
             {
                 lastBufferedCount = buffered;
@@ -183,6 +229,79 @@ void JACDAC::_timerCallback(uint16_t channels)
         sendPacket();
 }
 
+void JACDAC::errorState(JDBusErrorState es)
+{
+    DMESG("ERROR! %d",es);
+    // first time entering the error state?
+    if (es != JDBusErrorState::Continuation && !(status & es))
+    {
+        set_gpio(1);
+        DMESG("FIRST");
+        status &= ~(JD_SERIAL_BUS_STATE | JD_SERIAL_BUS_TOGGLED);
+
+        if (es == JD_SERIAL_BUS_TIMEOUT_ERROR || es == JD_SERIAL_BUS_UART_ERROR)
+        {
+            error_count++;
+            sws.abortDMA();
+            sws.setMode(SingleWireDisconnected);
+
+            if (commLED)
+                commLED->setDigitalValue(0);
+        }
+
+        status |= es;
+
+        setState(JDSerialState::ErrorRecovery);
+
+        Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
+
+        startTime = timer.captureCounter();
+        timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + JD_BYTE_AT_125KBAUD);
+        return;
+    }
+
+    // in error mode we detect if there is activity on the bus (we do this by flagging when the bus is toggled,
+    // until the bus becomes idle defined by a period of JD_BUS_NORMALITY_PERIOD where there is no toggling)
+
+    set_gpio2(1);
+    // if the bus has not been toggled...
+    if (!(status & JD_SERIAL_BUS_TOGGLED) && sp.getDigitalValue(PullMode::Up))
+    {
+        // set_gpio(1);
+        uint32_t endTime = timer.captureCounter();
+
+        if (endTime - startTime >= JD_BUS_NORMALITY_PERIOD)
+        {
+            if (status & JD_SERIAL_BUS_LO_ERROR && busLED)
+                busLED->setDigitalValue(1);
+
+            status &= ~(JD_SERIAL_ERR_MSK);//~(JD_SERIAL_BUS_TIMEOUT_ERROR | JD_SERIAL_BUS_LO_ERROR | JD_SERIAL_BUS_UART_ERROR);
+
+            // resume normality
+            setState(JDSerialState::ListeningForPulse);
+            set_gpio(0);
+
+            // setup tx interrupt
+            timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
+            return;
+        }
+        // set_gpio(0);
+    }
+    else
+    {
+        // set_gpio2(1);
+        startTime = timer.captureCounter();
+        // set_gpio2(0);
+    }
+
+    set_gpio2(0);
+    // unset the bus toggled flag...
+    status &= ~JD_SERIAL_BUS_TOGGLED;
+
+    // otherwise come back in JD_BYTE_AT_125KBAUD us.
+    timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + JD_BYTE_AT_125KBAUD);
+}
+
 void JACDAC::dmaComplete(Event evt)
 {
     if (evt.value == SWS_EVT_ERROR)
@@ -191,6 +310,7 @@ void JACDAC::dmaComplete(Event evt)
 
         error_count++;
         status &= ~(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING);
+        DMESG("BUART ERR");
         errorState(JDBusErrorState::BusUARTError);
         return;
     }
@@ -206,7 +326,7 @@ void JACDAC::dmaComplete(Event evt)
                 if (rxBuf->size)
                 {
                     sws.receiveDMA(((uint8_t*)rxBuf) + JD_SERIAL_HEADER_SIZE, rxBuf->size);
-                    timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + (2 * JD_MAX_INTERBYTE_SPACING));
+                    timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + JD_MAX_INTERBYTE_SPACING);
 
                     status |= JD_SERIAL_RECEIVING;
                 }
@@ -229,18 +349,15 @@ void JACDAC::dmaComplete(Event evt)
                     // move rxbuf to rxArray and allocate new buffer.
                     addToRxArray(rxBuf);
                     rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
-                    memset(rxBuf, JD_MAGIC_BUFFER_VALUE, sizeof(JDPacket));
                     Event(id, JD_SERIAL_EVT_DATA_READY);
-                    JD_DMESG("DMA RXD");
+                    DMESG("DMA RXD");
                 }
                 // could we do something cool to indicate an incorrect CRC?
                 // i.e. drive the bus low....?
                 else
                 {
                     JD_DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
-                    // uint8_t* bufPtr = (uint8_t*)rxBuf;
-                    // for (int i = 0; i < JD_SERIAL_HEADER_SIZE + 2; i++)
-                    //     JD_DMESG("%d[%c]",bufPtr[i]);
+                    Event(this->id, JD_SERIAL_EVT_CRC_ERROR);
                 }
             }
         }
@@ -250,7 +367,7 @@ void JACDAC::dmaComplete(Event evt)
             status &= ~(JD_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
-            JD_DMESG("DMA TXD");
+            DMESG("DMA TXD");
         }
     }
 
@@ -259,7 +376,7 @@ void JACDAC::dmaComplete(Event evt)
     // force transition to output so that the pin is reconfigured.
     // also drive the bus high for a little bit.
     sp.setDigitalValue(1);
-    configure(JDPinEvents::ListeningForPulse);
+    setState(JDSerialState::ListeningForPulse);
 
     timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
 
@@ -274,7 +391,7 @@ void JACDAC::loPulseDetected(uint32_t pulseTime)
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
 
-    JD_DMESG("TS: %d", pulseTime);
+    DMESG("TS: %d", pulseTime);
 
     pulseTime = ceil(pulseTime / 10);
     pulseTime = ceil_pow2(pulseTime);
@@ -291,8 +408,12 @@ void JACDAC::loPulseDetected(uint32_t pulseTime)
         pulseTime = 1;
 
     if (pulseTime < (uint8_t)this->maxBaud)
+    {
+        DMESG("BAUD ERR");
         // we can't receive at this baud rate
         errorState(JDBusErrorState::BusUARTError);
+        return;
+    }
 
     // 1 us to here
 
@@ -302,10 +423,11 @@ void JACDAC::loPulseDetected(uint32_t pulseTime)
         this->currentBaud = (JDBaudRate)pulseTime;
         JD_DMESG("SB: %d",baudToByteMap[pulseTime - 1].baud);
     }
-    // 1 more us
 
+    // 1 more us
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
     sp.getDigitalValue(PullMode::None);
+
     // 10 us
     status |= (JD_SERIAL_RECEIVING_HEADER);
 
@@ -313,35 +435,35 @@ void JACDAC::loPulseDetected(uint32_t pulseTime)
     sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_HEADER_SIZE);
     // 14 more us
     startTime = timer.captureCounter();
-    timer.setCompare(MAXIMUM_LO_DATA_CC, JD_MAX_INTERLODATA_SPACING);
+    timer.setCompare(MAXIMUM_LO_DATA_CC, startTime + JD_MAX_INTERLODATA_SPACING);
 
     if (commLED)
         commLED->setDigitalValue(1);
 }
 
-void JACDAC::configure(JDPinEvents eventType)
+void JACDAC::setState(JDSerialState state)
 {
     sp.getDigitalValue(PullMode::Up);
 
+    uint32_t eventType = 0;
+
     // to ensure atomicity of the state machine, we disable one set of event and enable the other.
-    if (eventType == ListeningForPulse)
+    if (state == JDSerialState::ListeningForPulse)
     {
-        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::onRiseFall);
-        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_FALL, this, &JACDAC::onRiseFall);
+        eventType = DEVICE_PIN_INTERRUPT_ON_EDGE;
     }
 
-    if (eventType == DetectBusEdge)
+    if (state == JDSerialState::ErrorRecovery)
     {
-        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::onRiseFall, MESSAGE_BUS_LISTENER_IMMEDIATE);
-        EventModel::defaultEventBus->listen(sp.id, DEVICE_PIN_EVT_FALL, this, &JACDAC::onRiseFall, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        eventType = DEVICE_PIN_INTERRUPT_ON_EDGE;
     }
 
-    if (eventType == Off)
+    if (state == JDSerialState::Off)
     {
-        // remove all active listeners too
-        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_RISE, this, &JACDAC::onRiseFall);
-        EventModel::defaultEventBus->ignore(sp.id, DEVICE_PIN_EVT_FALL, this, &JACDAC::onRiseFall);
+        eventType = DEVICE_PIN_EVENT_NONE;
     }
+
+    this->state = state;
 
     sp.eventOn(eventType);
 }
@@ -353,7 +475,6 @@ void JACDAC::initialise()
     memset(rxArray, 0, sizeof(JDPacket*) * JD_RX_ARRAY_SIZE);
     memset(txArray, 0, sizeof(JDPacket*) * JD_TX_ARRAY_SIZE);
 
-    this->id = id;
     status = 0;
 
     // 32 bit 1 us timer.
@@ -408,13 +529,13 @@ void JACDAC::start()
     if (rxBuf == NULL)
         rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
 
-    JD_DMESG("JD START");
+    DMESG("JD START");
 
-    status = 0;
+
     status |= DEVICE_COMPONENT_RUNNING;
 
     // check if the bus is lo here and change our led
-    configure(JDPinEvents::ListeningForPulse);
+    setState(JDSerialState::ListeningForPulse);
 
     if (busLED)
         busLED->setDigitalValue(1);
@@ -437,98 +558,17 @@ void JACDAC::stop()
         rxBuf = NULL;
     }
 
-    configure(JDPinEvents::Off);
+    setState(JDSerialState::Off);
 
     if (busLED)
         busLED->setDigitalValue(0);
+
     Event(this->id, JD_SERIAL_EVT_BUS_DISCONNECTED);
-}
-
-void JACDAC::onRiseFall(Event e)
-{
-    bool toggle = false;
-    if (e.value == DEVICE_PIN_EVT_RISE)
-    {
-        // Lo to hi transition?
-        if (!(status & JD_SERIAL_BUS_STATE))
-            toggle = true;
-
-        status |= (JD_SERIAL_BUS_STATE | ((toggle) ? JD_SERIAL_BUS_TOGGLED : 0));
-    }
-    else
-    {
-        // Hi to lo transition?
-        if (status & JD_SERIAL_BUS_STATE)
-            toggle = true;
-
-        status &= ~JD_SERIAL_BUS_STATE;
-        status |= (toggle) ? JD_SERIAL_BUS_TOGGLED : 0;
-    }
-}
-
-void JACDAC::errorState(JDBusErrorState es)
-{
-    // first time entering the error state?
-    if (es != JDBusErrorState::Continuation && !(status & es))
-    {
-        status &= ~(JD_SERIAL_BUS_STATE | JD_SERIAL_BUS_TOGGLED);
-
-        if (es == JD_SERIAL_BUS_TIMEOUT_ERROR || es == JD_SERIAL_BUS_UART_ERROR)
-        {
-            error_count++;
-            sws.abortDMA();
-            sws.setMode(SingleWireDisconnected);
-
-            if (commLED)
-                commLED->setDigitalValue(0);
-        }
-
-        status |= es;
-
-        configure(JDPinEvents::DetectBusEdge);
-
-        Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
-
-        startTime = timer.captureCounter();
-        timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + JD_MAX_INTERBYTE_SPACING);
-        return;
-    }
-
-    // in error mode we detect if there is activity on the bus (we do this by flagging when the bus is toggled,
-    // until the bus becomes idle defined by a period of JD_BUS_NORMALITY_PERIOD where there is no toggling)
-
-    // if the bus has not been toggled...
-    if (!(status & JD_SERIAL_BUS_TOGGLED))
-    {
-        uint32_t endTime = timer.captureCounter();
-
-        if (endTime - startTime >= JD_BUS_NORMALITY_PERIOD && sp.getDigitalValue(PullMode::Up))
-        {
-            if (status & JD_SERIAL_BUS_LO_ERROR && busLED)
-                busLED->setDigitalValue(1);
-
-            status &= ~(JD_SERIAL_BUS_TIMEOUT_ERROR | JD_SERIAL_BUS_LO_ERROR);
-
-            // resume normality
-            configure(JDPinEvents::ListeningForPulse);
-
-            // setup tx interrupt
-            timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
-            return;
-        }
-    }
-
-    // unset the bus toggled flag...
-    status &= ~JD_SERIAL_BUS_TOGGLED;
-
-    // otherwise come back in JD_MAX_INTERBYTE_SPACING us.
-    startTime = timer.captureCounter();
-    timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + JD_MAX_INTERBYTE_SPACING);
 }
 
 void JACDAC::sendPacket()
 {
-    JD_DMESG("SENDP");
+    DMESG("SENDP");
     // if we are receiving, the tx timer will be resumed upon reception.
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER))
     {
@@ -548,6 +588,7 @@ void JACDAC::sendPacket()
             if (commLED)
                 commLED->setDigitalValue(0);
 
+            DMESG("TXLO ERR");
             errorState(JDBusErrorState::BusLoError);
             return;
         }
@@ -575,6 +616,7 @@ void JACDAC::sendPacket()
                 currentBaud = (JDBaudRate)txBuf->communication_rate;
             }
 
+            // configure to come back after the minimum lo_data gap has been observed.
             timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (baudToByteMap[(uint8_t)txBuf->communication_rate - 1].time_per_byte * JD_INTERLODATA_SPACING_MULTIPLIER));
             return;
         }
@@ -640,7 +682,7 @@ int JACDAC::send(JDPacket* tx, bool compute_crc)
 
     if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
     {
-        JD_DMESG("DR EN %d", timer.captureCounter());
+        DMESG("DR EN %d", timer.captureCounter());
         status |= JD_SERIAL_TX_DRAIN_ENABLE;
         int ret = timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
         JD_DMESG("SC: %d",ret);
@@ -709,7 +751,7 @@ bool JACDAC::isConnected()
     int busVal = sp.getDigitalValue(PullMode::Up);
 
     // re-enable events!
-    configure(JDPinEvents::ListeningForPulse);
+    setState(JDSerialState::ListeningForPulse);
 
     if (busVal)
         return true;
@@ -730,7 +772,7 @@ bool JACDAC::isConnected()
  **/
 JDBusState JACDAC::getState()
 {
-    if (status & JD_SERIAL_RECEIVING)
+    if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER))
         return JDBusState::Receiving;
 
     if (status & JD_SERIAL_TRANSMITTING)
@@ -743,7 +785,7 @@ JDBusState JACDAC::getState()
     // if we are neither transmitting or receiving, examine the bus.
     int busVal = sp.getDigitalValue(PullMode::Up);
     // re-enable events!
-    configure(JDPinEvents::ListeningForPulse);
+    setState(JDSerialState::ListeningForPulse);
 
     if (busVal)
         return JDBusState::High;
