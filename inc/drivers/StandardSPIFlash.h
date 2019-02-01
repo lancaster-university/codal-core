@@ -37,6 +37,7 @@ protected:
     SPI &spi;
     Pin &ssel;
     uint8_t cmdBuf[4];
+    uint8_t status;
 
     void setCommand(uint8_t command, int addr);
     int sendCommand(uint8_t command, int addr = -1, void *resp = 0, int respSize = 0);
