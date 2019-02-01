@@ -233,8 +233,8 @@ int USBMSC::handeSCSICommand()
 {
     bool ok = false;
 
-    LOG("SCSI CMD %x %x:%x", state->CommandBlock.SCSICommandData[0],
-        state->CommandBlock.SCSICommandData[1], state->CommandBlock.SCSICommandData[2]);
+    //LOG("SCSI CMD %x %x:%x", state->CommandBlock.SCSICommandData[0],
+    //    state->CommandBlock.SCSICommandData[1], state->CommandBlock.SCSICommandData[2]);
 
     /* Run the appropriate SCSI command hander function based on the passed command */
     switch (state->CommandBlock.SCSICommandData[0])
