@@ -182,10 +182,11 @@ void JACDAC::errorState(JDBusErrorState es)
         }
 
         status &= ~JD_SERIAL_BUS_STATE;
-        // update the bus state
-        status |= es | (sp.getDigitalValue(PullMode::Up) ? JD_SERIAL_BUS_STATE : 0);
 
         setState(JDSerialState::ErrorRecovery);
+
+        // update the bus state after enabling our IRQ.
+        status |= es | (sp.getDigitalValue(PullMode::Up) ? JD_SERIAL_BUS_STATE : 0);
 
         startTime = timer.captureCounter();
 
@@ -583,11 +584,11 @@ void JACDAC::sendPacket()
             if (txBuf == NULL)
                 txBuf = popTxArray();
 
-            sp.setDigitalValue(0);
             target_disable_irq();
+            sp.setDigitalValue(0);
             target_wait_us(baudToByteMap[(uint8_t)txBuf->communication_rate - 1].time_per_byte);
-            target_enable_irq();
             sp.setDigitalValue(1);
+            target_enable_irq();
 
             if (txBuf->communication_rate != (uint8_t)currentBaud)
             {
@@ -596,7 +597,7 @@ void JACDAC::sendPacket()
             }
 
             // configure to come back after the minimum lo_data gap has been observed.
-            timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (baudToByteMap[(uint8_t)txBuf->communication_rate - 1].time_per_byte * JD_INTERLODATA_SPACING_MULTIPLIER));
+            timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + JD_MIN_INTERLODATA_SPACING);
             return;
         }
     }
@@ -631,6 +632,11 @@ int JACDAC::send(JDPacket* tx, bool compute_crc)
     // if checks is not set, we skip error checking.
     if (tx == NULL)
         return DEVICE_INVALID_PARAMETER;
+
+    uint8_t nextTail = (this->txTail + 1) % JD_TX_ARRAY_SIZE;
+
+    if (nextTail == this->txHead)
+        return DEVICE_NO_RESOURCES;
 
     // don't queue packets if jacdac is not running, or the bus is being held LO.
     if (!isRunning() || status & JD_SERIAL_BUS_LO_ERROR)
@@ -863,7 +869,7 @@ JDPacket* JACDAC::popTxArray()
  **/
 int JACDAC::addToTxArray(JDPacket* packet)
 {
-     uint8_t nextTail = (this->txTail + 1) % JD_TX_ARRAY_SIZE;
+    uint8_t nextTail = (this->txTail + 1) % JD_TX_ARRAY_SIZE;
 
     if (nextTail == this->txHead)
         return DEVICE_NO_RESOURCES;
