@@ -126,11 +126,19 @@ static const uint8_t initCmds[] = {
 };
 // clang-format on
 
+// Nordic cannot send more than 255 bytes at a time;
+// 224 aligns with a word
+#if defined(NRF52840) || defined(NRF52832)
+#define DATABUFSIZE 224
+#else
+#define DATABUFSIZE 500
+#endif
+
 struct ST7735WorkBuffer
 {
     unsigned width;
     unsigned height;
-    uint8_t dataBuf[255];
+    uint8_t dataBuf[DATABUFSIZE];
     const uint8_t *srcPtr;
     unsigned x;
     uint32_t *paletteTable;
@@ -152,8 +160,8 @@ void ST7735::sendBytes(unsigned num)
         while (num--)
         {
             uint8_t v = *work->srcPtr++;
-            *dst++ = 0x08210821 * (v & 0xf);
-            *dst++ = 0x08210821 * (v >> 4);
+            *dst++ = work->expPalette[v & 0xf];
+            *dst++ = work->expPalette[v >> 4];
         }
         startTransfer((uint8_t *)dst - work->dataBuf);
     }
@@ -186,14 +194,14 @@ void ST7735::sendWords(unsigned numBytes)
         while (numWords--)
         {
             uint32_t v = *src++;
-            *dst++ = 0x08210821 * (0xf & (v >> 0));
-            *dst++ = 0x08210821 * (0xf & (v >> 4));
-            *dst++ = 0x08210821 * (0xf & (v >> 8));
-            *dst++ = 0x08210821 * (0xf & (v >> 12));
-            *dst++ = 0x08210821 * (0xf & (v >> 16));
-            *dst++ = 0x08210821 * (0xf & (v >> 20));
-            *dst++ = 0x08210821 * (0xf & (v >> 24));
-            *dst++ = 0x08210821 * (0xf & (v >> 28));
+            *dst++ = tbl[0xf & (v >> 0)];
+            *dst++ = tbl[0xf & (v >> 4)];
+            *dst++ = tbl[0xf & (v >> 8)];
+            *dst++ = tbl[0xf & (v >> 12)];
+            *dst++ = tbl[0xf & (v >> 16)];
+            *dst++ = tbl[0xf & (v >> 20)];
+            *dst++ = tbl[0xf & (v >> 24)];
+            *dst++ = tbl[0xf & (v >> 28)];
         }
     else
         while (numWords--)
@@ -305,13 +313,20 @@ void ST7735::waitForSendDone()
         fiber_wait_for_event(DEVICE_ID_DISPLAY, 101);
 }
 
+#define ENC16(r, g, b) (((r << 3) | (g >> 3)) & 0xff) | (((b | (g << 5)) & 0xff) << 8)
+
 int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height, uint32_t *palette)
 {
     if (!work)
     {
         work = new ST7735WorkBuffer;
         memset(work, 0, sizeof(*work));
-        if (!double16)
+        if (double16)
+            for (int i = 0; i < 16; ++i) {
+                uint16_t e = ENC16(i, i, i);
+                work->expPalette[i] = e | (e << 16);
+            }
+        else
             for (int i = 0; i < 256; ++i)
                 work->expPalette[i] = 0x1011 * (i & 0xf) | (0x110100 * (i >> 4));
         EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, 100, this, &ST7735::sendDone);
