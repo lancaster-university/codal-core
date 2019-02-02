@@ -44,6 +44,7 @@ struct ST7735WorkBuffer;
 
 class ST7735
 {
+protected:
     SPI &spi;
     Pin &cs;
     Pin &dc;
@@ -62,7 +63,7 @@ class ST7735
 
 public:
     ST7735(SPI &spi, Pin &cs, Pin &dc);
-    void init();
+    virtual void init();
 
     /**
      * Configure screen-specific parameters.
