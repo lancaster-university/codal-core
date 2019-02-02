@@ -50,6 +50,7 @@ protected:
     Pin &dc;
     uint8_t cmdBuf[20];
     ST7735WorkBuffer *work;
+    bool double16;
 
     void sendCmd(uint8_t *buf, int len);
     void sendCmdSeq(const uint8_t *buf);

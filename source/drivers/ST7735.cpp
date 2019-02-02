@@ -65,7 +65,9 @@
 namespace codal
 {
 
-ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc) : spi(spi), cs(cs), dc(dc), work(NULL) {}
+ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc) : spi(spi), cs(cs), dc(dc), work(NULL) {
+    double16 = false;
+}
 
 #define DELAY 0x80
 
@@ -146,7 +148,7 @@ void ST7735::sendBytes(unsigned num)
 
     if (double16)
     {
-        uint32_t *dst = work->dataBuf;
+        uint32_t *dst = (uint32_t *)work->dataBuf;
         while (num--)
         {
             uint8_t v = *work->srcPtr++;
@@ -183,7 +185,7 @@ void ST7735::sendWords(unsigned numBytes)
     if (double16)
         while (numWords--)
         {
-            uint32_t s = *src++;
+            uint32_t v = *src++;
             *dst++ = 0x08210821 * (0xf & (v >> 0));
             *dst++ = 0x08210821 * (0xf & (v >> 4));
             *dst++ = 0x08210821 * (0xf & (v >> 8));
@@ -237,10 +239,10 @@ void ST7735::sendColorsStep(ST7735 *st)
         work->x++;
     }
 
-    if (double16 && work->srcLeft == 0 && work->x++ < (work->width << 1))
+    if (st->double16 && work->srcLeft == 0 && work->x++ < (work->width << 1))
     {
-        work->srcLeft = (height + 1) >> 1;
-        if ((x & 1) == 0)
+        work->srcLeft = (work->height + 1) >> 1;
+        if ((work->x & 1) == 0)
         {
             work->srcPtr -= work->srcLeft;
         }
@@ -266,7 +268,7 @@ void ST7735::sendColorsStep(ST7735 *st)
     }
     else
     {
-        if (double16)
+        if (st->double16)
             st->sendWords(sizeof(work->dataBuf) / 8);
         else
             st->sendWords((sizeof(work->dataBuf) / (3 * 4)) * 4);

@@ -30,7 +30,7 @@ DEALINGS IN THE SOFTWARE.
 namespace codal
 {
 
-class ILI9341
+class ILI9341 : public ST7735
 {
 public:
     ILI9341(SPI &spi, Pin &cs, Pin &dc);
