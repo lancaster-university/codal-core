@@ -175,6 +175,16 @@ namespace codal
         virtual void idleCallback() {}
 
         /**
+         * Puts the component in (or out of) sleep (low power) mode.
+         */
+        virtual int setSleep(bool doSleep) { return DEVICE_NOT_SUPPORTED; }
+
+        /**
+         * Puts all components in (or out of) sleep (low power) mode.
+         */
+        static void setAllSleep(bool doSleep);
+
+        /**
           * If you have added your component to the idle or system tick component arrays,
           * you must remember to remove your component from them if your component is destructed.
           */

@@ -311,11 +311,6 @@ namespace codal
           */
         ~Accelerometer();
 
-        /**
-         * Puts the accelerometer in (or out of) sleep mode.
-         */
-        virtual int setSleep(bool sleepMode) { return DEVICE_NOT_SUPPORTED; }
-
         private:
 
         /**
