@@ -34,7 +34,7 @@ class ILI9341 : public ST7735
 {
 public:
     ILI9341(SPI &spi, Pin &cs, Pin &dc);
-    void init();
+    int init();
 };
 
 }

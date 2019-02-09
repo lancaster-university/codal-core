@@ -153,13 +153,15 @@ ILI9341::ILI9341(SPI &spi, Pin &cs, Pin &dc) : ST7735(spi, cs, dc)
     double16 = true;
 }
 
-void ILI9341::init()
+int ILI9341::init()
 {
     cs.setDigitalValue(1);
     dc.setDigitalValue(1);
 
     fiber_sleep(10);
     sendCmdSeq(initcmd);
+
+    return DEVICE_OK;
 }
 
 } // namespace codal

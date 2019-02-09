@@ -42,7 +42,7 @@ struct ST7735WorkBuffer;
 #define MADCTL_BGR 0x08
 #define MADCTL_MH 0x04
 
-class ST7735
+class ST7735 : public CodalComponent
 {
 protected:
     SPI &spi;
@@ -69,7 +69,7 @@ protected:
 
 public:
     ST7735(SPI &spi, Pin &cs, Pin &dc);
-    virtual void init();
+    virtual int init();
 
     /**
      * Configure screen-specific parameters.
@@ -95,7 +95,7 @@ public:
     /**
      * Puts the display in (or out of) sleep mode.
      */
-    void setSleep(bool sleepMode);
+    virtual int setSleep(bool sleepMode);
 };
 
 }
