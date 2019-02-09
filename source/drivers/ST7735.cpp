@@ -65,7 +65,9 @@
 namespace codal
 {
 
-ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc) : spi(spi), cs(cs), dc(dc), work(NULL) {}
+ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc) : spi(spi), cs(cs), dc(dc), work(NULL) {
+    double16 = false;
+}
 
 #define DELAY 0x80
 
@@ -124,11 +126,19 @@ static const uint8_t initCmds[] = {
 };
 // clang-format on
 
+// Nordic cannot send more than 255 bytes at a time;
+// 224 aligns with a word
+#if defined(NRF52840) || defined(NRF52832)
+#define DATABUFSIZE 224
+#else
+#define DATABUFSIZE 500
+#endif
+
 struct ST7735WorkBuffer
 {
     unsigned width;
     unsigned height;
-    uint8_t dataBuf[255];
+    uint8_t dataBuf[DATABUFSIZE];
     const uint8_t *srcPtr;
     unsigned x;
     uint32_t *paletteTable;
@@ -143,15 +153,30 @@ void ST7735::sendBytes(unsigned num)
     if (num > work->srcLeft)
         num = work->srcLeft;
     work->srcLeft -= num;
-    uint8_t *dst = work->dataBuf;
-    while (num--)
+
+    if (double16)
     {
-        uint32_t v = work->expPalette[*work->srcPtr++];
-        *dst++ = v;
-        *dst++ = v >> 8;
-        *dst++ = v >> 16;
+        uint32_t *dst = (uint32_t *)work->dataBuf;
+        while (num--)
+        {
+            uint8_t v = *work->srcPtr++;
+            *dst++ = work->expPalette[v & 0xf];
+            *dst++ = work->expPalette[v >> 4];
+        }
+        startTransfer((uint8_t *)dst - work->dataBuf);
     }
-    startTransfer(dst - work->dataBuf);
+    else
+    {
+        uint8_t *dst = work->dataBuf;
+        while (num--)
+        {
+            uint32_t v = work->expPalette[*work->srcPtr++];
+            *dst++ = v;
+            *dst++ = v >> 8;
+            *dst++ = v >> 16;
+        }
+        startTransfer(dst - work->dataBuf);
+    }
 }
 
 void ST7735::sendWords(unsigned numBytes)
@@ -165,17 +190,31 @@ void ST7735::sendWords(unsigned numBytes)
     uint32_t *tbl = work->expPalette;
     uint32_t *dst = (uint32_t *)work->dataBuf;
 
-    while (numWords--)
-    {
-        uint32_t s = *src++;
-        uint32_t o = tbl[s & 0xff];
-        uint32_t v = tbl[(s >> 8) & 0xff];
-        *dst++ = o | (v << 24);
-        o = tbl[(s >> 16) & 0xff];
-        *dst++ = (v >> 8) | (o << 16);
-        v = tbl[s >> 24];
-        *dst++ = (o >> 16) | (v << 8);
-    }
+    if (double16)
+        while (numWords--)
+        {
+            uint32_t v = *src++;
+            *dst++ = tbl[0xf & (v >> 0)];
+            *dst++ = tbl[0xf & (v >> 4)];
+            *dst++ = tbl[0xf & (v >> 8)];
+            *dst++ = tbl[0xf & (v >> 12)];
+            *dst++ = tbl[0xf & (v >> 16)];
+            *dst++ = tbl[0xf & (v >> 20)];
+            *dst++ = tbl[0xf & (v >> 24)];
+            *dst++ = tbl[0xf & (v >> 28)];
+        }
+    else
+        while (numWords--)
+        {
+            uint32_t s = *src++;
+            uint32_t o = tbl[s & 0xff];
+            uint32_t v = tbl[(s >> 8) & 0xff];
+            *dst++ = o | (v << 24);
+            o = tbl[(s >> 16) & 0xff];
+            *dst++ = (v >> 8) | (o << 16);
+            v = tbl[s >> 24];
+            *dst++ = (o >> 16) | (v << 8);
+        }
 
     work->srcPtr = (uint8_t *)src;
     startTransfer((uint8_t *)dst - work->dataBuf);
@@ -208,6 +247,15 @@ void ST7735::sendColorsStep(ST7735 *st)
         work->x++;
     }
 
+    if (st->double16 && work->srcLeft == 0 && work->x++ < (work->width << 1))
+    {
+        work->srcLeft = (work->height + 1) >> 1;
+        if ((work->x & 1) == 0)
+        {
+            work->srcPtr -= work->srcLeft;
+        }
+    }
+
     // with the current image format in PXT the sendBytes cases never happen
     unsigned align = (unsigned)work->srcPtr & 3;
     if (work->srcLeft && align)
@@ -228,7 +276,10 @@ void ST7735::sendColorsStep(ST7735 *st)
     }
     else
     {
-        st->sendWords((sizeof(work->dataBuf) / (3 * 4)) * 4);
+        if (st->double16)
+            st->sendWords(sizeof(work->dataBuf) / 8);
+        else
+            st->sendWords((sizeof(work->dataBuf) / (3 * 4)) * 4);
     }
 }
 
@@ -282,6 +333,7 @@ void ST7735::setSleep(bool sleepMode)
         this->inSleepMode = false;
     }
 }
+#define ENC16(r, g, b) (((r << 3) | (g >> 3)) & 0xff) | (((b | (g << 5)) & 0xff) << 8)
 
 int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height, uint32_t *palette)
 {
@@ -289,8 +341,14 @@ int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height
     {
         work = new ST7735WorkBuffer;
         memset(work, 0, sizeof(*work));
-        for (int i = 0; i < 256; ++i)
-            work->expPalette[i] = 0x1011 * (i & 0xf) | (0x110100 * (i >> 4));
+        if (double16)
+            for (int i = 0; i < 16; ++i) {
+                uint16_t e = ENC16(i, i, i);
+                work->expPalette[i] = e | (e << 16);
+            }
+        else
+            for (int i = 0; i < 256; ++i)
+                work->expPalette[i] = 0x1011 * (i & 0xf) | (0x110100 * (i >> 4));
         EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, 100, this, &ST7735::sendDone);
     }
 
@@ -303,7 +361,10 @@ int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height
     work->srcPtr = src;
     work->width = width;
     work->height = height;
-    work->srcLeft = ((width + 1) >> 1) * height;
+    work->srcLeft = (height + 1) >> 1;
+    // when not scaling up, we don't care about where lines end
+    if (!double16)
+        work->srcLeft *= width;
     work->x = 0;
 
     sendColorsStep(this);
@@ -349,8 +410,10 @@ void ST7735::sendCmdSeq(const uint8_t *buf)
 
 void ST7735::setAddrWindow(int x, int y, int w, int h)
 {
-    uint8_t cmd0[] = {ST7735_RASET, 0, (uint8_t)x, 0, (uint8_t)(x + w - 1)};
-    uint8_t cmd1[] = {ST7735_CASET, 0, (uint8_t)y, 0, (uint8_t)(y + h - 1)};
+    int x2 = x + w - 1;
+    int y2 = y + h - 1;
+    uint8_t cmd0[] = {ST7735_RASET, (uint8_t)(x >> 8), (uint8_t)x, (uint8_t)(x2 >> 8), (uint8_t)x2};
+    uint8_t cmd1[] = {ST7735_CASET, (uint8_t)(y >> 8), (uint8_t)y, (uint8_t)(y2 >> 8), (uint8_t)y2};
     sendCmd(cmd1, sizeof(cmd1));
     sendCmd(cmd0, sizeof(cmd0));
 }

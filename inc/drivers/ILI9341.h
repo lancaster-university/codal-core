@@ -22,38 +22,21 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef CODAL_STD_SPIFLASH_H
-#define CODAL_STD_SPIFLASH_H
+#ifndef DEVICE_ILI9341_H
+#define DEVICE_ILI9341_H
 
-#include "SPIFlash.h"
-#include "SPI.h"
+#include "ST7735.h"
 
 namespace codal
 {
-class StandardSPIFlash : public SPIFlash
+
+class ILI9341 : public ST7735
 {
-protected:
-    uint32_t _numPages;
-    SPI &spi;
-    Pin &ssel;
-    uint8_t cmdBuf[4];
-    uint8_t status;
-
-    void setCommand(uint8_t command, int addr);
-    int sendCommand(uint8_t command, int addr = -1, void *resp = 0, int respSize = 0);
-    int eraseCore(uint8_t cmd, uint32_t addr);
-    int waitBusy(int waitMS);
-    void writeEnable();
-
 public:
-    StandardSPIFlash(SPI &spi, Pin &ssel, int numPages);
-    virtual int numPages();
-    virtual int readBytes(uint32_t addr, void *buffer, uint32_t len);
-    virtual int writeBytes(uint32_t addr, const void *buffer, uint32_t len);
-    virtual int eraseSmallRow(uint32_t addr);
-    virtual int eraseBigRow(uint32_t addr);
-    virtual int eraseChip();
+    ILI9341(SPI &spi, Pin &cs, Pin &dc);
+    void init();
 };
+
 }
 
 #endif

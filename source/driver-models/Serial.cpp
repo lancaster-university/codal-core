@@ -650,7 +650,7 @@ int Serial::read(uint8_t *buffer, int bufferLen, SerialMode mode)
 
     if(mode == ASYNC)
     {
-        while((temp = getChar(mode)) != DEVICE_NO_DATA && bufferIndex < bufferLen)
+        while(bufferIndex < bufferLen && (temp = getChar(mode)) != DEVICE_NO_DATA)
         {
             buffer[bufferIndex] = (char)temp;
             bufferIndex++;
