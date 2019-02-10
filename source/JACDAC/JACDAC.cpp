@@ -66,39 +66,31 @@ inline uint32_t ceil_pow2(uint32_t v)
 }
 
 /**
- * Fletchers algorithm, a widely used low-overhead checksum (even used in apple latest file system APFS).
+ * Caclulate a 12 bit crc based on CSMA2000 polynomial. Takes more time to compute than fletcher16, but offers more consistency guarantees.
  *
- * @param data the data to checksum
+ * @param data the byte buffer
+ * @param len the length of the byte buffer.
  *
- * @param len the length of data
+ * @note it would be faster if the crc table was precomputed.
  **/
-uint16_t fletcher16(const uint8_t *data, size_t len)
-{
-    uint32_t c0, c1;
-    unsigned int i;
+static uint16_t crc12(uint8_t *data, uint32_t len) {
+    uint16_t crc = 0xfff;
 
-    for (c0 = c1 = 0; len >= 5802; len -= 5802)
+    while (len--)
     {
-        for (i = 0; i < 5802; ++i)
+        crc ^= (*data++ << 8);
+        for (int i = 0; i < 8; ++i)
         {
-                c0 = c0 + *data++;
-                c1 = c1 + c0;
+            if (crc & 0x800)
+                crc = crc << 1 ^ 0xF13;
+            else
+                crc = crc << 1;
         }
-        c0 = c0 % 255;
-        c1 = c1 % 255;
     }
 
-    for (i = 0; i < len; ++i)
-    {
-        c0 = c0 + *data++;
-        c1 = c1 + c0;
-    }
-
-    c0 = c0 % 255;
-    c1 = c1 % 255;
-
-    return (c1 << 8 | c0);
+    return crc;
 }
+
 extern "C" void set_gpio(int);
 void jacdac_gpio_irq(int state)
 {
@@ -315,7 +307,7 @@ void JACDAC::dmaComplete(Event evt)
                 timer.clearCompare(MAXIMUM_INTERBYTE_CC);
 
                 uint8_t* crcPointer = (uint8_t*)&rxBuf->address;
-                uint16_t crc = fletcher16(crcPointer, rxBuf->size + JD_SERIAL_CRC_HEADER_SIZE); // include size and address in the checksum.
+                uint16_t crc = crc12(crcPointer, rxBuf->size + JD_SERIAL_CRC_HEADER_SIZE); // include size and address in the checksum.
 
                 if (crc == rxBuf->crc && rxBuf->jacdac_version == JD_VERSION)
                 {
@@ -649,7 +641,7 @@ int JACDAC::send(JDPacket* tx, bool compute_crc)
     {
         // crc is calculated from the address field onwards
         uint8_t* crcPointer = (uint8_t*)&pkt->address;
-        pkt->crc = fletcher16(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE);
+        pkt->crc = crc12(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE);
     }
 
     int ret = addToTxArray(pkt);
