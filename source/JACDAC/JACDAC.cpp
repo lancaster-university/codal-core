@@ -309,7 +309,7 @@ void JACDAC::dmaComplete(Event evt)
                 uint8_t* crcPointer = (uint8_t*)&rxBuf->address;
                 uint16_t crc = crc12(crcPointer, rxBuf->size + JD_SERIAL_CRC_HEADER_SIZE); // include size and address in the checksum.
 
-                if (crc == rxBuf->crc && rxBuf->jacdac_version == JD_VERSION)
+                if (crc == JD_SERIAL_PACKET_GET_CRC(rxBuf) && JD_SERIAL_PACKET_GET_VERSION(rxBuf) == JD_VERSION)
                 {
                     rxBuf->communication_rate = (uint8_t)currentBaud;
 
@@ -323,7 +323,7 @@ void JACDAC::dmaComplete(Event evt)
                 // i.e. drive the bus low....?
                 else
                 {
-                    DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
+                    DMESG("CRCE: %d, comp: %d",JD_SERIAL_PACKET_GET_CRC(rxBuf), crc);
                     Event(this->id, JD_SERIAL_EVT_CRC_ERROR);
                 }
             }
@@ -634,14 +634,14 @@ int JACDAC::send(JDPacket* tx, bool compute_crc)
 
     JD_DMESG("QU %d", pkt->size);
 
-    pkt->jacdac_version = JD_VERSION;
+    JD_SERIAL_PACKET_SET_VERSION(pkt, JD_VERSION);
 
     // if compute_crc is not set, we assume the user is competent enough to use their own crc mechanisms.
     if (compute_crc)
     {
         // crc is calculated from the address field onwards
         uint8_t* crcPointer = (uint8_t*)&pkt->address;
-        pkt->crc = crc12(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE);
+        JD_SERIAL_PACKET_SET_CRC(pkt, crc12(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE));
     }
 
     int ret = addToTxArray(pkt);
@@ -679,7 +679,7 @@ int JACDAC::send(uint8_t* buf, int len, uint8_t address, JDBaudRate br)
     JDPacket pkt;
     memset(&pkt, 0, sizeof(JDPacket));
 
-    pkt.crc = 0;
+    pkt.version_crc = 0;
     pkt.address = address;
     pkt.size = len;
     pkt.communication_rate = (uint8_t)br;

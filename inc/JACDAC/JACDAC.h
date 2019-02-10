@@ -87,6 +87,18 @@ DEALINGS IN THE SOFTWARE.
 #define JD_RX_ARRAY_SIZE               10
 #define JD_TX_ARRAY_SIZE               10
 
+#define JD_SERIAL_PACKET_GET_CRC(pkt)(pkt->version_crc & 0xFFF)
+#define JD_SERIAL_PACKET_SET_CRC(pkt, crc) do { \
+                                            pkt->version_crc &=~0xFFF;\
+                                            pkt->version_crc |= crc & 0xFFF;\
+                                           }while(0)
+
+#define JD_SERIAL_PACKET_GET_VERSION(pkt)(pkt->version_crc & 0xF000 >> 12)
+#define JD_SERIAL_PACKET_SET_VERSION(pkt, version) do {\
+                                                    pkt->version_crc &=~0xF000;\
+                                                    pkt->version_crc |= (version & 0xF) << 12;\
+                                                   } while(0)
+
 #if CONFIG_ENABLED(JD_DEBUG)
 #define JD_DMESG      codal_dmesg
 #else
@@ -122,8 +134,11 @@ namespace codal
      * or none at all.
      **/
     struct JDPacket {
-        uint8_t jacdac_version:4; // identifies the version of the entire stack, filled out by the JACDAC driver
-        uint16_t crc: 12; // a cyclic redundancy check, filled out by the JACDAC driver (currently Fletcher16 is used).
+        /**
+         * jacdac_version (upper 4 bits):  identifies the version of the entire stack, filled out by the JACDAC driver
+         * crc (lower 12 bits):  a cyclic redundancy check, filled out by the JACDAC driver (currently crc12 is used).
+         **/
+        uint16_t version_crc;
         uint8_t address; // control is 0, devices are allocated address in the range 1 - 255
         uint8_t size; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.
         uint8_t data[JD_SERIAL_MAX_PAYLOAD_SIZE];

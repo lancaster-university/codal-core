@@ -196,7 +196,7 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
     JDControlPacket *cp = (JDControlPacket *)pkt->data;
 
     // incompatible version
-    if (pkt->jacdac_version != JD_VERSION)
+    if (JD_SERIAL_PACKET_GET_VERSION(pkt) != JD_VERSION)
         return DEVICE_OK;
 
     uint8_t* dataPointer = cp->data;
