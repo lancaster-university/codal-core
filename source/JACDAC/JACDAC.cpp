@@ -129,7 +129,7 @@ void JACDAC::_gpioCallback(int state)
 
         if (status & JD_SERIAL_ERR_MSK)
         {
-            startTime = end;
+            startTime = now;
             timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + JD_BYTE_AT_125KBAUD);
             set_gpio2(0);
         }
@@ -138,7 +138,7 @@ void JACDAC::_gpioCallback(int state)
             // set_gpio(1);
             status &= ~JD_SERIAL_LO_PULSE_START;
             timer.clearCompare(MAXIMUM_INTERBYTE_CC);
-            loPulseDetected((end > startTime) ? now - startTime : startTime - now);
+            loPulseDetected((now > startTime) ? now - startTime : startTime - now);
         }
     }
     else
