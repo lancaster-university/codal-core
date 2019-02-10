@@ -99,6 +99,7 @@ uint16_t fletcher16(const uint8_t *data, size_t len)
 
     return (c1 << 8 | c0);
 }
+extern "C" void set_gpio(int);
 void jacdac_gpio_irq(int state)
 {
     if (JACDAC::instance)
@@ -112,55 +113,49 @@ void jacdac_timer_irq(uint16_t channels)
         JACDAC::instance->_timerCallback(channels);
 }
 
-extern void set_gpio(int);
 extern void set_gpio2(int);
 extern void set_gpio3(int);
 extern void set_gpio4(int);
 
 void JACDAC::_gpioCallback(int state)
 {
+    uint32_t now = timer.captureCounter();
+    // set_gpio(0);
+
     if (state)
     {
+
         status |= JD_SERIAL_BUS_STATE;
 
         if (status & JD_SERIAL_ERR_MSK)
         {
-
-            startTime = timer.captureCounter();
-            timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + JD_BYTE_AT_125KBAUD);
+            startTime = end;
+            timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + JD_BYTE_AT_125KBAUD);
             set_gpio2(0);
         }
         else if (status & JD_SERIAL_LO_PULSE_START)
         {
-            set_gpio(1);
+            // set_gpio(1);
             status &= ~JD_SERIAL_LO_PULSE_START;
             timer.clearCompare(MAXIMUM_INTERBYTE_CC);
-            uint32_t end = timer.captureCounter();
-            loPulseDetected((end > startTime) ? end - startTime : startTime - end);
-            set_gpio(0);
+            loPulseDetected((end > startTime) ? now - startTime : startTime - now);
         }
     }
     else
     {
+        // set_gpio(1);
         status &= ~JD_SERIAL_BUS_STATE;
-
-        startTime = timer.captureCounter();
-
+        startTime = now;
+        // set_gpio(0);
         if (!(status & JD_SERIAL_ERR_MSK))
         {
-            set_gpio2(1);
+            // set_gpio2(1);
             status |= JD_SERIAL_LO_PULSE_START;
             timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + baudToByteMap[(uint8_t)JDBaudRate::Baud125K - 1].time_per_byte);
-            set_gpio2(0);
-        }
-        else
-        {
-            set_gpio2(1);
-            timer.captureCounter();
-            set_gpio2(0);
+            // set_gpio2(0);
         }
     }
-
+    // set_gpio(0);
 }
 
 void JACDAC::errorState(JDBusErrorState es)
@@ -336,7 +331,7 @@ void JACDAC::dmaComplete(Event evt)
                 // i.e. drive the bus low....?
                 else
                 {
-                    JD_DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
+                    DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
                     Event(this->id, JD_SERIAL_EVT_CRC_ERROR);
                 }
             }
@@ -371,48 +366,42 @@ void JACDAC::loPulseDetected(uint32_t pulseTime)
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
 
-    DMESG("TS: %d", pulseTime);
-
+    // DMESG("TS: %d", pulseTime);
     pulseTime = ceil(pulseTime / 10);
     pulseTime = ceil_pow2(pulseTime);
 
     JD_DMESG("TS: %d", pulseTime);
 
     // we support 1, 2, 4, 8 as our powers of 2.
-    if (pulseTime > 8)
-        return;
-
-    // if zero round to 1 (to prevent div by 0)
-    // it is assumed that the transaction is at 1 mbaud
-    if (pulseTime == 0)
-        pulseTime = 1;
-
-    if (pulseTime < (uint8_t)this->maxBaud)
+    if (pulseTime < (uint8_t)this->maxBaud || pulseTime > 8)
     {
-        DMESG("BAUD ERR");
-        // we can't receive at this baud rate
         errorState(JDBusErrorState::BusUARTError);
         return;
     }
 
     // 1 us to here
-
     if ((JDBaudRate)pulseTime != this->currentBaud)
     {
         sws.setBaud(baudToByteMap[pulseTime - 1].baud);
         this->currentBaud = (JDBaudRate)pulseTime;
         JD_DMESG("SB: %d",baudToByteMap[pulseTime - 1].baud);
     }
+    // set_gpio(0);
 
     // 1 more us
+    // set_gpio(1);
+    set_gpio(1);
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
-    sp.getDigitalValue(PullMode::None);
+    sp.setPull(PullMode::None);
 
     // 10 us
     status |= (JD_SERIAL_RECEIVING_HEADER);
 
     lastBufferedCount = 0;
+    // set_gpio(1);
     sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_HEADER_SIZE);
+    set_gpio(0);
+
     // 14 more us
     startTime = timer.captureCounter();
     timer.setCompare(MAXIMUM_LO_DATA_CC, startTime + JD_BYTE_AT_125KBAUD);

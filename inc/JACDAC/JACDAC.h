@@ -73,7 +73,7 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_EVT_BUS_CONNECTED    5
 #define JD_SERIAL_EVT_BUS_DISCONNECTED 6
 
-#define JD_SERIAL_HEADER_SIZE          5
+#define JD_SERIAL_HEADER_SIZE          4
 #define JD_SERIAL_CRC_HEADER_SIZE      2  // when computing CRC, we skip the CRC and version fields, so the header size decreases by three.
 #define JD_SERIAL_MAX_PAYLOAD_SIZE     255
 
@@ -122,11 +122,10 @@ namespace codal
      * or none at all.
      **/
     struct JDPacket {
-        uint8_t jacdac_version; // identifies the version of the entire stack, filled out by the JACDAC driver
-        uint16_t crc; // a cyclic redundancy check, filled out by the JACDAC driver (currently Fletcher16 is used).
+        uint8_t jacdac_version:4; // identifies the version of the entire stack, filled out by the JACDAC driver
+        uint16_t crc: 12; // a cyclic redundancy check, filled out by the JACDAC driver (currently Fletcher16 is used).
         uint8_t address; // control is 0, devices are allocated address in the range 1 - 255
         uint8_t size; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.
-        // add more stuff
         uint8_t data[JD_SERIAL_MAX_PAYLOAD_SIZE];
         uint8_t communication_rate;
     } __attribute((__packed__));
