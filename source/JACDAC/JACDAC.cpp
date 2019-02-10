@@ -66,7 +66,7 @@ inline uint32_t ceil_pow2(uint32_t v)
 }
 
 /**
- * Caclulate a 12 bit crc based on CSMA2000 polynomial. Takes more time to compute than fletcher16, but offers more consistency guarantees.
+ * Calculate a 12 bit crc based on CSMA2000 polynomial. Takes more time to compute than fletcher16, but offers more consistency guarantees.
  *
  * @param data the byte buffer
  * @param len the length of the byte buffer.
