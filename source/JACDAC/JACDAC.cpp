@@ -88,7 +88,7 @@ static uint16_t crc12(uint8_t *data, uint32_t len) {
         }
     }
 
-    return crc;
+    return crc & 0xFFF;
 }
 
 extern "C" void set_gpio(int);
