@@ -90,8 +90,8 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_PACKET_GET_CRC(pkt)(pkt->version_crc & 0xFFF)
 #define JD_SERIAL_PACKET_SET_CRC(pkt, crc) (pkt->version_crc = (pkt->version_crc & 0xF000) | (crc & 0xFFF))
 
-#define JD_SERIAL_PACKET_GET_VERSION(pkt)(pkt->version_crc & 0xF000 >> 12)
-#define JD_SERIAL_PACKET_SET_VERSION(pkt, version) (pkt->version_crc = (pkt->version_crc  | 0xFFF) | ((version & 0xF) << 12))
+#define JD_SERIAL_PACKET_GET_VERSION(pkt)((pkt->version_crc & 0xF000) >> 12)
+#define JD_SERIAL_PACKET_SET_VERSION(pkt, version) (pkt->version_crc = (pkt->version_crc  & 0xFFF) | ((version & 0xF) << 12))
 
 #if CONFIG_ENABLED(JD_DEBUG)
 #define JD_DMESG      codal_dmesg
