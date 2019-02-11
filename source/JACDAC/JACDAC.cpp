@@ -395,7 +395,6 @@ void JACDAC::loPulseDetected(uint32_t pulseTime)
     set_gpio(0);
 
     // 14 more us
-    startTime = timer.captureCounter();
     timer.setCompare(MAXIMUM_LO_DATA_CC, startTime + JD_BYTE_AT_125KBAUD);
 
     if (commLED)
