@@ -150,7 +150,9 @@ namespace codal
 
         int whoAmI();
 
-        void idleCallback();
+        virtual void idleCallback();
+
+        virtual int setSleep(bool sleepMode);
     };
 }
 

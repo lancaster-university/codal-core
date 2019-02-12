@@ -339,3 +339,10 @@ LIS3DH::~LIS3DH()
 {
 }
 
+int LIS3DH::setSleep(bool sleepMode)
+{
+    if (sleepMode)
+        return i2c.writeRegister(this->address, LIS3DH_CTRL_REG1, 0x00);
+    else
+        return configure();
+}

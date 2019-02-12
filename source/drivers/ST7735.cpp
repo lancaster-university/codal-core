@@ -65,7 +65,8 @@
 namespace codal
 {
 
-ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc) : spi(spi), cs(cs), dc(dc), work(NULL) {
+ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc) : spi(spi), cs(cs), dc(dc), work(NULL)
+{
     double16 = false;
 }
 
@@ -313,6 +314,29 @@ void ST7735::waitForSendDone()
         fiber_wait_for_event(DEVICE_ID_DISPLAY, 101);
 }
 
+int ST7735::setSleep(bool sleepMode)
+{
+    if (sleepMode == this->inSleepMode)
+        return DEVICE_OK;
+
+    if (sleepMode)
+    {
+        uint8_t cmd = ST7735_SLPIN;
+        this->inSleepMode = true;
+        waitForSendDone();
+        sendCmd(&cmd, 1);
+    }
+    else
+    {
+        uint8_t cmd = ST7735_SLPOUT;
+        sendCmd(&cmd, 1);
+        fiber_sleep(120);
+        this->inSleepMode = false;
+    }
+
+    return DEVICE_OK;
+}
+
 #define ENC16(r, g, b) (((r << 3) | (g >> 3)) & 0xff) | (((b | (g << 5)) & 0xff) << 8)
 
 int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height, uint32_t *palette)
@@ -322,7 +346,8 @@ int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height
         work = new ST7735WorkBuffer;
         memset(work, 0, sizeof(*work));
         if (double16)
-            for (int i = 0; i < 16; ++i) {
+            for (int i = 0; i < 16; ++i)
+            {
                 uint16_t e = ENC16(i, i, i);
                 work->expPalette[i] = e | (e << 16);
             }
@@ -332,7 +357,7 @@ int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height
         EventModel::defaultEventBus->listen(DEVICE_ID_DISPLAY, 100, this, &ST7735::sendDone);
     }
 
-    if (work->inProgress)
+    if (work->inProgress || inSleepMode)
         return DEVICE_BUSY;
 
     work->paletteTable = palette;
@@ -398,13 +423,15 @@ void ST7735::setAddrWindow(int x, int y, int w, int h)
     sendCmd(cmd0, sizeof(cmd0));
 }
 
-void ST7735::init()
+int ST7735::init()
 {
     cs.setDigitalValue(1);
     dc.setDigitalValue(1);
 
     fiber_sleep(10); // TODO check if delay needed
     sendCmdSeq(initCmds);
+
+    return DEVICE_OK;
 }
 
 void ST7735::configure(uint8_t madctl, uint32_t frmctr1)
