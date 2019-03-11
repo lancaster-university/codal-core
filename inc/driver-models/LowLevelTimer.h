@@ -3,6 +3,7 @@
 
 #include "CodalConfig.h"
 #include "CodalComponent.h"
+#include "codal_target_hal.h"
 
 namespace codal
 {
