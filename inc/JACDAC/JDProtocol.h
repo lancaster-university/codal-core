@@ -37,75 +37,75 @@ DEALINGS IN THE SOFTWARE.
 
 // the following defines should really be in separate head files, but circular includes suck.
 
-// BEGIN    JD SERIAL DRIVER FLAGS
-#define JD_DRIVER_EVT_CONNECTED         65520
-#define JD_DRIVER_EVT_DISCONNECTED      65521
-#define JD_DRIVER_EVT_PAIRED            65522
-#define JD_DRIVER_EVT_UNPAIRED          65523
-#define JD_DRIVER_EVT_PAIR_REJECTED     65524
-#define JD_DRIVER_EVT_PAIRING_RESPONSE  65525
-#define JD_DRIVER_EVT_ERROR             65526
+// BEGIN    JD SERIAL SERVICE FLAGS
+#define JD_SERVICE_EVT_CONNECTED         65520
+#define JD_SERVICE_EVT_DISCONNECTED      65521
+#define JD_SERVICE_EVT_PAIRED            65522
+#define JD_SERVICE_EVT_UNPAIRED          65523
+#define JD_SERVICE_EVT_PAIR_REJECTED     65524
+#define JD_SERVICE_EVT_PAIRING_RESPONSE  65525
+#define JD_SERVICE_EVT_ERROR             65526
 
-#define JD_DEVICE_FLAGS_LOCAL           0x8000 // on the board
-#define JD_DEVICE_FLAGS_REMOTE          0x4000 // off the board
+#define JD_SERVICE_STATE_FLAGS_LOCAL           0x8000 // on the board
+#define JD_SERVICE_STATE_FLAGS_REMOTE          0x4000 // off the board
 
 // following flags combined with the above to yield different behaviours
-#define JD_DEVICE_FLAGS_BROADCAST       0x2000 // receive all class packets regardless of the address
-#define JD_DEVICE_FLAGS_PAIR            0x1000 // this flag indicates that the driver should pair with another
+#define JD_SERVICE_STATE_FLAGS_BROADCAST       0x2000 // receive all class packets regardless of the address
+#define JD_SERVICE_STATE_FLAGS_PAIR            0x1000 // this flag indicates that the service should pair with another
 
-#define JD_DEVICE_DRIVER_MODE_MSK       0xF000 // the top byte represents the current driver mode.
+#define JD_SERVICE_STATE_SERVICE_MODE_MSK       0xF000 // the top byte represents the current service mode.
 // end combo flags
 
-#define JD_DEVICE_FLAGS_PAIRABLE        0x0800 // this flag indicates that a driver is paired with another
-#define JD_DEVICE_FLAGS_PAIRED          0x0400 // this flag indicates that a driver is paired with another
-#define JD_DEVICE_FLAGS_PAIRING         0x0200 // this flag indicates that a driver is paired with another
+#define JD_SERVICE_STATE_FLAGS_PAIRABLE        0x0800 // this flag indicates that a service is paired with another
+#define JD_SERVICE_STATE_FLAGS_PAIRED          0x0400 // this flag indicates that a service is paired with another
+#define JD_SERVICE_STATE_FLAGS_PAIRING         0x0200 // this flag indicates that a service is paired with another
 
-#define JD_DEVICE_FLAGS_INITIALISED     0x0100 // device driver is running
-#define JD_DEVICE_FLAGS_INITIALISING    0x0080 // a flag to indicate that a control packet has been queued
-#define JD_DEVICE_FLAGS_CP_SEEN         0x0040 // indicates whether a control packet has been seen recently.
+#define JD_SERVICE_STATE_FLAGS_INITIALISED     0x0100 // device service is running
+#define JD_SERVICE_STATE_FLAGS_INITIALISING    0x0080 // a flag to indicate that a control packet has been queued
+#define JD_SERVICE_STATE_FLAGS_CP_SEEN         0x0040 // indicates whether a control packet has been seen recently.
 
-#define JD_DEVICE_COMM_RATE_MSK         0x0030 // these bits indicate the current comm rate of the driver
-#define JD_DEVICE_COMM_RATE_POS         16     // the position of the comm rate msk in the flags field.
+#define JD_SERVICE_STATE_COMM_RATE_MSK         0x0030 // these bits indicate the current comm rate of the service
+#define JD_SERVICE_STATE_COMM_RATE_POS         16     // the position of the comm rate msk in the flags field.
 
-#define JD_DEVICE_ERROR_MSK             0x000F // the lower 4 bits are reserved for well known errors, these are
-                                               // automatically placed into control packets by the logic driver.
-// END      JD SERIAL DRIVER FLAGS
+#define JD_SERVICE_STATE_ERROR_MSK             0x000F // the lower 4 bits are reserved for well known errors, these are
+                                               // automatically placed into control packets by the logic service.
+// END      JD SERIAL SERVICE FLAGS
 
 
-// BEGIN    LOGIC DRIVER FLAGS
-#define JD_LOGIC_DRIVER_MAX_FILTERS                     20
-#define JD_LOGIC_DRIVER_EVT_CHANGED                     2
-#define JD_LOGIC_DRIVER_EVT_TIMER_CALLBACK              3
+// BEGIN    LOGIC SERVICE FLAGS
+#define JD_LOGIC_SERVICE_MAX_FILTERS                     20
+#define JD_LOGIC_SERVICE_EVT_CHANGED                     2
+#define JD_LOGIC_SERVICE_EVT_TIMER_CALLBACK              3
 
-#define JD_DRIVER_INFO_FLAGS_RESERVED                   0x80
-#define JD_DRIVER_INFO_FLAGS_PAIRING_MODE               0x40 // in pairing mode, control packets aren't forwarded to drivers
-#define JD_DRIVER_INFO_FLAGS_PAIRABLE                   0x20 // advertises that a driver can be optionally paired with another
-#define JD_DRIVER_INFO_FLAGS_PAIRED                     0x10 // advertises that a driver is already paired with another.
+#define JD_SERVICE_INFO_FLAGS_RESERVED                   0x80
+#define JD_SERVICE_INFO_FLAGS_PAIRING_MODE               0x40 // in pairing mode, control packets aren't forwarded to services
+#define JD_SERVICE_INFO_FLAGS_PAIRABLE                   0x20 // advertises that a service can be optionally paired with another
+#define JD_SERVICE_INFO_FLAGS_PAIRED                     0x10 // advertises that a service is already paired with another.
 
-#define JD_DRIVER_INFO_FLAGS_CONFLICT                   0x08
-#define JD_DRIVER_INFO_FLAGS_UNCERTAIN                  0x04
-#define JD_DRIVER_INFO_FLAGS_NACK                       0x02
-#define JD_DRIVER_INFO_FLAGS_ACK                        0x01
+#define JD_SERVICE_INFO_FLAGS_CONFLICT                   0x08
+#define JD_SERVICE_INFO_FLAGS_UNCERTAIN                  0x04
+#define JD_SERVICE_INFO_FLAGS_NACK                       0x02
+#define JD_SERVICE_INFO_FLAGS_ACK                        0x01
 
-#define JD_DRIVER_INFO_TYPE_HELLO                       0x1
-#define JD_DRIVER_INFO_TYPE_PAIRING_REQUEST             0x2
-#define JD_DRIVER_INFO_TYPE_ERROR                       0x3
-#define JD_DRIVER_INFO_TYPE_PANIC                       0xF
+#define JD_SERVICE_INFO_TYPE_HELLO                       0x1
+#define JD_SERVICE_INFO_TYPE_PAIRING_REQUEST             0x2
+#define JD_SERVICE_INFO_TYPE_ERROR                       0x3
+#define JD_SERVICE_INFO_TYPE_PANIC                       0xF
 
-#define JD_DRIVER_INFO_MAX_PAYLOAD_SIZE                 16
-// END      LOGIC DRIVER FLAGS
+#define JD_SERVICE_INFO_MAX_PAYLOAD_SIZE                 16
+// END      LOGIC SERVICE FLAGS
 
 
 // BEGIN    JD SERIAL PROTOCOL
 #define JD_PROTOCOL_EVT_SEND_CONTROL                1
-#define JD_PROTOCOL_DRIVER_ARRAY_SIZE               20
+#define JD_PROTOCOL_SERVICE_ARRAY_SIZE               20
 
 #include "JDClasses.h"
 
 // END      JD SERIAL PROTOCOL
 #define JD_CONTROL_PACKET_ERROR_NAME_LENGTH         6
 
-#define JD_DRIVER_INFO_HEADER_SIZE                  8
+#define JD_SERVICE_INFO_HEADER_SIZE                  8
 #define JD_CONTROL_PACKET_HEADER_SIZE               4
 
 #define JD_MAX_PACKET_SIZE                          255
@@ -115,182 +115,185 @@ namespace codal
     class JDProtocol;
 
     /**
-     * This struct represents a JDControlPacket used by the logic driver
-     * A control packet provides full information about a driver, it's most important use is to translates the address used in
-     * standard packets to the full driver information. Standard packet address == control packet address.
+     * This struct represents a JDControlPacket used by the logic service
+     * A control packet provides full information about a service, it's most important use is to translates the address used in
+     * standard packets to the full service information. Standard packet address == control packet address.
      *
      * Currently there are two types of packet:
-     * CONTROL_JD_TYPE_HELLO - Which broadcasts the availablity of a driver
-     * CONTROL_JD_TYPE_PAIRING_REQUEST - Used when drivers are pairing to one another.
+     * CONTROL_JD_TYPE_HELLO - Which broadcasts the availablity of a service
+     * CONTROL_JD_TYPE_PAIRING_REQUEST - Used when services are pairing to one another.
      **/
     struct JDControlPacket
     {
-        uint32_t serial_number; // the "unique" serial number of the device.
+        uint64_t serial_number; // the "unique" serial number of the device.
+        uint8_t device_address;
+        uint8_t device_flags;
         uint8_t data[];
     } __attribute((__packed__));
 
-    struct JDDriverInfo
+    struct JDServiceInfo
     {
-        uint8_t size;
-        uint8_t address;        // the address assigned by the logic driver
-        uint16_t flags: 8, error_code: 4, type: 4; // various flags, upper eight bits are reserved for control usage, error code, then driver info type
-        uint32_t driver_class;  // the class of the driver
+        uint8_t service_flags;
+        uint8_t service_status: 4, advertisement_size: 4; // error code upper four bits, then advertisement size lower four bits
+        uint32_t service_class;  // the class of the service
         uint8_t data[]; // optional additional data, maximum of 16 bytes
     } __attribute((__packed__));
 
-    // This enumeration specifies that supported configurations that drivers should utilise.
+    // This enumeration specifies that supported configurations that services should utilise.
     // Many combinations of flags are supported, but only the ones listed here have been fully implemented.
-    enum DriverType
+    enum ServiceType
     {
-        VirtualDriver = JD_DEVICE_FLAGS_REMOTE, // the driver is seeking the use of another device's resource
-        PairedDriver = JD_DEVICE_FLAGS_BROADCAST | JD_DEVICE_FLAGS_PAIR,
-        HostDriver = JD_DEVICE_FLAGS_LOCAL, // the driver is hosting a resource for others to use.
-        PairableHostDriver = JD_DEVICE_FLAGS_PAIRABLE | JD_DEVICE_FLAGS_LOCAL, // the driver is allowed to pair with another driver of the same class
-        BroadcastDriver = JD_DEVICE_FLAGS_LOCAL | JD_DEVICE_FLAGS_BROADCAST, // the driver is enumerated with its own address, and receives all packets of the same class (including control packets)
-        SnifferDriver = JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_BROADCAST, // the driver is not enumerated, and receives all packets of the same class (including control packets)
+        ClientService = JD_SERVICE_STATE_FLAGS_CLIENT, // the service is seeking the use of another device's resource
+        // PairedService = JD_SERVICE_STATE_FLAGS_BROADCAST | JD_SERVICE_STATE_FLAGS_PAIR,
+        HostService = JD_SERVICE_STATE_FLAGS_HOST, // the service is hosting a resource for others to use.
+        // PairableHostService = JD_SERVICE_STATE_FLAGS_PAIRABLE | JD_SERVICE_STATE_FLAGS_LOCAL, // the service is allowed to pair with another service of the same class
+        BroadcastHostService = JD_SERVICE_STATE_FLAGS_HOST | JD_SERVICE_STATE_FLAGS_BROADCAST, // the service is enumerated with its own address, and receives all packets of the same class (including control packets)
+        BroadcastClientService = JD_SERVICE_STATE_FLAGS_CLIENT | JD_SERVICE_STATE_FLAGS_BROADCAST, // the service is not enumerated, and receives all packets of the same class (including control packets)
     };
 
-    enum DriverErrorCode
+    enum ServiceErrorCode
     {
         // No error occurred.
-        DRIVER_OK = 0,
+        SERVICE_OK = 0,
 
         // Device calibration information
-        DRIVER_CALIBRATION_IN_PROGRESS,
-        DRIVER_CALIBRATION_REQUIRED,
+        SERVICE_CALIBRATION_IN_PROGRESS,
+        SERVICE_CALIBRATION_REQUIRED,
 
-        // The driver has run out of some essential resource (e.g. allocated memory)
-        DRIVER_NO_RESOURCES,
+        // The service has run out of some essential resource (e.g. allocated memory)
+        SERVICE_NO_RESOURCES,
 
-        // The driver operation could not be performed as some essential resource is busy (e.g. the display)
-        DRIVER_BUSY,
+        // The service operation could not be performed as some essential resource is busy (e.g. the display)
+        SERVICE_BUSY,
 
         // I2C / SPI Communication error occured
-        DRIVER_COMMS_ERROR,
+        SERVICE_COMMS_ERROR,
 
         // An invalid state was detected (i.e. not initialised)
-        DRIVER_INVALID_STATE,
+        SERVICE_INVALID_STATE,
 
         // an external peripheral has a malfunction e.g. external circuitry is drawing too much power.
-        DRIVER_PERIPHERAL_MALFUNCTION
+        SERVICE_PERIPHERAL_MALFUNCTION
     };
 
     /**
-     * This struct represents a JDDevice used by a JDDriver.
+     * This struct represents a JDServiceState used by a JDService.
      *
-     * It is perhaps named incorrectly, but JDDevice represents the core information about the driver which is placed into control packets.
-     * A rolling counter is used to trigger control packets and other core driver events.
+     * It is perhaps named incorrectly, but JDServiceState represents the core information about the service which is placed into control packets.
+     * A rolling counter is used to trigger control packets and other core service events.
      **/
-    struct JDDevice
+    struct JDServiceState
     {
-        uint8_t address; // the address assigned by the logic driver.
+        uint8_t address; // the address assigned by the logic service.
         uint8_t rolling_counter; // used to trigger various time related events
-        uint16_t flags; // various flags indicating the state of the driver
+        uint16_t flags; // various flags indicating the state of the service
         uint32_t serial_number; // the serial number used to "uniquely" identify a device
-        uint32_t driver_class; // the class of the driver, created or selected from the list in JDClasses.h
+        uint32_t service_class; // the class of the service, created or selected from the list in JDClasses.h
+        uint8_t service_offset;
 
         /**
-         * Constructor, creates a local driver using just the driver class.
+         * Constructor, creates a local service using just the service class.
          *
-         * Should be used if only a local driver is required.
+         * Should be used if only a local service is required.
          *
-         * @param driver_class the class of the driver listed in JDClasses.h
+         * @param service_class the class of the service listed in JDClasses.h
          **/
-        JDDevice(uint32_t driver_class)
+        JDServiceState(uint32_t service_class)
         {
             address = 0;
             rolling_counter = 0;
-            flags = JD_DEVICE_FLAGS_LOCAL;
+            flags = JD_SERVICE_STATE_FLAGS_LOCAL;
             serial_number = target_get_serial();
-            driver_class = driver_class;
+            service_class = service_class;
+            service_offset??
         }
 
         /**
-         * Constructor, creates a driver given a DriverType (enumeration above) and the driver class.
+         * Constructor, creates a service given a ServiceType (enumeration above) and the service class.
          *
          * Should be used if you need to use any of the other types from the enumeration (most of the time, this will be used).
          *
-         * @param t the driver type to use
+         * @param t the service type to use
          *
-         * @param driver_class the class of the driver listed in JDClasses.h
+         * @param service_class the class of the service listed in JDClasses.h
          *
-         * @note the VirtualDriver will always have a serial_number of 0 by default, as the serial number is used as a filter.
+         * @note the VirtualService will always have a serial_number of 0 by default, as the serial number is used as a filter.
          *       if a filter is required, then the full constructor should be used (below).
          **/
-        JDDevice(DriverType t, uint32_t driver_class)
+        JDServiceState(ServiceType t, uint32_t service_class)
         {
             this->address = 0;
             this->rolling_counter = 0;
             this->flags |= t;
 
-            if (t & JD_DEVICE_FLAGS_REMOTE)
+            if (t & JD_SERVICE_STATE_FLAGS_REMOTE)
                 this->serial_number = 0;
             else
                 this->serial_number = target_get_serial();
 
-            this->driver_class = driver_class;
+            this->service_class = service_class;
         }
 
         /**
-         * Constructor, allows (almost) full specification of a JDDevice.
+         * Constructor, allows (almost) full specification of a JDServiceState.
          *
          * Should be used if you need to specify all of the fields, i.e. if you're adding complex logic that requires already
-         * initialised drivers.
+         * initialised services.
          *
-         * @param a the address of the driver
+         * @param a the address of the service
          *
-         * @param flags the low-level flags that are normally set by using the DriverType enum.
+         * @param flags the low-level flags that are normally set by using the ServiceType enum.
          *
-         * @param serial_number the serial number of the driver
+         * @param serial_number the serial number of the service
          *
-         * @param driver_class the class of the driver listed in JDClasses.h
+         * @param service_class the class of the service listed in JDClasses.h
          *
          * @note you are responsible for any weirdness you achieve using this constructor.
          **/
-        JDDevice(uint8_t address, uint16_t flags, uint32_t serial_number, uint32_t driver_class)
+        JDServiceState(uint8_t address, uint16_t flags, uint32_t serial_number, uint32_t service_class)
         {
             this->address = address;
             this->rolling_counter = 0;
             this->flags = flags;
             this->serial_number = serial_number;
-            this->driver_class = driver_class;
+            this->service_class = service_class;
         }
 
         /**
-         * Returns the communication rate of this driver.
+         * Returns the communication rate of this service.
          **/
         JDBaudRate getBaudRate()
         {
-            uint32_t r = ((this->flags & JD_DEVICE_COMM_RATE_MSK) >> JD_DEVICE_COMM_RATE_POS) + 1;
+            uint32_t r = ((this->flags & JD_SERVICE_STATE_COMM_RATE_MSK) >> JD_SERVICE_STATE_COMM_RATE_POS) + 1;
             return (JDBaudRate)r;
         }
 
         /**
-         * Returns the communication rate of this driver.
+         * Returns the communication rate of this service.
          **/
         void setBaudRate(JDBaudRate br)
         {
-            this->flags &= ~JD_DEVICE_COMM_RATE_MSK;
+            this->flags &= ~JD_SERVICE_STATE_COMM_RATE_MSK;
             // JDBaudRate values start from one, we only use 3 bits in our flags field for the comm rate... subtract one
-            this->flags |= ((uint8_t)br - 1) << JD_DEVICE_COMM_RATE_POS;
+            this->flags |= ((uint8_t)br - 1) << JD_SERVICE_STATE_COMM_RATE_POS;
         }
 
         /**
-         * Sets the mode to the given DriverType
+         * Sets the mode to the given ServiceType
          *
-         * @param m the new mode the driver should move to.
+         * @param m the new mode the service should move to.
          *
-         * @param initialised whether the driver is initialised or not (defaults to false).
+         * @param initialised whether the service is initialised or not (defaults to false).
          **/
-        void setMode(DriverType m, bool initialised = false)
+        void setMode(ServiceType m, bool initialised = false)
         {
-            this->flags &= ~JD_DEVICE_DRIVER_MODE_MSK;
+            this->flags &= ~JD_SERVICE_STATE_SERVICE_MODE_MSK;
             this->flags |= m;
 
             if (initialised)
-                this->flags |= JD_DEVICE_FLAGS_INITIALISED;
+                this->flags |= JD_SERVICE_STATE_FLAGS_INITIALISED;
             else
-                this->flags &= ~JD_DEVICE_FLAGS_INITIALISED;
+                this->flags &= ~JD_SERVICE_STATE_FLAGS_INITIALISED;
         }
 
         /**
@@ -298,128 +301,126 @@ namespace codal
          *
          * @param e the error code to place into control packets
          **/
-        void setError(DriverErrorCode e)
+        void setError(ServiceErrorCode e)
         {
-            uint32_t flags = this->flags & ~(JD_DEVICE_ERROR_MSK);
+            uint32_t flags = this->flags & ~(JD_SERVICE_STATE_ERROR_MSK);
             this->flags = flags | (uint8_t) e;
         }
 
         /**
          * Retrieves the current error code from the error portion of flags.
          *
-         * @return a JDDeviceErrorCode
+         * @return a JDServiceStateErrorCode
          **/
-        DriverErrorCode getError()
+        ServiceErrorCode getError()
         {
-            return (DriverErrorCode)(this->flags & JD_DEVICE_ERROR_MSK);
+            return (ServiceErrorCode)(this->flags & JD_SERVICE_STATE_ERROR_MSK);
         }
 
         /**
-         * Used to determine what mode the driver is currently in.
+         * Used to determine what mode the service is currently in.
          *
-         * This will check to see if the flags field resembles the VirtualDriver mode specified in the DriverType enumeration.
+         * This will check to see if the flags field resembles the VirtualService mode specified in the ServiceType enumeration.
          *
-         * @returns true if in VirtualDriver mode.
+         * @returns true if in VirtualService mode.
          **/
-        bool isVirtualDriver()
+        bool isVirtualService()
         {
-            return (this->flags & JD_DEVICE_FLAGS_REMOTE) && !(this->flags & JD_DEVICE_FLAGS_BROADCAST);
+            return (this->flags & JD_SERVICE_STATE_FLAGS_REMOTE) && !(this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST);
         }
 
         /**
-         * Used to determine what mode the driver is currently in.
+         * Used to determine what mode the service is currently in.
          *
-         * This will check to see if the flags field resembles the PairedDriver mode specified in the DriverType enumeration.
+         * This will check to see if the flags field resembles the PairedService mode specified in the ServiceType enumeration.
          *
-         * @returns true if in PairedDriver mode.
+         * @returns true if in PairedService mode.
          **/
-        bool isPairedDriver()
+        bool isPairedService()
         {
-            return this->flags & JD_DEVICE_FLAGS_BROADCAST && this->flags & JD_DEVICE_FLAGS_PAIR;
+            return this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST && this->flags & JD_SERVICE_STATE_FLAGS_PAIR;
         }
 
         /**
-         * Used to determine what mode the driver is currently in.
+         * Used to determine what mode the service is currently in.
          *
-         * This will check to see if the flags field resembles the HostDriver mode specified in the DriverType enumeration.
+         * This will check to see if the flags field resembles the HostService mode specified in the ServiceType enumeration.
          *
-         * @returns true if in SnifferDriver mode.
+         * @returns true if in SnifferService mode.
          **/
-        bool isHostDriver()
+        bool isHostService()
         {
-            return this->flags & JD_DEVICE_FLAGS_LOCAL && !(this->flags & JD_DEVICE_FLAGS_BROADCAST);
+            return this->flags & JD_SERVICE_STATE_FLAGS_LOCAL && !(this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST);
         }
 
         /**
-         * Used to determine what mode the driver is currently in.
+         * Used to determine what mode the service is currently in.
          *
-         * This will check to see if the flags field resembles the BroadcastDriver mode specified in the DriverType enumeration.
+         * This will check to see if the flags field resembles the BroadcastService mode specified in the ServiceType enumeration.
          *
-         * @returns true if in BroadcastDriver mode.
+         * @returns true if in BroadcastService mode.
          **/
-        bool isBroadcastDriver()
+        bool isBroadcastService()
         {
-            return this->flags & JD_DEVICE_FLAGS_LOCAL && this->flags & JD_DEVICE_FLAGS_BROADCAST;
+            return this->flags & JD_SERVICE_STATE_FLAGS_LOCAL && this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST;
         }
 
         /**
-         * Used to determine what mode the driver is currently in.
+         * Used to determine what mode the service is currently in.
          *
-         * This will check to see if the flags field resembles the SnifferDriver mode specified in the DriverType enumeration.
+         * This will check to see if the flags field resembles the SnifferService mode specified in the ServiceType enumeration.
          *
-         * @returns true if in SnifferDriver mode.
+         * @returns true if in SnifferService mode.
          **/
-        bool isSnifferDriver()
+        bool isSnifferService()
         {
-            return this->flags & JD_DEVICE_FLAGS_REMOTE && this->flags & JD_DEVICE_FLAGS_BROADCAST;
+            return this->flags & JD_SERVICE_STATE_FLAGS_REMOTE && this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST;
         }
 
         /**
-         * Indicates if the driver is currently paired to another.
+         * Indicates if the service is currently paired to another.
          *
          * @returns true if paired
          **/
         bool isPaired()
         {
-            return this->flags & JD_DEVICE_FLAGS_PAIRED;
+            return this->flags & JD_SERVICE_STATE_FLAGS_PAIRED;
         }
 
         /**
-         * Indicates if the driver can be currently paired to another.
+         * Indicates if the service can be currently paired to another.
          *
          * @returns true if pairable
          **/
         bool isPairable()
         {
-            return this->flags & JD_DEVICE_FLAGS_PAIRABLE;
+            return this->flags & JD_SERVICE_STATE_FLAGS_PAIRABLE;
         }
 
         /**
-         * Indicates if the driver is currently in the process of pairing to another.
+         * Indicates if the service is currently in the process of pairing to another.
          *
          * @returns true if pairing
          **/
         bool isPairing()
         {
-            return this->flags & JD_DEVICE_FLAGS_PAIRING;
+            return this->flags & JD_SERVICE_STATE_FLAGS_PAIRING;
         }
     };
 
-    class JDPairedDriver;
+    class JDPairedService;
     class JDProtocol;
 
     /**
-     * This class presents a common abstraction for all JDDrivers. It also contains some default member functions to perform common operations.
-     * This should be subclassed by any driver implementation
+     * This class presents a common abstraction for all JDServices. It also contains some default member functions to perform common operations.
+     * This should be subclassed by any service implementation
      **/
-    class JDDriver : public CodalComponent
+    class JDService : public CodalComponent
     {
-        friend class JDLogicDriver;
+        friend class JDControlService;
         friend class JDProtocol;
         friend class JDBroadcastMap;
         // the above need direct access to our member variables and more.
-
-        uint8_t rolling_counter;
 
         /**
          * After calling sendPairingPacket, this member function is called when the device is enumerated.
@@ -430,66 +431,66 @@ namespace codal
 
         protected:
 
-        // Due to the dynamic nature of JACDAC when a new driver is created, this variable is incremented.
+        // Due to the dynamic nature of JACDAC when a new service is created, this variable is incremented.
         // JACDAC id's are allocated from 3000 - 4000
         static uint32_t dynamicId;
 
-        // When we pair to another driver, this points to the stub of our partner.
-        JDPairedDriver* pairedInstance;
+        // When we pair to another service, this points to the stub of our partner.
+        JDPairedService* pairedInstance;
 
-        // A struct the represents the state of the driver.
-        JDDevice device;
+        // A struct the represents the state of the service.
+        JDServiceState state;
 
         /**
-         * This method internally redirects specific packets from the control driver.
+         * This method internally redirects specific packets from the control service.
          *
          * i.e. it switches the type of the logic packet, and redirects it to handleControlPacket or handlePairingPacket accordingly.
          **/
         int handleLogicPacket(JDControlPacket* cp);
 
         /**
-         * Called by the logic driver when a new device is connected to the serial bus
+         * Called by the logic service when a new state is connected to the serial bus
          *
-         * @param device an instance of JDDevice representing the device that has been connected
+         * @param state an instance of JDServiceState representing the device that has been connected
          *
-         * @return DEVICE_OK for success
+         * @return SERVICE_STATE_OK for success
          **/
-        virtual int deviceConnected(JDDevice device);
+        virtual int deviceConnected(JDServiceState state);
 
         /**
-         * Called by the logic driver when this driver has been disconnected from the serial bus.
+         * Called by the logic service when this service has been disconnected from the serial bus.
          *
-         * This is only called if a driver is in VirtualMode and the virtualised device disappears from the bus.
+         * This is only called if a service is in VirtualMode and the virtualised device disappears from the bus.
          *
-         * @return DEVICE_OK for success
+         * @return SERVICE_STATE_OK for success
          **/
         virtual int deviceRemoved();
 
         /**
-         * This should be called when a driver wishes to pair with another. A driver should first detect a driver in pairing mode
-         * by observing packets in Broadcast mode. PairedDriver from the DriverType enumeration first starts in broadcast mode only,
-         * observes packets looking for a device to pair with. When a pairable device appears, the driver enumerates, and sends a
+         * This should be called when a service wishes to pair with another. A service should first detect a service in pairing mode
+         * by observing packets in Broadcast mode. PairedService from the ServiceType enumeration first starts in broadcast mode only,
+         * observes packets looking for a device to pair with. When a pairable device appears, the service enumerates, and sends a
          * pairing packet by calling this member function.
          *
          * @param d the device to pair too.
          *
-         * @returns DEVICE_OK on success.
+         * @returns SERVICE_STATE_OK on success.
          **/
-        virtual int sendPairingPacket(JDDevice d);
+        virtual int sendPairingPacket(JDServiceState d);
 
         /**
-         * This is called when a paired driver is removed from the bus. It unpairs this driver instance, and fires an event
-         * using the drivers id, and the event code JD_DRIVER_EVT_UNPAIRED.
+         * This is called when a paired service is removed from the bus. It unpairs this service instance, and fires an event
+         * using the services id, and the event code JD_SERVICE_EVT_UNPAIRED.
          **/
         void partnerDisconnected(Event);
 
         /**
-         * A convenience function that calls JACDAC->send with parameters supplied from this instances' JDDevice
+         * A convenience function that calls JACDAC->send with parameters supplied from this instances' JDServiceState
          *
          * @param buf the data to send
          * @param len the length of the data.
          *
-         * @return DEVICE_OK on success.
+         * @return SERVICE_STATE_OK on success.
          **/
         int send(uint8_t* buf, int len);
 
@@ -498,139 +499,139 @@ namespace codal
         /**
          * Constructor
          *
-         * @param d a struct containing a device representation, see JDDevice.
+         * @param d a struct containing a device representation, see JDServiceState.
          * */
-        JDDriver(JDDevice d);
+        JDService(JDServiceState d);
 
         /**
-         * Invoked by the logic driver when it is queuing a control packet.
+         * Invoked by the logic service when it is queuing a control packet.
          *
-         * This allows the addition of driver specific control packet information and the setting of any additional flags.
+         * This allows the addition of service specific control packet information and the setting of any additional flags.
          *
          * @param p A pointer to the packet, where the data field contains a pre-filled control packet.
          *
-         * @return DEVICE_OK on success
+         * @return SERVICE_STATE_OK on success
          **/
-        virtual int populateDriverInfo(JDDriverInfo* info, uint8_t bytesRemaining);
+        virtual int populateServiceInfo(JDServiceInfo* info, uint8_t bytesRemaining);
 
         /**
-         * Invoked by the logic driver when a control packet with the address of the driver is received.
+         * Invoked by the logic service when a control packet with the address of the service is received.
          *
-         * Control packets are routed by address, or by class in broadcast mode. Drivers
+         * Control packets are routed by address, or by class in broadcast mode. Services
          * can override this function to handle additional payloads in control packet.s
          *
-         * @param p the packet from the serial bus. Drivers should cast p->data to a JDControlPacket.
+         * @param p the packet from the serial bus. Services should cast p->data to a JDControlPacket.
          *
-         * @return DEVICE_OK to signal that the packet has been handled, or DEVICE_CANCELLED to indicate the logic driver
-         *         should continue to search for a driver.
+         * @return SERVICE_STATE_OK to signal that the packet has been handled, or SERVICE_STATE_CANCELLED to indicate the logic service
+         *         should continue to search for a service.
          **/
         virtual int handleControlPacket(JDControlPacket* info);
 
         /**
-         * Invoked by the logic driver when a control packet with its type set to error is received.
+         * Invoked by the logic service when a control packet with its type set to error is received.
          *
          *
-         * @param p the packet from the serial bus. Drivers should cast p->data to a JDControlPacket,
+         * @param p the packet from the serial bus. Services should cast p->data to a JDControlPacket,
          *          then JDControlPacket->data to ControlPacketError to obtain the error code.
          *
-         * @return DEVICE_OK to signal that the packet has been handled, or DEVICE_CANCELLED to indicate the logic driver
-         *         should continue to search for a driver.
+         * @return SERVICE_STATE_OK to signal that the packet has been handled, or SERVICE_STATE_CANCELLED to indicate the logic service
+         *         should continue to search for a service.
          **/
         virtual int handleErrorPacket(JDControlPacket* info);
 
         /**
-         * Invoked by the logic driver when a pairing packet with the address of the driver is received.
+         * Invoked by the logic service when a pairing packet with the address of the service is received.
          *
          * Pairing packets are Control packets with the type set to CONTROL_JD_TYPE_PAIRING_REQUEST. They are routed by
-         * address, or by class in broadcast mode. Drivers can override this function to handle additional payloads in
+         * address, or by class in broadcast mode. Services can override this function to handle additional payloads in
          * control packet.
          *
          * Pairing packets contain the source information of the device that sent the pairing request in cp->data;
          *
-         * @param p the packet from the serial bus. Drivers should cast p->data to a JDControlPacket.
+         * @param p the packet from the serial bus. Services should cast p->data to a JDControlPacket.
          *
-         * @return DEVICE_OK to signal that the packet has been handled, or DEVICE_CANCELLED to indicate the logic driver
-         *         should continue to search for a driver.
+         * @return SERVICE_STATE_OK to signal that the packet has been handled, or SERVICE_STATE_CANCELLED to indicate the logic service
+         *         should continue to search for a service.
          **/
         virtual int handlePairingPacket(JDControlPacket* p);
 
         /**
-         * Invoked by the Protocol driver when a standard packet with the address of the driver is received.
+         * Invoked by the Protocol service when a standard packet with the address of the service is received.
          *
-         * @param p the packet from the serial bus. Drivers should cast p->data to their agreed upon structure..
+         * @param p the packet from the serial bus. Services should cast p->data to their agreed upon structure..
          *
-         * @return DEVICE_OK to signal that the packet has been handled, or DEVICE_CANCELLED to indicate the logic driver
-         *         should continue to search for a driver.
+         * @return SERVICE_STATE_OK to signal that the packet has been handled, or SERVICE_STATE_CANCELLED to indicate the logic service
+         *         should continue to search for a service.
          **/
         virtual int handlePacket(JDPacket* p);
 
         /**
-         * Returns the current connected state of this driver instance.
+         * Returns the current connected state of this service instance.
          *
          * @return true for connected, false for disconnected
          **/
         virtual bool isConnected();
 
         /**
-         * Returns the current pairing state of this driver instance.
+         * Returns the current pairing state of this service instance.
          *
          * @return true for paired, false for unpaired
          **/
         virtual bool isPaired();
 
         /**
-         * Returns whether the driver is advertising a pairable state
+         * Returns whether the service is advertising a pairable state
          *
          * @return true for paired, false for unpaired
          **/
         virtual bool isPairable();
 
         /**
-         * Retrieves the address of the driver.
+         * Retrieves the address of the service.
          *
          * @return the address.
          **/
         uint8_t getAddress();
 
         /**
-         * Retrieves the class of the driver.
+         * Retrieves the class of the service.
          *
          * @return the class.
          **/
         uint32_t getClass();
 
         /**
-         * Retrieves the state of the driver.
+         * Retrieves the state of the service.
          *
-         * @return the internal driver state.
+         * @return the internal service state.
          **/
-        JDDevice getState();
+        JDServiceState getState();
 
         /**
-         * Retrieves the serial number in use by this driver.
+         * Retrieves the serial number in use by this service.
          *
          * @return the serial number
          **/
         uint32_t getSerialNumber();
 
         /**
-         * Destructor, removes this driver from the drivers array and deletes the pairedInstance member variable if allocated.
+         * Destructor, removes this service from the services array and deletes the pairedInstance member variable if allocated.
          **/
-        ~JDDriver();
+        ~JDService();
     };
 
     /**
-     * This class is a stub of a remote driver that a local driver is paired with.
+     * This class is a stub of a remote service that a local service is paired with.
      *
-     * It simply forwards all standard packets to the paired local driver for processing.
+     * It simply forwards all standard packets to the paired local service for processing.
      **/
-    class JDPairedDriver : public JDDriver
+    class JDPairedService : public JDService
     {
-        JDDriver& other;
+        JDService& other;
 
         public:
 
-        JDPairedDriver(JDDevice d, JDDriver& other) : JDDriver(d), other(other)
+        JDPairedService(JDServiceState d, JDService& other) : JDService(d), other(other)
         {
         }
 
@@ -641,34 +642,34 @@ namespace codal
     };
 
     /**
-     * This class represents the logic driver, which is consistent across all JACDAC devices.
+     * This class represents the logic service, which is consistent across all JACDAC devices.
      *
-     * It handles addressing and the routing of control packets from the bus to their respective drivers.
+     * It handles addressing and the routing of control packets from the bus to their respective services.
      **/
-    class JDLogicDriver : public JDDriver
+    class JDControlService : public JDService
     {
-        JDControlPacket* rxControlPacket; // given to drivers upon receiving a control packet from another device.
+        JDControlPacket* rxControlPacket; // given to services upon receiving a control packet from another device.
         JDPacket* txControlPacket; // used to transmit this devices' information (more optimal than repeat allocing)
 
-        // this array is used to filter paired driver packets from consuming unneccessary processing cycles
+        // this array is used to filter paired service packets from consuming unneccessary processing cycles
         // on jacdac devices.
-        uint8_t address_filters[JD_LOGIC_DRIVER_MAX_FILTERS];
+        uint8_t address_filters[JD_LOGIC_SERVICE_MAX_FILTERS];
 
         /**
          * A simple function to remove some code duplication, fills a given control packet(cp)
-         * based upon a driver.
+         * based upon a service.
          *
-         * @param driver the driver whose information will fill the control packet.
+         * @param service the service whose information will fill the control packet.
          *
-         * @param info the allocated driver info struct (embedded inside a control packet) to fill.
+         * @param info the allocated service info struct (embedded inside a control packet) to fill.
          *
-         * @param bytesRemaining the remaining data available for the driver to add additional payload to.
+         * @param bytesRemaining the remaining data available for the service to add additional payload to.
          **/
-        int populateDriverInfo(JDDriver* driver, JDDriverInfo* info, uint8_t bytesRemaining);
+        int populateServiceInfo(JDService* service, JDServiceInfo* info, uint8_t bytesRemaining);
 
         /**
-         * This member function periodically iterates across all drivers and performs various actions. It handles the sending
-         * of control packets, address assignments for local drivers, and the connection and disconnection of drivers as they
+         * This member function periodically iterates across all services and performs various actions. It handles the sending
+         * of control packets, address assignments for local services, and the connection and disconnection of services as they
          * are added or removed from the bus.
          **/
         void timerCallback(Event);
@@ -678,20 +679,20 @@ namespace codal
         /**
          * Constructor.
          *
-         * Creates a local initialised driver and adds itself to the driver array.
+         * Creates a local initialised service and adds itself to the service array.
          **/
-        JDLogicDriver();
+        JDControlService();
 
         /**
-         * Overrided for future use. It might be useful to control the behaviour of the logic driver in the future.
+         * Overrided for future use. It might be useful to control the behaviour of the logic service in the future.
          **/
         virtual int handleControlPacket(JDControlPacket* p);
 
         /**
          * Called by the JDProtocol when a data packet has address 0.
          *
-         * Packets addressed to zero will always be control packets, this function then iterates over all drivers
-         * routing control packets correctly. Virtual drivers are populated if a packet is not handled by an existing driver.
+         * Packets addressed to zero will always be control packets, this function then iterates over all services
+         * routing control packets correctly. Virtual services are populated if a packet is not handled by an existing service.
          *
          * @param p the packet from the serial bus.
          **/
@@ -715,7 +716,7 @@ namespace codal
          *
          * @param address the address to add to the filter.
          *
-         * @return DEVICE_OK on success.
+         * @return SERVICE_STATE_OK on success.
          **/
         int addToFilter(uint8_t address);
 
@@ -724,17 +725,17 @@ namespace codal
          *
          * @param address the address to remove from the filter.
          *
-         * @return DEVICE_OK on success.
+         * @return SERVICE_STATE_OK on success.
          **/
         int removeFromFilter(uint8_t address);
     };
 
     /**
-     * This class handles packets produced by the JACDAC physical layer and passes them to our high level drivers.
+     * This class handles packets produced by the JACDAC physical layer and passes them to our high level services.
      **/
     class JDProtocol : public CodalComponent
     {
-        friend class JDLogicDriver;
+        friend class JDControlService;
 
         /**
          * Invoked by JACDAC when a packet is received from the serial bus.
@@ -742,20 +743,20 @@ namespace codal
          * This handler is invoked in standard conext. This also means that users can stop the device from handling packets.
          * (which might be a bad thing).
          *
-         * This handler continues to pull packets from the queue and iterate over drivers.
+         * This handler continues to pull packets from the queue and iterate over services.
          **/
         void onPacketReceived(Event);
 
-        // An instance of our logic driver
-        JDLogicDriver logic;
+        // An instance of our logic service
+        JDControlService logic;
 
-        // A pointer to a bridge driver (if set, defaults to NULL).
-        JDDriver* bridge;
+        // A pointer to a bridge service (if set, defaults to NULL).
+        JDService* bridge;
 
         public:
 
-        // this array holds all drivers on the device
-        static JDDriver* drivers[JD_PROTOCOL_DRIVER_ARRAY_SIZE];
+        // this array holds all services on the device
+        static JDService* services[JD_PROTOCOL_SERVICE_ARRAY_SIZE];
 
         // a reference to a JACDAC instance
         JACDAC& bus;
@@ -768,24 +769,24 @@ namespace codal
          *
          * @param JD A reference to JACDAC for communicators
          *
-         * @param id for the message bus, defaults to  DEVICE_ID_JACDAC_PROTOCOL
+         * @param id for the message bus, defaults to  SERVICE_STATE_ID_JACDAC_PROTOCOL
          **/
-        JDProtocol(JACDAC& JD, uint16_t id = DEVICE_ID_JACDAC_PROTOCOL);
+        JDProtocol(JACDAC& JD, ManagedString deviceName = ManagedString(), uint16_t id = SERVICE_STATE_ID_JACDAC_PROTOCOL);
 
         /**
-         * Sets the bridge member variable to the given JDDriver pointer.
+         * Sets the bridge member variable to the given JDService pointer.
          *
-         * Bridge drivers are given all packets received on the bus, the idea being that
+         * Bridge services are given all packets received on the bus, the idea being that
          * packets can be bridged to another networking medium, i.e. packet radio.
          *
-         * @param bridge the driver to forward all packets to another networking medium
-         *        this driver will receive all packets via the handlePacket call. If NULL
+         * @param bridge the service to forward all packets to another networking medium
+         *        this service will receive all packets via the handlePacket call. If NULL
          *        is given, the bridge member variable is cleared.
          *
-         * @note one limitation is that the bridge driver does not receive packets over the radio itself.
+         * @note one limitation is that the bridge service does not receive packets over the radio itself.
          *       Ultimately the bridge should punt packets back intro JDProtocol for correct handling.
          **/
-        int setBridge(JDDriver* bridge);
+        int setBridge(JDService* bridge);
 
         /**
          * Set the name to use for error codes and panics
@@ -794,44 +795,44 @@ namespace codal
          *
          * @note Must be 6 characters or smaller.
          **/
-        static int setDebugName(ManagedString s);
+        static int setDeviceName(ManagedString s);
 
         /**
          * Retrieve the name used for error codes and panics
          *
          * @return the name used for error codes and panics
          **/
-        static ManagedString getDebugName();
+        static ManagedString setDeviceName();
 
         /**
-         * Adds a driver to the drivers array. The logic driver iterates over this array.
+         * Adds a service to the services array. The logic service iterates over this array.
          *
-         * @param device a reference to the driver to add.
+         * @param device a reference to the service to add.
          *
-         * @return DEVICE_OK on success.
+         * @return SERVICE_STATE_OK on success.
          **/
-        virtual int add(JDDriver& device);
+        virtual int add(JDService& device);
 
         /**
-         * removes a driver from the drivers array. The logic driver iterates over this array.
+         * removes a service from the services array. The logic service iterates over this array.
          *
-         * @param device a reference to the driver to remove.
+         * @param device a reference to the service to remove.
          *
-         * @return DEVICE_OK on success.
+         * @return SERVICE_STATE_OK on success.
          **/
-        virtual int remove(JDDriver& device);
+        virtual int remove(JDService& device);
 
         /**
-         * A static method to send an entire, premade JDPacket on the bus. Used by the logic driver.
+         * A static method to send an entire, premade JDPacket on the bus. Used by the logic service.
          *
          * @param pkt the packet to send.
          *
-         * @return DEVICE_OK on success.
+         * @return SERVICE_STATE_OK on success.
          **/
         static int send(JDPacket* pkt);
 
         /**
-         * Logs the current state of JACDAC, drivers, and the jackrouter (if provided).
+         * Logs the current state of JACDAC, services, and the jackrouter (if provided).
          *
          * @param jr The jack router in use.
          **/

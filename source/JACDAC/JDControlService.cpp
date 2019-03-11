@@ -6,35 +6,35 @@ using namespace codal;
 
 int JDLogicDriver::populateDriverInfo(JDDriver* driver, JDDriverInfo* info, uint8_t bytesRemaining)
 {
-    info->type = JD_DRIVER_INFO_TYPE_HELLO;
+    info->type = JD_SERVICE_INFO_TYPE_HELLO;
     info->size = 0;
 
     info->address = driver->device.address;
     info->flags = 0;
 
     if (driver->device.isPairing())
-        info->flags |= JD_DRIVER_INFO_FLAGS_PAIRING_MODE;
+        info->flags |= JD_SERVICE_INFO_FLAGS_PAIRING_MODE;
 
     if (driver->device.isPaired())
-        info->flags |= JD_DRIVER_INFO_FLAGS_PAIRED;
+        info->flags |= JD_SERVICE_INFO_FLAGS_PAIRED;
 
     if (driver->device.isPairable())
-        info->flags |= JD_DRIVER_INFO_FLAGS_PAIRABLE;
+        info->flags |= JD_SERVICE_INFO_FLAGS_PAIRABLE;
 
     info->driver_class = driver->device.driver_class;
 
     if (bytesRemaining > 0)
     {
-        int payloadSize = driver->populateDriverInfo(info, min(bytesRemaining, JD_DRIVER_INFO_MAX_PAYLOAD_SIZE));
-        info->size = min(payloadSize, JD_DRIVER_INFO_MAX_PAYLOAD_SIZE);
+        int payloadSize = driver->populateDriverInfo(info, min(bytesRemaining, JD_SERVICE_INFO_MAX_PAYLOAD_SIZE));
+        info->size = min(payloadSize, JD_SERVICE_INFO_MAX_PAYLOAD_SIZE);
     }
 
     info->error_code = driver->device.getError();
 
     if (info->error_code > 0)
-        info->type = JD_DRIVER_INFO_TYPE_ERROR;
+        info->type = JD_SERVICE_INFO_TYPE_ERROR;
 
-    return info->size + JD_DRIVER_INFO_HEADER_SIZE;
+    return info->size + JD_SERVICE_INFO_HEADER_SIZE;
 }
 
 /**
@@ -53,7 +53,7 @@ void JDLogicDriver::timerCallback(Event)
 
     uint8_t dataOffset = 0;
 
-    for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
+    for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
     {
         JDDriver* current = JDProtocol::instance->drivers[i];
 
@@ -71,7 +71,7 @@ void JDLogicDriver::timerCallback(Event)
             {
                 JD_DMESG("CONTROL NOT SEEN %d %d", current->device.address, current->device.serial_number);
                 current->deviceRemoved();
-                Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
+                Event(this->id, JD_LOGIC_SERVICE_EVT_CHANGED);
 
                 if (current->device.flags & JD_DEVICE_FLAGS_BROADCAST)
                 {
@@ -107,7 +107,7 @@ void JDLogicDriver::timerCallback(Event)
                     bool stillAllocated = false;
                     current->device.address = target_random(256);
 
-                    for (int j = 0; j < JD_PROTOCOL_DRIVER_ARRAY_SIZE; j++)
+                    for (int j = 0; j < JD_PROTOCOL_SERVICE_ARRAY_SIZE; j++)
                     {
                         if (i == j)
                             continue;
@@ -129,7 +129,7 @@ void JDLogicDriver::timerCallback(Event)
 
                 // flag our address as uncertain (i.e. not committed / finalised)
                 dataOffset += populateDriverInfo(current, info, 0);
-                info->flags = JD_DRIVER_INFO_FLAGS_UNCERTAIN;
+                info->flags = JD_SERVICE_INFO_FLAGS_UNCERTAIN;
                 current->device.flags |= JD_DEVICE_FLAGS_INITIALISING;
                 current->device.rolling_counter = this->rolling_counter;
             }
@@ -145,7 +145,7 @@ void JDLogicDriver::timerCallback(Event)
                     current->device.flags &= ~JD_DEVICE_FLAGS_INITIALISING;
                     current->device.flags |= JD_DEVICE_FLAGS_INITIALISED;
                     current->deviceConnected(current->device);
-                    Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
+                    Event(this->id, JD_LOGIC_SERVICE_EVT_CHANGED);
                 }
                 JD_DMESG("DIFFERENCE %d ", difference);
             }
@@ -168,17 +168,17 @@ JDLogicDriver::JDLogicDriver() : JDDriver(JDDevice(0, JD_DEVICE_FLAGS_LOCAL | JD
 {
     this->device.address = 0;
 
-    this->rxControlPacket = (JDControlPacket *)malloc(sizeof(JDControlPacket) + sizeof(JDDriverInfo) + JD_DRIVER_INFO_MAX_PAYLOAD_SIZE);
+    this->rxControlPacket = (JDControlPacket *)malloc(sizeof(JDControlPacket) + sizeof(JDDriverInfo) + JD_SERVICE_INFO_MAX_PAYLOAD_SIZE);
     this->txControlPacket = (JDPacket *)malloc(sizeof(JDPacket));
 
     status = 0;
-    memset(this->address_filters, 0, JD_LOGIC_DRIVER_MAX_FILTERS);
+    memset(this->address_filters, 0, JD_LOGIC_SERVICE_MAX_FILTERS);
     status |= (DEVICE_COMPONENT_RUNNING);
 
     if (EventModel::defaultEventBus)
     {
-        EventModel::defaultEventBus->listen(this->id, JD_LOGIC_DRIVER_EVT_TIMER_CALLBACK, this, &JDLogicDriver::timerCallback);
-        system_timer_event_every(500, this->id, JD_LOGIC_DRIVER_EVT_TIMER_CALLBACK);
+        EventModel::defaultEventBus->listen(this->id, JD_LOGIC_SERVICE_EVT_TIMER_CALLBACK, this, &JDLogicDriver::timerCallback);
+        system_timer_event_every(500, this->id, JD_LOGIC_SERVICE_EVT_TIMER_CALLBACK);
     }
 }
 
@@ -212,11 +212,11 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
 
         // presumably we will eventually pass this control packet to a driver.
         // copy the driver information into our statically allocated control packet.
-        if (driverInfo->size > 0 && driverInfo->size <= JD_DRIVER_INFO_MAX_PAYLOAD_SIZE)
-            memcpy(rxControlPacket->data, driverInfo, JD_DRIVER_INFO_HEADER_SIZE + driverInfo->size);
+        if (driverInfo->size > 0 && driverInfo->size <= JD_SERVICE_INFO_MAX_PAYLOAD_SIZE)
+            memcpy(rxControlPacket->data, driverInfo, JD_SERVICE_INFO_HEADER_SIZE + driverInfo->size);
 
         // special packet types should be handled here.
-        if (driverInfo->type == JD_DRIVER_INFO_TYPE_PANIC)
+        if (driverInfo->type == JD_SERVICE_INFO_TYPE_PANIC)
         {
             uint8_t* errorName = (uint8_t*)driverInfo->data;
 
@@ -230,18 +230,18 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                 JD_DMESG("%s is panicking [%d]", name, driverInfo->code);
             }
 
-            dataPointer += JD_DRIVER_INFO_HEADER_SIZE + driverInfo->size;
+            dataPointer += JD_SERVICE_INFO_HEADER_SIZE + driverInfo->size;
             continue;
         }
 
-        JD_DMESG("DI A:%d S:%d C:%d p: %d", driverInfo->address, cp->serial_number, driverInfo->driver_class, (driverInfo->flags & JD_DRIVER_INFO_FLAGS_PAIRING_MODE) ? 1 : 0);
+        JD_DMESG("DI A:%d S:%d C:%d p: %d", driverInfo->address, cp->serial_number, driverInfo->driver_class, (driverInfo->flags & JD_SERVICE_INFO_FLAGS_PAIRING_MODE) ? 1 : 0);
 
         // Logic Driver addressing rules:
         // 1. drivers cannot have the same address and different serial numbers.
         // 2. if someone has flagged a conflict with you, you must reassign your address.
 
         // Address assignment rules:
-        // 1. if you are initialising (address unconfirmed), set JD_DRIVER_INFO_FLAGS_UNCERTAIN
+        // 1. if you are initialising (address unconfirmed), set JD_SERVICE_INFO_FLAGS_UNCERTAIN
         // 2. if an existing, confirmed device spots a packet with the same address and the uncertain flag set, it should respond with
         //    the same packet, with the CONFLICT flag set.
         // 2b. if the transmitting device has no uncertain flag set, we reassign ourselves (first CP wins)
@@ -256,9 +256,9 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
         // devices about to enter pairing mode enumerate themselves, so that they have an address on the bus.
         // devices with uncertain addresses cannot be used
         // These two scenarios mean that drivers in this state are unusable, so we determine their packets as unsafe... "dropping" their packets
-        bool safe = (driverInfo->flags & (JD_DRIVER_INFO_FLAGS_UNCERTAIN | JD_DRIVER_INFO_FLAGS_PAIRING_MODE)) == 0; // the packet it is safe
+        bool safe = (driverInfo->flags & (JD_SERVICE_INFO_FLAGS_UNCERTAIN | JD_SERVICE_INFO_FLAGS_PAIRING_MODE)) == 0; // the packet it is safe
 
-        for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
+        for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
         {
             JDDriver* current = JDProtocol::instance->drivers[i];
 
@@ -282,16 +282,16 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                 if (current->device.flags & JD_DEVICE_FLAGS_LOCAL)
                 {
                     // a different device is using our address!!
-                    if (!serial_check && address_check && !(driverInfo->flags & JD_DRIVER_INFO_FLAGS_CONFLICT))
+                    if (!serial_check && address_check && !(driverInfo->flags & JD_SERVICE_INFO_FLAGS_CONFLICT))
                     {
                         JD_DMESG("SERIAL_DIFF");
                         // if we're initialised, this means that someone else is about to use our address, reject.
                         // see 2. above.
-                        if ((current->device.flags & JD_DEVICE_FLAGS_INITIALISED) && (driverInfo->flags & JD_DRIVER_INFO_FLAGS_UNCERTAIN))
+                        if ((current->device.flags & JD_DEVICE_FLAGS_INITIALISED) && (driverInfo->flags & JD_SERVICE_INFO_FLAGS_UNCERTAIN))
                         {
-                            memcpy(rxControlPacket->data, driverInfo, JD_DRIVER_INFO_HEADER_SIZE);
+                            memcpy(rxControlPacket->data, driverInfo, JD_SERVICE_INFO_HEADER_SIZE);
                             JDDriverInfo* di = (JDDriverInfo*) cp->data;
-                            di->flags |= JD_DRIVER_INFO_FLAGS_CONFLICT;
+                            di->flags |= JD_SERVICE_INFO_FLAGS_CONFLICT;
                             di->size = 0;
                             send((uint8_t*)rxControlPacket, JD_CONTROL_PACKET_HEADER_SIZE + JD_CONTROL_PACKET_HEADER_SIZE);
                             JD_DMESG("ASK OTHER TO REASSIGN");
@@ -308,11 +308,11 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                         continue;
                     }
                     // someone has flagged a conflict with this initialised device
-                    else if (driverInfo->flags & JD_DRIVER_INFO_FLAGS_CONFLICT)
+                    else if (driverInfo->flags & JD_SERVICE_INFO_FLAGS_CONFLICT)
                     {
                         // new address will be assigned on next tick.
                         current->deviceRemoved();
-                        Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
+                        Event(this->id, JD_LOGIC_SERVICE_EVT_CHANGED);
                         JD_DMESG("REASSIGNING SELF");
                         continue;
                     }
@@ -370,11 +370,11 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
             bool filtered = filterPacket(driverInfo->address);
 
             // if it's paired with a driver and it's not us, we can just ignore
-            if (!filtered && driverInfo->flags & JD_DRIVER_INFO_FLAGS_PAIRED)
+            if (!filtered && driverInfo->flags & JD_SERVICE_INFO_FLAGS_PAIRED)
                 addToFilter(driverInfo->address);
 
             // if it was previously paired with another device, we remove the filter.
-            else if (filtered && !(driverInfo->flags & JD_DRIVER_INFO_FLAGS_PAIRED))
+            else if (filtered && !(driverInfo->flags & JD_SERVICE_INFO_FLAGS_PAIRED))
                 removeFromFilter(driverInfo->address);
 
             else
@@ -383,10 +383,10 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                 bool found = false;
 
                 // if we reach here, there is no associated device, find a free remote instance in the drivers array
-                for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
+                for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
                 {
                     JDDriver* current = JDProtocol::instance->drivers[i];
-                    // JD_DMESG("FIND DRIVER");
+                    // JD_DMESG("FIND SERVICE");
                     if (current && current->device.flags & JD_DEVICE_FLAGS_REMOTE && !(current->device.flags & JD_DEVICE_FLAGS_INITIALISED) && current->device.driver_class == driverInfo->driver_class)
                     {
                         JD_DMESG("ITER a %d, s %d, c %d, t %c%c%c", current->device.address, current->device.serial_number, current->device.driver_class, current->device.flags & JD_DEVICE_FLAGS_BROADCAST ? 'B' : ' ', current->device.flags & JD_DEVICE_FLAGS_LOCAL ? 'L' : ' ', current->device.flags & JD_DEVICE_FLAGS_REMOTE ? 'R' : ' ');
@@ -401,7 +401,7 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                         if (ret == DEVICE_OK)
                         {
                             current->deviceConnected(JDDevice(driverInfo->address, driverInfo->flags, cp->serial_number, driverInfo->driver_class));
-                            Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
+                            Event(this->id, JD_LOGIC_SERVICE_EVT_CHANGED);
                             found = true;
                             break;
                         }
@@ -416,12 +416,12 @@ int JDLogicDriver::handlePacket(JDPacket* pkt)
                     JD_DMESG("ADD NEW MAP");
                     JD_DMESG("BROADCAST ADD %d", driverInfo->address);
                     new JDDriver(JDDevice(driverInfo->address, JD_DEVICE_FLAGS_BROADCAST | JD_DEVICE_FLAGS_REMOTE | JD_DEVICE_FLAGS_INITIALISED | JD_DEVICE_FLAGS_CP_SEEN, cp->serial_number, driverInfo->driver_class));
-                    Event(this->id, JD_LOGIC_DRIVER_EVT_CHANGED);
+                    Event(this->id, JD_LOGIC_SERVICE_EVT_CHANGED);
                 }
             }
         }
 
-        dataPointer += JD_DRIVER_INFO_HEADER_SIZE + driverInfo->size;
+        dataPointer += JD_SERVICE_INFO_HEADER_SIZE + driverInfo->size;
     }
 
     return DEVICE_OK;
@@ -431,13 +431,13 @@ int JDLogicDriver::addToFilter(uint8_t address)
 {
     JD_DMESG("FILTER: %d", address);
     // we shouldn't filter any addresses that we are virtualising or hosting.
-    for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
+    for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
     {
         if (address == JDProtocol::instance->drivers[i]->getAddress())
             return DEVICE_OK;
     }
 
-    for (int i = 0; i < JD_LOGIC_DRIVER_MAX_FILTERS; i++)
+    for (int i = 0; i < JD_LOGIC_SERVICE_MAX_FILTERS; i++)
     {
         if (this->address_filters[i] == 0)
             this->address_filters[i] = address;
@@ -449,7 +449,7 @@ int JDLogicDriver::addToFilter(uint8_t address)
 int JDLogicDriver::removeFromFilter(uint8_t address)
 {
     JD_DMESG("UNFILTER: %d", address);
-    for (int i = 0; i < JD_LOGIC_DRIVER_MAX_FILTERS; i++)
+    for (int i = 0; i < JD_LOGIC_SERVICE_MAX_FILTERS; i++)
     {
         if (this->address_filters[i] == address)
             this->address_filters[i] = 0;
@@ -462,7 +462,7 @@ bool JDLogicDriver::filterPacket(uint8_t address)
 {
     if (address > 0)
     {
-        for (int i = 0; i < JD_PROTOCOL_DRIVER_ARRAY_SIZE; i++)
+        for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
             if (address_filters[i] == address)
                 return true;
     }

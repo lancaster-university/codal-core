@@ -87,11 +87,16 @@ DEALINGS IN THE SOFTWARE.
 #define JD_RX_ARRAY_SIZE               10
 #define JD_TX_ARRAY_SIZE               10
 
-#define JD_SERIAL_PACKET_GET_CRC(pkt)(pkt->version_crc & 0xFFF)
-#define JD_SERIAL_PACKET_SET_CRC(pkt, crc) (pkt->version_crc = (pkt->version_crc & 0xF000) | (crc & 0xFFF))
+#define JD_SERIAL_PACKET_GET_CRC(pkt)(pkt->crc_service_number & 0xFFF)
+#define JD_SERIAL_PACKET_SET_CRC(pkt, crc) (pkt->crc_service_number = (pkt->crc_service_number & 0xF000) | (crc & 0xFFF))
 
-#define JD_SERIAL_PACKET_GET_VERSION(pkt)((pkt->version_crc & 0xF000) >> 12)
-#define JD_SERIAL_PACKET_SET_VERSION(pkt, version) (pkt->version_crc = (pkt->version_crc  & 0xFFF) | ((version & 0xF) << 12))
+#define JD_SERIAL_PACKET_GET_SERVICE_NUMBER(pkt)(pkt->crc_service_number & 0xF000 >> 12)
+#define JD_SERIAL_PACKET_SET_SERVICE_NUMBER(pkt, service_number) (pkt->crc_service_number = (pkt->crc_service_number & 0xF000) | (service_number & 0xFFF))
+
+#define JD_SERIAL_PACKET_GET_SIZE(pkt)(pkt->size_version & 0x7F)
+#define JD_SERIAL_PACKET_SET_SIZE(pkt, size) (pkt->size_version = (pkt->size_version & 0x8000) | (size & 0x7F))
+
+#define JD_SERIAL_PACKET_GET_VERSION(pkt)((pkt->version_crc & 0x8000) >> 7)
 
 #if CONFIG_ENABLED(JD_DEBUG)
 #define JD_DMESG      codal_dmesg
@@ -101,43 +106,14 @@ DEALINGS IN THE SOFTWARE.
 
 namespace codal
 {
-    /**
-     * A JDPacket contains: a crc for error checking, the size of the packet
-     * and an address.
-     *
-     * An address of a packet can be the drivers own address, or another drivers address.
-     *
-     * Why would you send a packet using your own address? Well, there are a number of different paradigms in JACDAC:
-     *
-     * 1) Virtual Drivers
-     *
-     * Virtual drivers allow the virtualisation of a remote resource. Packets produced from the remote resource are
-     * consumed as if the remote resource is on the device. An example of this in action would be a remote Accelerometer.
-     * Any device can modify the configuration of the remote resource. Only the host of the remote resource is required to be enumerated.
-     *
-     * 2) Paired Drivers
-     *
-     * Sharing resources is great, except when you want to own a resource like a joystick. Paired drivers allow ownership
-     * over a remote resource. This mode requires both the host and the consumer to enumerated, so that one can tell if
-     * the other disappears from the bus and vice versa.
-     *
-     * 3) Broadcast Drivers
-     *
-     * Sometimes drivers would like to receive all packets on the bus and do not require the use of addresses. This mode
-     * allows any packet addressed to a class to be received. Broadcast drivers can be combined with either mode above,
-     * or none at all.
-     **/
-    struct JDPacket {
-        /**
-         * jacdac_version (upper 4 bits):  identifies the version of the entire stack, filled out by the JACDAC driver
-         * crc (lower 12 bits):  a cyclic redundancy check, filled out by the JACDAC driver (currently crc12 is used).
-         **/
-        uint16_t version_crc;
+    struct JDPacket
+    {
+        uint16_t crc_service_number; // crc is stored in the first 12 bits, service number in the final 4 bits
         uint8_t address; // control is 0, devices are allocated address in the range 1 - 255
-        uint8_t size; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.
+        uint8_t size_version; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.
         uint8_t data[JD_SERIAL_MAX_PAYLOAD_SIZE];
         uint8_t communication_rate;
-    } __attribute((__packed__));
+    };
 
     enum class JDBusState : uint8_t
     {
@@ -237,7 +213,7 @@ namespace codal
         JACDAC(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busStateLED = NULL, Pin* commStateLED = NULL, JDBaudRate baud = JDBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
 
         /**
-          * Retrieves the first packet on the rxQueue irregardless of the device_class
+          * Retrieves the first packet on the rxQueue regardless of the device_class
           *
           * @returns the first packet on the rxQueue or NULL
           */
