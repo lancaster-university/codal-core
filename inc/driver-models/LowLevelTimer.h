@@ -3,6 +3,7 @@
 
 #include "CodalConfig.h"
 #include "CodalComponent.h"
+#include "codal_target_hal.h"
 
 namespace codal
 {
@@ -59,6 +60,17 @@ class LowLevelTimer : public CodalComponent
     {
         this->timer_pointer = timer_pointer;
         return DEVICE_OK;
+    }
+
+    /**
+     * Sets the interrupt priority (if supported on this mcu)
+     *
+     * @returns DEVICE_OK on success.
+     **/
+    virtual int setIRQPriority(int)
+    {
+        target_panic(DEVICE_NOT_IMPLEMENTED);
+        return DEVICE_NOT_IMPLEMENTED;
     }
 
     /**
