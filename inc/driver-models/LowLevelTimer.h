@@ -62,6 +62,17 @@ class LowLevelTimer : public CodalComponent
     }
 
     /**
+     * Sets the interrupt priority (if supported on this mcu)
+     *
+     * @returns DEVICE_OK on success.
+     **/
+    virtual int setIRQPriority(int)
+    {
+        target_panic(DEVICE_NOT_IMPLEMENTED);
+        return DEVICE_NOT_IMPLEMENTED;
+    }
+
+    /**
      * Constructor
      *
      * @param channel_count the number of capture compare registers the underlying hardware has.
