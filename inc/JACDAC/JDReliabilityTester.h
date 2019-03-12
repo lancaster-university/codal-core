@@ -24,7 +24,7 @@ namespace codal
         uint32_t count;
     };
 
-    class JDReliabilityTester : public JDDriver
+    class JDReliabilityTester : public JDService
     {
         Pin* pin;
 
@@ -42,7 +42,7 @@ namespace codal
 
         int start();
 
-        virtual int populateDriverInfo(JDDriverInfo* cp, uint8_t bytesRemaining);
+        virtual int populateDriverInfo(JDServiceInfo* cp, uint8_t bytesRemaining);
 
         virtual int handleControlPacket(JDControlPacket* cp);
 

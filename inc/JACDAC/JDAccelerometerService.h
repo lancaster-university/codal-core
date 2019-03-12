@@ -23,7 +23,7 @@ namespace codal
         int16_t event_value;
     }__attribute__((packed));
 
-    class JDAccelerometerDriver : public JDDriver
+    class JDAccelerometerService : public JDService
     {
         Accelerometer* accelerometer;
         Sample3D latest;
@@ -32,8 +32,8 @@ namespace codal
         void forwardEvent(Event evt);
 
         public:
-        JDAccelerometerDriver(Accelerometer& accel);
-        JDAccelerometerDriver();
+        JDAccelerometerService(Accelerometer& accel);
+        JDAccelerometerService();
 
         int getX();
         int getY();

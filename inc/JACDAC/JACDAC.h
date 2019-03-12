@@ -48,7 +48,9 @@ DEALINGS IN THE SOFTWARE.
 // max spacing is 3 times 1 byte at minimum baud rate (240 us)
 #define JD_MAX_INTERLODATA_SPACING                          (3 * JD_BYTE_AT_125KBAUD)
 
-#define JD_SERIAL_MAX_BUFFERS          10
+#define JD_SERIAL_MAX_BUFFERS           10
+
+#define JD_SERIAL_MAX_SERVICE_NUMBER    15
 
 #define JD_SERIAL_RECEIVING             0x0002
 #define JD_SERIAL_RECEIVING_HEADER      0x0004
@@ -87,17 +89,6 @@ DEALINGS IN THE SOFTWARE.
 #define JD_RX_ARRAY_SIZE               10
 #define JD_TX_ARRAY_SIZE               10
 
-#define JD_SERIAL_PACKET_GET_CRC(pkt)(pkt->crc_service_number & 0xFFF)
-#define JD_SERIAL_PACKET_SET_CRC(pkt, crc) (pkt->crc_service_number = (pkt->crc_service_number & 0xF000) | (crc & 0xFFF))
-
-#define JD_SERIAL_PACKET_GET_SERVICE_NUMBER(pkt)(pkt->crc_service_number & 0xF000 >> 12)
-#define JD_SERIAL_PACKET_SET_SERVICE_NUMBER(pkt, service_number) (pkt->crc_service_number = (pkt->crc_service_number & 0xF000) | (service_number & 0xFFF))
-
-#define JD_SERIAL_PACKET_GET_SIZE(pkt)(pkt->size_version & 0x7F)
-#define JD_SERIAL_PACKET_SET_SIZE(pkt, size) (pkt->size_version = (pkt->size_version & 0x8000) | (size & 0x7F))
-
-#define JD_SERIAL_PACKET_GET_VERSION(pkt)((pkt->version_crc & 0x8000) >> 7)
-
 #if CONFIG_ENABLED(JD_DEBUG)
 #define JD_DMESG      codal_dmesg
 #else
@@ -108,9 +99,9 @@ namespace codal
 {
     struct JDPacket
     {
-        uint16_t crc_service_number; // crc is stored in the first 12 bits, service number in the final 4 bits
-        uint8_t address; // control is 0, devices are allocated address in the range 1 - 255
-        uint8_t size_version; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.
+        uint16_t crc:12, service_number:4; // crc is stored in the first 12 bits, service number in the final 4 bits
+        uint8_t device_address; // control is 0, devices are allocated address in the range 1 - 255
+        uint8_t size; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.
         uint8_t data[JD_SERIAL_MAX_PAYLOAD_SIZE];
         uint8_t communication_rate;
     };
@@ -253,7 +244,7 @@ namespace codal
           *
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
           */
-        virtual int send(uint8_t* buf, int len, uint8_t address, JDBaudRate communicationRate);
+        virtual int send(uint8_t* buf, int len, uint8_t address, uint8_t service_number, JDBaudRate communicationRate);
 
         /**
          * Returns a bool indicating whether the JACDAC driver has been started.

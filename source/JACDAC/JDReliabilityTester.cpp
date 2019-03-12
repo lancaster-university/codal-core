@@ -4,20 +4,20 @@
 
 using namespace codal;
 
-JDReliabilityTester::JDReliabilityTester(Pin& p, uint32_t max_count) : JDDriver(JDDevice(HostDriver, JD_DRIVER_CLASS_RELIABILITY_TESTER)), pin(&p)
+JDReliabilityTester::JDReliabilityTester(Pin& p, uint32_t max_count) : JDService(JDServiceState(HostService, JD_DRIVER_CLASS_RELIABILITY_TESTER)), pin(&p)
 {
     this->max_count = max_count;
     this->received = (uint8_t*)malloc(this->max_count);
     memset(received, 0, this->max_count);
 }
 
-JDReliabilityTester::JDReliabilityTester() :  JDDriver(JDDevice(VirtualDriver, JD_DRIVER_CLASS_RELIABILITY_TESTER)), pin(NULL), received(NULL)
+JDReliabilityTester::JDReliabilityTester() :  JDService(JDServiceState(ClientService, JD_DRIVER_CLASS_RELIABILITY_TESTER)), pin(NULL), received(NULL)
 {
 }
 
 int JDReliabilityTester::sendPacket(uint8_t value)
 {
-    if (!(this->device.flags & JD_DEVICE_FLAGS_REMOTE) || !this->isConnected())
+    if (!(this->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT) || !this->isConnected())
         return DEVICE_INVALID_STATE;
 
     ReliabilityPacket p;
@@ -30,7 +30,7 @@ int JDReliabilityTester::sendPacket(uint8_t value)
 
 int JDReliabilityTester::start()
 {
-    if (this->device.flags & JD_DEVICE_FLAGS_REMOTE && this->status & RELIABILITY_STATUS_TEST_READY)
+    if (this->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT && this->status & RELIABILITY_STATUS_TEST_READY)
     {
         this->count = 0;
         int state = 0;
@@ -70,7 +70,7 @@ int JDReliabilityTester::start()
     return this->max_count;
 }
 
-int JDReliabilityTester::populateDriverInfo(JDDriverInfo* p, uint8_t bytesRemaining)
+int JDReliabilityTester::populateDriverInfo(JDServiceInfo* p, uint8_t bytesRemaining)
 {
     if (bytesRemaining < sizeof(ReliabilityAdvertisement))
         return 0;
@@ -87,7 +87,7 @@ int JDReliabilityTester::handleControlPacket(JDControlPacket* p)
 {
     JDControlPacket* cp = (JDControlPacket*)p->data;
 
-    if (this->device.flags & JD_DEVICE_FLAGS_REMOTE)
+    if (this->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT)
     {
         ReliabilityAdvertisement* ra = (ReliabilityAdvertisement*)cp->data;
 
@@ -114,11 +114,11 @@ int JDReliabilityTester::handlePacket(JDPacket* p)
     ReliabilityPacket* pinData = (ReliabilityPacket*)p->data;
 
     // if remote we ignore received packets.
-    if ((this->device.flags & JD_DEVICE_FLAGS_REMOTE))
+    if ((this->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT))
         return DEVICE_CANCELLED;
 
     // if we're paired and a random device has sent us a packet ignore
-    if (isPaired() && this->pairedInstance->getAddress() != p->address )
+    if (isPaired() && this->pairedInstance->getAddress() != p->device_address )
         return DEVICE_OK;
 
 

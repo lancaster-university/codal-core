@@ -19,15 +19,15 @@ namespace codal
         uint32_t value;
     };
 
-    class JDPinDriver : public JDDriver
+    class JDPinService : public JDService
     {
         Pin* pin;
 
         int sendPacket(Mode m, uint32_t value);
 
         public:
-        JDPinDriver(Pin& p);
-        JDPinDriver();
+        JDPinService(Pin& p);
+        JDPinService();
 
         int setAnalogValue(uint32_t value);
         int setDigitalValue(uint32_t value);

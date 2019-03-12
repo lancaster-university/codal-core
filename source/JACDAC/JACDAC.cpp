@@ -306,10 +306,11 @@ void JACDAC::dmaComplete(Event evt)
                 status &= ~(JD_SERIAL_RECEIVING);
                 timer.clearCompare(MAXIMUM_INTERBYTE_CC);
 
-                uint8_t* crcPointer = (uint8_t*)&rxBuf->address;
+                uint8_t* crcPointer = (uint8_t*)&rxBuf->device_address;
                 uint16_t crc = crc12(crcPointer, rxBuf->size + JD_SERIAL_CRC_HEADER_SIZE); // include size and address in the checksum.
 
-                if (crc == JD_SERIAL_PACKET_GET_CRC(rxBuf) && JD_SERIAL_PACKET_GET_VERSION(rxBuf) == JD_VERSION)
+                #warning fix crc calculation
+                if (crc == rxBuf->crc)
                 {
                     rxBuf->communication_rate = (uint8_t)currentBaud;
 
@@ -323,7 +324,7 @@ void JACDAC::dmaComplete(Event evt)
                 // i.e. drive the bus low....?
                 else
                 {
-                    DMESG("CRCE: %d, comp: %d",JD_SERIAL_PACKET_GET_CRC(rxBuf), crc);
+                    DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
                     Event(this->id, JD_SERIAL_EVT_CRC_ERROR);
                 }
             }
@@ -633,14 +634,12 @@ int JACDAC::send(JDPacket* tx, bool compute_crc)
 
     JD_DMESG("QU %d", pkt->size);
 
-    JD_SERIAL_PACKET_SET_VERSION(pkt, JD_VERSION);
-
     // if compute_crc is not set, we assume the user is competent enough to use their own crc mechanisms.
     if (compute_crc)
     {
         // crc is calculated from the address field onwards
-        uint8_t* crcPointer = (uint8_t*)&pkt->address;
-        JD_SERIAL_PACKET_SET_CRC(pkt, crc12(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE));
+        uint8_t* crcPointer = (uint8_t*)&pkt->device_address;
+        pkt->crc = crc12(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE);
     }
 
     int ret = addToTxArray(pkt);
@@ -667,9 +666,9 @@ int JACDAC::send(JDPacket* tx, bool compute_crc)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int JACDAC::send(uint8_t* buf, int len, uint8_t address, JDBaudRate br)
+int JACDAC::send(uint8_t* buf, int len, uint8_t address, uint8_t service_number, JDBaudRate br)
 {
-    if (buf == NULL || len <= 0 || len > JD_SERIAL_MAX_PAYLOAD_SIZE)
+    if (buf == NULL || len <= 0 || len > JD_SERIAL_MAX_PAYLOAD_SIZE || service_number > JD_SERIAL_MAX_SERVICE_NUMBER)
     {
         JD_DMESG("pkt TOO BIG: %d ",len);
         return DEVICE_INVALID_PARAMETER;
@@ -678,8 +677,9 @@ int JACDAC::send(uint8_t* buf, int len, uint8_t address, JDBaudRate br)
     JDPacket pkt;
     memset(&pkt, 0, sizeof(JDPacket));
 
-    pkt.version_crc = 0;
-    pkt.address = address;
+    pkt.crc = 0;
+    pkt.service_number = service_number;
+    pkt.device_address = address;
     pkt.size = len;
     pkt.communication_rate = (uint8_t)br;
 

@@ -1,10 +1,9 @@
-#include "JDMessageBusDriver.h"
+#include "JDMessageBusService.h"
 #include "CodalDmesg.h"
 
 using namespace codal;
 
-JDMessageBusDriver::JDMessageBusDriver() :
-    JDDriver(JDDevice(BroadcastDriver, JD_DRIVER_CLASS_MESSAGE_BUS))
+JDMessageBusService::JDMessageBusService() : JDService(JDServiceState(BroadcastHostService, JD_DRIVER_CLASS_MESSAGE_BUS))
 {
     suppressForwarding = false;
 }
@@ -24,7 +23,7 @@ JDMessageBusDriver::JDMessageBusDriver() :
   * @note The wildcards DEVICE_ID_ANY and DEVICE_EVT_ANY can also be in place of the
   *       id and value fields.
   */
-int JDMessageBusDriver::listen(uint16_t id, uint16_t value)
+int JDMessageBusService::listen(uint16_t id, uint16_t value)
 {
     if (EventModel::defaultEventBus)
         return listen(id, value, *EventModel::defaultEventBus);
@@ -49,9 +48,9 @@ int JDMessageBusDriver::listen(uint16_t id, uint16_t value)
   * @note The wildcards DEVICE_ID_ANY and DEVICE_EVT_ANY can also be in place of the
   *       id and value fields.
   */
-int JDMessageBusDriver::listen(uint16_t id, uint16_t value, EventModel &eventBus)
+int JDMessageBusService::listen(uint16_t id, uint16_t value, EventModel &eventBus)
 {
-    return eventBus.listen(id, value, this, &JDMessageBusDriver::eventReceived, MESSAGE_BUS_LISTENER_IMMEDIATE);
+    return eventBus.listen(id, value, this, &JDMessageBusService::eventReceived, MESSAGE_BUS_LISTENER_IMMEDIATE);
 }
 
 /**
@@ -65,7 +64,7 @@ int JDMessageBusDriver::listen(uint16_t id, uint16_t value, EventModel &eventBus
   *
   * @note DEVICE_EVT_ANY can be used to deregister all event values matching the given id.
   */
-int JDMessageBusDriver::ignore(uint16_t id, uint16_t value)
+int JDMessageBusService::ignore(uint16_t id, uint16_t value)
 {
     if (EventModel::defaultEventBus)
         return ignore(id, value, *EventModel::defaultEventBus);
@@ -86,9 +85,9 @@ int JDMessageBusDriver::ignore(uint16_t id, uint16_t value)
   *
   * @note DEVICE_EVT_ANY can be used to deregister all event values matching the given id.
   */
-int JDMessageBusDriver::ignore(uint16_t id, uint16_t value, EventModel &eventBus)
+int JDMessageBusService::ignore(uint16_t id, uint16_t value, EventModel &eventBus)
 {
-    return eventBus.ignore(id, value, this, &JDMessageBusDriver::eventReceived);
+    return eventBus.ignore(id, value, this, &JDMessageBusService::eventReceived);
 }
 
 
@@ -97,7 +96,7 @@ int JDMessageBusDriver::ignore(uint16_t id, uint16_t value, EventModel &eventBus
   *
   * This function process this packet, and fires the event contained inside onto the default EventModel.
   */
-int JDMessageBusDriver::handlePacket(JDPacket* p)
+int JDMessageBusService::handlePacket(JDPacket* p)
 {
     Event *e = (Event *) p->data;
 
@@ -108,7 +107,7 @@ int JDMessageBusDriver::handlePacket(JDPacket* p)
     return DEVICE_OK;
 }
 
-int JDMessageBusDriver::handleControlPacket(JDControlPacket*)
+int JDMessageBusService::handleControlPacket(JDControlPacket*)
 {
     return DEVICE_OK;
 }
@@ -118,7 +117,7 @@ int JDMessageBusDriver::handleControlPacket(JDControlPacket*)
   * the registerEvent() method described above. Upon receiving such an event, it is wrapped into
   * a serial bus packet and transmitted to any other micro:bits in the same group.
   */
-void JDMessageBusDriver::eventReceived(Event e)
+void JDMessageBusService::eventReceived(Event e)
 {
     // DMESG("EVENT");
     if(suppressForwarding)

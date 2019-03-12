@@ -46,8 +46,8 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERVICE_EVT_PAIRING_RESPONSE  65525
 #define JD_SERVICE_EVT_ERROR             65526
 
-#define JD_SERVICE_STATE_FLAGS_LOCAL           0x8000 // on the board
-#define JD_SERVICE_STATE_FLAGS_REMOTE          0x4000 // off the board
+#define JD_SERVICE_STATE_FLAGS_HOST            0x8000 // on the board
+#define JD_SERVICE_STATE_FLAGS_CLIENT          0x4000 // off the board
 
 // following flags combined with the above to yield different behaviours
 #define JD_SERVICE_STATE_FLAGS_BROADCAST       0x2000 // receive all class packets regardless of the address
@@ -72,20 +72,20 @@ DEALINGS IN THE SOFTWARE.
 // END      JD SERIAL SERVICE FLAGS
 
 
-// BEGIN    LOGIC SERVICE FLAGS
-#define JD_LOGIC_SERVICE_MAX_FILTERS                     20
-#define JD_LOGIC_SERVICE_EVT_CHANGED                     2
-#define JD_LOGIC_SERVICE_EVT_TIMER_CALLBACK              3
+// BEGIN    CONTROL SERVICE FLAGS
+#define JD_CONTROL_SERVICE_MAX_FILTERS                     20
+#define JD_CONTROL_SERVICE_EVT_CHANGED                     2
+#define JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK              3
 
-#define JD_SERVICE_INFO_FLAGS_RESERVED                   0x80
-#define JD_SERVICE_INFO_FLAGS_PAIRING_MODE               0x40 // in pairing mode, control packets aren't forwarded to services
-#define JD_SERVICE_INFO_FLAGS_PAIRABLE                   0x20 // advertises that a service can be optionally paired with another
-#define JD_SERVICE_INFO_FLAGS_PAIRED                     0x10 // advertises that a service is already paired with another.
+#define JD_DEVICE_FLAGS_RESERVED                  0x80
+#define JD_DEVICE_FLAGS_PAIRING_MODE              0x40 // in pairing mode, control packets aren't forwarded to services
+#define JD_DEVICE_FLAGS_PAIRABLE                  0x20 // advertises that a service can be optionally paired with another
+#define JD_DEVICE_FLAGS_PAIRED                    0x10 // advertises that a service is already paired with another.
 
-#define JD_SERVICE_INFO_FLAGS_CONFLICT                   0x08
-#define JD_SERVICE_INFO_FLAGS_UNCERTAIN                  0x04
-#define JD_SERVICE_INFO_FLAGS_NACK                       0x02
-#define JD_SERVICE_INFO_FLAGS_ACK                        0x01
+#define JD_DEVICE_FLAGS_CONFLICT                        0x08
+#define JD_DEVICE_FLAGS_UNCERTAIN                       0x04
+#define JD_DEVICE_FLAGS_NACK                            0x02
+#define JD_DEVICE_FLAGS_ACK                             0x01
 
 #define JD_SERVICE_INFO_TYPE_HELLO                       0x1
 #define JD_SERVICE_INFO_TYPE_PAIRING_REQUEST             0x2
@@ -93,22 +93,21 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERVICE_INFO_TYPE_PANIC                       0xF
 
 #define JD_SERVICE_INFO_MAX_PAYLOAD_SIZE                 16
-// END      LOGIC SERVICE FLAGS
+
+// END      CONTROL SERVICE FLAGS
 
 
 // BEGIN    JD SERIAL PROTOCOL
-#define JD_PROTOCOL_EVT_SEND_CONTROL                1
-#define JD_PROTOCOL_SERVICE_ARRAY_SIZE               20
 
 #include "JDClasses.h"
 
-// END      JD SERIAL PROTOCOL
-#define JD_CONTROL_PACKET_ERROR_NAME_LENGTH         6
+#define JD_PROTOCOL_SERVICE_ARRAY_SIZE                  20
+#define JD_MAX_DEVICE_NAME_LENGTH                       8
 
-#define JD_SERVICE_INFO_HEADER_SIZE                  8
-#define JD_CONTROL_PACKET_HEADER_SIZE               4
+#define JD_SERVICE_INFO_HEADER_SIZE                     6
+#define JD_CONTROL_PACKET_HEADER_SIZE                   10
 
-#define JD_MAX_PACKET_SIZE                          255
+#define JD_MAX_PACKET_SIZE                              255
 
 namespace codal
 {
@@ -144,9 +143,9 @@ namespace codal
     enum ServiceType
     {
         ClientService = JD_SERVICE_STATE_FLAGS_CLIENT, // the service is seeking the use of another device's resource
-        // PairedService = JD_SERVICE_STATE_FLAGS_BROADCAST | JD_SERVICE_STATE_FLAGS_PAIR,
+        PairedService = JD_SERVICE_STATE_FLAGS_BROADCAST | JD_SERVICE_STATE_FLAGS_PAIR,
         HostService = JD_SERVICE_STATE_FLAGS_HOST, // the service is hosting a resource for others to use.
-        // PairableHostService = JD_SERVICE_STATE_FLAGS_PAIRABLE | JD_SERVICE_STATE_FLAGS_LOCAL, // the service is allowed to pair with another service of the same class
+        PairableHostService = JD_SERVICE_STATE_FLAGS_PAIRABLE | JD_SERVICE_STATE_FLAGS_HOST, // the service is allowed to pair with another service of the same class
         BroadcastHostService = JD_SERVICE_STATE_FLAGS_HOST | JD_SERVICE_STATE_FLAGS_BROADCAST, // the service is enumerated with its own address, and receives all packets of the same class (including control packets)
         BroadcastClientService = JD_SERVICE_STATE_FLAGS_CLIENT | JD_SERVICE_STATE_FLAGS_BROADCAST, // the service is not enumerated, and receives all packets of the same class (including control packets)
     };
@@ -187,9 +186,9 @@ namespace codal
         uint8_t address; // the address assigned by the logic service.
         uint8_t rolling_counter; // used to trigger various time related events
         uint16_t flags; // various flags indicating the state of the service
-        uint32_t serial_number; // the serial number used to "uniquely" identify a device
+        uint64_t serial_number; // the serial number used to "uniquely" identify a device
         uint32_t service_class; // the class of the service, created or selected from the list in JDClasses.h
-        uint8_t service_offset;
+        uint8_t service_number;
 
         /**
          * Constructor, creates a local service using just the service class.
@@ -200,12 +199,12 @@ namespace codal
          **/
         JDServiceState(uint32_t service_class)
         {
-            address = 0;
-            rolling_counter = 0;
-            flags = JD_SERVICE_STATE_FLAGS_LOCAL;
-            serial_number = target_get_serial();
-            service_class = service_class;
-            service_offset??
+            this->address = 0;
+            this->rolling_counter = 0;
+            this->flags = JD_SERVICE_STATE_FLAGS_HOST;
+            this->serial_number = target_get_serial();
+            this->service_class = service_class;
+            this->service_number = 255;
         }
 
         /**
@@ -226,12 +225,13 @@ namespace codal
             this->rolling_counter = 0;
             this->flags |= t;
 
-            if (t & JD_SERVICE_STATE_FLAGS_REMOTE)
+            if (t & JD_SERVICE_STATE_FLAGS_CLIENT)
                 this->serial_number = 0;
             else
                 this->serial_number = target_get_serial();
 
             this->service_class = service_class;
+            this->service_number = 255;
         }
 
         /**
@@ -250,13 +250,14 @@ namespace codal
          *
          * @note you are responsible for any weirdness you achieve using this constructor.
          **/
-        JDServiceState(uint8_t address, uint16_t flags, uint32_t serial_number, uint32_t service_class)
+        JDServiceState(uint8_t address, uint8_t service_number, uint16_t flags, uint64_t serial_number, uint32_t service_class)
         {
             this->address = address;
             this->rolling_counter = 0;
             this->flags = flags;
             this->serial_number = serial_number;
             this->service_class = service_class;
+            this->service_number = service_number;
         }
 
         /**
@@ -324,9 +325,9 @@ namespace codal
          *
          * @returns true if in VirtualService mode.
          **/
-        bool isVirtualService()
+        bool isClient()
         {
-            return (this->flags & JD_SERVICE_STATE_FLAGS_REMOTE) && !(this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST);
+            return (this->flags & JD_SERVICE_STATE_FLAGS_CLIENT) && !(this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST);
         }
 
         /**
@@ -336,8 +337,9 @@ namespace codal
          *
          * @returns true if in PairedService mode.
          **/
-        bool isPairedService()
+        bool isPairedToDevice()
         {
+            #warning remove this
             return this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST && this->flags & JD_SERVICE_STATE_FLAGS_PAIR;
         }
 
@@ -348,9 +350,9 @@ namespace codal
          *
          * @returns true if in SnifferService mode.
          **/
-        bool isHostService()
+        bool isHost()
         {
-            return this->flags & JD_SERVICE_STATE_FLAGS_LOCAL && !(this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST);
+            return this->flags & JD_SERVICE_STATE_FLAGS_HOST && !(this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST);
         }
 
         /**
@@ -360,9 +362,9 @@ namespace codal
          *
          * @returns true if in BroadcastService mode.
          **/
-        bool isBroadcastService()
+        bool isBroadcastHost()
         {
-            return this->flags & JD_SERVICE_STATE_FLAGS_LOCAL && this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST;
+            return this->flags & JD_SERVICE_STATE_FLAGS_HOST && this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST;
         }
 
         /**
@@ -372,9 +374,9 @@ namespace codal
          *
          * @returns true if in SnifferService mode.
          **/
-        bool isSnifferService()
+        bool isBroadcastClient()
         {
-            return this->flags & JD_SERVICE_STATE_FLAGS_REMOTE && this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST;
+            return this->flags & JD_SERVICE_STATE_FLAGS_CLIENT && this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST;
         }
 
         /**
@@ -653,7 +655,7 @@ namespace codal
 
         // this array is used to filter paired service packets from consuming unneccessary processing cycles
         // on jacdac devices.
-        uint8_t address_filters[JD_LOGIC_SERVICE_MAX_FILTERS];
+        uint8_t address_filters[JD_CONTROL_SERVICE_MAX_FILTERS];
 
         /**
          * A simple function to remove some code duplication, fills a given control packet(cp)
@@ -748,7 +750,7 @@ namespace codal
         void onPacketReceived(Event);
 
         // An instance of our logic service
-        JDControlService logic;
+        JDControlService control;
 
         // A pointer to a bridge service (if set, defaults to NULL).
         JDService* bridge;
@@ -771,7 +773,7 @@ namespace codal
          *
          * @param id for the message bus, defaults to  SERVICE_STATE_ID_JACDAC_PROTOCOL
          **/
-        JDProtocol(JACDAC& JD, ManagedString deviceName = ManagedString(), uint16_t id = SERVICE_STATE_ID_JACDAC_PROTOCOL);
+        JDProtocol(JACDAC& JD, ManagedString deviceName = ManagedString(), uint16_t id = DEVICE_ID_JACDAC_PROTOCOL);
 
         /**
          * Sets the bridge member variable to the given JDService pointer.
@@ -802,7 +804,7 @@ namespace codal
          *
          * @return the name used for error codes and panics
          **/
-        static ManagedString setDeviceName();
+        static ManagedString getDeviceName();
 
         /**
          * Adds a service to the services array. The logic service iterates over this array.

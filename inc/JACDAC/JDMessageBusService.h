@@ -9,13 +9,13 @@
 
 namespace codal
 {
-    class JDMessageBusDriver : public JDDriver
+    class JDMessageBusService : public JDService
     {
         void eventReceived(Event e);
         bool suppressForwarding;
 
         public:
-        JDMessageBusDriver();
+        JDMessageBusService();
 
         /**
          * Associates the given event with the serial channel.
