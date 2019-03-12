@@ -171,10 +171,16 @@ void JDControlService::timerCallback(Event)
 
 JDControlService::JDControlService() : JDService(JDServiceState(0, 0, JD_SERVICE_STATE_FLAGS_HOST | JD_SERVICE_STATE_FLAGS_INITIALISED, 0, 0))
 {
-    this->state.device_address = 0;
-
     this->rxControlPacket = (JDControlPacket *)malloc(sizeof(JDControlPacket) + sizeof(JDServiceInfo) + JD_SERVICE_INFO_MAX_PAYLOAD_SIZE);
     this->txControlPacket = (JDPacket *)malloc(sizeof(JDPacket));
+
+    this->device.serial_number = target_get_serial();
+    this->device.device_address = 1 + target_random(254);
+    this->device.device_flags = 0;
+    this->device.rolling_counter = 0;
+    this->device.next = NULL;
+
+    this->deviceList = NULL;
 
     status = 0;
     memset(this->address_filters, 0, JD_CONTROL_SERVICE_MAX_FILTERS);
@@ -191,6 +197,41 @@ int JDControlService::handleControlPacket(JDControlPacket* p)
 {
     // nop for now... could be useful in the future for controlling the mode of the logic service?
     return DEVICE_OK;
+}
+
+/**
+  * Given a control packet, finds the associated service, or if no associated device, associates a remote device with a service.
+  **/
+int JDControlService::handlePacket(JDPacket* pkt)
+{
+    JDControlPacket *cp = (JDControlPacket *)pkt->data;
+
+    uint8_t* dataPointer = cp->data;
+
+    for (int i = 0; i < )
+
+    // check for an address collision with us...
+
+    // if ok, then process the services:
+        // iterate over the service array
+            // if device_address, service_num, and class match a service
+                // then pass the service information to the service
+            // otherwise iterate
+
+        // if we reach the end of the services array without finding a match
+            // then check our local client services to see if any aren't initialised and are looking for the class.
+                // also check if they are looking for a specific device_name or serial_number.
+            // if a match is found, connect the service and create a device representation if one doesn't exist for the control service to track.
+
+
+
+    // set the serial_number of our statically allocated rx control packet (which is given to every service)
+    rxControlPacket->serial_number = cp->serial_number;
+
+    JD_DMESG("CP size:%d wh:%d", pkt->size, (pkt->size - JD_CONTROL_PACKET_HEADER_SIZE));
+
+    int service_number = 0;
+
 }
 
 /**
@@ -221,17 +262,6 @@ int JDControlService::handlePacket(JDPacket* pkt)
 
         JD_DMESG("DI A:%d S:%d C:%d p: %d", serviceInfo->device_address, cp->serial_number, serviceInfo->service_class, (serviceInfo->flags & JD_SERVICE_INFO_FLAGS_PAIRING_MODE) ? 1 : 0);
 
-        // Logic Service addressing rules:
-        // 1. services cannot have the same address and different serial numbers.
-        // 2. if someone has flagged a conflict with you, you must reassign your address.
-
-        // Address assignment rules:
-        // 1. if you are initialising (address unconfirmed), set JD_SERVICE_INFO_FLAGS_UNCERTAIN
-        // 2. if an existing, confirmed device spots a packet with the same address and the uncertain flag set, it should respond with
-        //    the same packet, with the CONFLICT flag set.
-        // 2b. if the transmitting device has no uncertain flag set, we reassign ourselves (first CP wins)
-        // 3. upon receiving a packet with the conflict packet set, the receiving device should reassign their address.
-
         // first check for any services who are associated with this control packet
         bool handled = false; // indicates if the control packet has been handled by a service.
 
@@ -250,7 +280,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
             if (current == NULL || current->state.service_class != serviceInfo->service_class)
                 continue;
 
-            bool address_check = current->state.device_address == cp->device_address;
+            bool address_check = current->state.device_address == cp->device_address && current->state.service_class == service_number;
             // bool class_check = true; // unused
             bool serial_check = cp->serial_number == current->state.serial_number;
             // this boolean is used to override stringent address checks (not needed for broadcast services as they receive all packets) to prevent code duplication
@@ -270,8 +300,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
                     if (!serial_check && address_check && !(cp->device_flags & JD_DEVICE_FLAGS_CONFLICT))
                     {
                         JD_DMESG("SERIAL_DIFF");
-                        // if we're initialised, this means that someone else is about to use our address, reject.
-                        // see 2. above.
+                        // Another device is about to use the address of our device
                         if ((current->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED) && (cp->device_flags & JD_DEVICE_FLAGS_UNCERTAIN))
                         {
                             memcpy(rxControlPacket->data, serviceInfo, JD_SERVICE_INFO_HEADER_SIZE);

@@ -175,6 +175,15 @@ namespace codal
         SERVICE_PERIPHERAL_MALFUNCTION
     };
 
+    struct JDDevice
+    {
+        uint64_t serial_number;
+        uint8_t device_flags;
+        uint8_t device_address;
+        uint16_t rolling_counter;
+        JDDevice* next;
+    };
+
     /**
      * This struct represents a JDServiceState used by a JDService.
      *
@@ -184,11 +193,10 @@ namespace codal
     struct JDServiceState
     {
         uint8_t device_address; // the address assigned by the logic service.
-        uint8_t rolling_counter; // used to trigger various time related events
+        uint8_t service_number;
         uint16_t flags; // various flags indicating the state of the service
         uint64_t serial_number; // the serial number used to "uniquely" identify a device
         uint32_t service_class; // the class of the service, created or selected from the list in JDClasses.h
-        uint8_t service_number;
 
         /**
          * Constructor, creates a local service using just the service class.
@@ -200,11 +208,10 @@ namespace codal
         JDServiceState(uint32_t service_class)
         {
             this->device_address = 0;
-            this->rolling_counter = 0;
+            this->service_number = 255;
             this->flags = JD_SERVICE_STATE_FLAGS_HOST;
             this->serial_number = target_get_serial();
             this->service_class = service_class;
-            this->service_number = 255;
         }
 
         /**
@@ -222,7 +229,6 @@ namespace codal
         JDServiceState(ServiceType t, uint32_t service_class)
         {
             this->device_address = 0;
-            this->rolling_counter = 0;
             this->flags |= t;
 
             if (t & JD_SERVICE_STATE_FLAGS_CLIENT)
@@ -253,11 +259,10 @@ namespace codal
         JDServiceState(uint8_t address, uint8_t service_number, uint16_t flags, uint64_t serial_number, uint32_t service_class)
         {
             this->device_address = address;
-            this->rolling_counter = 0;
+            this->service_number = service_number;
             this->flags = flags;
             this->serial_number = serial_number;
             this->service_class = service_class;
-            this->service_number = service_number;
         }
 
         /**
@@ -652,6 +657,9 @@ namespace codal
     {
         JDControlPacket* rxControlPacket; // given to services upon receiving a control packet from another device.
         JDPacket* txControlPacket; // used to transmit this devices' information (more optimal than repeat allocing)
+
+        JDDevice* deviceList;
+        JDDevice device;
 
         // this array is used to filter paired service packets from consuming unneccessary processing cycles
         // on jacdac devices.
