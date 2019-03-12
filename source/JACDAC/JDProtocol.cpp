@@ -61,10 +61,10 @@ void JDProtocol::onPacketReceived(Event)
                 if (service)
                 {
                     // the above could be optimised into a single if, but useful for debugging.
-                    JD_DMESG("DRIV a:%d sn:%d c:%d i:%d f %d", service->state.address, service->state.serial_number, service->state.service_class, service->state.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, service->state.flags);
+                    JD_DMESG("DRIV a:%d sn:%d c:%d i:%d f %d", service->state.device_address, service->state.serial_number, service->state.service_class, service->state.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, service->state.flags);
 
                     // if the address is the same, or we're matching on class...
-                    if ((service->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED) && service->state.address == pkt->device_address && service->state.service_number == pkt->service_number)
+                    if ((service->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED) && service->state.device_address == pkt->device_address && service->state.service_number == pkt->service_number)
                     {
                         service_class = service->state.service_class;
 
@@ -251,6 +251,6 @@ void JDProtocol::logState(JackRouter* jr)
         JDService* current = JDProtocol::instance->services[i];
 
         if (current)
-            DMESG("Driver %d initialised[%d] address[%d] serial[%d] class[%d], mode[%s%s%s]", i, current->isConnected(), current->state.address, current->state.serial_number, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? "B" : "", current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? "H" : "", current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? "C" : "");
+            DMESG("Driver %d initialised[%d] address[%d] serial[%d] class[%d], mode[%s%s%s]", i, current->isConnected(), current->state.device_address, current->state.serial_number, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? "B" : "", current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? "H" : "", current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? "C" : "");
     }
 }

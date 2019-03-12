@@ -9,7 +9,7 @@ int JDControlService::populateServiceInfo(JDService* service, JDServiceInfo* inf
     // info->type = JD_SERVICE_INFO_TYPE_HELLO;
     // info->size = 0;
 
-    // info->device_address = service->state.address;
+    // info->device_address = service->state.device_address;
     // info->flags = 0;
 
     // if (service->state.isPairing())
@@ -72,13 +72,13 @@ void JDControlService::timerCallback(Event)
         {
             if (!(current->state.flags & JD_SERVICE_STATE_FLAGS_CP_SEEN) && difference > 2)
             {
-                JD_DMESG("CONTROL NOT SEEN %d %d", current->state.address, current->state.serial_number);
+                JD_DMESG("CONTROL NOT SEEN %d %d", current->state.device_address, current->state.serial_number);
                 current->deviceRemoved();
                 Event(this->id, JD_CONTROL_SERVICE_EVT_CHANGED);
 
                 if (current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST)
                 {
-                    JD_DMESG("BROADCAST REM %d", current->state.address);
+                    JD_DMESG("BROADCAST REM %d", current->state.device_address);
                     JDProtocol::instance->remove(*current);
                     delete current;
                     continue;
@@ -102,7 +102,7 @@ void JDControlService::timerCallback(Event)
             if (!(current->state.flags & (JD_SERVICE_STATE_FLAGS_INITIALISED | JD_SERVICE_STATE_FLAGS_INITIALISING)))
             {
                 JD_DMESG("BEGIN INIT");
-                current->state.address = 0;
+                current->state.device_address = 0;
 
                 bool allocated = true;
 
@@ -110,7 +110,7 @@ void JDControlService::timerCallback(Event)
                 while(allocated)
                 {
                     bool stillAllocated = false;
-                    current->state.address = target_random(256);
+                    current->state.device_address = target_random(256);
 
                     for (int j = 0; j < JD_PROTOCOL_SERVICE_ARRAY_SIZE; j++)
                     {
@@ -119,7 +119,7 @@ void JDControlService::timerCallback(Event)
 
                         if (JDProtocol::instance->services[j] && JDProtocol::instance->services[j]->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED)
                         {
-                            if (JDProtocol::instance->services[j]->state.address == current->state.address)
+                            if (JDProtocol::instance->services[j]->state.device_address == current->state.device_address)
                             {
                                 stillAllocated = true;
                                 break;
@@ -130,7 +130,7 @@ void JDControlService::timerCallback(Event)
                     allocated = stillAllocated;
                 }
 
-                JD_DMESG("ALLOC: %d",current->state.address);
+                JD_DMESG("ALLOC: %d",current->state.device_address);
 
                 // flag our address as uncertain (i.e. not committed / finalised)
                 dataOffset += populateServiceInfo(current, info, 0);
@@ -171,7 +171,7 @@ void JDControlService::timerCallback(Event)
 
 JDControlService::JDControlService() : JDService(JDServiceState(0, 0, JD_SERVICE_STATE_FLAGS_HOST | JD_SERVICE_STATE_FLAGS_INITIALISED, 0, 0))
 {
-    this->state.address = 0;
+    this->state.device_address = 0;
 
     this->rxControlPacket = (JDControlPacket *)malloc(sizeof(JDControlPacket) + sizeof(JDServiceInfo) + JD_SERVICE_INFO_MAX_PAYLOAD_SIZE);
     this->txControlPacket = (JDPacket *)malloc(sizeof(JDPacket));
@@ -250,13 +250,13 @@ int JDControlService::handlePacket(JDPacket* pkt)
             if (current == NULL || current->state.service_class != serviceInfo->service_class)
                 continue;
 
-            bool address_check = current->state.address == cp->device_address;
+            bool address_check = current->state.device_address == cp->device_address;
             // bool class_check = true; // unused
             bool serial_check = cp->serial_number == current->state.serial_number;
             // this boolean is used to override stringent address checks (not needed for broadcast services as they receive all packets) to prevent code duplication
             bool broadcast_override = (current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST) ? true : false;
 
-            JD_DMESG("d a %d, s %d, c %d, i %d, t %c%c%c", current->state.address, current->state.serial_number, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED ? 1 : 0, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? 'B' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? 'L' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? 'R' : ' ');
+            JD_DMESG("d a %d, s %d, c %d, i %d, t %c%c%c", current->state.device_address, current->state.serial_number, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED ? 1 : 0, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? 'B' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? 'L' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? 'R' : ' ');
             if (address_check)
                 representation_required = false;
 
@@ -285,7 +285,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
                         else
                         {
                             // new address will be assigned on next tick.
-                            current->state.address = 0;
+                            current->state.device_address = 0;
                             current->state.flags &= ~(JD_SERVICE_STATE_FLAGS_INITIALISING | JD_SERVICE_STATE_FLAGS_INITIALISED);
                             JD_DMESG("INIT REASSIGNING SELF");
                         }
@@ -313,7 +313,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
                     if (safe && current->handleLogicPacket(rxControlPacket) == DEVICE_OK)
                     {
                         handled = true;
-                        JD_DMESG("L ABSORBED %d", current->state.address);
+                        JD_DMESG("L ABSORBED %d", current->state.device_address);
                         continue;
                     }
                 }
@@ -333,12 +333,12 @@ int JDControlService::handlePacket(JDPacket* pkt)
                         // all is good, flag the device so that it is not removed.
                         current->state.setBaudRate((JDBaudRate)pkt->communication_rate);
                         current->state.flags |= JD_SERVICE_STATE_FLAGS_CP_SEEN;
-                        JD_DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->state.address, current->state.serial_number, current->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED ? 1 : 0);
+                        JD_DMESG("FOUND REMOTE a:%d sn:%d i:%d", current->state.device_address, current->state.serial_number, current->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED ? 1 : 0);
 
                         if (safe && current->handleLogicPacket(rxControlPacket) == DEVICE_OK)
                         {
                             handled = true;
-                            JD_DMESG("R ABSORBED %d", current->state.address);
+                            JD_DMESG("R ABSORBED %d", current->state.device_address);
                             continue;
                         }
                     }
@@ -374,12 +374,12 @@ int JDControlService::handlePacket(JDPacket* pkt)
                     // JD_DMESG("FIND SERVICE");
                     if (current && current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT && !(current->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED) && current->state.service_class == serviceInfo->service_class)
                     {
-                        JD_DMESG("ITER a %d, s %d, c %d, t %c%c%c", current->state.address, current->state.serial_number, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? 'B' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? 'L' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? 'R' : ' ');
+                        JD_DMESG("ITER a %d, s %d, c %d, t %c%c%c", current->state.device_address, current->state.serial_number, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? 'B' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? 'L' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? 'R' : ' ');
                         // this service instance is looking for a specific serial number
                         if (current->state.serial_number > 0 && current->state.serial_number != cp->serial_number)
                             continue;
 
-                        JD_DMESG("FOUND NEW: %d %d %d", current->state.address, current->state.service_class);
+                        JD_DMESG("FOUND NEW: %d %d %d", current->state.device_address, current->state.service_class);
                         current->state.setBaudRate((JDBaudRate)pkt->communication_rate);
                         int ret = current->handleLogicPacket(rxControlPacket);
 

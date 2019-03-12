@@ -41,7 +41,7 @@ int JDService::populateServiceInfo(JDServiceInfo*, uint8_t)
 int JDService::send(uint8_t* buf, int len)
 {
     if (JDProtocol::instance)
-        return JDProtocol::instance->bus.send(buf, len, this->state.address, this->state.service_number, this->state.getBaudRate());
+        return JDProtocol::instance->bus.send(buf, len, this->state.device_address, this->state.service_number, this->state.getBaudRate());
 
     return DEVICE_NO_RESOURCES;
 }
@@ -123,7 +123,7 @@ bool JDService::isConnected()
 int JDService::deviceConnected(JDServiceState device)
 {
     // DMESG("CONNB a:%d sn:%d cl:%d",device.address,device.serial_number, device.service_class);
-    this->state.address = device.address;
+    this->state.device_address = device.device_address;
     this->state.serial_number = device.serial_number;
     this->state.flags |= JD_SERVICE_STATE_FLAGS_INITIALISED | JD_SERVICE_STATE_FLAGS_CP_SEEN;
 
@@ -254,7 +254,7 @@ bool JDService::isPairable()
 
 uint8_t JDService::getAddress()
 {
-    return this->state.address;
+    return this->state.device_address;
 }
 
 uint32_t JDService::getClass()
