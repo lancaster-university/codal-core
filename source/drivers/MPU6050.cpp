@@ -9,7 +9,7 @@
 using namespace codal;
 
 
-MPU6050::MPU6050(I2C& _i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address,  uint16_t id) : Accelerometer(coordinateSpace, id), i2c(_i2c), int1(_int1), sample()
+MPU6050::MPU6050(I2C& _i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address,  uint16_t id) : Accelerometer(coordinateSpace, id), i2c(_i2c), int1(_int1)
 {
     // Store our identifiers.
     this->id = id;
@@ -89,23 +89,17 @@ int MPU6050::updateSample()
     return DEVICE_OK;
 };
 
-int MPU6050::setRange(int range)
-{
-    sampleRange = range;
-    return configure();
-}
-
-Sample3D MPU6050::getSample()
-{
-    return sample;
-}
-
 void MPU6050::idleCallback()
 {
 
 }
 
-MPU6050::~MPU6050()
+int MPU6050::setSleep(bool sleepMode)
 {
-}
+    if (sleepMode)
+        return 0; // TODO
+        // return i2c.writeRegister(this->address, MMA8653_CTRL_REG1, 0x00);
+    else
+        return configure();
 
+}
