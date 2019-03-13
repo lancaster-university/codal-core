@@ -13,8 +13,8 @@
 
 #define MPU6050_WHOAMI_VAL      0x34
 
-namespace codal{
-
+namespace codal
+{
     class MPU6050 : public Accelerometer
     {
         I2C& i2c;
@@ -30,40 +30,6 @@ namespace codal{
         MPU6050(I2C &_i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address = MPU6050_DEFAULT_ADDR,  uint16_t id = DEVICE_ID_ACCELEROMETER);
 
         /**
-          * Attempts to set the sample rate of the accelerometer to the specified value (in ms).
-          *
-          * @param period the requested time between samples, in milliseconds.
-          *
-          * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
-          *
-          * @code
-          * // sample rate is now 20 ms.
-          * accelerometer.setPeriod(20);
-          * @endcode
-          *
-          * @note The requested rate may not be possible on the hardware. In this case, the
-          * nearest lower rate is chosen.
-          */
-        int setPeriod(int period);
-
-        /**
-          * Attempts to set the sample range of the accelerometer to the specified value (in g).
-          *
-          * @param range The requested sample range of samples, in g.
-          *
-          * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
-          *
-          * @code
-          * // the sample range of the accelerometer is now 8G.
-          * accelerometer.setRange(8);
-          * @endcode
-          *
-          * @note The requested range may not be possible on the hardware. In this case, the
-          * nearest lower range is chosen.
-          */
-        int setRange(int range);
-
-        /**
           * Attempts to read the 8 bit ID from the accelerometer, this can be used for
           * validation purposes.
           *
@@ -76,21 +42,11 @@ namespace codal{
         int whoAmI();
 
         /**
-          * Reads the accelerometer data from the latest update retrieved from the accelerometer.
-          * Data is provided in ENU format, relative to the device package (and makes no attempt
-          * to align axes to the device).
-          *
-          * @return The force measured in each axis, in milli-g.
-          *
-          */
-        Sample3D getSample();
-
-        /**
           * A periodic callback invoked by the fiber scheduler idle thread.
           *
           * Internally calls updateSample().
           */
-        virtual void idleCallback();
+        virtual void idleCallback() override;
 
         /**
           * Configures the accelerometer for G range and sample rate defined
@@ -100,7 +56,7 @@ namespace codal{
           *
           * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the accelerometer could not be configured.
           */
-        int configure();
+        virtual int configure() override;
 
         /**
           * Reads the acceleration data from the accelerometer, and stores it in our buffer.
@@ -128,7 +84,7 @@ namespace codal{
          * @note This method should be overidden by the hardware driver to implement the requested
          * changes in hardware.
          */
-        virtual int requestUpdate();
+        virtual int requestUpdate() override;
 
         /**
           * Destructor.

@@ -89,17 +89,6 @@ int MPU6050::updateSample()
     return DEVICE_OK;
 };
 
-int MPU6050::setRange(int range)
-{
-    sampleRange = range;
-    return configure();
-}
-
-Sample3D MPU6050::getSample()
-{
-    return sample;
-}
-
 void MPU6050::idleCallback()
 {
 
