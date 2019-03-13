@@ -97,7 +97,7 @@ void MPU6050::idleCallback()
 int MPU6050::setSleep(bool sleepMode)
 {
     if (sleepMode)
-        return 0; // TODO
+        return i2c.writeRegister(address, 0x6B, 0x40);
         // return i2c.writeRegister(this->address, MMA8653_CTRL_REG1, 0x00);
     else
         return configure();
