@@ -4,7 +4,7 @@
 
 using namespace codal;
 
-int JDControlService::populateServiceInfo(JDService* service, JDServiceInfo* info, uint8_t bytesRemaining)
+int JDControlService::populateServiceInfo(JDService* service, JDServiceInformation* info, uint8_t bytesRemaining)
 {
     // info->type = JD_SERVICE_INFO_TYPE_HELLO;
     // info->size = 0;
@@ -96,7 +96,7 @@ void JDControlService::timerCallback(Event)
         // local services run on the state
         if (current->state.flags & JD_SERVICE_STATE_FLAGS_HOST)
         {
-            JDServiceInfo* info = (JDServiceInfo *)(cp->data + dataOffset);
+            JDServiceInformation* info = (JDServiceInformation *)(cp->data + dataOffset);
 
             // initialise a service by queuing a control packet with a first reasonable address
             if (!(current->state.flags & (JD_SERVICE_STATE_FLAGS_INITIALISED | JD_SERVICE_STATE_FLAGS_INITIALISING)))
@@ -171,7 +171,7 @@ void JDControlService::timerCallback(Event)
 
 JDControlService::JDControlService() : JDService(JDServiceState(0, 0, JD_SERVICE_STATE_FLAGS_HOST | JD_SERVICE_STATE_FLAGS_INITIALISED, 0, 0))
 {
-    this->rxControlPacket = (JDControlPacket *)malloc(sizeof(JDControlPacket) + sizeof(JDServiceInfo) + JD_SERVICE_INFO_MAX_PAYLOAD_SIZE);
+    this->rxControlPacket = (JDControlPacket *)malloc(sizeof(JDControlPacket) + sizeof(JDServiceInformation) + JD_SERVICE_INFO_MAX_PAYLOAD_SIZE);
     this->txControlPacket = (JDPacket *)malloc(sizeof(JDPacket));
 
     this->device.serial_number = target_get_serial();
@@ -206,32 +206,128 @@ int JDControlService::handlePacket(JDPacket* pkt)
 {
     JDControlPacket *cp = (JDControlPacket *)pkt->data;
 
+    // address collision check
+    if (device->address == cp->device_address)
+    {
+        // a different device is using our address!!
+        if (device.serial_number != cp->serial_number)
+        {
+            // if the device is proposing, we can reject (as per the spec)
+            if (cp->device_flags & JD_DEVICE_FLAGS_PROPOSING)
+            {
+                // if we're proposing too, this device has won the address
+                if (this->device.flags & JD_DEVICE_FLAGS_PROPOSING)
+                {
+                    this->device.remove();
+                    this->device.enumerate();
+                }
+                // if our address is established, reject the proposal
+                else
+                {
+                    JDControlPacket cp;
+
+                    p.device_address = cp->device_address;
+                    p.serial_number = cp->serial_number;
+                    p.device_flags = cp->device_flags | JD_DEVICE_FLAGS_REJECT;
+                    send((uint8_t*)&cp, JD_CONTROL_PACKET_HEADER_SIZE);
+                    JD_DMESG("ASK OTHER TO REASSIGN");
+                }
+
+                return; // no further processing required.
+            }
+        }
+        // someone has flagged a conflict with our device address, re-enumerate
+        else if (cp->device_flags & JD_DEVICE_FLAGS_REJECT)
+        {
+            this->device.remove();
+            this->device.enumerate();
+            return;
+        }
+    }
+
+    // the device has not got a confirmed address... if there was a collision it would be handled above
+    // we just drop the packet as the device is enumerating
+    if (cp->device_flags & (JD_DEVICE_FLAGS_PROPOSING | JD_DEVICE_FLAGS_PAIRING_MODE))
+        return;
+
+    JDDevice* device = JDDevice::getDevice(cp->serial_number);
+    #warning null ptr
+    device->seen(true);
+    // if we're maintaining the state of the device, flag it as "seen"
+    flagDevice(cp->device_address, cp->serial_number, pkt->communication_rate);
+
+    // if here, address validation has completed successfully... process service information
     uint8_t* dataPointer = cp->data;
-
-    for (int i = 0; i < )
-
-    // check for an address collision with us...
-
-    // if ok, then process the services:
-        // iterate over the service array
-            // if device_address, service_num, and class match a service
-                // then pass the service information to the service
-            // otherwise iterate
-
-        // if we reach the end of the services array without finding a match
-            // then check our local client services to see if any aren't initialised and are looking for the class.
-                // also check if they are looking for a specific device_name or serial_number.
-            // if a match is found, connect the service and create a device representation if one doesn't exist for the control service to track.
-
-
-
-    // set the serial_number of our statically allocated rx control packet (which is given to every service)
-    rxControlPacket->serial_number = cp->serial_number;
-
-    JD_DMESG("CP size:%d wh:%d", pkt->size, (pkt->size - JD_CONTROL_PACKET_HEADER_SIZE));
-
     int service_number = 0;
 
+    JDDeviceInformation device_info;
+
+    while (dataPointer < cp->data + (pkt->size - JD_CONTROL_PACKET_HEADER_SIZE))
+    {
+        JDServiceInformation* serviceInfo = (JDServiceInformation *)dataPointer;
+        bool handled = false;
+
+        for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
+        {
+            JDService* current = JDProtocol::instance->services[i];
+
+            if (current == NULL)
+                continue;
+
+            bool class_check = current->state.service_class == serviceInfo->service_class;
+
+            if (current->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED)
+            {
+                bool address_check = current->state.device_address == cp->device_address && current->state.service_number == service_number;
+                bool serial_check = cp->serial_number == current->state.serial_number;
+                // this boolean is used to override stringent address checks (not needed for broadcast services as they receive all packets) to prevent code duplication
+                bool broadcast_override = current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST > 0;
+
+                if (broadcast_override && cp->address != us)
+                {
+                    // what should this device representation be?
+                    create device representation?
+                }
+
+                JD_DMESG("d a %d, s %d, c %d, i %d, t %c%c%c", current->state.device_address, current->state.serial_number, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED ? 1 : 0, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? 'B' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? 'L' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? 'R' : ' ');
+
+                // check if applicable
+                if ((address_check && serial_check && class_check) || (class_check && broadcast_override))
+                {
+                    // if the service has handled the packet it will return DEVICE_OK.
+                    // any non zero return value will cause packet routing to continue
+                    if (current->handleLogicPacket(XX) == DEVICE_OK)
+                    {
+                        JD_DMESG("S ABSORBED %d", current->state.device_address);
+                        handled = true;
+                        break;
+                    }
+                }
+            }
+            else if (class_check && current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT)
+            {
+                JD_DMESG("ITER a %d, s %d, c %d, t %c%c%c", current->state.device_address, current->state.serial_number, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? 'B' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? 'L' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? 'R' : ' ');
+                // this service instance is looking for a specific serial number
+                if (current->state.serial_number != cp->serial_number || current->deviceName != EmptyString)
+                    continue;
+
+                JD_DMESG("FOUND NEW: %d %d %d", current->state.device_address, current->state.service_class);
+                current->state.setBaudRate((JDBaudRate)pkt->communication_rate);
+                int ret = current->handleLogicPacket(rxControlPacket);
+
+                if (ret == DEVICE_OK)
+                {
+                    current->deviceConnected(JDServiceState(cp->device_address, service_number, serviceInfo->service_flags, cp->serial_number, serviceInfo->service_class));
+                    Event(this->id, JD_CONTROL_SERVICE_EVT_CHANGED);
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        service_number++;
+        dataPointer += JD_SERVICE_INFO_HEADER_SIZE + serviceInfo->advertisement_size;
+    }
 }
 
 /**
@@ -252,7 +348,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
 
     while (dataPointer < cp->data + (pkt->size - JD_CONTROL_PACKET_HEADER_SIZE))
     {
-        JDServiceInfo* serviceInfo = (JDServiceInfo *)dataPointer;
+        JDServiceInformation* serviceInfo = (JDServiceInformation *)dataPointer;
 
         // presumably we will eventually pass this control packet to a service.
         // copy the service information into our statically allocated control packet.
@@ -263,10 +359,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
         JD_DMESG("DI A:%d S:%d C:%d p: %d", serviceInfo->device_address, cp->serial_number, serviceInfo->service_class, (serviceInfo->flags & JD_SERVICE_INFO_FLAGS_PAIRING_MODE) ? 1 : 0);
 
         // first check for any services who are associated with this control packet
-        bool handled = false; // indicates if the control packet has been handled by a service.
 
-        // we use this variable to determine if a new broadcast map needs to be created.
-        bool representation_required = true;
 
         // devices about to enter pairing mode enumerate themselves, so that they have an address on the bus.
         // devices with uncertain addresses cannot be used
@@ -304,7 +397,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
                         if ((current->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED) && (cp->device_flags & JD_DEVICE_FLAGS_UNCERTAIN))
                         {
                             memcpy(rxControlPacket->data, serviceInfo, JD_SERVICE_INFO_HEADER_SIZE);
-                            JDServiceInfo* di = (JDServiceInfo*) cp->data;
+                            JDServiceInformation* di = (JDServiceInformation*) cp->data;
                             cp->device_flags |= JD_DEVICE_FLAGS_CONFLICT;
                             #warning fix this
                             send((uint8_t*)rxControlPacket, JD_CONTROL_PACKET_HEADER_SIZE + JD_CONTROL_PACKET_HEADER_SIZE);
