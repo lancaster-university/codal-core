@@ -37,7 +37,7 @@ int MPU6050::configure()
 
     i2c.writeRegister(address, 0x37, 0x20); // enable interrupt latch
     i2c.writeRegister(address, 0x38, 0x01); // enable raw data interrupt
-    i2c.readRegister(address, 0x3A, &irqsrc, 1, false);
+    i2c.readRegister(address, 0x3A, &irqsrc, 1);
 
     DMESG("MPU6050 init %x", whoAmI());
     return DEVICE_OK;
@@ -48,7 +48,7 @@ int MPU6050::whoAmI()
     uint8_t data;
     int result;
     // the default whoami should return 0x68
-    result = i2c.readRegister(address, MPU6050_WHOAMI, &data, 1, false);
+    result = i2c.readRegister(address, MPU6050_WHOAMI, &data, 1);
     if (result !=0)
         return 0xffff;
 
@@ -70,9 +70,9 @@ int MPU6050::updateSample()
     status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 
     if(int1.getDigitalValue() == 1) {
-        result = i2c.readRegister(address, 0x3B, (uint8_t *) i2cData, 14, false);
+        result = i2c.readRegister(address, 0x3B, (uint8_t *) i2cData, 14);
 
-        i2c.readRegister(address, 0x3A, &irqsrc, 1, false);
+        i2c.readRegister(address, 0x3A, &irqsrc, 1);
         if (result != 0)
             return DEVICE_I2C_ERROR;
 
