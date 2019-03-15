@@ -76,13 +76,17 @@ int MPU6050::updateSample()
         if (result != 0)
             return DEVICE_I2C_ERROR;
 
-        sample.x = ((i2cData[0] << 8) | i2cData[1]);
-        sample.y = ((i2cData[2] << 8) | i2cData[3]);
-        sample.z = ((i2cData[4] << 8) | i2cData[5]);
+        sample.y = ((i2cData[0] << 8) | i2cData[1]);
+        sample.x = -((i2cData[2] << 8) | i2cData[3]);
+        sample.z = -((i2cData[4] << 8) | i2cData[5]);
 
         gyro.x = (((i2cData[8] << 8) | i2cData[9]));
         gyro.y = (((i2cData[10] << 8) | i2cData[11]));
         gyro.z = (((i2cData[12] << 8) | i2cData[13]));
+
+        sample.x /= 16;
+        sample.y /= 16;
+        sample.z /= 16;
 
         update(sample);
     }
