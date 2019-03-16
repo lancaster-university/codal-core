@@ -1,7 +1,7 @@
 #ifndef JD_RELIABILITY_TESTER_H
 #define JD_RELIABILITY_TESTER_H
 
-#include "JDProtocol.h"
+#include "JDControlLayer.h"
 #include "Pin.h"
 
 #define RELIABILITY_TEST_FINISHED 7

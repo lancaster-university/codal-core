@@ -1,7 +1,7 @@
 #ifndef JD_PIN_DRIVER_H
 #define JD_PIN_DRIVER_H
 
-#include "JDProtocol.h"
+#include "JDControlLayer.h"
 #include "Pin.h"
 
 namespace codal

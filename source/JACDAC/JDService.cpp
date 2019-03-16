@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
-#include "JDProtocol.h"
+#include "JDControlLayer.h"
 #include "CodalDmesg.h"
 #include "codal_target_hal.h"
 #include "EventModel.h"
@@ -40,8 +40,8 @@ int JDService::populateServiceInfo(JDServiceInfo*, uint8_t)
 
 int JDService::send(uint8_t* buf, int len)
 {
-    if (JDProtocol::instance)
-        return JDProtocol::instance->bus.send(buf, len, this->state.device_address, this->state.service_number, this->state.getBaudRate());
+    if (JDControlLayer::instance)
+        return JDControlLayer::instance->bus.send(buf, len, this->state.device_address, this->state.service_number, this->state.getBaudRate());
 
     return DEVICE_NO_RESOURCES;
 }
@@ -111,8 +111,8 @@ JDService::JDService(JDServiceState state) : state(state)
 
     this->pairedInstance = NULL;
 
-    if (JDProtocol::instance)
-        JDProtocol::instance->add(*this);
+    if (JDControlLayer::instance)
+        JDControlLayer::instance->add(*this);
 }
 
 bool JDService::isConnected()
@@ -320,7 +320,7 @@ int JDService::handlePacket(JDPacket* p)
 
 JDService::~JDService()
 {
-    JDProtocol::instance->remove(*this);
+    JDControlLayer::instance->remove(*this);
 
     if (this->pairedInstance)
         delete this->pairedInstance;

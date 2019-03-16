@@ -56,19 +56,11 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERVICE_STATE_SERVICE_MODE_MSK       0xF000 // the top byte represents the current service mode.
 // end combo flags
 
-#define JD_SERVICE_STATE_FLAGS_PAIRABLE        0x0800 // this flag indicates that a service is paired with another
-#define JD_SERVICE_STATE_FLAGS_PAIRED          0x0400 // this flag indicates that a service is paired with another
-#define JD_SERVICE_STATE_FLAGS_PAIRING         0x0200 // this flag indicates that a service is paired with another
+// #define JD_SERVICE_STATE_FLAGS_PAIRABLE        0x0800 // this flag indicates that a service is paired with another
+// #define JD_SERVICE_STATE_FLAGS_PAIRED          0x0400 // this flag indicates that a service is paired with another
+// #define JD_SERVICE_STATE_FLAGS_PAIRING         0x0200 // this flag indicates that a service is paired with another
 
-#define JD_SERVICE_STATE_FLAGS_INITIALISED     0x0100 // device service is running
-#define JD_SERVICE_STATE_FLAGS_INITIALISING    0x0080 // a flag to indicate that a control packet has been queued
-#define JD_SERVICE_STATE_FLAGS_CP_SEEN         0x0040 // indicates whether a control packet has been seen recently.
-
-#define JD_SERVICE_STATE_COMM_RATE_MSK         0x0030 // these bits indicate the current comm rate of the service
-#define JD_SERVICE_STATE_COMM_RATE_POS         16     // the position of the comm rate msk in the flags field.
-
-#define JD_SERVICE_STATE_ERROR_MSK             0x000F // the lower 4 bits are reserved for well known errors, these are
-                                               // automatically placed into control packets by the logic service.
+#define JD_SERVICE_STATUS_FLAGS_INITIALISED     0x01 // device service is running
 // END      JD SERIAL SERVICE FLAGS
 
 
@@ -77,20 +69,16 @@ DEALINGS IN THE SOFTWARE.
 #define JD_CONTROL_SERVICE_EVT_CHANGED                     2
 #define JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK              3
 
-#define JD_DEVICE_FLAGS_RESERVED                  0x80
-#define JD_DEVICE_FLAGS_PAIRING_MODE              0x40 // in pairing mode, control packets aren't forwarded to services
-#define JD_DEVICE_FLAGS_PAIRABLE                  0x20 // advertises that a service can be optionally paired with another
-#define JD_DEVICE_FLAGS_PAIRED                    0x10 // advertises that a service is already paired with another.
+// pairing mode comes later... ;)
+// #define JD_DEVICE_FLAGS_RESERVED                        0x80
+// #define JD_DEVICE_FLAGS_PAIRING_MODE                    0x40 // in pairing mode, control packets aren't forwarded to services
+// #define JD_DEVICE_FLAGS_PAIRABLE                        0x20 // advertises that a service can be optionally paired with another
+// #define JD_DEVICE_FLAGS_PAIRED                          0x10 // advertises that a service is already paired with another.
 
-#define JD_DEVICE_FLAGS_CONFLICT                        0x08
-#define JD_DEVICE_FLAGS_UNCERTAIN                       0x04
-#define JD_DEVICE_FLAGS_NACK                            0x02
-#define JD_DEVICE_FLAGS_ACK                             0x01
-
-#define JD_SERVICE_INFO_TYPE_HELLO                       0x1
-#define JD_SERVICE_INFO_TYPE_PAIRING_REQUEST             0x2
-#define JD_SERVICE_INFO_TYPE_ERROR                       0x3
-#define JD_SERVICE_INFO_TYPE_PANIC                       0xF
+#define JD_DEVICE_FLAGS_NACK                            0x08
+#define JD_DEVICE_FLAGS_HAS_NAME                        0x04
+#define JD_DEVICE_FLAGS_PROPOSING                       0x02
+#define JD_DEVICE_FLAGS_REJECT                          0x01
 
 #define JD_SERVICE_INFO_MAX_PAYLOAD_SIZE                 16
 
@@ -103,6 +91,7 @@ DEALINGS IN THE SOFTWARE.
 
 #define JD_PROTOCOL_SERVICE_ARRAY_SIZE                  20
 #define JD_MAX_DEVICE_NAME_LENGTH                       8
+#define JD_MAX_HOST_SERVICES                            16
 
 #define JD_SERVICE_INFO_HEADER_SIZE                     6
 #define JD_CONTROL_PACKET_HEADER_SIZE                   10
@@ -111,7 +100,16 @@ DEALINGS IN THE SOFTWARE.
 
 namespace codal
 {
-    class JDProtocol;
+    class JDControlLayer;
+
+    // This enumeration specifies that supported configurations that services should utilise.
+    // Many combinations of flags are supported, but only the ones listed here have been fully implemented.
+    enum ServiceMode
+    {
+        ClientService = JD_SERVICE_STATE_FLAGS_CLIENT, // the service is seeking the use of another device's resource
+        HostService = JD_SERVICE_STATE_FLAGS_HOST, // the service is hosting a resource for others to use.
+        BroadcastHostService = JD_SERVICE_STATE_FLAGS_HOST | JD_SERVICE_STATE_FLAGS_BROADCAST, // the service is enumerated with its own address, and receives all packets of the same class (including control packets)
+    };
 
     /**
      * This struct represents a JDControlPacket used by the logic service
@@ -130,57 +128,23 @@ namespace codal
         uint8_t data[];
     } __attribute((__packed__));
 
-    struct JDServiceInfo
+    struct JDServiceInformation
     {
-        uint8_t service_flags;
-        uint8_t service_status: 4, advertisement_size: 4; // error code upper four bits, then advertisement size lower four bits
         uint32_t service_class;  // the class of the service
+        uint8_t service_flags;
+        uint8_t advertisement_size;
         uint8_t data[]; // optional additional data, maximum of 16 bytes
     } __attribute((__packed__));
-
-    // This enumeration specifies that supported configurations that services should utilise.
-    // Many combinations of flags are supported, but only the ones listed here have been fully implemented.
-    enum ServiceType
-    {
-        ClientService = JD_SERVICE_STATE_FLAGS_CLIENT, // the service is seeking the use of another device's resource
-        PairedService = JD_SERVICE_STATE_FLAGS_BROADCAST | JD_SERVICE_STATE_FLAGS_PAIR,
-        HostService = JD_SERVICE_STATE_FLAGS_HOST, // the service is hosting a resource for others to use.
-        PairableHostService = JD_SERVICE_STATE_FLAGS_PAIRABLE | JD_SERVICE_STATE_FLAGS_HOST, // the service is allowed to pair with another service of the same class
-        BroadcastHostService = JD_SERVICE_STATE_FLAGS_HOST | JD_SERVICE_STATE_FLAGS_BROADCAST, // the service is enumerated with its own address, and receives all packets of the same class (including control packets)
-        BroadcastClientService = JD_SERVICE_STATE_FLAGS_CLIENT | JD_SERVICE_STATE_FLAGS_BROADCAST, // the service is not enumerated, and receives all packets of the same class (including control packets)
-    };
-
-    enum ServiceErrorCode
-    {
-        // No error occurred.
-        SERVICE_OK = 0,
-
-        // Device calibration information
-        SERVICE_CALIBRATION_IN_PROGRESS,
-        SERVICE_CALIBRATION_REQUIRED,
-
-        // The service has run out of some essential resource (e.g. allocated memory)
-        SERVICE_NO_RESOURCES,
-
-        // The service operation could not be performed as some essential resource is busy (e.g. the display)
-        SERVICE_BUSY,
-
-        // I2C / SPI Communication error occured
-        SERVICE_COMMS_ERROR,
-
-        // An invalid state was detected (i.e. not initialised)
-        SERVICE_INVALID_STATE,
-
-        // an external peripheral has a malfunction e.g. external circuitry is drawing too much power.
-        SERVICE_PERIPHERAL_MALFUNCTION
-    };
 
     struct JDDevice
     {
         uint64_t serial_number;
         uint8_t device_flags;
         uint8_t device_address;
-        uint16_t rolling_counter;
+        uint8_t device_state;
+        uint8_t rolling_counter;
+        uint8_t name[JD_MAX_DEVICE_NAME_LENGTH];
+        uint8_t broadcast_servicemap[JD_MAX_HOST_SERVICES / 2] // use to map remote broadcast services to local broadcast services.
         JDDevice* next;
     };
 
@@ -264,159 +228,9 @@ namespace codal
             this->serial_number = serial_number;
             this->service_class = service_class;
         }
-
-        /**
-         * Returns the communication rate of this service.
-         **/
-        JDBaudRate getBaudRate()
-        {
-            uint32_t r = ((this->flags & JD_SERVICE_STATE_COMM_RATE_MSK) >> JD_SERVICE_STATE_COMM_RATE_POS) + 1;
-            return (JDBaudRate)r;
-        }
-
-        /**
-         * Returns the communication rate of this service.
-         **/
-        void setBaudRate(JDBaudRate br)
-        {
-            this->flags &= ~JD_SERVICE_STATE_COMM_RATE_MSK;
-            // JDBaudRate values start from one, we only use 3 bits in our flags field for the comm rate... subtract one
-            this->flags |= ((uint8_t)br - 1) << JD_SERVICE_STATE_COMM_RATE_POS;
-        }
-
-        /**
-         * Sets the mode to the given ServiceType
-         *
-         * @param m the new mode the service should move to.
-         *
-         * @param initialised whether the service is initialised or not (defaults to false).
-         **/
-        void setMode(ServiceType m, bool initialised = false)
-        {
-            this->flags &= ~JD_SERVICE_STATE_SERVICE_MODE_MSK;
-            this->flags |= m;
-
-            if (initialised)
-                this->flags |= JD_SERVICE_STATE_FLAGS_INITIALISED;
-            else
-                this->flags &= ~JD_SERVICE_STATE_FLAGS_INITIALISED;
-        }
-
-        /**
-         * Sets the error portion of flags to the given error code
-         *
-         * @param e the error code to place into control packets
-         **/
-        void setError(ServiceErrorCode e)
-        {
-            uint32_t flags = this->flags & ~(JD_SERVICE_STATE_ERROR_MSK);
-            this->flags = flags | (uint8_t) e;
-        }
-
-        /**
-         * Retrieves the current error code from the error portion of flags.
-         *
-         * @return a JDServiceStateErrorCode
-         **/
-        ServiceErrorCode getError()
-        {
-            return (ServiceErrorCode)(this->flags & JD_SERVICE_STATE_ERROR_MSK);
-        }
-
-        /**
-         * Used to determine what mode the service is currently in.
-         *
-         * This will check to see if the flags field resembles the VirtualService mode specified in the ServiceType enumeration.
-         *
-         * @returns true if in VirtualService mode.
-         **/
-        bool isClient()
-        {
-            return (this->flags & JD_SERVICE_STATE_FLAGS_CLIENT) && !(this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST);
-        }
-
-        /**
-         * Used to determine what mode the service is currently in.
-         *
-         * This will check to see if the flags field resembles the PairedService mode specified in the ServiceType enumeration.
-         *
-         * @returns true if in PairedService mode.
-         **/
-        bool isPairedToDevice()
-        {
-            #warning remove this
-            return this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST && this->flags & JD_SERVICE_STATE_FLAGS_PAIR;
-        }
-
-        /**
-         * Used to determine what mode the service is currently in.
-         *
-         * This will check to see if the flags field resembles the HostService mode specified in the ServiceType enumeration.
-         *
-         * @returns true if in SnifferService mode.
-         **/
-        bool isHost()
-        {
-            return this->flags & JD_SERVICE_STATE_FLAGS_HOST && !(this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST);
-        }
-
-        /**
-         * Used to determine what mode the service is currently in.
-         *
-         * This will check to see if the flags field resembles the BroadcastService mode specified in the ServiceType enumeration.
-         *
-         * @returns true if in BroadcastService mode.
-         **/
-        bool isBroadcastHost()
-        {
-            return this->flags & JD_SERVICE_STATE_FLAGS_HOST && this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST;
-        }
-
-        /**
-         * Used to determine what mode the service is currently in.
-         *
-         * This will check to see if the flags field resembles the SnifferService mode specified in the ServiceType enumeration.
-         *
-         * @returns true if in SnifferService mode.
-         **/
-        bool isBroadcastClient()
-        {
-            return this->flags & JD_SERVICE_STATE_FLAGS_CLIENT && this->flags & JD_SERVICE_STATE_FLAGS_BROADCAST;
-        }
-
-        /**
-         * Indicates if the service is currently paired to another.
-         *
-         * @returns true if paired
-         **/
-        bool isPaired()
-        {
-            return this->flags & JD_SERVICE_STATE_FLAGS_PAIRED;
-        }
-
-        /**
-         * Indicates if the service can be currently paired to another.
-         *
-         * @returns true if pairable
-         **/
-        bool isPairable()
-        {
-            return this->flags & JD_SERVICE_STATE_FLAGS_PAIRABLE;
-        }
-
-        /**
-         * Indicates if the service is currently in the process of pairing to another.
-         *
-         * @returns true if pairing
-         **/
-        bool isPairing()
-        {
-            return this->flags & JD_SERVICE_STATE_FLAGS_PAIRING;
-        }
     };
 
-    class JDPairedService;
-    class JDProtocol;
+    class JDControlLayer;
 
     /**
      * This class presents a common abstraction for all JDServices. It also contains some default member functions to perform common operations.
@@ -425,7 +239,7 @@ namespace codal
     class JDService : public CodalComponent
     {
         friend class JDControlService;
-        friend class JDProtocol;
+        friend class JDControlLayer;
         friend class JDBroadcastMap;
         // the above need direct access to our member variables and more.
 
@@ -444,9 +258,6 @@ namespace codal
 
         // When we pair to another service, this points to the stub of our partner.
         JDPairedService* pairedInstance;
-
-        // A struct the represents the state of the service.
-        JDServiceState state;
 
         /**
          * This method internally redirects specific packets from the control service.
@@ -506,9 +317,9 @@ namespace codal
         /**
          * Constructor
          *
-         * @param d a struct containing a device representation, see JDServiceState.
+
          * */
-        JDService(JDServiceState d);
+        JDService(ServiceMode m);
 
         /**
          * Invoked by the logic service when it is queuing a control packet.
@@ -658,7 +469,7 @@ namespace codal
         JDControlPacket* rxControlPacket; // given to services upon receiving a control packet from another device.
         JDPacket* txControlPacket; // used to transmit this devices' information (more optimal than repeat allocing)
 
-        JDDevice* deviceList;
+        JDDevice* remoteDevices;
         JDDevice device;
 
         // this array is used to filter paired service packets from consuming unneccessary processing cycles
@@ -699,7 +510,7 @@ namespace codal
         virtual int handleControlPacket(JDControlPacket* p);
 
         /**
-         * Called by the JDProtocol when a data packet has address 0.
+         * Called by the JDControlLayer when a data packet has address 0.
          *
          * Packets addressed to zero will always be control packets, this function then iterates over all services
          * routing control packets correctly. Virtual services are populated if a packet is not handled by an existing service.
@@ -713,7 +524,7 @@ namespace codal
          * we are not interested in packets that are paired to other devices hence we
          * shouldn't incur the processing cost.
          *
-         * Used by JDProtocol for standard packets. The address 0 can never be filtered.
+         * Used by JDControlLayer for standard packets. The address 0 can never be filtered.
          *
          * @param address the address to check in the filter.
          *
@@ -743,7 +554,7 @@ namespace codal
     /**
      * This class handles packets produced by the JACDAC physical layer and passes them to our high level services.
      **/
-    class JDProtocol : public CodalComponent
+    class JDControlLayer : public CodalComponent
     {
         friend class JDControlService;
 
@@ -771,8 +582,8 @@ namespace codal
         // a reference to a JACDAC instance
         JACDAC& bus;
 
-        // a singleton pointer to the current instance of JDProtocol.
-        static JDProtocol* instance;
+        // a singleton pointer to the current instance of JDControlLayer.
+        static JDControlLayer* instance;
 
         /**
          * Constructor
@@ -781,7 +592,7 @@ namespace codal
          *
          * @param id for the message bus, defaults to  SERVICE_STATE_ID_JACDAC_PROTOCOL
          **/
-        JDProtocol(JACDAC& JD, ManagedString deviceName = ManagedString(), uint16_t id = DEVICE_ID_JACDAC_PROTOCOL);
+        JDControlLayer(JACDAC& JD, ManagedString deviceName = ManagedString(), uint16_t id = DEVICE_ID_JACDAC_PROTOCOL);
 
         /**
          * Sets the bridge member variable to the given JDService pointer.
@@ -794,7 +605,7 @@ namespace codal
          *        is given, the bridge member variable is cleared.
          *
          * @note one limitation is that the bridge service does not receive packets over the radio itself.
-         *       Ultimately the bridge should punt packets back intro JDProtocol for correct handling.
+         *       Ultimately the bridge should punt packets back intro JDControlLayer for correct handling.
          **/
         int setBridge(JDService* bridge);
 

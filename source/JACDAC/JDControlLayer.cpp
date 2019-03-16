@@ -26,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #include "ErrorNo.h"
 #include "Event.h"
 #include "EventModel.h"
-#include "JDProtocol.h"
+#include "JDControlLayer.h"
 #include "Timer.h"
 #include "CodalDmesg.h"
 
@@ -35,11 +35,11 @@ static char jacdac_name[JD_MAX_DEVICE_NAME_LENGTH] = {'J', 'A', 'C', 'D', 'A', '
 
 using namespace codal;
 
-JDService* JDProtocol::services[JD_PROTOCOL_SERVICE_ARRAY_SIZE] = { 0 };
+JDService* JDControlLayer::services[JD_PROTOCOL_SERVICE_ARRAY_SIZE] = { 0 };
 
-JDProtocol* JDProtocol::instance = NULL;
+JDControlLayer* JDControlLayer::instance = NULL;
 
-void JDProtocol::onPacketReceived(Event)
+void JDControlLayer::onPacketReceived(Event)
 {
     JDPacket* pkt = NULL;
 
@@ -96,7 +96,7 @@ void JDProtocol::onPacketReceived(Event)
     }
 }
 
-JDProtocol::JDProtocol(JACDAC& jacdac, ManagedString name, uint16_t id) : control(), bridge(NULL), bus(jacdac)
+JDControlLayer::JDControlLayer(JACDAC& jacdac, ManagedString name, uint16_t id) : control(), bridge(NULL), bus(jacdac)
 {
     this->id = id;
 
@@ -111,10 +111,10 @@ JDProtocol::JDProtocol(JACDAC& jacdac, ManagedString name, uint16_t id) : contro
 
     // packets are queued, and should be processed in normal context.
     if (EventModel::defaultEventBus)
-        EventModel::defaultEventBus->listen(jacdac.id, JD_SERIAL_EVT_DATA_READY, this, &JDProtocol::onPacketReceived);
+        EventModel::defaultEventBus->listen(jacdac.id, JD_SERIAL_EVT_DATA_READY, this, &JDControlLayer::onPacketReceived);
 }
 
-int JDProtocol::add(JDService& service)
+int JDControlLayer::add(JDService& service)
 {
     int i;
 
@@ -141,7 +141,7 @@ int JDProtocol::add(JDService& service)
     return DEVICE_OK;
 }
 
-int JDProtocol::remove(JDService& service)
+int JDControlLayer::remove(JDService& service)
 {
     target_disable_irq();
     for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
@@ -157,13 +157,13 @@ int JDProtocol::remove(JDService& service)
     return DEVICE_OK;
 }
 
-int JDProtocol::setBridge(JDService* bridge)
+int JDControlLayer::setBridge(JDService* bridge)
 {
     this->bridge = bridge;
     return DEVICE_OK;
 }
 
-int JDProtocol::send(JDPacket* pkt)
+int JDControlLayer::send(JDPacket* pkt)
 {
     if (instance)
         return instance->bus.send(pkt);
@@ -171,7 +171,7 @@ int JDProtocol::send(JDPacket* pkt)
     return DEVICE_NO_RESOURCES;
 }
 
-int JDProtocol::setDeviceName(ManagedString s)
+int JDControlLayer::setDeviceName(ManagedString s)
 {
     if (s.length() > JD_MAX_DEVICE_NAME_LENGTH)
         return DEVICE_INVALID_PARAMETER;
@@ -180,20 +180,20 @@ int JDProtocol::setDeviceName(ManagedString s)
     return DEVICE_OK;
 }
 
-ManagedString JDProtocol::getDeviceName()
+ManagedString JDControlLayer::getDeviceName()
 {
     return ManagedString(jacdac_name, JD_MAX_DEVICE_NAME_LENGTH);
 }
 
-void JDProtocol::logState(JackRouter* jr)
+void JDControlLayer::logState(JackRouter* jr)
 {
-    if (JDProtocol::instance == NULL)
+    if (JDControlLayer::instance == NULL)
         return;
 
-    DMESG("Enabled: %d", JDProtocol::instance->bus.isRunning());
+    DMESG("Enabled: %d", JDControlLayer::instance->bus.isRunning());
 
 
-    JDBusState busState = JDProtocol::instance->bus.getState();
+    JDBusState busState = JDControlLayer::instance->bus.getState();
 
     const char* busStateStr = "";
 
@@ -248,7 +248,7 @@ void JDProtocol::logState(JackRouter* jr)
 
     for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
     {
-        JDService* current = JDProtocol::instance->services[i];
+        JDService* current = JDControlLayer::instance->services[i];
 
         if (current)
             DMESG("Driver %d initialised[%d] address[%d] serial[%d] class[%d], mode[%s%s%s]", i, current->isConnected(), current->state.device_address, current->state.serial_number, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? "B" : "", current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? "H" : "", current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? "C" : "");
