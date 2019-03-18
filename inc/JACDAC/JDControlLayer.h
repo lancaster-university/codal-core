@@ -150,19 +150,20 @@ namespace codal
         friend class JDControlService;
         friend class JDControlLayer;
         // the above need direct access to our member variables and more
-        JDDevice* device;
-        JDDevice* requiredDevice;
-
-        JDServiceMode mode;
-        uint32_t service_class;
-        uint16_t service_number;
-        uint8_t service_flags;
 
         protected:
 
         // Due to the dynamic nature of JACDAC when a new service is created, this variable is incremented.
         // JACDAC id's are allocated from 3000 - 4000
         static uint32_t dynamicId;
+
+        JDServiceMode mode;
+        uint32_t service_class;
+        uint16_t service_number;
+        uint8_t service_flags;
+
+        JDDevice* device;
+        JDDevice* requiredDevice;
 
         /**
          * This method internally redirects specific packets from the control service.
