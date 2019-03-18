@@ -65,9 +65,12 @@ DEALINGS IN THE SOFTWARE.
 
 
 // BEGIN    CONTROL SERVICE FLAGS
-#define JD_CONTROL_SERVICE_MAX_FILTERS                     20
-#define JD_CONTROL_SERVICE_EVT_CHANGED                     2
-#define JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK              3
+#define JD_CONTROL_SERVICE_STATUS_ENUMERATE                 0x02
+#define JD_CONTROL_SERVICE_STATUS_ENUMERATING               0x04
+#define JD_CONTROL_SERVICE_STATUS_ENUMERATED                0x08
+
+#define JD_CONTROL_SERVICE_EVT_CHANGED                      2
+#define JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK               3
 
 // pairing mode comes later... ;)
 // #define JD_DEVICE_FLAGS_RESERVED                        0x80
@@ -122,7 +125,7 @@ namespace codal
      **/
     struct JDControlPacket
     {
-        uint64_t serial_number; // the "unique" serial number of the device.
+        uint64_t udid; // the "unique" serial number of the device.
         uint8_t device_address;
         uint8_t device_flags;
         uint8_t data[];
@@ -138,96 +141,14 @@ namespace codal
 
     struct JDDevice
     {
-        uint64_t serial_number;
+        uint64_t udid;
         uint8_t device_flags;
         uint8_t device_address;
-        uint8_t device_state;
+        uint8_t communication_rate;
         uint8_t rolling_counter;
-        uint8_t name[JD_MAX_DEVICE_NAME_LENGTH];
-        uint8_t broadcast_servicemap[JD_MAX_HOST_SERVICES / 2] // use to map remote broadcast services to local broadcast services.
+        uint8_t broadcast_servicemap[JD_MAX_HOST_SERVICES / 2]; // use to map remote broadcast services to local broadcast services.
         JDDevice* next;
-    };
-
-    /**
-     * This struct represents a JDServiceState used by a JDService.
-     *
-     * It is perhaps named incorrectly, but JDServiceState represents the core information about the service which is placed into control packets.
-     * A rolling counter is used to trigger control packets and other core service events.
-     **/
-    struct JDServiceState
-    {
-        uint8_t device_address; // the address assigned by the logic service.
-        uint8_t service_number;
-        uint16_t flags; // various flags indicating the state of the service
-        uint64_t serial_number; // the serial number used to "uniquely" identify a device
-        uint32_t service_class; // the class of the service, created or selected from the list in JDClasses.h
-
-        /**
-         * Constructor, creates a local service using just the service class.
-         *
-         * Should be used if only a local service is required.
-         *
-         * @param service_class the class of the service listed in JDClasses.h
-         **/
-        JDServiceState(uint32_t service_class)
-        {
-            this->device_address = 0;
-            this->service_number = 255;
-            this->flags = JD_SERVICE_STATE_FLAGS_HOST;
-            this->serial_number = target_get_serial();
-            this->service_class = service_class;
-        }
-
-        /**
-         * Constructor, creates a service given a ServiceType (enumeration above) and the service class.
-         *
-         * Should be used if you need to use any of the other types from the enumeration (most of the time, this will be used).
-         *
-         * @param t the service type to use
-         *
-         * @param service_class the class of the service listed in JDClasses.h
-         *
-         * @note the VirtualService will always have a serial_number of 0 by default, as the serial number is used as a filter.
-         *       if a filter is required, then the full constructor should be used (below).
-         **/
-        JDServiceState(ServiceType t, uint32_t service_class)
-        {
-            this->device_address = 0;
-            this->flags |= t;
-
-            if (t & JD_SERVICE_STATE_FLAGS_CLIENT)
-                this->serial_number = 0;
-            else
-                this->serial_number = target_get_serial();
-
-            this->service_class = service_class;
-            this->service_number = 255;
-        }
-
-        /**
-         * Constructor, allows (almost) full specification of a JDServiceState.
-         *
-         * Should be used if you need to specify all of the fields, i.e. if you're adding complex logic that requires already
-         * initialised services.
-         *
-         * @param a the address of the service
-         *
-         * @param flags the low-level flags that are normally set by using the ServiceType enum.
-         *
-         * @param serial_number the serial number of the service
-         *
-         * @param service_class the class of the service listed in JDClasses.h
-         *
-         * @note you are responsible for any weirdness you achieve using this constructor.
-         **/
-        JDServiceState(uint8_t address, uint8_t service_number, uint16_t flags, uint64_t serial_number, uint32_t service_class)
-        {
-            this->device_address = address;
-            this->service_number = service_number;
-            this->flags = flags;
-            this->serial_number = serial_number;
-            this->service_class = service_class;
-        }
+        uint8_t* name;
     };
 
     class JDControlLayer;
@@ -240,24 +161,17 @@ namespace codal
     {
         friend class JDControlService;
         friend class JDControlLayer;
-        friend class JDBroadcastMap;
-        // the above need direct access to our member variables and more.
+        // the above need direct access to our member variables and more
 
-        /**
-         * After calling sendPairingPacket, this member function is called when the device is enumerated.
-         *
-         * It then creates a pairing control packet, and sends it to the remote instance.
-         **/
-        void pair();
+        ServiceMode mode;
+        JDDevice* device;
+        uint32_t service_class;
 
         protected:
 
         // Due to the dynamic nature of JACDAC when a new service is created, this variable is incremented.
         // JACDAC id's are allocated from 3000 - 4000
         static uint32_t dynamicId;
-
-        // When we pair to another service, this points to the stub of our partner.
-        JDPairedService* pairedInstance;
 
         /**
          * This method internally redirects specific packets from the control service.
@@ -273,7 +187,7 @@ namespace codal
          *
          * @return SERVICE_STATE_OK for success
          **/
-        virtual int deviceConnected(JDServiceState state);
+        virtual int hostConnected(JDServiceState state);
 
         /**
          * Called by the logic service when this service has been disconnected from the serial bus.
@@ -282,25 +196,7 @@ namespace codal
          *
          * @return SERVICE_STATE_OK for success
          **/
-        virtual int deviceRemoved();
-
-        /**
-         * This should be called when a service wishes to pair with another. A service should first detect a service in pairing mode
-         * by observing packets in Broadcast mode. PairedService from the ServiceType enumeration first starts in broadcast mode only,
-         * observes packets looking for a device to pair with. When a pairable device appears, the service enumerates, and sends a
-         * pairing packet by calling this member function.
-         *
-         * @param d the device to pair too.
-         *
-         * @returns SERVICE_STATE_OK on success.
-         **/
-        virtual int sendPairingPacket(JDServiceState d);
-
-        /**
-         * This is called when a paired service is removed from the bus. It unpairs this service instance, and fires an event
-         * using the services id, and the event code JD_SERVICE_EVT_UNPAIRED.
-         **/
-        void partnerDisconnected(Event);
+        virtual int hostDisconnected();
 
         /**
          * A convenience function that calls JACDAC->send with parameters supplied from this instances' JDServiceState
@@ -317,9 +213,8 @@ namespace codal
         /**
          * Constructor
          *
-
          * */
-        JDService(ServiceMode m);
+        JDService(uint32_t serviceClass, ServiceMode m);
 
         /**
          * Invoked by the logic service when it is queuing a control packet.
@@ -330,7 +225,7 @@ namespace codal
          *
          * @return SERVICE_STATE_OK on success
          **/
-        virtual int populateServiceInfo(JDServiceInfo* info, uint8_t bytesRemaining);
+        virtual int addAdvertisementData(JDServiceInfo* info);
 
         /**
          * Invoked by the logic service when a control packet with the address of the service is received.
@@ -344,34 +239,6 @@ namespace codal
          *         should continue to search for a service.
          **/
         virtual int handleControlPacket(JDControlPacket* info);
-
-        /**
-         * Invoked by the logic service when a control packet with its type set to error is received.
-         *
-         *
-         * @param p the packet from the serial bus. Services should cast p->data to a JDControlPacket,
-         *          then JDControlPacket->data to ControlPacketError to obtain the error code.
-         *
-         * @return SERVICE_STATE_OK to signal that the packet has been handled, or SERVICE_STATE_CANCELLED to indicate the logic service
-         *         should continue to search for a service.
-         **/
-        virtual int handleErrorPacket(JDControlPacket* info);
-
-        /**
-         * Invoked by the logic service when a pairing packet with the address of the service is received.
-         *
-         * Pairing packets are Control packets with the type set to CONTROL_JD_TYPE_PAIRING_REQUEST. They are routed by
-         * address, or by class in broadcast mode. Services can override this function to handle additional payloads in
-         * control packet.
-         *
-         * Pairing packets contain the source information of the device that sent the pairing request in cp->data;
-         *
-         * @param p the packet from the serial bus. Services should cast p->data to a JDControlPacket.
-         *
-         * @return SERVICE_STATE_OK to signal that the packet has been handled, or SERVICE_STATE_CANCELLED to indicate the logic service
-         *         should continue to search for a service.
-         **/
-        virtual int handlePairingPacket(JDControlPacket* p);
 
         /**
          * Invoked by the Protocol service when a standard packet with the address of the service is received.
@@ -391,72 +258,23 @@ namespace codal
         virtual bool isConnected();
 
         /**
-         * Returns the current pairing state of this service instance.
-         *
-         * @return true for paired, false for unpaired
-         **/
-        virtual bool isPaired();
-
-        /**
-         * Returns whether the service is advertising a pairable state
-         *
-         * @return true for paired, false for unpaired
-         **/
-        virtual bool isPairable();
-
-        /**
          * Retrieves the address of the service.
          *
          * @return the address.
          **/
-        uint8_t getAddress();
+        JDDevice* getDevice();
 
         /**
          * Retrieves the class of the service.
          *
          * @return the class.
          **/
-        uint32_t getClass();
-
-        /**
-         * Retrieves the state of the service.
-         *
-         * @return the internal service state.
-         **/
-        JDServiceState getState();
-
-        /**
-         * Retrieves the serial number in use by this service.
-         *
-         * @return the serial number
-         **/
-        uint32_t getSerialNumber();
+        uint32_t getServiceClass();
 
         /**
          * Destructor, removes this service from the services array and deletes the pairedInstance member variable if allocated.
          **/
         ~JDService();
-    };
-
-    /**
-     * This class is a stub of a remote service that a local service is paired with.
-     *
-     * It simply forwards all standard packets to the paired local service for processing.
-     **/
-    class JDPairedService : public JDService
-    {
-        JDService& other;
-
-        public:
-
-        JDPairedService(JDServiceState d, JDService& other) : JDService(d), other(other)
-        {
-        }
-
-        virtual int handlePacket(JDPacket* p)
-        {
-            return other.handlePacket(p);
-        }
     };
 
     /**
@@ -466,27 +284,9 @@ namespace codal
      **/
     class JDControlService : public JDService
     {
-        JDControlPacket* rxControlPacket; // given to services upon receiving a control packet from another device.
-        JDPacket* txControlPacket; // used to transmit this devices' information (more optimal than repeat allocing)
-
         JDDevice* remoteDevices;
-        JDDevice device;
-
-        // this array is used to filter paired service packets from consuming unneccessary processing cycles
-        // on jacdac devices.
-        uint8_t address_filters[JD_CONTROL_SERVICE_MAX_FILTERS];
-
-        /**
-         * A simple function to remove some code duplication, fills a given control packet(cp)
-         * based upon a service.
-         *
-         * @param service the service whose information will fill the control packet.
-         *
-         * @param info the allocated service info struct (embedded inside a control packet) to fill.
-         *
-         * @param bytesRemaining the remaining data available for the service to add additional payload to.
-         **/
-        int populateServiceInfo(JDService* service, JDServiceInfo* info, uint8_t bytesRemaining);
+        JDDevice* controller;
+        JDControlPacket* enumerationData;
 
         /**
          * This member function periodically iterates across all services and performs various actions. It handles the sending
@@ -520,35 +320,24 @@ namespace codal
         virtual int handlePacket(JDPacket* p);
 
         /**
-         * This function provides the ability to ignore specific packets. For instance,
-         * we are not interested in packets that are paired to other devices hence we
-         * shouldn't incur the processing cost.
          *
-         * Used by JDControlLayer for standard packets. The address 0 can never be filtered.
-         *
-         * @param address the address to check in the filter.
-         *
-         * @return true if the packet should be filtered, false if it should pass through.
          **/
-        virtual bool filterPacket(uint8_t address);
+        int enumerate();
 
         /**
-         * This function adds an address to the list of filtered address.
          *
-         * @param address the address to add to the filter.
-         *
-         * @return SERVICE_STATE_OK on success.
          **/
-        int addToFilter(uint8_t address);
+        bool isEnumerated();
 
         /**
-         * This function removes an address to the list of filtered address.
          *
-         * @param address the address to remove from the filter.
-         *
-         * @return SERVICE_STATE_OK on success.
          **/
-        int removeFromFilter(uint8_t address);
+        bool isEnumerating();
+
+        /**
+         *
+         **/
+        int disconnect();
     };
 
     /**
