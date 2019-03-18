@@ -31,6 +31,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_COMPAT_H
 
 #include "CodalConfig.h"
+#include "codal_target_hal.h"
 
 #ifndef PI
 #define PI 3.14159265359
@@ -39,6 +40,8 @@ DEALINGS IN THE SOFTWARE.
 // Required for gcc 6+
 #undef min
 #undef max
+
+#define CODAL_ASSERT(cond, panic_num) do{ if (!(cond)) target_panic(panic_num); }while(0);
 
 namespace codal
 {
