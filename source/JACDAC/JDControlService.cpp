@@ -1,6 +1,7 @@
 #include "JDControlLayer.h"
 #include "CodalDmesg.h"
 #include "Timer.h"
+#include "CodalCompat.h"
 
 using namespace codal;
 
@@ -10,9 +11,9 @@ uint64_t generate_eui64(uint64_t device_identifier)
 
     udid = device_identifier;
 
-    uint8_t* bytePtr = &udid;
+    uint8_t* bytePtr = (uint8_t *)&udid;
 
-    // set the address to locally administered (it wasn't assigned as globally unique).
+    // set the address to locally administered (it wasn't assigned as globally unique, it's made up).
     // https://community.cisco.com/t5/networking-documents/understanding-ipv6-eui-64-bit-address/ta-p/3116953
     bytePtr[7] &= ~0x02;
 
@@ -26,30 +27,31 @@ void JDControlService::setConnectionState(bool state, JDDevice* device)
     {
         JDService* current = JDControlLayer::instance->services[i];
 
+        // set device if host and device == this->device->
         if (current == NULL || current == this || current->device != device)
             continue;
 
         if (state)
         {
-            if ()
             current->device = device;
             current->hostConnected();
         }
         else
         {
             current->device = NULL;
+            current->service_number = JD_SERVICE_UNITIALISED_VAL;
             current->hostDisconnected();
         }
     }
 }
 
-JDDevice* JDControlService::getRemoteDevice(uint8_t device_address, uint64_t udid)
+JDDevice* JDControlService::getRemoteDevice(uint8_t device_address)
 {
     JDDevice* head = this->remoteDevices;
 
     while(head)
     {
-        if (head->address == device_address && head->udid == udid)
+        if (head->device_address == device_address)
             return head;
 
         head = head->next;
@@ -58,8 +60,22 @@ JDDevice* JDControlService::getRemoteDevice(uint8_t device_address, uint64_t udi
     return NULL;
 }
 
+JDDevice* JDControlService::getRemoteDevice(uint8_t device_address, uint64_t udid)
+{
+    JDDevice* head = this->remoteDevices;
 
-int JDControlService::addRemoteDevice(JDControlPacket* remoteDevice, uint8_t communicationRate)
+    while(head)
+    {
+        if (head->device_address == device_address && head->udid == udid)
+            return head;
+
+        head = head->next;
+    }
+
+    return NULL;
+}
+
+JDDevice* JDControlService::addRemoteDevice(JDControlPacket* remoteDevice, uint8_t communicationRate)
 {
     JDDevice* newRemote = (JDDevice *) malloc(sizeof(JDDevice));
 
@@ -87,7 +103,7 @@ int JDControlService::addRemoteDevice(JDControlPacket* remoteDevice, uint8_t com
         while(head)
         {
             // guard against duplicates.
-            if (head->address == newRemote->device_address && head->udid == device->udid)
+            if (head->device_address == newRemote->device_address && head->udid == device->udid)
             {
                 free(newRemote);
                 return head;
@@ -99,7 +115,7 @@ int JDControlService::addRemoteDevice(JDControlPacket* remoteDevice, uint8_t com
         head->next = newRemote;
     }
 
-    return DEVICE_OK;
+    return newRemote;
 }
 
 int JDControlService::removeRemoteDevice(JDDevice* device)
@@ -113,7 +129,7 @@ int JDControlService::removeRemoteDevice(JDDevice* device)
     while (curr)
     {
         // found!!
-        if (curr->address == device->device_address && curr->udid == device->udid)
+        if (curr->device_address == device->device_address && curr->udid == device->udid)
         {
             if (prev == NULL)
                 this->remoteDevices = curr->next;
@@ -133,7 +149,6 @@ int JDControlService::removeRemoteDevice(JDDevice* device)
 int JDControlService::formControlPacket()
 {
     uint16_t size = 0;
-    bool hosting = false;
 
     enumerationData->udid = this->device->udid;
     enumerationData->device_address = this->device->device_address;
@@ -141,29 +156,37 @@ int JDControlService::formControlPacket()
 
     // name change is only allowed when the device is re-enumerated.
     if (enumerationData->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
-        size += *cp->data;
+        size += *enumerationData->data;
 
     // compile the list of host services for control packet
-    JDServiceInformation* info = (JDServiceInformation *)(cp->data + size);
+    JDServiceInformation* info = (JDServiceInformation *)(enumerationData->data + size);
+
+    int service_number = 0;
 
     for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
     {
         JDService* current = JDControlLayer::instance->services[i];
 
-        if (current == NULL || current == this || current->mode == ClientService)
+        if (current == NULL || current == this || current->mode != HostService)
             continue;
 
-        hosting = true;
+        // the device has modified its service numbers whilst enumerated.
+        if (current->service_number != JD_SERVICE_UNITIALISED_VAL && current->service_number != service_number)
+            target_panic(DEVICE_JACDAC_ERROR);
 
-        info = (JDServiceInformation *)(cp->data + size);
+        current->service_number = service_number;
 
-        info->service_flags = current->getServiceFlags();
-        info->advertisement_size = service->addAdvertisementData(info->data);
+        info = (JDServiceInformation *)(enumerationData->data + size);
+
+        info->service_flags = current->service_flags;
         info->service_class = current->service_class;
+        info->advertisement_size = current->addAdvertisementData(info->data);
+
         size += info->advertisement_size + JD_SERVICE_INFO_HEADER_SIZE;
+        service_number++;
     }
 
-    CODAL_ASSERT((size + JD_CONTROL_PACKET_HEADER_SIZE) <= JD_MAX_PACKET_SIZE);
+    CODAL_ASSERT((size + JD_CONTROL_PACKET_HEADER_SIZE) <= JD_MAX_PACKET_SIZE, DEVICE_JACDAC_ERROR);
 
     return size + JD_CONTROL_PACKET_HEADER_SIZE;
 }
@@ -194,7 +217,7 @@ void JDControlService::timerCallback(Event)
         }
         else
         {
-            if (JDProtocol::instance->bus.isConnected() == false)
+            if (JDControlLayer::instance->bus.isConnected() == false)
             {
                 this->device->rolling_counter++;
 
@@ -209,14 +232,15 @@ void JDControlService::timerCallback(Event)
         }
     }
 
-    // queue a control packet.
-    enumerationData->udid = this->device->udid;
-    enumerationData->device_address = this->device->device_address;
-    enumerationData->device_flags = this->device->device_flags;
+    // queue a control packet if we have host services.
+    if (this->status & JD_CONTROL_SERVICE_STATUS_ENUMERATE)
+    {
+        enumerationData->udid = this->device->udid;
+        enumerationData->device_address = this->device->device_address;
+        enumerationData->device_flags = this->device->device_flags;
 
-    int size = formControlPacket();
-
-    send((uint8_t*)enumerationData, size, 0, 0);
+        send((uint8_t*)enumerationData, formControlPacket());
+    }
 
     // now check to see if remote devices have timed out.
     JDDevice* head = this->remoteDevices;
@@ -242,7 +266,10 @@ int JDControlService::enumerate()
         return DEVICE_INVALID_STATE;
 
     if (enumerationData == NULL)
+    {
         this->enumerationData = (JDControlPacket*)malloc(JD_MAX_PACKET_SIZE);
+        memset(this->enumerationData, 0, JD_MAX_PACKET_SIZE);
+    }
 
     if (device == NULL)
     {
@@ -263,15 +290,17 @@ int JDControlService::enumerate()
     }
 
     // copy the name into the control packet (if we have one)
-    if (this->name.length())
+    if (this->deviceName.length())
     {
         this->device->device_flags |= JD_DEVICE_FLAGS_HAS_NAME;
         uint8_t* name = enumerationData->data;
-        name[0] = this->name.length();
-        memcpy(enumerationData->data + 1, this->name.toCharArray(), name[0]);
+        name[0] = this->deviceName.length();
+        memcpy(enumerationData->data + 1, this->deviceName.toCharArray(), name[0]);
     }
 
-    if (hosting)
+    int size = formControlPacket();
+
+    if (size > JD_CONTROL_PACKET_HEADER_SIZE)
     {
         this->status |= (JD_CONTROL_SERVICE_STATUS_ENUMERATING | JD_CONTROL_SERVICE_STATUS_ENUMERATE);
         return DEVICE_OK;
@@ -313,15 +342,14 @@ int JDControlService::disconnect()
     return DEVICE_OK;
 }
 
-JDControlService::JDControlService() : JDService(CONTROL_SERVICE, (ServiceMode)JD_SERVICE_STATE_FLAGS_HOST | JD_SERVICE_STATE_FLAGS_INITIALISED)
+JDControlService::JDControlService(ManagedString deviceName) : JDService(JD_SERVICE_CLASS_CONTROL, HostService), deviceName(deviceName)
 {
     this->device = NULL;
     this->remoteDevices = NULL;
     this->enumerationData = NULL;
 
     status = 0;
-    memset(this->address_filters, 0, JD_CONTROL_SERVICE_MAX_FILTERS);
-    status |= (DEVICE_COMPONENT_RUNNING);
+    status |= DEVICE_COMPONENT_RUNNING;
 
     if (EventModel::defaultEventBus)
     {
@@ -330,7 +358,15 @@ JDControlService::JDControlService() : JDService(CONTROL_SERVICE, (ServiceMode)J
     }
 }
 
-int JDControlService::handleControlPacket(JDControlPacket* p)
+int JDControlService::send(uint8_t* buf, int len)
+{
+    if (JDControlLayer::instance)
+        return JDControlLayer::instance->bus.send(buf, len, 0, 0, JDBaudRate::Baud1M);
+
+    return DEVICE_NO_RESOURCES;
+}
+
+int JDControlService::handleServiceInformation(JDDevice* device, JDServiceInformation* p)
 {
     // nop for now... could be useful in the future for controlling the mode of the logic service?
     return DEVICE_OK;
@@ -344,64 +380,62 @@ int JDControlService::handlePacket(JDPacket* pkt)
     JDControlPacket *cp = (JDControlPacket *)pkt->data;
 
     // address collision check
-    if (device->address == cp->device_address && this->device->status & (JD_DEVICE_STATE_ENUMERATING | JD_DEVICE_STATE_ENUMERATED))
+    if (device->device_address == cp->device_address && this->status & (JD_CONTROL_SERVICE_STATUS_ENUMERATING | JD_CONTROL_SERVICE_STATUS_ENUMERATED))
     {
         // a different device is using our address!!
-        if (device.udid != cp->udid)
+        if (device->udid != cp->udid)
         {
             // if the device is proposing, we can reject (as per the spec)
             if (cp->device_flags & JD_DEVICE_FLAGS_PROPOSING)
             {
                 // if we're proposing too, the remote device has won the address
-                if (this->device->flags & JD_DEVICE_FLAGS_PROPOSING)
+                if (this->device->device_flags & JD_DEVICE_FLAGS_PROPOSING)
                 {
                     this->device->rolling_counter = 0;
-                    this->device->device_address = generate_address();
+                    this->device->device_address = 1 + target_random(254);
                 }
                 // if our address is established, reject the proposal
                 else
                 {
-                    JDControlPacket cp;
+                    JDControlPacket rejectCP;
 
-                    p.device_address = cp->device_address;
-                    p.udid = cp->udid;
-                    p.device_flags = cp->device_flags | JD_DEVICE_FLAGS_REJECT;
-                    send((uint8_t *)&cp, JD_CONTROL_PACKET_HEADER_SIZE);
+                    rejectCP.device_address = cp->device_address;
+                    rejectCP.udid = cp->udid;
+                    rejectCP.device_flags = cp->device_flags | JD_DEVICE_FLAGS_REJECT;
+                    send((uint8_t *)&rejectCP, JD_CONTROL_PACKET_HEADER_SIZE);
                     JD_DMESG("ASK OTHER TO REASSIGN");
                 }
 
-                return; // no further processing required.
+                return DEVICE_OK; // no further processing required.
             }
         }
         // someone has flagged a conflict with our device address, re-enumerate
         else if (cp->device_flags & JD_DEVICE_FLAGS_REJECT)
         {
             this->device->rolling_counter = 0;
-            this->device->device_address = generate_address();
-            return;
+            this->device->device_address = 1 + target_random(254);
+            return DEVICE_OK;
         }
     }
 
     // the device has not got a confirmed address (enumerating)... if there was a collision it would be handled above
     if (cp->device_flags & JD_DEVICE_FLAGS_PROPOSING)
-        return;
+        return DEVICE_OK;
 
     // if a service is relying on a remote device, the control service is maintaining the state.
-    JDDevice* remoteDevice = this->getRemoteDevice(cp->address, cp->udid);
+    JDDevice* remoteDevice = this->getRemoteDevice(cp->device_address, cp->udid);
 
     if (remoteDevice)
         remoteDevice->rolling_counter = 0; // by resetting the counter to zero we mark the device as "seen".
+
+    // if here, address validation has completed successfully... process service information
+    uint8_t* dataPointer = cp->data;
+    int service_number = 0;
 
     // skip name:
     // the size of the name is the first byte of the data payload (if present)
     if (cp->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
         dataPointer += *dataPointer;
-
-    // if here, address validation has completed successfully... process service information
-    uint8_t* dataPointer = cp->data;
-
-    int service_number = 0;
-    JDDeviceInformation device_info;
 
     while (dataPointer < cp->data + (pkt->size - JD_CONTROL_PACKET_HEADER_SIZE))
     {
@@ -415,22 +449,23 @@ int JDControlService::handlePacket(JDPacket* pkt)
             if (current == NULL)
                 continue;
 
+            bool class_check = current->service_class == serviceInfo->service_class;
+
             // if the service is running, route the packet.
-            if (current->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED)
+            if (current->status & JD_SERVICE_STATUS_FLAGS_INITIALISED)
             {
-                bool address_check = current->state.device_address == cp->device.address && current->service_number == service_number;
-                bool serial_check = cp->udid == current->device.udid;
-                bool class_check = current->service_class == serviceInfo->service_class;
+                bool address_check = current->device->device_address == cp->device_address && current->service_number == service_number;
+                bool serial_check = cp->udid == current->device->udid;
 
                 // this boolean is used to override stringent address checks (not needed for broadcast services as they receive all packets) to prevent code duplication
-                bool broadcast_override = current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST > 0;
+                bool broadcast_override = current->mode == BroadcastHostService;
                 JD_DMESG("d a %d, s %d, c %d, i %d, t %c%c%c", current->state.device_address, current->state.udid, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED ? 1 : 0, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? 'B' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? 'L' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? 'R' : ' ');
 
                 // check if applicable
                 if ((address_check && serial_check && class_check) || (class_check && broadcast_override))
                 {
                     // we are receiving a packet from a remote device for a service in broadcast mode.
-                    if (broadcast_override && cp->device_address != this->device->address)
+                    if (broadcast_override && cp->device_address != this->device->device_address)
                     {
                         // create a device representation if none exists
                         if (!remoteDevice)
@@ -440,14 +475,14 @@ int JDControlService::handlePacket(JDPacket* pkt)
 
                         // set the service map for this broadcast service.
                         if (idx % 2 == 0)
-                            remoteDevice->service_map[idx] = (remoteDevice->service_map[idx] & 0xF0) | current->service_number;
+                            remoteDevice->broadcast_servicemap[idx] = (remoteDevice->broadcast_servicemap[idx] & 0xF0) | current->service_number;
                         else
-                            remoteDevice->service_map[idx] =  current->service_number << 4 | (remoteDevice->service_map[idx] & 0x0F);
+                            remoteDevice->broadcast_servicemap[idx] =  current->service_number << 4 | (remoteDevice->broadcast_servicemap[idx] & 0x0F);
                     }
 
                     // if the service has handled the packet it will return DEVICE_OK.
                     // any non zero return value will cause packet routing to continue
-                    if (current->handleLogicPacket(XX) == DEVICE_OK)
+                    if (current->handleServiceInformation(remoteDevice, serviceInfo) == DEVICE_OK)
                     {
                         JD_DMESG("S ABSORBED %d", current->state.device_address);
                         handled = true;
@@ -455,32 +490,36 @@ int JDControlService::handlePacket(JDPacket* pkt)
                     }
                 }
             }
-            else if (class_check && current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT)
+            else if (class_check && current->mode == ClientService)
             {
                 JD_DMESG("ITER a %d, s %d, c %d, t %c%c%c", current->state.device_address, current->state.udid, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? 'B' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? 'L' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? 'R' : ' ');
-                // this service instance is looking for a specific serial number
-                if ((current->state.udid > 0 && current->state.udid != cp->udid))
-                    continue;
 
-                // this service is looking for a device with a name, further check required.
-                if (cp->device_flags & JD_DEVICE_FLAGS_HAS_NAME && current->deviceName.length() > 0)
+                // this service instance is looking for a specific device (either a udid or name)
+                if (current->requiredDevice)
                 {
-                    // the size of the name is the first byte of the data payload (if present)
-                    uint8_t len = *cp->data;
-
-                    if (ManagedString(cp->data + 1, len) != current->deviceName)
+                    if ((current->requiredDevice->udid > 0 && current->requiredDevice->udid != cp->udid))
                         continue;
+
+                    // this service is looking for a device with a name, further check required.
+                    if (current->requiredDevice->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
+                    {
+                        if (!(cp->device_flags & JD_DEVICE_FLAGS_HAS_NAME))
+                            continue;
+
+                        // the size of the name is the first byte of the data payload (if present)
+                        uint8_t len = *cp->data;
+
+                        if (ManagedString((char *)cp->data + 1, len) == ManagedString((char *)current->requiredDevice->name))
+                            continue;
+                    }
                 }
 
                 JD_DMESG("FOUND NEW: %d %d %d", current->state.device_address, current->state.service_class);
-                int ret = current->handleControlPacket(remote_device, (ServiceInformation*)dataPointer);
+                remoteDevice = this->addRemoteDevice(cp, pkt->communication_rate);
 
-                if (ret == DEVICE_OK)
+                if (current->handleServiceInformation(remoteDevice, (JDServiceInformation*)dataPointer) == DEVICE_OK)
                 {
-                    if (!remote_device)
-                        remote_device = this->addRemoteDevice(cp, pkt->communication_rate);
-
-                    current->device = remote_device;
+                    current->device = remoteDevice;
                     current->service_number = service_number;
                     current->hostConnected();
                     Event(this->id, JD_CONTROL_SERVICE_EVT_CHANGED);
@@ -492,4 +531,6 @@ int JDControlService::handlePacket(JDPacket* pkt)
         service_number++;
         dataPointer += JD_SERVICE_INFO_HEADER_SIZE + serviceInfo->advertisement_size;
     }
+
+    return DEVICE_OK;
 }
