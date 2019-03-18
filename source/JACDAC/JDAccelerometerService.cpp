@@ -32,7 +32,7 @@ void JDAccelerometerService::forwardEvent(Event evt)
     send((uint8_t*)&p, sizeof(AccelerometerGesturePacket));
 }
 
-JDAccelerometerService::JDAccelerometerService(Accelerometer& accel) : JDService(JDServiceState(HostService, JD_DRIVER_CLASS_ACCELEROMETER)), accelerometer(&accel)
+JDAccelerometerService::JDAccelerometerService(Accelerometer& accel) : JDService(JD_SERVICE_CLASS_ACCELEROMETER, HostService), accelerometer(&accel)
 {
     system_timer_event_every(50, this->id, JD_ACCEL_EVT_SEND_DATA);
 
@@ -43,7 +43,7 @@ JDAccelerometerService::JDAccelerometerService(Accelerometer& accel) : JDService
     }
 }
 
-JDAccelerometerService::JDAccelerometerService() : JDService(JDServiceState(ClientService, JD_DRIVER_CLASS_ACCELEROMETER)), accelerometer(NULL)
+JDAccelerometerService::JDAccelerometerService() : JDService(JD_SERVICE_CLASS_ACCELEROMETER, ClientService), accelerometer(NULL)
 {
 }
 
@@ -58,11 +58,6 @@ int JDAccelerometerService::getY()
 int JDAccelerometerService::getZ()
 {
     return latest.z;
-}
-
-int JDAccelerometerService::handleControlPacket(JDControlPacket* cp)
-{
-    return DEVICE_OK;
 }
 
 int JDAccelerometerService::handlePacket(JDPacket* p)

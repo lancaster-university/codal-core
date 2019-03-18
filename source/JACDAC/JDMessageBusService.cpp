@@ -1,9 +1,10 @@
 #include "JDMessageBusService.h"
 #include "CodalDmesg.h"
 
+
 using namespace codal;
 
-JDMessageBusService::JDMessageBusService() : JDService(JDServiceState(BroadcastHostService, JD_DRIVER_CLASS_MESSAGE_BUS))
+JDMessageBusService::JDMessageBusService() : JDService(JD_SERVICE_CLASS_MESSAGE_BUS, BroadcastHostService)
 {
     suppressForwarding = false;
 }
@@ -104,11 +105,6 @@ int JDMessageBusService::handlePacket(JDPacket* p)
     e->fire();
     suppressForwarding = false;
 
-    return DEVICE_OK;
-}
-
-int JDMessageBusService::handleControlPacket(JDControlPacket*)
-{
     return DEVICE_OK;
 }
 

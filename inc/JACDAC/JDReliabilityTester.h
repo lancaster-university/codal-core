@@ -42,11 +42,11 @@ namespace codal
 
         int start();
 
-        virtual int populateDriverInfo(JDServiceInfo* cp, uint8_t bytesRemaining);
+        virtual int addAdvertisementData(uint8_t* data) override;
 
-        virtual int handleControlPacket(JDControlPacket* cp);
+        virtual int handleServiceInformation(JDDevice* device, JDServiceInformation* info) override;
 
-        virtual int handlePacket(JDPacket* p);
+        virtual int handlePacket(JDPacket* p) override;
     };
 }
 

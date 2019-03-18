@@ -3,17 +3,17 @@
 
 using namespace codal;
 
-JDPinService::JDPinService(Pin& p) : JDService(JDServiceState(PairableHostService, JD_DRIVER_CLASS_PIN)), pin(&p)
+JDPinService::JDPinService(Pin& p) : JDService(JD_SERVICE_CLASS_PIN, HostService), pin(&p)
 {
 }
 
-JDPinService::JDPinService() : JDService(JDServiceState(PairedService, JD_DRIVER_CLASS_PIN)), pin(NULL)
+JDPinService::JDPinService() : JDService(JD_SERVICE_CLASS_PIN, ClientService), pin(NULL)
 {
 }
 
 int JDPinService::sendPacket(Mode m, uint32_t value)
 {
-    if (!(this->state.isPaired()) || !this->isConnected())
+    if (!this->isConnected())
         return DEVICE_INVALID_STATE;
 
     PinPacket p;
@@ -38,33 +38,11 @@ int JDPinService::setServoValue(uint32_t value)
     return sendPacket(SetServo, value);
 }
 
-int JDPinService::handleControlPacket(JDControlPacket* cp)
-{
-    #warning pairing broken
-    // JDServiceInfo* info = (JDServiceInfo*)cp->data;
-
-    // DMESG("PIN CONTROL PKT!");
-
-    // if (this->state.isPairedDriver() && !this->state.isPaired())
-    // {
-    //     DMESG("NEED TO PAIR!");
-    //     if (info->flags & JD_DEVICE_FLAGS_PAIRABLE)
-    //     {
-    //         DMESG("PAIR!");
-    //         sendPairingPacket(JDServiceState(info->device_address, JD_SERVICE_STATE_FLAGS_CLIENT | JD_SERVICE_STATE_FLAGS_INITIALISED | JD_SERVICE_STATE_FLAGS_CP_SEEN, cp->serial_number, info->service_class));
-    //     }
-    // }
-
-    return DEVICE_OK;
-}
-
 int JDPinService::handlePacket(JDPacket* p)
 {
     PinPacket* pinData = (PinPacket*)p->data;
 
-    DMESG("PIN DATA: paired %d %d %d",isPaired(), this->pairedInstance->getAddress(), p->device_address);
-
-    if (state.isClient() || (isPaired() && this->pairedInstance->getAddress() != p->device_address))
+    if (this->mode == ClientService)
         return DEVICE_OK;
 
     switch (pinData->mode)

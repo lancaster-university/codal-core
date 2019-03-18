@@ -1,5 +1,5 @@
-#ifndef JD_ACCELEROMETER_DRIVER_H
-#define JD_ACCELEROMETER_DRIVER_H
+#ifndef JD_ACCELEROMETER_SERVICE_H
+#define JD_ACCELEROMETER_SERVICE_H
 
 #include "JDControlLayer.h"
 #include "Accelerometer.h"
@@ -38,8 +38,6 @@ namespace codal
         int getX();
         int getY();
         int getZ();
-
-        virtual int handleControlPacket(JDControlPacket* cp);
 
         virtual int handlePacket(JDPacket* p);
     };

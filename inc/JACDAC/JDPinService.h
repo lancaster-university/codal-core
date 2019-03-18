@@ -1,5 +1,5 @@
-#ifndef JD_PIN_DRIVER_H
-#define JD_PIN_DRIVER_H
+#ifndef JD_PIN_SERVICE_H
+#define JD_PIN_SERVICE_H
 
 #include "JDControlLayer.h"
 #include "Pin.h"
@@ -32,8 +32,6 @@ namespace codal
         int setAnalogValue(uint32_t value);
         int setDigitalValue(uint32_t value);
         int setServoValue(uint32_t value);
-
-        virtual int handleControlPacket(JDControlPacket* cp);
 
         virtual int handlePacket(JDPacket* p);
     };

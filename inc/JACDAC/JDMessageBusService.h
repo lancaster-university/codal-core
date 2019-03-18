@@ -1,5 +1,5 @@
-#ifndef JD_MESSAGE_BUS_DRIVER_H
-#define JD_MESSAGE_BUS_DRIVER_H
+#ifndef JD_MESSAGE_BUS_SERVICE_H
+#define JD_MESSAGE_BUS_SERVICE_H
 
 #include "JDControlLayer.h"
 #include "MessageBus.h"
@@ -79,8 +79,6 @@ namespace codal
          * @note DEVICE_EVT_ANY can be used to deregister all event values matching the given id.
          */
         int ignore(uint16_t id, uint16_t value, EventModel &eventBus);
-
-        virtual int handleControlPacket(JDControlPacket* cp);
 
         virtual int handlePacket(JDPacket* p);
     };
