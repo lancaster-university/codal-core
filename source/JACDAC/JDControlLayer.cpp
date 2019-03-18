@@ -45,58 +45,76 @@ void JDControlLayer::onPacketReceived(Event)
 
     while((pkt = bus.getPacket()) != NULL)
     {
-        JD_DMESG("pkt REC AD: %d SZ:%d",pkt->address, pkt->size);
+        JD_DMESG("pkt REC AD: %d sno: %d SZ:%d",pkt->device_address, pkt->service_number, pkt->size);
 
-        uint32_t service_class = 0;
-
-        // check if this packet is destined for our services...
-        // address 0 will never be filtered.
-        if (!control.filterPacket(pkt->device_address))
+        if (pkt->device_address == 0)
+            controlService.handlePacket(pkt);
+        else
         {
-            JD_DMESG("NOT FILTERED");
+            JDDevice* device = controlService.getRemoteDevice(pkt->device_address);
+            uint32_t broadcast_class = 0;
+
+            if (!device)
+                continue;
+
+            // map from device broadcast map to potentially the service number of one of our enumerated broadcast hosts
+            uint16_t host_service_number = device->broadcast_servicemap[pkt->service_number / 2];
+
+            if (pkt->service_number % 2 == 0)
+                host_service_number &= 0x0F;
+            else
+                host_service_number &= 0xF0 >> 4;
+
+            if (!host_service_number)
+                host_service_number = JD_SERVICE_UNITIALISED_VAL;
+
+            // handle initialised services
             for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
             {
                 JDService* service = this->services[i];
 
-                if (service)
+                if (service && service->device == device && service->service_number == pkt->service_number)
                 {
-                    // the above could be optimised into a single if, but useful for debugging.
                     JD_DMESG("DRIV a:%d sn:%d c:%d i:%d f %d", service->state.device_address, service->state.serial_number, service->state.service_class, service->state.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, service->state.flags);
 
-                    // if the address is the same, or we're matching on class...
-                    if ((service->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED) && service->state.device_address == pkt->device_address && service->state.service_number == pkt->service_number)
+                    if (service->device == this->controlService.device && service->service_number == host_service_number)
                     {
-                        service_class = service->state.service_class;
+                        broadcast_class = service->service_class;
+                        continue;
+                    }
 
-                        // break if the state is a broadcast to prevent duplicate receptions
+                    // break if DEVICE_OK is returned (indicates the packet has been handled)
+                    if (service->handlePacket(pkt) == DEVICE_OK)
+                        break;
+                }
+            }
+
+            // we matched a broadcast host, route to all broadcast hosts on the device.
+            if (broadcast_class)
+            {
+                for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
+                {
+                    JDService* service = this->services[i];
+
+                    if (service && service->service_class == broadcast_class && service->mode == BroadcastHostService)
+                    {
                         // break if DEVICE_OK is returned (indicates the packet has been handled)
-                        if (service->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST || service->handlePacket(pkt) == DEVICE_OK)
+                        if (service->handlePacket(pkt) == DEVICE_OK)
                             break;
                     }
                 }
             }
 
-            // iterate over the array again, this time matching on class instead of address, checking for any BROADCAST services.
-            for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
-            {
-                JDService* service = this->services[i];
-
-                if (service && service->state.service_class == service_class && service->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST)
-                {
-                    JD_DMESG("HANDLED BY BROADCAST");
-                    service->handlePacket(pkt);
-                }
-            }
         }
 
-        if (bridge != NULL)
+        if (bridge)
             bridge->handlePacket(pkt);
 
         free(pkt);
     }
 }
 
-JDControlLayer::JDControlLayer(JACDAC& jacdac, ManagedString name, uint16_t id) : control(), bridge(NULL), bus(jacdac)
+JDControlLayer::JDControlLayer(JACDAC& jacdac, ManagedString name, uint16_t id) : controlService(name), bridge(NULL), bus(jacdac)
 {
     this->id = id;
 
@@ -107,7 +125,7 @@ JDControlLayer::JDControlLayer(JACDAC& jacdac, ManagedString name, uint16_t id) 
 
     memset(this->services, 0, sizeof(JDService*) * JD_PROTOCOL_SERVICE_ARRAY_SIZE);
 
-    add(control);
+    add(controlService);
 
     // packets are queued, and should be processed in normal context.
     if (EventModel::defaultEventBus)
@@ -251,6 +269,6 @@ void JDControlLayer::logState(JackRouter* jr)
         JDService* current = JDControlLayer::instance->services[i];
 
         if (current)
-            DMESG("Driver %d initialised[%d] address[%d] serial[%d] class[%d], mode[%s%s%s]", i, current->isConnected(), current->state.device_address, current->state.serial_number, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? "B" : "", current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? "H" : "", current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? "C" : "");
+            DMESG("Driver %d initialised[%d] device_address[%d] serial[%d] class[%d], mode[%s%s%s]", i, current->isConnected(), (current->device) ? current->device->device_address : -1, (current->device) ? current->device->udid : -1, current->service_class, current->mode == BroadcastHostService ? "B" : "", current->mode == HostService ? "H" : "", current->mode == ClientService ? "C" : "");
     }
 }

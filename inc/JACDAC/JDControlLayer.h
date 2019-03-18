@@ -45,22 +45,10 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERVICE_EVT_PAIR_REJECTED     65524
 #define JD_SERVICE_EVT_PAIRING_RESPONSE  65525
 #define JD_SERVICE_EVT_ERROR             65526
-
-#define JD_SERVICE_STATE_FLAGS_HOST            0x8000 // on the board
-#define JD_SERVICE_STATE_FLAGS_CLIENT          0x4000 // off the board
-
-// following flags combined with the above to yield different behaviours
-#define JD_SERVICE_STATE_FLAGS_BROADCAST       0x2000 // receive all class packets regardless of the address
-#define JD_SERVICE_STATE_FLAGS_PAIR            0x1000 // this flag indicates that the service should pair with another
-
-#define JD_SERVICE_STATE_SERVICE_MODE_MSK       0xF000 // the top byte represents the current service mode.
 // end combo flags
 
-// #define JD_SERVICE_STATE_FLAGS_PAIRABLE        0x0800 // this flag indicates that a service is paired with another
-// #define JD_SERVICE_STATE_FLAGS_PAIRED          0x0400 // this flag indicates that a service is paired with another
-// #define JD_SERVICE_STATE_FLAGS_PAIRING         0x0200 // this flag indicates that a service is paired with another
-
-#define JD_SERVICE_STATUS_FLAGS_INITIALISED     0x01 // device service is running
+#define JD_SERVICE_UNITIALISED_VAL              65535  // used as the service_number when a service is not initialised
+#define JD_SERVICE_STATUS_FLAGS_INITIALISED     0x02 // device service is running
 // END      JD SERIAL SERVICE FLAGS
 
 
@@ -107,11 +95,11 @@ namespace codal
 
     // This enumeration specifies that supported configurations that services should utilise.
     // Many combinations of flags are supported, but only the ones listed here have been fully implemented.
-    enum ServiceMode
+    enum JDServiceMode
     {
-        ClientService = JD_SERVICE_STATE_FLAGS_CLIENT, // the service is seeking the use of another device's resource
-        HostService = JD_SERVICE_STATE_FLAGS_HOST, // the service is hosting a resource for others to use.
-        BroadcastHostService = JD_SERVICE_STATE_FLAGS_HOST | JD_SERVICE_STATE_FLAGS_BROADCAST, // the service is enumerated with its own address, and receives all packets of the same class (including control packets)
+        ClientService, // the service is seeking the use of another device's resource
+        HostService, // the service is hosting a resource for others to use.
+        BroadcastHostService // the service is enumerated with its own address, and receives all packets of the same class (including control packets)
     };
 
     /**
@@ -162,10 +150,13 @@ namespace codal
         friend class JDControlService;
         friend class JDControlLayer;
         // the above need direct access to our member variables and more
-
-        ServiceMode mode;
         JDDevice* device;
+        JDDevice* requiredDevice;
+
+        JDServiceMode mode;
         uint32_t service_class;
+        uint16_t service_number;
+        uint8_t service_flags;
 
         protected:
 
@@ -187,7 +178,7 @@ namespace codal
          *
          * @return SERVICE_STATE_OK for success
          **/
-        virtual int hostConnected(JDServiceState state);
+        virtual int hostConnected();
 
         /**
          * Called by the logic service when this service has been disconnected from the serial bus.
@@ -206,7 +197,7 @@ namespace codal
          *
          * @return SERVICE_STATE_OK on success.
          **/
-        int send(uint8_t* buf, int len);
+        virtual int send(uint8_t* buf, int len);
 
         public:
 
@@ -214,7 +205,7 @@ namespace codal
          * Constructor
          *
          * */
-        JDService(uint32_t serviceClass, ServiceMode m);
+        JDService(uint32_t serviceClass, JDServiceMode m);
 
         /**
          * Invoked by the logic service when it is queuing a control packet.
@@ -225,7 +216,7 @@ namespace codal
          *
          * @return SERVICE_STATE_OK on success
          **/
-        virtual int addAdvertisementData(JDServiceInfo* info);
+        virtual int addAdvertisementData(uint8_t* data);
 
         /**
          * Invoked by the logic service when a control packet with the address of the service is received.
@@ -238,7 +229,7 @@ namespace codal
          * @return SERVICE_STATE_OK to signal that the packet has been handled, or SERVICE_STATE_CANCELLED to indicate the logic service
          *         should continue to search for a service.
          **/
-        virtual int handleControlPacket(JDControlPacket* info);
+        virtual int handleServiceInformation(JDDevice* device, JDServiceInformation* info);
 
         /**
          * Invoked by the Protocol service when a standard packet with the address of the service is received.
@@ -258,11 +249,11 @@ namespace codal
         virtual bool isConnected();
 
         /**
-         * Retrieves the address of the service.
+         * Retrieves the device instance of the remote device
          *
          * @return the address.
          **/
-        JDDevice* getDevice();
+        JDDevice* getHostDevice();
 
         /**
          * Retrieves the class of the service.
@@ -288,12 +279,26 @@ namespace codal
         JDDevice* controller;
         JDControlPacket* enumerationData;
 
+        ManagedString deviceName;
+
         /**
          * This member function periodically iterates across all services and performs various actions. It handles the sending
          * of control packets, address assignments for local services, and the connection and disconnection of services as they
          * are added or removed from the bus.
          **/
         void timerCallback(Event);
+
+        void setConnectionState(bool state, JDDevice* device);
+
+        JDDevice* getRemoteDevice(uint8_t device_address, uint64_t udid);
+
+        JDDevice* addRemoteDevice(JDControlPacket* remoteDevice, uint8_t communicationRate);
+
+        int removeRemoteDevice(JDDevice* device);
+
+        int formControlPacket();
+
+        int send(uint8_t* buf, int len) override;
 
         public:
 
@@ -302,12 +307,12 @@ namespace codal
          *
          * Creates a local initialised service and adds itself to the service array.
          **/
-        JDControlService();
+        JDControlService(ManagedString deviceName);
 
         /**
          * Overrided for future use. It might be useful to control the behaviour of the logic service in the future.
          **/
-        virtual int handleControlPacket(JDControlPacket* p);
+        virtual int handleServiceInformation(JDDevice* device, JDServiceInformation* p) override;
 
         /**
          * Called by the JDControlLayer when a data packet has address 0.
@@ -317,7 +322,12 @@ namespace codal
          *
          * @param p the packet from the serial bus.
          **/
-        virtual int handlePacket(JDPacket* p);
+        virtual int handlePacket(JDPacket* p) override;
+
+        /**
+         *
+         **/
+        JDDevice* getRemoteDevice(uint8_t device_address);
 
         /**
          *
@@ -358,7 +368,7 @@ namespace codal
         void onPacketReceived(Event);
 
         // An instance of our logic service
-        JDControlService control;
+        JDControlService controlService;
 
         // A pointer to a bridge service (if set, defaults to NULL).
         JDService* bridge;
@@ -381,7 +391,7 @@ namespace codal
          *
          * @param id for the message bus, defaults to  SERVICE_STATE_ID_JACDAC_PROTOCOL
          **/
-        JDControlLayer(JACDAC& JD, ManagedString deviceName = ManagedString(), uint16_t id = DEVICE_ID_JACDAC_PROTOCOL);
+        JDControlLayer(JACDAC& jacdac, ManagedString deviceName = ManagedString(), uint16_t id = DEVICE_ID_JACDAC_PROTOCOL);
 
         /**
          * Sets the bridge member variable to the given JDService pointer.
