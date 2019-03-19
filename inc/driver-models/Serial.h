@@ -121,6 +121,8 @@ namespace codal
         void dataTransmitted();
         void dataReceived(char c);
 
+        virtual void idleCallback() override;
+
         /**
          * SUB CLASSES / IMPLEMENTATIONS DEFINE THE FOLLOWING METHODS:
          **/
