@@ -509,6 +509,7 @@ int codal::system_timer_calibrate_cycles()
 void codal::system_timer_wait_cycles(uint32_t cycles)
 {
     __asm__ __volatile__(
+        ".syntax unified\n"
         "1:              \n"
         "   subs %0, #1   \n" // subtract 1 from %0 (n)
         "   bne 1b       \n" // if result is not 0 jump to 1

@@ -1,7 +1,7 @@
-#ifndef JD_MESSAGE_BUS_DRIVER_H
-#define JD_MESSAGE_BUS_DRIVER_H
+#ifndef JD_MESSAGE_BUS_SERVICE_H
+#define JD_MESSAGE_BUS_SERVICE_H
 
-#include "JDProtocol.h"
+#include "JACDAC.h"
 #include "MessageBus.h"
 
 #define JD_MESSAGEBUS_TYPE_EVENT       0x01
@@ -9,13 +9,13 @@
 
 namespace codal
 {
-    class JDMessageBusDriver : public JDDriver
+    class JDMessageBusService : public JDService
     {
         void eventReceived(Event e);
         bool suppressForwarding;
 
         public:
-        JDMessageBusDriver();
+        JDMessageBusService();
 
         /**
          * Associates the given event with the serial channel.
@@ -79,8 +79,6 @@ namespace codal
          * @note DEVICE_EVT_ANY can be used to deregister all event values matching the given id.
          */
         int ignore(uint16_t id, uint16_t value, EventModel &eventBus);
-
-        virtual int handleControlPacket(JDControlPacket* cp);
 
         virtual int handlePacket(JDPacket* p);
     };

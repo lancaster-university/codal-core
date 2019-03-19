@@ -1,7 +1,7 @@
 #ifndef JD_RELIABILITY_TESTER_H
 #define JD_RELIABILITY_TESTER_H
 
-#include "JDProtocol.h"
+#include "JACDAC.h"
 #include "Pin.h"
 
 #define RELIABILITY_TEST_FINISHED 7
@@ -24,7 +24,7 @@ namespace codal
         uint32_t count;
     };
 
-    class JDReliabilityTester : public JDDriver
+    class JDReliabilityTester : public JDService
     {
         Pin* pin;
 
@@ -42,11 +42,11 @@ namespace codal
 
         int start();
 
-        virtual int populateDriverInfo(JDDriverInfo* cp, uint8_t bytesRemaining);
+        virtual int addAdvertisementData(uint8_t* data) override;
 
-        virtual int handleControlPacket(JDControlPacket* cp);
+        virtual int handleServiceInformation(JDDevice* device, JDServiceInformation* info) override;
 
-        virtual int handlePacket(JDPacket* p);
+        virtual int handlePacket(JDPacket* p) override;
     };
 }
 

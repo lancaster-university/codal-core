@@ -43,7 +43,7 @@ extern "C"
 
     int target_random(int max);
 
-    uint32_t target_get_serial();
+    uint64_t target_get_serial();
 
     void target_wait_for_event();
   

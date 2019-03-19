@@ -34,7 +34,7 @@ namespace codal
 JackRouter::JackRouter(Pin &mid, Pin &sense, Pin &headphoneEnable, Pin &buzzerEnable,
                        Pin &powerEnable, JACDAC &jacdac)
     : mid(mid), sense(sense), hpEn(headphoneEnable), bzEn(buzzerEnable), pwrEn(powerEnable),
-      serial(jacdac)
+      jacdac(jacdac)
 {
     status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 
@@ -60,9 +60,9 @@ void JackRouter::setState(JackState s)
     if (state == s)
         return;
 
-    // shut down serial
+    // shut down jacdac
     if (state == JackState::BuzzerAndSerial)
-        serial.stop();
+        jacdac.stop();
 
     state = s;
     hpEn.setDigitalValue(state == JackState::HeadPhones);
@@ -71,9 +71,9 @@ void JackRouter::setState(JackState s)
 
     DMESG("Jack plug-in state: %d", state);
 
-    // start serial
+    // start jacdac
     if (state == JackState::BuzzerAndSerial)
-        serial.start();
+        jacdac.start();
 
     Event(DEVICE_ID_JACKROUTER, (uint8_t)state);
 }
@@ -182,5 +182,33 @@ void JackRouter::idleCallback()
     numLows = 0;
     numSenseForced = 0;
 }
+
+void JackRouter::logState()
+{
+    const char* jackRouterStateStr = "";
+
+    switch (state)
+    {
+        case JackState::None:
+            jackRouterStateStr = "None";
+            break;
+        case JackState::AllDown:
+            jackRouterStateStr = "AllDown";
+            break;
+        case JackState::HeadPhones:
+            jackRouterStateStr = "HeadPhones";
+            break;
+        case JackState::Buzzer:
+            jackRouterStateStr = "Buzzer";
+            break;
+        case JackState::BuzzerAndSerial:
+            jackRouterStateStr = "BuzzerAndSerial";
+            break;
+    }
+
+    DMESG("Router state: %s", jackRouterStateStr);
+}
+
+
 
 } // namespace codal

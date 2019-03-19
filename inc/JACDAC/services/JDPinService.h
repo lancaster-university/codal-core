@@ -1,7 +1,7 @@
-#ifndef JD_PIN_DRIVER_H
-#define JD_PIN_DRIVER_H
+#ifndef JD_PIN_SERVICE_H
+#define JD_PIN_SERVICE_H
 
-#include "JDProtocol.h"
+#include "JACDAC.h"
 #include "Pin.h"
 
 namespace codal
@@ -19,21 +19,19 @@ namespace codal
         uint32_t value;
     };
 
-    class JDPinDriver : public JDDriver
+    class JDPinService : public JDService
     {
         Pin* pin;
 
         int sendPacket(Mode m, uint32_t value);
 
         public:
-        JDPinDriver(Pin& p);
-        JDPinDriver();
+        JDPinService(Pin& p);
+        JDPinService();
 
         int setAnalogValue(uint32_t value);
         int setDigitalValue(uint32_t value);
         int setServoValue(uint32_t value);
-
-        virtual int handleControlPacket(JDControlPacket* cp);
 
         virtual int handlePacket(JDPacket* p);
     };
