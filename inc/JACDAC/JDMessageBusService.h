@@ -1,7 +1,7 @@
 #ifndef JD_MESSAGE_BUS_SERVICE_H
 #define JD_MESSAGE_BUS_SERVICE_H
 
-#include "JDControlLayer.h"
+#include "JACDAC.h"
 #include "MessageBus.h"
 
 #define JD_MESSAGEBUS_TYPE_EVENT       0x01

@@ -62,7 +62,7 @@ class JackRouter : public CodalComponent
     Pin &bzEn;
     Pin &pwrEn;
 
-    JACDAC& serial;
+    JACDAC& jacdac;
 
     void setState(JackState s);
     /**
@@ -98,6 +98,8 @@ public:
      * Return the current state of the router.
      */
     JackState getState() { return state; }
+
+    void logState();
 };
 
 } // namespace codal

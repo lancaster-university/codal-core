@@ -21,7 +21,7 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
-#include "JDControlLayer.h"
+#include "JACDAC.h"
 #include "CodalDmesg.h"
 #include "codal_target_hal.h"
 #include "EventModel.h"
@@ -40,8 +40,8 @@ int JDService::addAdvertisementData(uint8_t* data)
 
 int JDService::send(uint8_t* buf, int len)
 {
-    if (JDControlLayer::instance && this->device)
-        return JDControlLayer::instance->bus.send(buf, len, this->device->device_address, this->service_number, (JDBaudRate)this->device->communication_rate);
+    if (JACDAC::instance && this->device)
+        return JACDAC::instance->bus.send(buf, len, this->device->device_address, this->service_number, (JDBaudRate)this->device->communication_rate);
 
     return DEVICE_NO_RESOURCES;
 }
@@ -54,9 +54,10 @@ JDService::JDService(uint32_t service_class, JDServiceMode m)
     this->mode = m;
     this->device = NULL;
     this->requiredDevice = NULL;
+    this->service_number = JD_SERVICE_NUMBER_UNITIALISED_VAL;
 
-    if (JDControlLayer::instance)
-        JDControlLayer::instance->add(*this);
+    if (JACDAC::instance)
+        JACDAC::instance->add(*this);
 }
 
 bool JDService::isConnected()
@@ -102,5 +103,5 @@ int JDService::handlePacket(JDPacket* p)
 
 JDService::~JDService()
 {
-    JDControlLayer::instance->remove(*this);
+    JACDAC::instance->remove(*this);
 }

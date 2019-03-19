@@ -1,5 +1,5 @@
 #include "CodalConfig.h"
-#include "JDControlLayer.h"
+#include "JACDAC.h"
 #include "CodalDmesg.h"
 #include "Timer.h"
 
@@ -25,7 +25,7 @@ void JDControlService::setConnectionState(bool state, JDDevice* device)
     // iterate over services on the device and provide connect / disconnect events.
     for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
     {
-        JDService* current = JDControlLayer::instance->services[i];
+        JDService* current = JACDAC::instance->services[i];
 
         // set device if host and device == this->device->
         if (current == NULL || current == this || current->device != device)
@@ -39,7 +39,7 @@ void JDControlService::setConnectionState(bool state, JDDevice* device)
         else
         {
             current->device = NULL;
-            current->service_number = JD_SERVICE_UNITIALISED_VAL;
+            current->service_number = JD_SERVICE_NUMBER_UNITIALISED_VAL;
             current->hostDisconnected();
         }
     }
@@ -165,13 +165,13 @@ int JDControlService::formControlPacket()
 
     for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
     {
-        JDService* current = JDControlLayer::instance->services[i];
+        JDService* current = JACDAC::instance->services[i];
 
         if (current == NULL || current == this || current->mode != HostService)
             continue;
 
         // the device has modified its service numbers whilst enumerated.
-        if (current->service_number != JD_SERVICE_UNITIALISED_VAL && current->service_number != service_number)
+        if (current->service_number != JD_SERVICE_NUMBER_UNITIALISED_VAL && current->service_number != service_number)
             target_panic(DEVICE_JACDAC_ERROR);
 
         current->service_number = service_number;
@@ -197,7 +197,7 @@ int JDControlService::formControlPacket()
 void JDControlService::timerCallback(Event)
 {
     // no sense continuing if we dont have a bus to transmit on...
-    if (!JDControlLayer::instance || !JDControlLayer::instance->bus.isRunning())
+    if (!JACDAC::instance || !JACDAC::instance->bus.isRunning())
         return;
 
     // handle enumeration
@@ -217,7 +217,7 @@ void JDControlService::timerCallback(Event)
         }
         else
         {
-            if (JDControlLayer::instance->bus.isConnected() == false)
+            if (JACDAC::instance->bus.isConnected() == false)
             {
                 this->device->rolling_counter++;
 
@@ -358,10 +358,21 @@ JDControlService::JDControlService(ManagedString deviceName) : JDService(JD_SERV
     }
 }
 
+ManagedString JDControlService::getDeviceName()
+{
+    return this->deviceName;
+}
+
+int JDControlService::setDeviceName(ManagedString name)
+{
+    this->deviceName = name;
+    return DEVICE_OK;
+}
+
 int JDControlService::send(uint8_t* buf, int len)
 {
-    if (JDControlLayer::instance)
-        return JDControlLayer::instance->bus.send(buf, len, 0, 0, JDBaudRate::Baud1M);
+    if (JACDAC::instance)
+        return JACDAC::instance->bus.send(buf, len, 0, 0, JDBaudRate::Baud1M);
 
     return DEVICE_NO_RESOURCES;
 }
@@ -440,11 +451,10 @@ int JDControlService::handlePacket(JDPacket* pkt)
     while (dataPointer < cp->data + (pkt->size - JD_CONTROL_PACKET_HEADER_SIZE))
     {
         JDServiceInformation* serviceInfo = (JDServiceInformation *)dataPointer;
-        bool handled = false;
 
         for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
         {
-            JDService* current = JDControlLayer::instance->services[i];
+            JDService* current = JACDAC::instance->services[i];
 
             if (current == NULL)
                 continue;
@@ -485,7 +495,6 @@ int JDControlService::handlePacket(JDPacket* pkt)
                     if (current->handleServiceInformation(remoteDevice, serviceInfo) == DEVICE_OK)
                     {
                         JD_DMESG("S ABSORBED %d", current->state.device_address);
-                        handled = true;
                         break;
                     }
                 }

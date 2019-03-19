@@ -1,7 +1,7 @@
 #ifndef JD_PIN_SERVICE_H
 #define JD_PIN_SERVICE_H
 
-#include "JDControlLayer.h"
+#include "JACDAC.h"
 #include "Pin.h"
 
 namespace codal

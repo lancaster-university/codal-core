@@ -22,277 +22,450 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef CODAL_JACDAC_H
-#define CODAL_JACDAC_H
+#ifndef CODAL_JACDAC_PROTOCOL_H
+#define CODAL_JACDAC_PROTOCOL_H
 
 #include "CodalConfig.h"
+#include "CodalComponent.h"
 #include "ErrorNo.h"
-#include "Pin.h"
 #include "Event.h"
-#include "DMASingleWireSerial.h"
-#include "LowLevelTimer.h"
+#include "JDPhysicalLayer.h"
+#include "ManagedString.h"
+#include "codal_target_hal.h"
 
-#define JD_VERSION                     0
 
-// various timings in microseconds
-// 8 data bits, 1 start bit, 1 stop bit.
-#define JD_BYTE_AT_125KBAUD                                 80
-// the maximum permitted time between bytes
-#define JD_MAX_INTERBYTE_SPACING                            (2 * JD_BYTE_AT_125KBAUD)
-// the minimum permitted time between the data packets
-#define JD_MIN_INTERFRAME_SPACING                           (2 * JD_BYTE_AT_125KBAUD)
-// the time it takes for the bus to be considered in a normal state
-#define JD_BUS_NORMALITY_PERIOD                             (2 * JD_BYTE_AT_125KBAUD)
-// the minimum permitted time between the low pulse and data being received is 40 us
-#define JD_MIN_INTERLODATA_SPACING                          40
-// max spacing is 3 times 1 byte at minimum baud rate (240 us)
-#define JD_MAX_INTERLODATA_SPACING                          (3 * JD_BYTE_AT_125KBAUD)
+// the following defines should really be in separate head files, but circular includes suck.
 
-#define JD_SERIAL_MAX_BUFFERS           10
+// BEGIN    JD SERIAL SERVICE FLAGS
+#define JD_SERVICE_EVT_CONNECTED         65520
+#define JD_SERVICE_EVT_DISCONNECTED      65521
+#define JD_SERVICE_EVT_PAIRED            65522
+#define JD_SERVICE_EVT_UNPAIRED          65523
+#define JD_SERVICE_EVT_PAIR_REJECTED     65524
+#define JD_SERVICE_EVT_PAIRING_RESPONSE  65525
+#define JD_SERVICE_EVT_ERROR             65526
+// end combo flags
 
-#define JD_SERIAL_MAX_SERVICE_NUMBER    15
+#define JD_SERVICE_NUMBER_UNITIALISED_VAL              65535  // used as the service_number when a service is not initialised
+#define JD_SERVICE_STATUS_FLAGS_INITIALISED     0x02 // device service is running
+// END      JD SERIAL SERVICE FLAGS
 
-#define JD_SERIAL_RECEIVING             0x0002
-#define JD_SERIAL_RECEIVING_HEADER      0x0004
-#define JD_SERIAL_TRANSMITTING          0x0008
-#define JD_SERIAL_TX_DRAIN_ENABLE       0x0010
 
-#define JD_SERIAL_BUS_LO_ERROR          0x0020
-#define JD_SERIAL_BUS_TIMEOUT_ERROR     0x0040
-#define JD_SERIAL_BUS_UART_ERROR        0x0080
-#define JD_SERIAL_ERR_MSK               0x00E0
+// BEGIN    CONTROL SERVICE FLAGS
+#define JD_CONTROL_SERVICE_STATUS_ENUMERATE                 0x02
+#define JD_CONTROL_SERVICE_STATUS_ENUMERATING               0x04
+#define JD_CONTROL_SERVICE_STATUS_ENUMERATED                0x08
 
-#define JD_SERIAL_BUS_STATE             0x0100
-#define JD_SERIAL_BUS_TOGGLED           0x0200
-#define JD_SERIAL_LO_PULSE_START        0x0400
+#define JD_CONTROL_SERVICE_EVT_CHANGED                      2
+#define JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK               3
 
-#define JD_SERIAL_EVT_DATA_READY       1
-#define JD_SERIAL_EVT_BUS_ERROR        2
-#define JD_SERIAL_EVT_CRC_ERROR        3
-#define JD_SERIAL_EVT_DRAIN            4
-#define JD_SERIAL_EVT_RX_TIMEOUT       5
+// pairing mode comes later... ;)
+// #define JD_DEVICE_FLAGS_RESERVED                        0x80
+// #define JD_DEVICE_FLAGS_PAIRING_MODE                    0x40 // in pairing mode, control packets aren't forwarded to services
+// #define JD_DEVICE_FLAGS_PAIRABLE                        0x20 // advertises that a service can be optionally paired with another
+// #define JD_DEVICE_FLAGS_PAIRED                          0x10 // advertises that a service is already paired with another.
 
-#define JD_SERIAL_EVT_BUS_CONNECTED    5
-#define JD_SERIAL_EVT_BUS_DISCONNECTED 6
+#define JD_DEVICE_FLAGS_NACK                            0x08
+#define JD_DEVICE_FLAGS_HAS_NAME                        0x04
+#define JD_DEVICE_FLAGS_PROPOSING                       0x02
+#define JD_DEVICE_FLAGS_REJECT                          0x01
 
-#define JD_SERIAL_HEADER_SIZE          4
-#define JD_SERIAL_CRC_HEADER_SIZE      2  // when computing CRC, we skip the CRC and version fields, so the header size decreases by three.
-#define JD_SERIAL_MAX_PAYLOAD_SIZE     255
+#define JD_SERVICE_INFO_MAX_PAYLOAD_SIZE                 16
 
-#define JD_SERIAL_MAXIMUM_BUFFERS      10
+// END      CONTROL SERVICE FLAGS
 
-#define JD_SERIAL_DMA_TIMEOUT          2   // 2 callback ~8 ms
 
-#define JD_SERIAL_MAX_BAUD             1000000
-#define JD_SERIAL_TX_MAX_BACKOFF       1000
+// BEGIN    JACDAC
 
-#define JD_RX_ARRAY_SIZE               10
-#define JD_TX_ARRAY_SIZE               10
+#define JD_STARTED                                      0x02
 
-#if CONFIG_ENABLED(JD_DEBUG)
-#define JD_DMESG      codal_dmesg
-#else
-#define JD_DMESG(...) ((void)0)
-#endif
+#include "JDClasses.h"
+
+#define JD_PROTOCOL_SERVICE_ARRAY_SIZE                  20
+#define JD_MAX_HOST_SERVICES                            16
+
+#define JD_SERVICE_INFO_HEADER_SIZE                     6
+#define JD_CONTROL_PACKET_HEADER_SIZE                   10
+
+#define JD_MAX_PACKET_SIZE                              255
 
 namespace codal
 {
-    struct JDPacket
-    {
-        uint16_t crc:12, service_number:4; // crc is stored in the first 12 bits, service number in the final 4 bits
-        uint8_t device_address; // control is 0, devices are allocated address in the range 1 - 255
-        uint8_t size; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.
-        uint8_t data[JD_SERIAL_MAX_PAYLOAD_SIZE];
-        uint8_t communication_rate;
-    };
+    class JACDAC;
 
-    enum class JDBusState : uint8_t
+    // This enumeration specifies that supported configurations that services should utilise.
+    // Many combinations of flags are supported, but only the ones listed here have been fully implemented.
+    enum JDServiceMode
     {
-        Receiving,
-        Transmitting,
-        High,
-        Low
-    };
-
-    enum class JDSerialState : uint8_t
-    {
-        ListeningForPulse,
-        ErrorRecovery,
-        Off
+        ClientService, // the service is seeking the use of another device's resource
+        HostService, // the service is hosting a resource for others to use.
+        BroadcastHostService // the service is enumerated with its own address, and receives all packets of the same class (including control packets)
     };
 
     /**
-     * This enumeration defines the low time of the tx pulse, and the transmission speed of
-     * this JACDAC device on the bus.
+     * This struct represents a JDControlPacket used by the logic service
+     * A control packet provides full information about a service, it's most important use is to translates the address used in
+     * standard packets to the full service information. Standard packet address == control packet address.
+     *
+     * Currently there are two types of packet:
+     * CONTROL_JD_TYPE_HELLO - Which broadcasts the availablity of a service
+     * CONTROL_JD_TYPE_PAIRING_REQUEST - Used when services are pairing to one another.
      **/
-    enum class JDBaudRate : uint8_t
+    struct JDControlPacket
     {
-        Baud1M = 1,
-        Baud500K = 2,
-        Baud250K = 4,
-        Baud125K = 8
+        uint64_t udid; // the "unique" serial number of the device.
+        uint8_t device_address;
+        uint8_t device_flags;
+        uint8_t data[];
+    } __attribute((__packed__));
+
+    struct JDServiceInformation
+    {
+        uint32_t service_class;  // the class of the service
+        uint8_t service_flags;
+        uint8_t advertisement_size;
+        uint8_t data[]; // optional additional data, maximum of 16 bytes
+    } __attribute((__packed__));
+
+    struct JDDevice
+    {
+        uint64_t udid;
+        uint8_t device_flags;
+        uint8_t device_address;
+        uint8_t communication_rate;
+        uint8_t rolling_counter;
+        uint8_t broadcast_servicemap[JD_MAX_HOST_SERVICES / 2]; // use to map remote broadcast services to local broadcast services.
+        JDDevice* next;
+        uint8_t* name;
     };
 
-    enum JDBusErrorState : uint16_t
+    class JACDAC;
+
+    /**
+     * This class presents a common abstraction for all JDServices. It also contains some default member functions to perform common operations.
+     * This should be subclassed by any service implementation
+     **/
+    class JDService : public CodalComponent
     {
-        Continuation = 0,
-        BusLoError = JD_SERIAL_BUS_LO_ERROR,
-        BusTimeoutError = JD_SERIAL_BUS_TIMEOUT_ERROR,
-        BusUARTError = BusTimeoutError // a different error code, but we want the same behaviour.
+        friend class JDControlService;
+        friend class JACDAC;
+        // the above need direct access to our member variables and more
+
+        protected:
+
+        // Due to the dynamic nature of JACDAC when a new service is created, this variable is incremented.
+        // JACDAC id's are allocated from 3000 - 4000
+        static uint32_t dynamicId;
+
+        JDServiceMode mode;
+        uint32_t service_class;
+        uint16_t service_number;
+        uint8_t service_flags;
+
+        JDDevice* device;
+        JDDevice* requiredDevice;
+
+        /**
+         * This method internally redirects specific packets from the control service.
+         *
+         * i.e. it switches the type of the logic packet, and redirects it to handleControlPacket or handlePairingPacket accordingly.
+         **/
+        int handleLogicPacket(JDControlPacket* cp);
+
+        /**
+         * Called by the logic service when a new state is connected to the serial bus
+         *
+         * @param state an instance of JDServiceState representing the device that has been connected
+         *
+         * @return SERVICE_STATE_OK for success
+         **/
+        virtual int hostConnected();
+
+        /**
+         * Called by the logic service when this service has been disconnected from the serial bus.
+         *
+         * This is only called if a service is in VirtualMode and the virtualised device disappears from the bus.
+         *
+         * @return SERVICE_STATE_OK for success
+         **/
+        virtual int hostDisconnected();
+
+        /**
+         * A convenience function that calls JACDAC->send with parameters supplied from this instances' JDServiceState
+         *
+         * @param buf the data to send
+         * @param len the length of the data.
+         *
+         * @return SERVICE_STATE_OK on success.
+         **/
+        virtual int send(uint8_t* buf, int len);
+
+        public:
+
+        /**
+         * Constructor
+         *
+         * */
+        JDService(uint32_t serviceClass, JDServiceMode m);
+
+        /**
+         * Invoked by the logic service when it is queuing a control packet.
+         *
+         * This allows the addition of service specific control packet information and the setting of any additional flags.
+         *
+         * @param p A pointer to the packet, where the data field contains a pre-filled control packet.
+         *
+         * @return SERVICE_STATE_OK on success
+         **/
+        virtual int addAdvertisementData(uint8_t* data);
+
+        /**
+         * Invoked by the logic service when a control packet with the address of the service is received.
+         *
+         * Control packets are routed by address, or by class in broadcast mode. Services
+         * can override this function to handle additional payloads in control packet.s
+         *
+         * @param p the packet from the serial bus. Services should cast p->data to a JDControlPacket.
+         *
+         * @return SERVICE_STATE_OK to signal that the packet has been handled, or SERVICE_STATE_CANCELLED to indicate the logic service
+         *         should continue to search for a service.
+         **/
+        virtual int handleServiceInformation(JDDevice* device, JDServiceInformation* info);
+
+        /**
+         * Invoked by the Protocol service when a standard packet with the address of the service is received.
+         *
+         * @param p the packet from the serial bus. Services should cast p->data to their agreed upon structure..
+         *
+         * @return SERVICE_STATE_OK to signal that the packet has been handled, or SERVICE_STATE_CANCELLED to indicate the logic service
+         *         should continue to search for a service.
+         **/
+        virtual int handlePacket(JDPacket* p);
+
+        /**
+         * Returns the current connected state of this service instance.
+         *
+         * @return true for connected, false for disconnected
+         **/
+        virtual bool isConnected();
+
+        /**
+         * Retrieves the device instance of the remote device
+         *
+         * @return the address.
+         **/
+        JDDevice* getHostDevice();
+
+        /**
+         * Retrieves the class of the service.
+         *
+         * @return the class.
+         **/
+        uint32_t getServiceClass();
+
+        /**
+         * Destructor, removes this service from the services array and deletes the pairedInstance member variable if allocated.
+         **/
+        ~JDService();
     };
 
     /**
-    * Class definition for a JACDAC interface.
-    */
+     * This class represents the logic service, which is consistent across all JACDAC devices.
+     *
+     * It handles addressing and the routing of control packets from the bus to their respective services.
+     **/
+    class JDControlService : public JDService
+    {
+        JDDevice* remoteDevices;
+        JDDevice* controller;
+        JDControlPacket* enumerationData;
+
+        ManagedString deviceName;
+
+        /**
+         * This member function periodically iterates across all services and performs various actions. It handles the sending
+         * of control packets, address assignments for local services, and the connection and disconnection of services as they
+         * are added or removed from the bus.
+         **/
+        void timerCallback(Event);
+
+        void setConnectionState(bool state, JDDevice* device);
+
+        JDDevice* getRemoteDevice(uint8_t device_address, uint64_t udid);
+
+        JDDevice* addRemoteDevice(JDControlPacket* remoteDevice, uint8_t communicationRate);
+
+        int removeRemoteDevice(JDDevice* device);
+
+        int formControlPacket();
+
+        int send(uint8_t* buf, int len) override;
+
+        public:
+
+        /**
+         * Constructor.
+         *
+         * Creates a local initialised service and adds itself to the service array.
+         **/
+        JDControlService(ManagedString deviceName);
+
+        /**
+         * Overrided for future use. It might be useful to control the behaviour of the logic service in the future.
+         **/
+        virtual int handleServiceInformation(JDDevice* device, JDServiceInformation* p) override;
+
+        /**
+         * Called by the JACDAC when a data packet has address 0.
+         *
+         * Packets addressed to zero will always be control packets, this function then iterates over all services
+         * routing control packets correctly. Virtual services are populated if a packet is not handled by an existing service.
+         *
+         * @param p the packet from the serial bus.
+         **/
+        virtual int handlePacket(JDPacket* p) override;
+
+        /**
+         *
+         **/
+        JDDevice* getRemoteDevice(uint8_t device_address);
+
+        /**
+         *
+         **/
+        int enumerate();
+
+        /**
+         *
+         **/
+        bool isEnumerated();
+
+        /**
+         *
+         **/
+        bool isEnumerating();
+
+        /**
+         *
+         **/
+        int disconnect();
+
+        ManagedString getDeviceName();
+
+        int setDeviceName(ManagedString name);
+    };
+
+    /**
+     * This class handles packets produced by the JACDAC physical layer and passes them to our high level services.
+     **/
     class JACDAC : public CodalComponent
     {
-        JDBaudRate maxBaud;
-        JDBaudRate currentBaud;
-        uint8_t bufferOffset;
+        friend class JDControlService;
 
-    protected:
-        DMASingleWireSerial&  sws;
-        Pin&  sp;
-        LowLevelTimer& timer;
+        /**
+         * Invoked by JACDAC when a packet is received from the serial bus.
+         *
+         * This handler is invoked in standard conext. This also means that users can stop the device from handling packets.
+         * (which might be a bad thing).
+         *
+         * This handler continues to pull packets from the queue and iterate over services.
+         **/
+        void onPacketReceived(Event);
 
-        Pin* busLED;
-        Pin* commLED;
+        // An instance of our logic service
+        JDControlService controlService;
 
-        JDSerialState state;
+        // A pointer to a bridge service (if set, defaults to NULL).
+        JDService* bridge;
 
-        uint32_t startTime;
-        uint32_t lastBufferedCount;
+        public:
 
+        // this array holds all services on the device
+        static JDService* services[JD_PROTOCOL_SERVICE_ARRAY_SIZE];
 
-        void loPulseDetected(uint32_t);
-        void setState(JDSerialState s);
-        void dmaComplete(Event evt);
+        // a reference to a JACDAC instance
+        JDPhysicalLayer& bus;
 
-        JDPacket* popRxArray();
-        JDPacket* popTxArray();
-        int addToTxArray(JDPacket* packet);
-        int addToRxArray(JDPacket* packet);
-        void sendPacket();
-        void initialise();
-        void errorState(JDBusErrorState);
-
-    public:
-
+        // a singleton pointer to the current instance of JACDAC.
         static JACDAC* instance;
 
-        uint8_t txHead;
-        uint8_t txTail;
-        uint8_t rxHead;
-        uint8_t rxTail;
-
-        JDPacket* rxBuf; // holds the pointer to the current rx buffer
-        JDPacket* txBuf; // holds the pointer to the current tx buffer
-        JDPacket* rxArray[JD_RX_ARRAY_SIZE];
-        JDPacket* txArray[JD_TX_ARRAY_SIZE];
-
         /**
-          * Constructor
-          *
-          * @param sws an instance of sws.
-          *
-          * @param busStateLED an instance of a pin, used to display the state of the bus.
-          *
-          * @param commStateLED an instance of a pin, used to display the state of the bus.
-          *
-          * @param baud Defaults to 1mbaud
-          */
-        JACDAC(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busStateLED = NULL, Pin* commStateLED = NULL, JDBaudRate baud = JDBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
-
-        /**
-          * Retrieves the first packet on the rxQueue regardless of the device_class
-          *
-          * @returns the first packet on the rxQueue or NULL
-          */
-        JDPacket *getPacket();
-
-        /**
-          * Causes this instance of JACDAC to begin listening for packets transmitted on the serial line.
-          */
-        virtual void start();
-
-        /**
-          * Causes this instance of JACDAC to stop listening for packets transmitted on the serial line.
-          */
-        virtual void stop();
-
-        /**
-          * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
-          * If an ongoing asynchronous transmission is happening, JD is added to the txQueue. If this is the first packet in a while
-          * asynchronous transmission is begun.
-          *
-          * @param JD the packet to send.
-          *
-          * @param compute_crc default = true. When true, the crc is calculated in this member function... if set to false, the crc field is left untouched.
-          *
-          * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
-          */
-        virtual int send(JDPacket *p, bool compute_crc = true);
-
-        /**
-          * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
-          * If an ongoing asynchronous transmission is happening, JD is added to the txQueue. If this is the first packet in a while
-          * asynchronous transmission is begun.
-          *
-          * @param buf the buffer to send.
-          *
-          * @param len the length of the buffer to send.
-          *
-          * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
-          */
-        virtual int send(uint8_t* buf, int len, uint8_t address, uint8_t service_number, JDBaudRate communicationRate);
-
-        /**
-         * Returns a bool indicating whether the JACDAC driver has been started.
+         * Constructor
          *
-         * @return true if started, false if not.
+         * @param JD A reference to JACDAC for communicators
+         *
+         * @param id for the message bus, defaults to  SERVICE_STATE_ID_JACDAC_PROTOCOL
          **/
-        bool isRunning();
+        JACDAC(JDPhysicalLayer& bus, ManagedString deviceName = ManagedString(), uint16_t id = DEVICE_ID_JACDAC_PROTOCOL);
 
         /**
-         * Returns the current state if the bus.
+         * Sets the bridge member variable to the given JDService pointer.
          *
-         * @return true if connected, false if there's a bad bus condition.
+         * Bridge services are given all packets received on the bus, the idea being that
+         * packets can be bridged to another networking medium, i.e. packet radio.
+         *
+         * @param bridge the service to forward all packets to another networking medium
+         *        this service will receive all packets via the handlePacket call. If NULL
+         *        is given, the bridge member variable is cleared.
+         *
+         * @note one limitation is that the bridge service does not receive packets over the radio itself.
+         *       Ultimately the bridge should punt packets back intro JACDAC for correct handling.
          **/
-        bool isConnected();
+        int setBridge(JDService* bridge);
 
         /**
-         * Returns the current state of the bus, either:
+         * Set the name to use for error codes and panics
          *
-         * * Receiving if the driver is in the process of receiving a packet.
-         * * Transmitting if the driver is communicating a packet on the bus.
+         * @param s the name to use for error codes and panic's
          *
-         * If neither of the previous states are true, then the driver looks at the bus and returns the bus state:
-         *
-         * * High, if the line is currently floating high.
-         * * Lo if something is currently pulling the line low.
+         * @note Must be 6 characters or smaller.
          **/
-        JDBusState getState();
+        static int setDeviceName(ManagedString s);
 
         /**
-         * Sets the maximum baud rate which is used as a default (if no communication rate is given in any packet), and as
-         * a maximum reception rate.
+         * Retrieve the name used for error codes and panics
          *
-         * @param baudRate the desired baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
-         *
-         * @returns DEVICE_OK on success
+         * @return the name used for error codes and panics
          **/
-        int setMaximumBaud(JDBaudRate baudRate);
+        static ManagedString getDeviceName();
 
         /**
-         * Returns the current maximum baud rate.
+         * Adds a service to the services array. The logic service iterates over this array.
          *
-         * @returns the enumerated baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
+         * @param device a reference to the service to add.
+         *
+         * @return SERVICE_STATE_OK on success.
          **/
-        JDBaudRate getMaximumBaud();
+        virtual int add(JDService& device);
 
-        void _timerCallback(uint16_t channels);
-        void _gpioCallback(int state);
+        /**
+         * removes a service from the services array. The logic service iterates over this array.
+         *
+         * @param device a reference to the service to remove.
+         *
+         * @return SERVICE_STATE_OK on success.
+         **/
+        virtual int remove(JDService& device);
+
+        /**
+         * A static method to send an entire, premade JDPacket on the bus. Used by the logic service.
+         *
+         * @param pkt the packet to send.
+         *
+         * @return SERVICE_STATE_OK on success.
+         **/
+        static int send(JDPacket* pkt);
+
+        /**
+         * Logs the current state of JACDAC services.
+         **/
+        void logState();
+
+        int start();
+
+        int stop();
     };
+
 } // namespace codal
 
 #endif

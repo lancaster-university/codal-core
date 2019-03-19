@@ -1,7 +1,7 @@
 #ifndef JD_ACCELEROMETER_SERVICE_H
 #define JD_ACCELEROMETER_SERVICE_H
 
-#include "JDControlLayer.h"
+#include "JACDAC.h"
 #include "Accelerometer.h"
 
 #define JD_ACCEL_EVT_SEND_DATA      1
