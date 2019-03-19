@@ -49,6 +49,8 @@ void Serial::dataReceived(char c)
                 rxBuffHeadMatch = -1;
                 Event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
             }
+
+        status |= CODAL_SERIAL_STATUS_RXD;
     }
     else
         //otherwise, our buffer is full, send an event to the user...
@@ -99,6 +101,15 @@ int Serial::setTxInterrupt(uint8_t *string, int len, SerialMode mode)
     enableInterrupt(TxInterrupt);
 
     return copiedBytes;
+}
+
+void Serial::idleCallback()
+{
+    if (this->status & CODAL_SERIAL_STATUS_RXD)
+    {
+        Event(this->id, CODAL_SERIAL_EVT_DATA_RECEIVED);
+        this->status &= ~CODAL_SERIAL_STATUS_RXD;
+    }
 }
 
 /**
@@ -270,6 +281,8 @@ Serial::Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize, uint8_t txBufferSize, uin
     this->txBuffTail = 0;
 
     this->rxBuffHeadMatch = -1;
+
+    this->status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 }
 
 /**
