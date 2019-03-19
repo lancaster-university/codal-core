@@ -17,7 +17,7 @@ using namespace codal;
 
 void Serial::dataReceived(char c)
 {
-    if(!(status & CODAL_SERIAL_RX_BUFF_INIT))
+    if(!(status & CODAL_SERIAL_STATUS_RX_BUFF_INIT))
         return;
 
     int delimeterOffset = 0;
@@ -49,6 +49,8 @@ void Serial::dataReceived(char c)
                 rxBuffHeadMatch = -1;
                 Event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
             }
+
+        status |= CODAL_SERIAL_STATUS_RXD;
     }
     else
         //otherwise, our buffer is full, send an event to the user...
@@ -57,7 +59,7 @@ void Serial::dataReceived(char c)
 
 void Serial::dataTransmitted()
 {
-    if(!(status & CODAL_SERIAL_TX_BUFF_INIT))
+    if(!(status & CODAL_SERIAL_STATUS_TX_BUFF_INIT))
         return;
 
     //send our current char
@@ -101,12 +103,21 @@ int Serial::setTxInterrupt(uint8_t *string, int len, SerialMode mode)
     return copiedBytes;
 }
 
+void Serial::idleCallback()
+{
+    if (this->status & CODAL_SERIAL_STATUS_RXD)
+    {
+        Event(this->id, CODAL_SERIAL_EVT_DATA_RECEIVED);
+        this->status &= ~CODAL_SERIAL_STATUS_RXD;
+    }
+}
+
 /**
      * Locks the mutex so that others can't use this serial instance for reception
      */
 void Serial::lockRx()
 {
-    status |= CODAL_SERIAL_RX_IN_USE;
+    status |= CODAL_SERIAL_STATUS_RX_IN_USE;
 }
 
 /**
@@ -114,7 +125,7 @@ void Serial::lockRx()
      */
 void Serial::lockTx()
 {
-    status |= CODAL_SERIAL_TX_IN_USE;
+    status |= CODAL_SERIAL_STATUS_TX_IN_USE;
 }
 
 /**
@@ -122,7 +133,7 @@ void Serial::lockTx()
      */
 void Serial::unlockRx()
 {
-    status &= ~CODAL_SERIAL_RX_IN_USE;
+    status &= ~CODAL_SERIAL_STATUS_RX_IN_USE;
 }
 
 /**
@@ -130,7 +141,7 @@ void Serial::unlockRx()
      */
 void Serial::unlockTx()
 {
-    status &= ~CODAL_SERIAL_TX_IN_USE;
+    status &= ~CODAL_SERIAL_STATUS_TX_IN_USE;
 }
 
 /**
@@ -139,14 +150,14 @@ void Serial::unlockTx()
      */
 int Serial::initialiseRx()
 {
-    if((status & CODAL_SERIAL_RX_BUFF_INIT))
+    if((status & CODAL_SERIAL_STATUS_RX_BUFF_INIT))
     {
         //ensure that we receive no interrupts after freeing our buffer
         disableInterrupt(RxInterrupt);
         free(this->rxBuff);
     }
 
-    status &= ~CODAL_SERIAL_RX_BUFF_INIT;
+    status &= ~CODAL_SERIAL_STATUS_RX_BUFF_INIT;
 
     if((this->rxBuff = (uint8_t *)malloc(rxBuffSize)) == NULL)
         return DEVICE_NO_RESOURCES;
@@ -155,7 +166,7 @@ int Serial::initialiseRx()
     this->rxBuffTail = 0;
 
     //set the receive interrupt
-    status |= CODAL_SERIAL_RX_BUFF_INIT;
+    status |= CODAL_SERIAL_STATUS_RX_BUFF_INIT;
     enableInterrupt(RxInterrupt);
 
     return DEVICE_OK;
@@ -167,14 +178,14 @@ int Serial::initialiseRx()
      */
 int Serial::initialiseTx()
 {
-    if((status & CODAL_SERIAL_TX_BUFF_INIT))
+    if((status & CODAL_SERIAL_STATUS_TX_BUFF_INIT))
     {
         //ensure that we receive no interrupts after freeing our buffer
         disableInterrupt(TxInterrupt);
         free(this->txBuff);
     }
 
-    status &= ~CODAL_SERIAL_TX_BUFF_INIT;
+    status &= ~CODAL_SERIAL_STATUS_TX_BUFF_INIT;
 
     if((this->txBuff = (uint8_t *)malloc(txBuffSize)) == NULL)
         return DEVICE_NO_RESOURCES;
@@ -182,7 +193,7 @@ int Serial::initialiseTx()
     this->txBuffHead = 0;
     this->txBuffTail = 0;
 
-    status |= CODAL_SERIAL_TX_BUFF_INIT;
+    status |= CODAL_SERIAL_STATUS_TX_BUFF_INIT;
 
     return DEVICE_OK;
 }
@@ -270,6 +281,8 @@ Serial::Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize, uint8_t txBufferSize, uin
     this->txBuffTail = 0;
 
     this->rxBuffHeadMatch = -1;
+
+    this->status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 }
 
 /**
@@ -303,7 +316,7 @@ int Serial::sendChar(char c, SerialMode mode)
     lockTx();
 
     //lazy initialisation of our tx buffer
-    if(!(status & CODAL_SERIAL_TX_BUFF_INIT))
+    if(!(status & CODAL_SERIAL_STATUS_TX_BUFF_INIT))
     {
         int result = initialiseTx();
 
@@ -388,7 +401,7 @@ int Serial::send(uint8_t *buffer, int bufferLen, SerialMode mode)
     lockTx();
 
     //lazy initialisation of our tx buffer
-    if(!(status & CODAL_SERIAL_TX_BUFF_INIT))
+    if(!(status & CODAL_SERIAL_STATUS_TX_BUFF_INIT))
     {
         int result = initialiseTx();
 
@@ -502,7 +515,7 @@ int Serial::read(SerialMode mode)
     lockRx();
 
     //lazy initialisation of our buffers
-    if(!(status & CODAL_SERIAL_RX_BUFF_INIT))
+    if(!(status & CODAL_SERIAL_STATUS_RX_BUFF_INIT))
     {
         int result = initialiseRx();
 
@@ -636,7 +649,7 @@ int Serial::read(uint8_t *buffer, int bufferLen, SerialMode mode)
     lockRx();
 
     //lazy initialisation of our rx buffer
-    if(!(status & CODAL_SERIAL_RX_BUFF_INIT))
+    if(!(status & CODAL_SERIAL_STATUS_RX_BUFF_INIT))
     {
         int result = initialiseRx();
 
@@ -718,7 +731,7 @@ ManagedString Serial::readUntil(ManagedString delimeters, SerialMode mode)
         return ManagedString();
 
     //lazy initialisation of our rx buffer
-    if(!(status & CODAL_SERIAL_RX_BUFF_INIT))
+    if(!(status & CODAL_SERIAL_STATUS_RX_BUFF_INIT))
     {
         int result = initialiseRx();
 
@@ -1109,7 +1122,7 @@ int Serial::txBufferedSize()
  */
 int Serial::rxInUse()
 {
-    return (status & CODAL_SERIAL_RX_IN_USE);
+    return (status & CODAL_SERIAL_STATUS_RX_IN_USE);
 }
 
 /**
@@ -1121,7 +1134,7 @@ int Serial::rxInUse()
  */
 int Serial::txInUse()
 {
-    return (status & CODAL_SERIAL_TX_IN_USE);
+    return (status & CODAL_SERIAL_STATUS_TX_IN_USE);
 }
 
 Serial::~Serial()
