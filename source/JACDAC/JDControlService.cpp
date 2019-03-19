@@ -1,7 +1,7 @@
+#include "CodalConfig.h"
 #include "JDControlLayer.h"
 #include "CodalDmesg.h"
 #include "Timer.h"
-#include "CodalCompat.h"
 
 using namespace codal;
 

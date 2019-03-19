@@ -41,6 +41,13 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_DEBUG_HEAP                      2
 #endif
 
+
+#define CODAL_ASSERT(cond, panic_num) {\
+  if (!(cond)) \
+      target_panic(panic_num);\
+}
+
+
 #include "platform_includes.h"
 
 // Enables or disables the DeviceHeapllocator. Note that if disabled, no reuse of the SRAM normally
@@ -52,7 +59,7 @@ DEALINGS IN THE SOFTWARE.
 
 //
 // The CODAL heap allocator supports the use of multiple, independent heap regions if needed.
-// This defines the maximum number of heap regions permitted. 
+// This defines the maximum number of heap regions permitted.
 // n.b. Setting this option to '1' will also optimise the heap allocator for code space.
 //
 #ifndef DEVICE_MAXIMUM_HEAPS
@@ -153,7 +160,7 @@ DEALINGS IN THE SOFTWARE.
 #endif
 
 // When set to '1', this option enables parameter validation checking into low level system modules
-// such as the heap alloctor and scheduler. When set to '0', these checks will not take place resulting in 
+// such as the heap alloctor and scheduler. When set to '0', these checks will not take place resulting in
 // lower code size and faster operation of low level component.
 //
 #ifndef CODAL_LOW_LEVEL_VALIDATION
