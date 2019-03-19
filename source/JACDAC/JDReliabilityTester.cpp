@@ -2,7 +2,6 @@
 #include "CodalDmesg.h"
 #include "CodalFiber.h"
 
-#ifdef FOO
 using namespace codal;
 
 JDReliabilityTester::JDReliabilityTester(Pin& p, uint32_t max_count) : JDService(JD_SERVICE_CLASS_RELIABILITY_TESTER, ClientService), pin(&p)
@@ -134,4 +133,3 @@ int JDReliabilityTester::handlePacket(JDPacket* p)
 
     return DEVICE_OK;
 }
-#endif
