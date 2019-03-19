@@ -29,74 +29,17 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalComponent.h"
 #include "ErrorNo.h"
 #include "Event.h"
-#include "JDPhysicalLayer.h"
+#include "JDControlService.h"
 #include "ManagedString.h"
 #include "codal_target_hal.h"
-
-
-// the following defines should really be in separate head files, but circular includes suck.
-
-// BEGIN    JD SERIAL SERVICE FLAGS
-#define JD_SERVICE_EVT_CONNECTED         65520
-#define JD_SERVICE_EVT_DISCONNECTED      65521
-#define JD_SERVICE_EVT_PAIRED            65522
-#define JD_SERVICE_EVT_UNPAIRED          65523
-#define JD_SERVICE_EVT_PAIR_REJECTED     65524
-#define JD_SERVICE_EVT_PAIRING_RESPONSE  65525
-#define JD_SERVICE_EVT_ERROR             65526
-// end combo flags
-
-#define JD_SERVICE_NUMBER_UNITIALISED_VAL              65535  // used as the service_number when a service is not initialised
-#define JD_SERVICE_STATUS_FLAGS_INITIALISED     0x02 // device service is running
-// END      JD SERIAL SERVICE FLAGS
-
-
-// BEGIN    CONTROL SERVICE FLAGS
-#define JD_CONTROL_SERVICE_STATUS_ENUMERATE                 0x02
-#define JD_CONTROL_SERVICE_STATUS_ENUMERATING               0x04
-#define JD_CONTROL_SERVICE_STATUS_ENUMERATED                0x08
-
-#define JD_CONTROL_SERVICE_EVT_CHANGED                      2
-#define JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK               3
-
-// pairing mode comes later... ;)
-// #define JD_DEVICE_FLAGS_RESERVED                        0x80
-// #define JD_DEVICE_FLAGS_PAIRING_MODE                    0x40 // in pairing mode, control packets aren't forwarded to services
-// #define JD_DEVICE_FLAGS_PAIRABLE                        0x20 // advertises that a service can be optionally paired with another
-// #define JD_DEVICE_FLAGS_PAIRED                          0x10 // advertises that a service is already paired with another.
-
-#define JD_DEVICE_FLAGS_NACK                            0x08
-#define JD_DEVICE_FLAGS_HAS_NAME                        0x04
-#define JD_DEVICE_FLAGS_PROPOSING                       0x02
-#define JD_DEVICE_FLAGS_REJECT                          0x01
-
-#define JD_SERVICE_INFO_MAX_PAYLOAD_SIZE                 16
-
-// END      CONTROL SERVICE FLAGS
-
 
 // BEGIN    JACDAC
 
 #define JD_STARTED                                      0x02
-
-#include "JDClasses.h"
-
-#define JD_PROTOCOL_SERVICE_ARRAY_SIZE                  20
-#define JD_MAX_HOST_SERVICES                            16
-
-#define JD_SERVICE_INFO_HEADER_SIZE                     6
-#define JD_CONTROL_PACKET_HEADER_SIZE                   10
-
-#define JD_MAX_PACKET_SIZE                              255
-
-#include "JDService.h"
-#include "JDControlService.h"
+#define JD_SERVICE_ARRAY_SIZE                           20
 
 namespace codal
 {
-    class JDService;
-    class JDControlService;
-
     /**
      * This class handles packets produced by the JACDAC physical layer and passes them to our high level services.
      **/
@@ -123,7 +66,7 @@ namespace codal
         public:
 
         // this array holds all services on the device
-        static JDService* services[JD_PROTOCOL_SERVICE_ARRAY_SIZE];
+        static JDService* services[JD_SERVICE_ARRAY_SIZE];
 
         // a reference to a JACDAC instance
         JDPhysicalLayer& bus;

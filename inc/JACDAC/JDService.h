@@ -3,7 +3,24 @@
 
 #include "CodalComponent.h"
 #include "JDPhysicalLayer.h"
-#include "JACDAC.h"
+#include "JDServiceClasses.h"
+
+#define JD_MAX_HOST_SERVICES                            16
+
+// BEGIN    JD SERIAL SERVICE FLAGS
+#define JD_SERVICE_EVT_CONNECTED                        65520
+#define JD_SERVICE_EVT_DISCONNECTED                     65521
+#define JD_SERVICE_EVT_ERROR                            65526
+#define JD_SERVICE_NUMBER_UNITIALISED_VAL               65535  // used as the service_number when a service is not initialised
+#define JD_SERVICE_STATUS_FLAGS_INITIALISED             0x02 // device service is running
+// END      JD SERIAL SERVICE FLAGS
+
+#define JD_DEVICE_FLAGS_NACK                            0x08
+#define JD_DEVICE_FLAGS_HAS_NAME                        0x04
+#define JD_DEVICE_FLAGS_PROPOSING                       0x02
+#define JD_DEVICE_FLAGS_REJECT                          0x01
+
+#define JD_SERVICE_INFO_HEADER_SIZE                     6
 
 namespace codal
 {

@@ -2,6 +2,16 @@
 #define CODAL_JD_CONTROL_SERVICE_H
 
 #include "JDService.h"
+#include "ManagedString.h"
+
+#define JD_CONTROL_SERVICE_STATUS_ENUMERATE                 0x02
+#define JD_CONTROL_SERVICE_STATUS_ENUMERATING               0x04
+#define JD_CONTROL_SERVICE_STATUS_ENUMERATED                0x08
+
+#define JD_CONTROL_SERVICE_EVT_CHANGED                      2
+#define JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK               3
+
+#define JD_CONTROL_PACKET_HEADER_SIZE                   10
 
 namespace codal
 {

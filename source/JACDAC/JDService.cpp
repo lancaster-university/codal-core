@@ -26,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #include "codal_target_hal.h"
 #include "EventModel.h"
 #include "CodalFiber.h"
+#include "JACDAC.h"
 
 using namespace codal;
 

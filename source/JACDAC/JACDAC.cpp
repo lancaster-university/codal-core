@@ -32,7 +32,7 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
-JDService* JACDAC::services[JD_PROTOCOL_SERVICE_ARRAY_SIZE] = { 0 };
+JDService* JACDAC::services[JD_SERVICE_ARRAY_SIZE] = { 0 };
 
 JACDAC* JACDAC::instance = NULL;
 
@@ -66,7 +66,7 @@ void JACDAC::onPacketReceived(Event)
                 host_service_number = -1;
 
             // handle initialised services
-            for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
+            for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
             {
                 JDService* service = this->services[i];
 
@@ -89,7 +89,7 @@ void JACDAC::onPacketReceived(Event)
             // we matched a broadcast host, route to all broadcast hosts on the device.
             if (broadcast_class)
             {
-                for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
+                for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
                 {
                     JDService* service = this->services[i];
 
@@ -120,7 +120,7 @@ JACDAC::JACDAC(JDPhysicalLayer& bus, ManagedString name, uint16_t id) : controlS
     if (instance == NULL)
         instance = this;
 
-    memset(this->services, 0, sizeof(JDService*) * JD_PROTOCOL_SERVICE_ARRAY_SIZE);
+    memset(this->services, 0, sizeof(JDService*) * JD_SERVICE_ARRAY_SIZE);
 
     add(controlService);
 
@@ -134,11 +134,11 @@ int JACDAC::add(JDService& service)
     int i;
 
     // check for duplicates first
-    for (i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
+    for (i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
         if (services[i] == &service)
             return DEVICE_OK;
 
-    for (i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
+    for (i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
     {
         target_disable_irq();
         if (services[i] == NULL)
@@ -150,7 +150,7 @@ int JACDAC::add(JDService& service)
         target_enable_irq();
     }
 
-    if (i == JD_PROTOCOL_SERVICE_ARRAY_SIZE)
+    if (i == JD_SERVICE_ARRAY_SIZE)
         return DEVICE_NO_RESOURCES;
 
     return DEVICE_OK;
@@ -159,7 +159,7 @@ int JACDAC::add(JDService& service)
 int JACDAC::remove(JDService& service)
 {
     target_disable_irq();
-    for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
+    for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
     {
         if (services[i] == &service)
         {
@@ -235,7 +235,7 @@ void JACDAC::logState()
 
     DMESG("Bus state: %s", busStateStr);
 
-    for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
+    for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
     {
         JDService* current = JACDAC::instance->services[i];
 

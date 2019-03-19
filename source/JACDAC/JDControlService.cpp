@@ -2,6 +2,7 @@
 #include "JDControlService.h"
 #include "CodalDmesg.h"
 #include "Timer.h"
+#include "JACDAC.h"
 
 using namespace codal;
 
@@ -23,7 +24,7 @@ uint64_t generate_eui64(uint64_t device_identifier)
 void JDControlService::setConnectionState(bool state, JDDevice* device)
 {
     // iterate over services on the device and provide connect / disconnect events.
-    for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
+    for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
     {
         JDService* current = JACDAC::instance->services[i];
 
@@ -163,7 +164,7 @@ int JDControlService::formControlPacket()
 
     int service_number = 0;
 
-    for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
+    for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
     {
         JDService* current = JACDAC::instance->services[i];
 
@@ -186,7 +187,7 @@ int JDControlService::formControlPacket()
         service_number++;
     }
 
-    CODAL_ASSERT((size + JD_CONTROL_PACKET_HEADER_SIZE) <= JD_MAX_PACKET_SIZE, DEVICE_JACDAC_ERROR);
+    CODAL_ASSERT((size + JD_CONTROL_PACKET_HEADER_SIZE) <= JD_SERIAL_MAX_PAYLOAD_SIZE, DEVICE_JACDAC_ERROR);
 
     return size + JD_CONTROL_PACKET_HEADER_SIZE;
 }
@@ -267,8 +268,8 @@ int JDControlService::enumerate()
 
     if (enumerationData == NULL)
     {
-        this->enumerationData = (JDControlPacket*)malloc(JD_MAX_PACKET_SIZE);
-        memset(this->enumerationData, 0, JD_MAX_PACKET_SIZE);
+        this->enumerationData = (JDControlPacket*)malloc(JD_SERIAL_MAX_PAYLOAD_SIZE);
+        memset(this->enumerationData, 0, JD_SERIAL_MAX_PAYLOAD_SIZE);
     }
 
     if (device == NULL)
@@ -452,7 +453,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
     {
         JDServiceInformation* serviceInfo = (JDServiceInformation *)dataPointer;
 
-        for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
+        for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
         {
             JDService* current = JACDAC::instance->services[i];
 
