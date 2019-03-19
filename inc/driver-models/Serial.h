@@ -37,12 +37,11 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_SERIAL_EVT_RX_FULL          3
 #define CODAL_SERIAL_EVT_DATA_RECEIVED    4
 
-#define CODAL_SERIAL_RX_IN_USE            1
-#define CODAL_SERIAL_TX_IN_USE            2
-#define CODAL_SERIAL_RX_BUFF_INIT         4
-#define CODAL_SERIAL_TX_BUFF_INIT         8
-
-#define CODAL_SERIAL_STATUS_RXD           0x02
+#define CODAL_SERIAL_STATUS_RX_IN_USE            0x01
+#define CODAL_SERIAL_STATUS_TX_IN_USE            0x02
+#define CODAL_SERIAL_STATUS_RX_BUFF_INIT         0x04
+#define CODAL_SERIAL_STATUS_TX_BUFF_INIT         0x08
+#define CODAL_SERIAL_STATUS_RXD                 0x10
 
 
 namespace codal
