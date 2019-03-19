@@ -280,9 +280,9 @@ void GhostFAT::buildBlock(uint32_t block_no, uint8_t *data)
 
 void GhostFAT::readBlocks(int blockAddr, int numBlocks)
 {
-    uint8_t buf[512];
-
     finalizeFiles();
+
+    uint8_t *buf = new uint8_t[512];
 
     while (numBlocks--)
     {
@@ -290,6 +290,8 @@ void GhostFAT::readBlocks(int blockAddr, int numBlocks)
         writeBulk(buf, 512);
         blockAddr++;
     }
+
+    delete buf;
 
     finishReadWrite();
 }

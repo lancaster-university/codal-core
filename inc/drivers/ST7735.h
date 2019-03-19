@@ -42,13 +42,20 @@ struct ST7735WorkBuffer;
 #define MADCTL_BGR 0x08
 #define MADCTL_MH 0x04
 
-class ST7735
+class ST7735 : public CodalComponent
 {
+protected:
     SPI &spi;
     Pin &cs;
     Pin &dc;
     uint8_t cmdBuf[20];
     ST7735WorkBuffer *work;
+    bool inSleepMode;
+
+    // if true, every pixel will be plotted as 4 pixels and 16 bit color mode
+    // will be used; this is for ILI9341 which usually has 320x240 screens
+    // and doesn't support 12 bit color
+    bool double16;
 
     void sendCmd(uint8_t *buf, int len);
     void sendCmdSeq(const uint8_t *buf);
@@ -62,7 +69,7 @@ class ST7735
 
 public:
     ST7735(SPI &spi, Pin &cs, Pin &dc);
-    void init();
+    virtual int init();
 
     /**
      * Configure screen-specific parameters.
@@ -84,6 +91,11 @@ public:
      * Waits for the previous sendIndexedImage() operation to complete (it normally executes in background).
      */
     void waitForSendDone();
+
+    /**
+     * Puts the display in (or out of) sleep mode.
+     */
+    virtual int setSleep(bool sleepMode);
 };
 
 }
