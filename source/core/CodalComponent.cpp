@@ -33,6 +33,10 @@ CodalComponent* CodalComponent::components[DEVICE_COMPONENT_COUNT];
 
 uint8_t CodalComponent::configuration = 0;
 
+#if DEVICE_COMPONENT_COUNT > 255
+#error "DEVICE_COMPONENT_COUNT has to fit in uint8_t"
+#endif
+
 /**
   * The periodic callback for all components.
   */
@@ -112,5 +116,27 @@ void CodalComponent::removeComponent()
         }
 
         i++;
+    }
+}
+
+/**
+ * Puts all components in (or out of) sleep (low power) mode.
+ */
+void CodalComponent::setAllSleep(bool doSleep)
+{
+    // usually, dependencies of component X are added before X itself,
+    // so iterate backwards (so from high-level components to low-level)
+    // when putting stuff to sleep, and forwards when waking up
+    if (doSleep)
+    {
+        for (int i = DEVICE_COMPONENT_COUNT - 1; i >= 0; i--)
+            if (components[i])
+                components[i]->setSleep(true);
+    }
+    else
+    {
+        for (unsigned i = 0; i < DEVICE_COMPONENT_COUNT; i++)
+            if (components[i])
+                components[i]->setSleep(false);
     }
 }

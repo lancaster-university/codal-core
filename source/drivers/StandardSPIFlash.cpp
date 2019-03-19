@@ -65,8 +65,6 @@ void StandardSPIFlash::writeEnable()
 
 int StandardSPIFlash::waitBusy(int waitMS)
 {
-    uint8_t status;
-
     do
     {
         int r = sendCommand(0x05, -1, &status, 1);

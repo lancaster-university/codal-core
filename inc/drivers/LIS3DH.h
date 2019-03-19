@@ -237,6 +237,8 @@ namespace codal
           * Destructor.
           */
         ~LIS3DH();
+
+        virtual int setSleep(bool sleepMode);
     };
 }
 
