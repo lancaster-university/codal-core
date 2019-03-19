@@ -5,6 +5,8 @@
 
 using namespace codal;
 
+#ifdef FOO
+
 void JDAccelerometerService::sendData(Event)
 {
     this->latest = this->accelerometer->getSample();
@@ -80,3 +82,5 @@ int JDAccelerometerService::handlePacket(JDPacket* p)
 
     return DEVICE_OK;
 }
+
+#endif

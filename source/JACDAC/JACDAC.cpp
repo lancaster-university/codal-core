@@ -55,15 +55,15 @@ void JACDAC::onPacketReceived(Event)
                 continue;
 
             // map from device broadcast map to potentially the service number of one of our enumerated broadcast hosts
-            uint16_t host_service_number = device->broadcast_servicemap[pkt->service_number / 2];
+            int16_t host_service_number = device->broadcast_servicemap[pkt->service_number / 2];
 
             if (pkt->service_number % 2 == 0)
                 host_service_number &= 0x0F;
             else
                 host_service_number &= 0xF0 >> 4;
 
-            if (!host_service_number)
-                host_service_number = JD_SERVICE_NUMBER_UNITIALISED_VAL;
+            if (host_service_number == 0)
+                host_service_number = -1;
 
             // handle initialised services
             for (int i = 0; i < JD_PROTOCOL_SERVICE_ARRAY_SIZE; i++)
@@ -74,7 +74,7 @@ void JACDAC::onPacketReceived(Event)
                 {
                     JD_DMESG("DRIV a:%d sn:%d c:%d i:%d f %d", service->state.device_address, service->state.serial_number, service->state.service_class, service->state.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, service->state.flags);
 
-                    if (service->device == this->controlService.device && service->service_number == host_service_number)
+                    if (service->device == this->controlService.device && host_service_number > 0 && service->service_number == host_service_number)
                     {
                         broadcast_class = service->service_class;
                         continue;

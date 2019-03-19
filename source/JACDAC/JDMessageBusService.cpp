@@ -1,7 +1,7 @@
 #include "JDMessageBusService.h"
 #include "CodalDmesg.h"
 
-
+#ifdef FOO
 using namespace codal;
 
 JDMessageBusService::JDMessageBusService() : JDService(JD_SERVICE_CLASS_MESSAGE_BUS, BroadcastHostService)
@@ -123,3 +123,4 @@ void JDMessageBusService::eventReceived(Event e)
     send((uint8_t *)&e, sizeof(Event));
     // DMESG("RET %d",ret);
 }
+#endif

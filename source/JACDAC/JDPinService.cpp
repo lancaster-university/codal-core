@@ -2,6 +2,7 @@
 #include "CodalDmesg.h"
 
 using namespace codal;
+#ifdef FOO
 
 JDPinService::JDPinService(Pin& p) : JDService(JD_SERVICE_CLASS_PIN, HostService), pin(&p)
 {
@@ -62,3 +63,4 @@ int JDPinService::handlePacket(JDPacket* p)
 
     return DEVICE_OK;
 }
+#endif
