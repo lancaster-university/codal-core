@@ -17,10 +17,6 @@
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
-#define CODAL_ASSERT(cond)                                                                         \
-    if (!(cond))                                                                                   \
-    target_panic(0x5AC)
-
 using namespace codal;
 
 uint32_t error_count = 0;
@@ -123,7 +119,7 @@ void JDPhysicalLayer::_gpioCallback(int state)
         {
             startTime = now;
             timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + JD_BYTE_AT_125KBAUD);
-            set_gpio2(0);
+            // set_gpio2(0);
         }
         else if (status & JD_SERIAL_LO_PULSE_START)
         {
@@ -156,7 +152,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
     // first time entering the error state?
     if (es != JDBusErrorState::Continuation && !(status & es))
     {
-        set_gpio3(1);
+        // set_gpio3(1);
         DMESG("FIRST");
         if (es == JD_SERIAL_BUS_TIMEOUT_ERROR || es == JD_SERIAL_BUS_UART_ERROR)
         {
@@ -191,7 +187,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
 
     // in error mode we detect if there is activity on the bus (we do this by resetting start time when the bus is toggled,
     // until the bus becomes idle defined by a period of JD_BUS_NORMALITY_PERIOD)
-    set_gpio4(1);
+    // set_gpio4(1);
     uint32_t endTime = timer.captureCounter();
 
     if (status & JD_SERIAL_BUS_STATE && endTime - startTime >= JD_BUS_NORMALITY_PERIOD)
@@ -202,15 +198,15 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
         status &= ~(JD_SERIAL_ERR_MSK);
         // resume normality
         setState(JDSerialState::ListeningForPulse);
-        set_gpio4(0);
-        set_gpio3(0);
+        // set_gpio4(0);
+        // set_gpio3(0);
 
         // setup tx interrupt
         timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
         return;
     }
 
-    set_gpio4(0);
+    // set_gpio4(0);
     timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + JD_BYTE_AT_125KBAUD);
 }
 
@@ -383,7 +379,7 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
 
     // 1 more us
     // set_gpio(1);
-    set_gpio(1);
+    // set_gpio(1);
     sp.eventOn(DEVICE_PIN_EVENT_NONE);
     sp.setPull(PullMode::None);
 
@@ -393,7 +389,7 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     lastBufferedCount = 0;
     // set_gpio(1);
     sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_HEADER_SIZE);
-    set_gpio(0);
+    // set_gpio(0);
 
     // 14 more us
     timer.setCompare(MAXIMUM_LO_DATA_CC, startTime + JD_BYTE_AT_125KBAUD);
@@ -463,8 +459,8 @@ JDPhysicalLayer::JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer
     this->maxBaud = maxBaudRate;
     instance = this;
 
-    // at least three channels are required.
-    CODAL_ASSERT(timer.getChannelCount() >= TIMER_CHANNELS_REQUIRED);
+    // at least two channels are required.
+    CODAL_ASSERT(timer.getChannelCount() >= TIMER_CHANNELS_REQUIRED, DEVICE_HARDWARE_CONFIGURATION_ERROR);
 
     initialise();
 }
