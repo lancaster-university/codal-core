@@ -21,28 +21,34 @@ uint64_t generate_eui64(uint64_t device_identifier)
     return udid;
 }
 
-void JDControlService::setConnectionState(bool state, JDDevice* device)
+void JDControlService::deviceDisconnected(JDDevice* device)
 {
     // iterate over services on the device and provide connect / disconnect events.
     for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
     {
         JDService* current = JACDAC::instance->services[i];
 
-        // set device if host and device == this->device->
         if (current == NULL || current == this || current->device != device)
             continue;
 
-        if (state)
-        {
-            current->device = device;
-            current->hostConnected();
-        }
-        else
-        {
-            current->device = NULL;
-            current->service_number = JD_SERVICE_NUMBER_UNITIALISED_VAL;
-            current->hostDisconnected();
-        }
+        current->device = NULL;
+        current->service_number = JD_SERVICE_NUMBER_UNITIALISED_VAL;
+        current->hostDisconnected();
+    }
+}
+
+void JDControlService::deviceEnumerated()
+{
+    // iterate over services on the device and provide connect / disconnect events.
+    for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
+    {
+        JDService* current = JACDAC::instance->services[i];
+
+        if (current == NULL || current == this || current->mode == ClientService)
+            continue;
+
+        current->device = this->device;
+        current->hostConnected();
     }
 }
 
@@ -62,12 +68,11 @@ int JDControlService::formControlPacket()
     JDServiceInformation* info = (JDServiceInformation *)(enumerationData->data + size);
 
     int service_number = 0;
-
     for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
     {
         JDService* current = JACDAC::instance->services[i];
 
-        if (current == NULL || current == this || current->mode != HostService)
+        if (current == NULL || current == this || current->mode == ClientService)
             continue;
 
         // the device has modified its service numbers whilst enumerated.
@@ -86,9 +91,10 @@ int JDControlService::formControlPacket()
         service_number++;
     }
 
-    CODAL_ASSERT((size + JD_CONTROL_PACKET_HEADER_SIZE) <= JD_SERIAL_MAX_PAYLOAD_SIZE, DEVICE_JACDAC_ERROR);
+    size += JD_CONTROL_PACKET_HEADER_SIZE;
 
-    return size + JD_CONTROL_PACKET_HEADER_SIZE;
+    CODAL_ASSERT(size <= JD_SERIAL_MAX_PAYLOAD_SIZE, DEVICE_JACDAC_ERROR);
+    return size;
 }
 
 /**
@@ -112,7 +118,7 @@ void JDControlService::timerCallback(Event)
                 this->status &= ~JD_CONTROL_SERVICE_STATUS_ENUMERATING;
                 this->status |= JD_CONTROL_SERVICE_STATUS_ENUMERATED;
                 this->device->device_flags &= ~JD_DEVICE_FLAGS_PROPOSING;
-                this->setConnectionState(true, this->device);
+                this->deviceEnumerated();
             }
         }
         else
@@ -123,18 +129,24 @@ void JDControlService::timerCallback(Event)
 
                 if (this->device->rolling_counter > 3)
                 {
-                    this->setConnectionState(false, this->device);
+                    this->status |= JD_CONTROL_SERVICE_STATUS_BUS_LO;
+                    this->deviceDisconnected(this->device);
                     return;
                 }
             }
             else
-                this->device->rolling_counter = 0;
-        }
-    }
+            {
+                if (this->status & JD_CONTROL_SERVICE_STATUS_BUS_LO)
+                {
+                    this->deviceEnumerated();
+                    this->status &= ~JD_CONTROL_SERVICE_STATUS_BUS_LO;
+                }
 
-    // queue a control packet if we have host services.
-    if (this->status & JD_CONTROL_SERVICE_STATUS_ENUMERATE)
-    {
+                this->device->rolling_counter = 0;
+            }
+        }
+
+        // queue a control packet if we have host services.
         enumerationData->udid = this->device->udid;
         enumerationData->device_address = this->device->device_address;
         enumerationData->device_flags = this->device->device_flags;
@@ -154,7 +166,7 @@ void JDControlService::timerCallback(Event)
         if (dev->rolling_counter > 3)
         {
             this->deviceManager.removeDevice(dev);
-            this->setConnectionState(false, dev);
+            this->deviceDisconnected(dev);
             free(dev);
         }
     }
@@ -236,6 +248,8 @@ int JDControlService::disconnect()
 {
     if (!(this->status & JD_CONTROL_SERVICE_STATUS_ENUMERATE))
         return DEVICE_INVALID_STATE;
+
+    this->deviceDisconnected(this->device);
 
     this->status &= ~JD_CONTROL_SERVICE_STATUS_ENUMERATE;
 
@@ -382,6 +396,8 @@ int JDControlService::handlePacket(JDPacket* pkt)
                             remoteDevice = this->deviceManager.addDevice(cp, pkt->communication_rate);
 
                         int idx = service_number / 2;
+
+                        remoteDevice->servicemap_bitmsk |= 1 << service_number;
 
                         // set the service map for this broadcast service.
                         if (idx % 2 == 0)

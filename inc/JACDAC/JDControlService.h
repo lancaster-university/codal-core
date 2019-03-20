@@ -7,6 +7,7 @@
 #define JD_CONTROL_SERVICE_STATUS_ENUMERATE                 0x02
 #define JD_CONTROL_SERVICE_STATUS_ENUMERATING               0x04
 #define JD_CONTROL_SERVICE_STATUS_ENUMERATED                0x08
+#define JD_CONTROL_SERVICE_STATUS_BUS_LO                    0x10
 
 #define JD_CONTROL_SERVICE_EVT_CHANGED                      2
 #define JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK               3
@@ -54,7 +55,9 @@ namespace codal
          **/
         void timerCallback(Event);
 
-        void setConnectionState(bool state, JDDevice* device);
+        void deviceDisconnected(JDDevice* device);
+
+        void deviceEnumerated();
 
         int formControlPacket();
 
