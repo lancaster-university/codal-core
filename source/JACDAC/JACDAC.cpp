@@ -39,6 +39,7 @@ JACDAC* JACDAC::instance = NULL;
 void JACDAC::onPacketReceived(Event)
 {
     JDPacket* pkt = NULL;
+    JDDevice* device = NULL;
 
     while((pkt = bus.getPacket()) != NULL)
     {
@@ -46,39 +47,36 @@ void JACDAC::onPacketReceived(Event)
 
         if (pkt->device_address == 0)
             controlService.handlePacket(pkt);
-        else
+        else if ((device = controlService.getDevice(pkt->device_address)) != NULL)
         {
-            JDDevice* device = controlService.getDevice(pkt->device_address);
             uint32_t broadcast_class = 0;
 
-            if (!device)
-                continue;
-
             // map from device broadcast map to potentially the service number of one of our enumerated broadcast hosts
-            int16_t host_service_number = device->broadcast_servicemap[pkt->service_number / 2];
+            int16_t host_service_number = -1;
 
-            if (pkt->service_number % 2 == 0)
-                host_service_number &= 0x0F;
-            else
-                host_service_number &= 0xF0 >> 4;
+            if (device->servicemap_bitmsk & 1 << pkt->service_number)
+            {
+                uint8_t sn = device->broadcast_servicemap[pkt->service_number / 2];
 
-            if (host_service_number == 0)
-                host_service_number = -1;
+                if (pkt->service_number % 2 == 0)
+                    host_service_number = sn & 0x0F;
+                else
+                    host_service_number = sn & 0xF0 >> 4;
+            }
 
             // handle initialised services
             for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
             {
                 JDService* service = this->services[i];
 
-                if (service && service->device == device && service->service_number == pkt->service_number)
+                if (service->device == this->controlService.device && service->service_number == host_service_number)
+                {
+                    broadcast_class = service->service_class;
+                    continue;
+                }
+                else if (service && service->device == device && service->service_number == pkt->service_number)
                 {
                     JD_DMESG("DRIV a:%d sn:%d c:%d i:%d f %d", service->state.device_address, service->state.serial_number, service->state.service_class, service->state.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, service->state.flags);
-
-                    if (service->device == this->controlService.device && host_service_number > 0 && service->service_number == host_service_number)
-                    {
-                        broadcast_class = service->service_class;
-                        continue;
-                    }
 
                     // break if DEVICE_OK is returned (indicates the packet has been handled)
                     if (service->handlePacket(pkt) == DEVICE_OK)
@@ -101,7 +99,6 @@ void JACDAC::onPacketReceived(Event)
                     }
                 }
             }
-
         }
 
         if (bridge)
@@ -114,8 +111,6 @@ void JACDAC::onPacketReceived(Event)
 JACDAC::JACDAC(JDPhysicalLayer& bus, ManagedString name, uint16_t id) : controlService(name), bridge(NULL), bus(bus)
 {
     this->id = id;
-
-    setDeviceName(name);
 
     if (instance == NULL)
         instance = this;
