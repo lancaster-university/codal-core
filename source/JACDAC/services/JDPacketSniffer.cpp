@@ -1,0 +1,58 @@
+#include "JDPacketSniffer.h"
+#include "JDControlService.h"
+#include "CodalDmesg.h"
+#include "Timer.h"
+
+using namespace codal;
+
+void JDPacketSniffer::timerCallback(Event)
+{
+    JDDevice* head = this->deviceManager.getDevice();
+
+    while (head)
+    {
+        JDDevice* dev = head;
+        head = head->next;
+        dev->rolling_counter++;
+
+        if (dev->rolling_counter > 3)
+        {
+            this->deviceManager.removeDevice(dev);
+            free(dev);
+        }
+    }
+}
+
+JDPacketSniffer::JDPacketSniffer() : JDService(JD_SERVICE_CLASS_BRIDGE, ClientService)
+{
+    if (EventModel::defaultEventBus)
+    {
+        EventModel::defaultEventBus->listen(this->id, JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK, this, &JDPacketSniffer::timerCallback);
+        system_timer_event_every(500, this->id, JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK);
+    }
+
+}
+
+int JDPacketSniffer::handlePacket(JDPacket* p)
+{
+    if (p->device_address == 0)
+    {
+        if (p->service_number == 0)
+        {
+            JDDevice* remote = this->deviceManager.addDevice((JDControlPacket*)p->data, p->communication_rate);
+            remote->rolling_counter = 0;
+        }
+    }
+}
+
+void JDPacketSniffer::logDevices()
+{
+    JDDevice* head = this->deviceManager.getDevice();
+
+    while (head)
+    {
+        JDDevice* dev = head;
+        DMESG("A: %d, udidL: %d N: %s CR: %d", dev->device_address, (uint32_t)dev->udid, dev->name ? dev->name : 0, dev->communication_rate);
+        head = head->next;
+    }
+}

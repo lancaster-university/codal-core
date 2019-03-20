@@ -154,7 +154,7 @@ void JDControlService::timerCallback(Event)
         if (dev->rolling_counter > 3)
         {
             this->deviceManager.removeDevice(dev);
-            this->setConnectionState(true, dev);
+            this->setConnectionState(false, dev);
             free(dev);
         }
     }

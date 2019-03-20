@@ -53,6 +53,7 @@ JDDevice* JDDeviceManager::addDevice(JDControlPacket* remoteDevice, uint8_t comm
     newRemote->communication_rate = communicationRate;
     newRemote->rolling_counter = 0;
     newRemote->next = NULL;
+    newRemote->name = NULL;
 
     if (remoteDevice->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
     {
@@ -61,6 +62,7 @@ JDDevice* JDDeviceManager::addDevice(JDControlPacket* remoteDevice, uint8_t comm
         memcpy(newRemote->name, remoteDevice->data + 1, len);
         newRemote->name[len] = 0;
     }
+
 
     if (this->devices == NULL)
         this->devices = newRemote;
