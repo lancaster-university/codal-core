@@ -148,12 +148,12 @@ void JDPhysicalLayer::_gpioCallback(int state)
 
 void JDPhysicalLayer::errorState(JDBusErrorState es)
 {
-    DMESG("ERROR! %d",es);
+    JD_DMESG("ERROR! %d",es);
     // first time entering the error state?
     if (es != JDBusErrorState::Continuation && !(status & es))
     {
         // set_gpio3(1);
-        DMESG("FIRST");
+        JD_DMESG("FIRST");
         if (es == JD_SERIAL_BUS_TIMEOUT_ERROR || es == JD_SERIAL_BUS_UART_ERROR)
         {
             error_count++;
@@ -214,7 +214,7 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
 {
     if (status & JD_SERIAL_ERR_MSK)
     {
-        DMESG("CONT ERR");
+        JD_DMESG("CONT ERR");
         errorState(JDBusErrorState::Continuation);
         return;
     }
@@ -225,7 +225,7 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
         if (status & JD_SERIAL_LO_PULSE_START)
         {
             status &= ~JD_SERIAL_LO_PULSE_START;
-            DMESG("BL ERR");
+            JD_DMESG("BL ERR");
             errorState(JDBusErrorState::BusLoError);
             return;
         }
@@ -243,7 +243,7 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
                 if (endTime - startTime >= comparison)
                 {
                     status &= ~(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER);
-                    DMESG("BTO1");
+                    JD_DMESG("BTO1");
                     errorState(JDBusErrorState::BusTimeoutError);
                     return;
                 }
@@ -273,7 +273,7 @@ void JDPhysicalLayer::dmaComplete(Event evt)
 
         error_count++;
         status &= ~(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING);
-        DMESG("BUART ERR");
+        JD_DMESG("BUART ERR");
         errorState(JDBusErrorState::BusUARTError);
         return;
     }
@@ -314,13 +314,13 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                     addToRxArray(rxBuf);
                     rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
                     Event(id, JD_SERIAL_EVT_DATA_READY);
-                    DMESG("DMA RXD");
+                    JD_DMESG("DMA RXD");
                 }
                 // could we do something cool to indicate an incorrect CRC?
                 // i.e. drive the bus low....?
                 else
                 {
-                    DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
+                    JD_DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
                     Event(this->id, JD_SERIAL_EVT_CRC_ERROR);
                 }
             }
@@ -331,7 +331,7 @@ void JDPhysicalLayer::dmaComplete(Event evt)
             status &= ~(JD_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
-            DMESG("DMA TXD");
+            JD_DMESG("DMA TXD");
         }
     }
 
@@ -355,7 +355,7 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING) || !(status & DEVICE_COMPONENT_RUNNING))
         return;
 
-    // DMESG("TS: %d", pulseTime);
+    // JD_DMESG("TS: %d", pulseTime);
     pulseTime = ceil(pulseTime / 10);
     pulseTime = ceil_pow2(pulseTime);
 
@@ -486,7 +486,7 @@ void JDPhysicalLayer::start()
     if (rxBuf == NULL)
         rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
 
-    DMESG("JD START");
+    JD_DMESG("JD START");
 
 
     status |= DEVICE_COMPONENT_RUNNING;
@@ -525,7 +525,7 @@ void JDPhysicalLayer::stop()
 
 void JDPhysicalLayer::sendPacket()
 {
-    DMESG("SENDP");
+    JD_DMESG("SENDP");
     // if we are receiving, the tx timer will be resumed upon reception.
     if (status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER))
     {
@@ -546,7 +546,7 @@ void JDPhysicalLayer::sendPacket()
             if (commLED)
                 commLED->setDigitalValue(0);
 
-            DMESG("TXLO ERR");
+            JD_DMESG("TXLO ERR");
             errorState(JDBusErrorState::BusLoError);
             return;
         }
@@ -643,7 +643,7 @@ int JDPhysicalLayer::send(JDPacket* tx, bool compute_crc)
 
     if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
     {
-        DMESG("DR EN %d", timer.captureCounter());
+        JD_DMESG("DR EN %d", timer.captureCounter());
         status |= JD_SERIAL_TX_DRAIN_ENABLE;
         int ret = timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
         JD_DMESG("SC: %d",ret);
