@@ -12,13 +12,16 @@
 #define JD_SERVICE_CLASS_MAKECODE_END                    4000
 
 #define JD_SERVICE_CLASS_CONTROL                         0
-#define JD_SERVICE_CLASS_JOYSTICK                        1
-#define JD_SERVICE_CLASS_MESSAGE_BUS                     2
-#define JD_SERVICE_CLASS_BRIDGE                          3
-#define JD_SERVICE_CLASS_BUTTON                          4
-#define JD_SERVICE_CLASS_PIN                             5
-#define JD_SERVICE_CLASS_RELIABILITY_TESTER              6
-#define JD_SERVICE_CLASS_ACCELEROMETER                   7
-#define JD_SERVICE_CLASS_CAPTOUCH_BUTTON                 8
+#define JD_SERVICE_CLASS_CONTROL_RNG                     1
+#define JD_SERVICE_CLASS_CONTROL_NAMING                  2
+
+#define JD_SERVICE_CLASS_JOYSTICK                        3
+#define JD_SERVICE_CLASS_MESSAGE_BUS                     4
+#define JD_SERVICE_CLASS_BRIDGE                          5
+#define JD_SERVICE_CLASS_BUTTON                          6
+#define JD_SERVICE_CLASS_PIN                             7
+#define JD_SERVICE_CLASS_RELIABILITY_TESTER              8
+#define JD_SERVICE_CLASS_ACCELEROMETER                   9
+#define JD_SERVICE_CLASS_CAPTOUCH_BUTTON                 10
 
 #endif

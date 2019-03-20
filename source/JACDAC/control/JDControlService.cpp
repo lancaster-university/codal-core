@@ -60,9 +60,19 @@ int JDControlService::formControlPacket()
     enumerationData->device_address = this->device->device_address;
     enumerationData->device_flags = this->device->device_flags;
 
-    // name change is only allowed when the device is re-enumerated.
-    if (enumerationData->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
-        size += *enumerationData->data;
+    ManagedString nsName = this->namingService.getName();
+    int nsNameLen = nsName.length();
+
+    // copy the name into the control packet (if we have one)
+    if (nsNameLen)
+    {
+        this->device->device_flags |= JD_DEVICE_FLAGS_HAS_NAME;
+        uint8_t* name = enumerationData->data;
+        name[0] = nsNameLen;
+        memcpy(enumerationData->data + 1, nsName.toCharArray(), name[0]);
+
+        size += name[0] + 1;
+    }
 
     // compile the list of host services for control packet
     JDServiceInformation* info = (JDServiceInformation *)(enumerationData->data + size);
@@ -201,15 +211,6 @@ int JDControlService::enumerate()
         this->device->name = NULL;
     }
 
-    // copy the name into the control packet (if we have one)
-    if (this->deviceName.length())
-    {
-        this->device->device_flags |= JD_DEVICE_FLAGS_HAS_NAME;
-        uint8_t* name = enumerationData->data;
-        name[0] = this->deviceName.length();
-        memcpy(enumerationData->data + 1, this->deviceName.toCharArray(), name[0]);
-    }
-
     int size = formControlPacket();
 
     if (size > JD_CONTROL_PACKET_HEADER_SIZE)
@@ -256,7 +257,7 @@ int JDControlService::disconnect()
     return DEVICE_OK;
 }
 
-JDControlService::JDControlService(ManagedString deviceName) : JDService(JD_SERVICE_CLASS_CONTROL, HostService), deviceName(deviceName)
+JDControlService::JDControlService(ManagedString deviceName) : JDService(JD_SERVICE_CLASS_CONTROL, HostService), namingService(deviceName)
 {
     this->device = NULL;
     this->remoteDevices = NULL;
@@ -274,13 +275,12 @@ JDControlService::JDControlService(ManagedString deviceName) : JDService(JD_SERV
 
 ManagedString JDControlService::getDeviceName()
 {
-    return this->deviceName;
+    return this->namingService.getName();
 }
 
 int JDControlService::setDeviceName(ManagedString name)
 {
-    this->deviceName = name;
-    return DEVICE_OK;
+    return this->namingService.setName(name);
 }
 
 int JDControlService::send(uint8_t* buf, int len)
@@ -302,6 +302,19 @@ int JDControlService::handleServiceInformation(JDDevice* device, JDServiceInform
   **/
 int JDControlService::handlePacket(JDPacket* pkt)
 {
+
+    if (pkt->service_number == this->rngService.service_number)
+    {
+        this->rngService.handlePacket(pkt);
+        return DEVICE_OK;
+    }
+
+    if (pkt->service_number == this->namingService.service_number)
+    {
+        this->namingService.handlePacket(pkt);
+        return DEVICE_OK;
+    }
+
     JDControlPacket *cp = (JDControlPacket *)pkt->data;
 
     // address collision check

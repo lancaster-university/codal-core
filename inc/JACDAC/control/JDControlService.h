@@ -2,6 +2,8 @@
 #define CODAL_JD_CONTROL_SERVICE_H
 
 #include "JDService.h"
+#include "JDRNGService.h"
+#include "JDNamingService.h"
 #include "ManagedString.h"
 
 #define JD_CONTROL_SERVICE_STATUS_ENUMERATE                 0x02
@@ -45,8 +47,8 @@ namespace codal
         JDControlPacket* enumerationData;
 
         JDDeviceManager deviceManager;
-
-        ManagedString deviceName;
+        JDRNGService rngService;
+        JDNamingService namingService;
 
         /**
          * This member function periodically iterates across all services and performs various actions. It handles the sending
