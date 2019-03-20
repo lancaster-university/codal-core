@@ -39,10 +39,16 @@ int JDPacketSniffer::handlePacket(JDPacket* p)
     {
         if (p->service_number == 0)
         {
+            JDControlPacket* cp = (JDControlPacket *)p->data;
+            if (cp->device_flags & (JD_DEVICE_FLAGS_REJECT | JD_DEVICE_FLAGS_PROPOSING))
+                return DEVICE_OK;
+
             JDDevice* remote = this->deviceManager.addDevice((JDControlPacket*)p->data, p->communication_rate);
             remote->rolling_counter = 0;
         }
     }
+
+    return DEVICE_OK;
 }
 
 void JDPacketSniffer::logDevices()
