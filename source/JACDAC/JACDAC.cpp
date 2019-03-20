@@ -47,53 +47,34 @@ void JACDAC::onPacketReceived(Event)
 
         if (pkt->device_address == 0)
             controlService.handlePacket(pkt);
-        else if ((device = controlService.getDevice(pkt->device_address)) != NULL)
+        else
         {
-            uint32_t broadcast_class = 0;
-
-            // map from device broadcast map to potentially the service number of one of our enumerated broadcast hosts
-            int16_t host_service_number = -1;
-
-            if (device->servicemap_bitmsk & 1 << pkt->service_number)
-            {
-                uint8_t sn = device->broadcast_servicemap[pkt->service_number / 2];
-
-                if (pkt->service_number % 2 == 0)
-                    host_service_number = sn & 0x0F;
-                else
-                    host_service_number = sn & 0xF0 >> 4;
-
-                // we now match on the control service device looking for host services.
+            if (this->controlService.device && pkt->device_address == this->controlService.device->device_address)
                 device = this->controlService.device;
-            }
+            else
+                device = this->controlService.getDevice(pkt->device_address);
 
-            // handle initialised services
-            for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
+            if (device)
             {
-                JDService* service = this->services[i];
+                uint32_t broadcast_class = 0;
 
-                if (!service)
-                    continue;
+                // map from device broadcast map to potentially the service number of one of our enumerated broadcast hosts
+                int16_t host_service_number = -1;
 
-                if (service->device == device && service->service_number == pkt->service_number)
+                if (device->servicemap_bitmsk & 1 << pkt->service_number)
                 {
-                    JD_DMESG("DRIV a:%d sn:%d c:%d i:%d f %d", service->state.device_address, service->state.serial_number, service->state.service_class, service->state.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, service->state.flags);
+                    uint8_t sn = device->broadcast_servicemap[pkt->service_number / 2];
 
-                    if (host_service_number >= 0)
-                    {
-                        JD_DMESG("BROADCAST MATCH CL: %d", service->service_class);
-                        broadcast_class = service->service_class;
-                        break;
-                    }
-                    // break if DEVICE_OK is returned (indicates the packet has been handled)
-                    else if (service->handlePacket(pkt) == DEVICE_OK)
-                        break;
+                    if (pkt->service_number % 2 == 0)
+                        host_service_number = sn & 0x0F;
+                    else
+                        host_service_number = sn & 0xF0 >> 4;
+
+                    // we now match on the control service device looking for host services.
+                    device = this->controlService.device;
                 }
-            }
 
-            // we matched a broadcast host, route to all broadcast hosts on the device.
-            if (broadcast_class)
-            {
+                // handle initialised services
                 for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
                 {
                     JDService* service = this->services[i];
@@ -101,11 +82,41 @@ void JACDAC::onPacketReceived(Event)
                     if (!service)
                         continue;
 
-                    if (service->service_class == broadcast_class && service->mode == BroadcastHostService)
+                    if (service->device == device && service->service_number == pkt->service_number)
                     {
-                        // break if DEVICE_OK is returned (indicates the packet has been handled)
-                        if (service->handlePacket(pkt) == DEVICE_OK)
+                        JD_DMESG("DRIV a:%d sn:%d c:%d i:%d f %d", service->state.device_address, service->state.serial_number, service->state.service_class, service->state.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, service->state.flags);
+
+                        if (host_service_number >= 0)
+                        {
+                            JD_DMESG("BROADCAST MATCH CL: %d", service->service_class);
+                            broadcast_class = service->service_class;
                             break;
+                        }
+                        // break if DEVICE_OK is returned (indicates the packet has been handled)
+                        else if (service->handlePacket(pkt) == DEVICE_OK)
+                        {
+                            broadcast_class = service->service_class;
+                            break;
+                        }
+                    }
+                }
+
+                // we matched a broadcast host, route to all broadcast hosts on the device.
+                if (broadcast_class)
+                {
+                    for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
+                    {
+                        JDService* service = this->services[i];
+
+                        if (!service)
+                            continue;
+
+                        if (service->service_class == broadcast_class && service->mode == BroadcastHostService)
+                        {
+                            // break if DEVICE_OK is returned (indicates the packet has been handled)
+                            if (service->handlePacket(pkt) == DEVICE_OK)
+                                break;
+                        }
                     }
                 }
             }
