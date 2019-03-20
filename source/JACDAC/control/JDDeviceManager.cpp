@@ -3,6 +3,35 @@
 
 using namespace codal;
 
+int JDDeviceManager::initialiseDevice(JDDevice* remoteDevice, JDControlPacket* controlPacket, uint8_t communicationRate)
+{
+    remoteDevice->device_address = controlPacket->device_address;
+    remoteDevice->udid = controlPacket->udid;
+    remoteDevice->device_flags = controlPacket->device_flags;
+    remoteDevice->communication_rate = communicationRate;
+    remoteDevice->rolling_counter = 0;
+
+    if (controlPacket->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
+    {
+        uint8_t len = *controlPacket->data;
+
+        if (remoteDevice->name)
+        {
+            if (len == strlen((char *)remoteDevice->name) && memcmp(controlPacket->data + 1, remoteDevice->name, len))
+                return DEVICE_OK;
+
+            free(remoteDevice->name);
+            remoteDevice->name = NULL;
+        }
+
+        remoteDevice->name = (uint8_t *)malloc(len + 1);
+        memcpy(remoteDevice->name, controlPacket->data + 1, len);
+        remoteDevice->name[len] = 0;
+    }
+
+    return DEVICE_OK;
+}
+
 JDDeviceManager::JDDeviceManager()
 {
     this->devices = NULL;
@@ -43,27 +72,15 @@ JDDevice* JDDeviceManager::getDevice(uint8_t device_address, uint64_t udid)
     return NULL;
 }
 
-JDDevice* JDDeviceManager::addDevice(JDControlPacket* remoteDevice, uint8_t communicationRate)
+JDDevice* JDDeviceManager::addDevice(JDControlPacket* controlPacket, uint8_t communicationRate)
 {
     JDDevice* newRemote = (JDDevice *) malloc(sizeof(JDDevice));
 
-    newRemote->device_address = remoteDevice->device_address;
-    newRemote->udid = remoteDevice->udid;
-    newRemote->device_flags = remoteDevice->device_flags;
-    newRemote->communication_rate = communicationRate;
-    newRemote->rolling_counter = 0;
-    newRemote->servicemap_bitmsk = 0;
     newRemote->next = NULL;
     newRemote->name = NULL;
+    newRemote->servicemap_bitmsk = 0;
 
-    if (remoteDevice->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
-    {
-        uint8_t len = *remoteDevice->data;
-        newRemote->name = (uint8_t *)malloc(len + 1);
-        memcpy(newRemote->name, remoteDevice->data + 1, len);
-        newRemote->name[len] = 0;
-    }
-
+    initialiseDevice(newRemote, controlPacket, communicationRate);
 
     if (this->devices == NULL)
         this->devices = newRemote;
@@ -87,6 +104,11 @@ JDDevice* JDDeviceManager::addDevice(JDControlPacket* remoteDevice, uint8_t comm
     }
 
     return newRemote;
+}
+
+int JDDeviceManager::updateDevice(JDDevice* remoteDevice, JDControlPacket* controlPacket, uint8_t communicationRate)
+{
+    return initialiseDevice(remoteDevice, controlPacket, communicationRate);
 }
 
 int JDDeviceManager::removeDevice(JDDevice* device)

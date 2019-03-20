@@ -18,6 +18,7 @@ void JDPacketSniffer::timerCallback(Event)
         if (dev->rolling_counter > 3)
         {
             this->deviceManager.removeDevice(dev);
+            free(dev->name);
             free(dev);
         }
     }

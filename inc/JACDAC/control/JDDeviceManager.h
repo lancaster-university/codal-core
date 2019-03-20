@@ -37,6 +37,8 @@ namespace codal
     {
         JDDevice* devices;
 
+        int initialiseDevice(JDDevice* remoteDevice, JDControlPacket* controlPacket, uint8_t communicationRate);
+
         public:
 
         JDDevice* getDevice();
@@ -45,7 +47,9 @@ namespace codal
 
         JDDevice* getDevice(uint8_t device_address, uint64_t udid);
 
-        JDDevice* addDevice(JDControlPacket* remoteDevice, uint8_t communicationRate);
+        JDDevice* addDevice(JDControlPacket* controlPacket, uint8_t communicationRate);
+
+        int updateDevice(JDDevice* remoteDevice, JDControlPacket* controlPacket, uint8_t communicationRate);
 
         int removeDevice(JDDevice* device);
 

@@ -56,10 +56,6 @@ int JDControlService::formControlPacket()
 {
     uint16_t size = 0;
 
-    enumerationData->udid = this->device->udid;
-    enumerationData->device_address = this->device->device_address;
-    enumerationData->device_flags = this->device->device_flags;
-
     ManagedString nsName = this->namingService.getName();
     int nsNameLen = nsName.length();
 
@@ -69,10 +65,14 @@ int JDControlService::formControlPacket()
         this->device->device_flags |= JD_DEVICE_FLAGS_HAS_NAME;
         uint8_t* name = enumerationData->data;
         name[0] = nsNameLen;
-        memcpy(enumerationData->data + 1, nsName.toCharArray(), name[0]);
+        memcpy(name + 1, nsName.toCharArray(), name[0]);
 
         size += name[0] + 1;
     }
+
+    enumerationData->udid = this->device->udid;
+    enumerationData->device_address = this->device->device_address;
+    enumerationData->device_flags = this->device->device_flags;
 
     // compile the list of host services for control packet
     JDServiceInformation* info = (JDServiceInformation *)(enumerationData->data + size);
@@ -177,6 +177,7 @@ void JDControlService::timerCallback(Event)
         {
             this->deviceManager.removeDevice(dev);
             this->deviceDisconnected(dev);
+            free(dev->name);
             free(dev);
         }
     }
@@ -364,7 +365,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
     JDDevice* remoteDevice = this->deviceManager.getDevice(cp->device_address, cp->udid);
 
     if (remoteDevice)
-        remoteDevice->rolling_counter = 0; // by resetting the counter to zero we mark the device as "seen".
+        this->deviceManager.updateDevice(remoteDevice, cp, pkt->communication_rate);
 
     // if here, address validation has completed successfully... process service information
     uint8_t* dataPointer = cp->data;
