@@ -62,6 +62,9 @@ void JACDAC::onPacketReceived(Event)
                     host_service_number = sn & 0x0F;
                 else
                     host_service_number = sn & 0xF0 >> 4;
+
+                // we now match on the control service device looking for host services.
+                device = this->controlService.device;
             }
 
             // handle initialised services
@@ -69,17 +72,21 @@ void JACDAC::onPacketReceived(Event)
             {
                 JDService* service = this->services[i];
 
-                if (service->device == this->controlService.device && service->service_number == host_service_number)
-                {
-                    broadcast_class = service->service_class;
+                if (!service)
                     continue;
-                }
-                else if (service && service->device == device && service->service_number == pkt->service_number)
+
+                if (service->device == device && service->service_number == pkt->service_number)
                 {
                     JD_DMESG("DRIV a:%d sn:%d c:%d i:%d f %d", service->state.device_address, service->state.serial_number, service->state.service_class, service->state.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, service->state.flags);
 
+                    if (host_service_number >= 0)
+                    {
+                        JD_DMESG("BROADCAST MATCH CL: %d", service->service_class);
+                        broadcast_class = service->service_class;
+                        break;
+                    }
                     // break if DEVICE_OK is returned (indicates the packet has been handled)
-                    if (service->handlePacket(pkt) == DEVICE_OK)
+                    else if (service->handlePacket(pkt) == DEVICE_OK)
                         break;
                 }
             }
@@ -91,7 +98,10 @@ void JACDAC::onPacketReceived(Event)
                 {
                     JDService* service = this->services[i];
 
-                    if (service && service->service_class == broadcast_class && service->mode == BroadcastHostService)
+                    if (!service)
+                        continue;
+
+                    if (service->service_class == broadcast_class && service->mode == BroadcastHostService)
                     {
                         // break if DEVICE_OK is returned (indicates the packet has been handled)
                         if (service->handlePacket(pkt) == DEVICE_OK)
@@ -101,6 +111,7 @@ void JACDAC::onPacketReceived(Event)
             }
         }
 
+        // if we have a bridge service, route all packets to it.
         if (bridge)
             bridge->handlePacket(pkt);
 
