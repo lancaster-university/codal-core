@@ -4,23 +4,21 @@
 #include "CodalComponent.h"
 #include "JDPhysicalLayer.h"
 #include "JDServiceClasses.h"
+#include "JDDeviceManager.h"
 
-#define JD_MAX_HOST_SERVICES                            16
+#define JD_MAX_HOST_SERVICES                            JD_DEVICE_MAX_HOST_SERVICES
 
-// BEGIN    JD SERIAL SERVICE FLAGS
 #define JD_SERVICE_EVT_CONNECTED                        65520
 #define JD_SERVICE_EVT_DISCONNECTED                     65521
 #define JD_SERVICE_EVT_ERROR                            65526
 #define JD_SERVICE_NUMBER_UNITIALISED_VAL               65535  // used as the service_number when a service is not initialised
 #define JD_SERVICE_STATUS_FLAGS_INITIALISED             0x02 // device service is running
-// END      JD SERIAL SERVICE FLAGS
-
-#define JD_DEVICE_FLAGS_NACK                            0x08
-#define JD_DEVICE_FLAGS_HAS_NAME                        0x04
-#define JD_DEVICE_FLAGS_PROPOSING                       0x02
-#define JD_DEVICE_FLAGS_REJECT                          0x01
 
 #define JD_SERVICE_INFO_HEADER_SIZE                     6
+
+#define JD_SERVICE_MODE_CLIENT                          1
+#define JD_SERVICE_MODE_HOST                            2
+#define JD_SERVICE_MODE_BROADCAST_HOST                  3
 
 namespace codal
 {
@@ -28,21 +26,9 @@ namespace codal
     // Many combinations of flags are supported, but only the ones listed here have been fully implemented.
     enum JDServiceMode
     {
-        ClientService, // the service is seeking the use of another device's resource
-        HostService, // the service is hosting a resource for others to use.
-        BroadcastHostService // the service is enumerated with its own address, and receives all packets of the same class (including control packets)
-    };
-
-    struct JDDevice
-    {
-        uint64_t udid;
-        uint8_t device_flags;
-        uint8_t device_address;
-        uint8_t communication_rate;
-        uint8_t rolling_counter;
-        uint8_t broadcast_servicemap[JD_MAX_HOST_SERVICES / 2]; // use to map remote broadcast services to local broadcast services.
-        JDDevice* next;
-        uint8_t* name;
+        ClientService = JD_SERVICE_MODE_CLIENT, // the service is seeking the use of another device's resource
+        HostService = JD_SERVICE_MODE_HOST, // the service is hosting a resource for others to use.
+        BroadcastHostService = JD_SERVICE_MODE_BROADCAST_HOST // the service is enumerated with its own address, and receives all packets of the same class (including control packets)
     };
 
     struct JDServiceInformation

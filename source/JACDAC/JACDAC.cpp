@@ -48,7 +48,7 @@ void JACDAC::onPacketReceived(Event)
             controlService.handlePacket(pkt);
         else
         {
-            JDDevice* device = controlService.getRemoteDevice(pkt->device_address);
+            JDDevice* device = controlService.getDevice(pkt->device_address);
             uint32_t broadcast_class = 0;
 
             if (!device)

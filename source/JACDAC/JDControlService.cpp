@@ -46,107 +46,6 @@ void JDControlService::setConnectionState(bool state, JDDevice* device)
     }
 }
 
-JDDevice* JDControlService::getRemoteDevice(uint8_t device_address)
-{
-    JDDevice* head = this->remoteDevices;
-
-    while(head)
-    {
-        if (head->device_address == device_address)
-            return head;
-
-        head = head->next;
-    }
-
-    return NULL;
-}
-
-JDDevice* JDControlService::getRemoteDevice(uint8_t device_address, uint64_t udid)
-{
-    JDDevice* head = this->remoteDevices;
-
-    while(head)
-    {
-        if (head->device_address == device_address && head->udid == udid)
-            return head;
-
-        head = head->next;
-    }
-
-    return NULL;
-}
-
-JDDevice* JDControlService::addRemoteDevice(JDControlPacket* remoteDevice, uint8_t communicationRate)
-{
-    JDDevice* newRemote = (JDDevice *) malloc(sizeof(JDDevice));
-
-    newRemote->device_address = remoteDevice->device_address;
-    newRemote->udid = remoteDevice->udid;
-    newRemote->device_flags = remoteDevice->device_flags;
-    newRemote->communication_rate = communicationRate;
-    newRemote->rolling_counter = 0;
-    newRemote->next = NULL;
-
-    if (remoteDevice->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
-    {
-        uint8_t len = *remoteDevice->data;
-        newRemote->name = (uint8_t *)malloc(len + 1);
-        memcpy(newRemote->name, remoteDevice->data + 1, len);
-        newRemote->name[len] = 0;
-    }
-
-    if (this->remoteDevices == NULL)
-        this->remoteDevices = newRemote;
-    else
-    {
-        JDDevice* head = this->remoteDevices;
-
-        while(head)
-        {
-            // guard against duplicates.
-            if (head->device_address == newRemote->device_address && head->udid == device->udid)
-            {
-                free(newRemote);
-                return head;
-            }
-
-            head = head->next;
-        }
-
-        head->next = newRemote;
-    }
-
-    return newRemote;
-}
-
-int JDControlService::removeRemoteDevice(JDDevice* device)
-{
-    if (this->remoteDevices == NULL)
-        return DEVICE_INVALID_PARAMETER;
-
-    JDDevice* curr = this->remoteDevices;
-    JDDevice* prev = NULL;
-
-    while (curr)
-    {
-        // found!!
-        if (curr->device_address == device->device_address && curr->udid == device->udid)
-        {
-            if (prev == NULL)
-                this->remoteDevices = curr->next;
-            else
-                prev->next = curr->next;
-
-            return DEVICE_OK;
-        }
-
-        prev = curr;
-        curr = curr->next;
-    }
-
-    return DEVICE_INVALID_PARAMETER;
-}
-
 int JDControlService::formControlPacket()
 {
     uint16_t size = 0;
@@ -244,7 +143,7 @@ void JDControlService::timerCallback(Event)
     }
 
     // now check to see if remote devices have timed out.
-    JDDevice* head = this->remoteDevices;
+    JDDevice* head = this->deviceManager.getDevice();
 
     while (head)
     {
@@ -254,7 +153,7 @@ void JDControlService::timerCallback(Event)
 
         if (dev->rolling_counter > 3)
         {
-            this->removeRemoteDevice(dev);
+            this->deviceManager.removeDevice(dev);
             this->setConnectionState(true, dev);
             free(dev);
         }
@@ -435,7 +334,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
         return DEVICE_OK;
 
     // if a service is relying on a remote device, the control service is maintaining the state.
-    JDDevice* remoteDevice = this->getRemoteDevice(cp->device_address, cp->udid);
+    JDDevice* remoteDevice = this->deviceManager.getDevice(cp->device_address, cp->udid);
 
     if (remoteDevice)
         remoteDevice->rolling_counter = 0; // by resetting the counter to zero we mark the device as "seen".
@@ -480,7 +379,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
                     {
                         // create a device representation if none exists
                         if (!remoteDevice)
-                            remoteDevice = this->addRemoteDevice(cp, pkt->communication_rate);
+                            remoteDevice = this->deviceManager.addDevice(cp, pkt->communication_rate);
 
                         int idx = service_number / 2;
 
@@ -525,7 +424,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
                 }
 
                 JD_DMESG("FOUND NEW: %d %d %d", current->state.device_address, current->state.service_class);
-                remoteDevice = this->addRemoteDevice(cp, pkt->communication_rate);
+                remoteDevice = this->deviceManager.addDevice(cp, pkt->communication_rate);
 
                 if (current->handleServiceInformation(remoteDevice, (JDServiceInformation*)dataPointer) == DEVICE_OK)
                 {
@@ -543,4 +442,9 @@ int JDControlService::handlePacket(JDPacket* pkt)
     }
 
     return DEVICE_OK;
+}
+
+JDDevice* JDControlService::getDevice(uint8_t device_address)
+{
+    return this->deviceManager.getDevice(device_address);
 }

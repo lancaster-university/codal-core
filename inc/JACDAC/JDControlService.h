@@ -43,6 +43,8 @@ namespace codal
         JDDevice* controller;
         JDControlPacket* enumerationData;
 
+        JDDeviceManager deviceManager;
+
         ManagedString deviceName;
 
         /**
@@ -53,12 +55,6 @@ namespace codal
         void timerCallback(Event);
 
         void setConnectionState(bool state, JDDevice* device);
-
-        JDDevice* getRemoteDevice(uint8_t device_address, uint64_t udid);
-
-        JDDevice* addRemoteDevice(JDControlPacket* remoteDevice, uint8_t communicationRate);
-
-        int removeRemoteDevice(JDDevice* device);
 
         int formControlPacket();
 
@@ -116,6 +112,8 @@ namespace codal
         ManagedString getDeviceName();
 
         int setDeviceName(ManagedString name);
+
+        JDDevice* getDevice(uint8_t device_address);
     };
 }
 
