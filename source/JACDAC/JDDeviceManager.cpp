@@ -52,6 +52,7 @@ JDDevice* JDDeviceManager::addDevice(JDControlPacket* remoteDevice, uint8_t comm
     newRemote->device_flags = remoteDevice->device_flags;
     newRemote->communication_rate = communicationRate;
     newRemote->rolling_counter = 0;
+    newRemote->servicemap_bitmsk = 0;
     newRemote->next = NULL;
     newRemote->name = NULL;
 

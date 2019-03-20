@@ -18,6 +18,7 @@ struct JDDevice
     uint8_t device_address;
     uint8_t communication_rate;
     uint8_t rolling_counter;
+    uint16_t servicemap_bitmsk;
     uint8_t broadcast_servicemap[JD_DEVICE_MAX_HOST_SERVICES / 2]; // use to map remote broadcast services to local broadcast services.
     JDDevice* next;
     uint8_t* name;
