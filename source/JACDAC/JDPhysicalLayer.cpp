@@ -294,7 +294,7 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                     status |= JD_SERIAL_RECEIVING;
                 }
 
-                JD_DMESG("H %d %d %d %d ", rxBuf->jacdac_version, rxBuf->crc, rxBuf->address, rxBuf->size);
+                JD_DMESG("H %d %d ", rxBuf->device_address, rxBuf->size);
                 return;
             }
             else if (status & JD_SERIAL_RECEIVING)
@@ -532,6 +532,7 @@ void JDPhysicalLayer::sendPacket()
         JD_DMESG("RXing ret");
         return;
     }
+
     if (!(status & JD_SERIAL_TRANSMITTING))
     {
         // if the bus is lo, we shouldn't transmit
