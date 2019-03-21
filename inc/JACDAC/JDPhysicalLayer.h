@@ -231,7 +231,9 @@ namespace codal
           *
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
           */
-        virtual int send(JDPacket *p, bool compute_crc = true);
+        virtual int send(JDPacket *p);
+
+        int send(JDPacket* tx, uint64_t* udid);
 
         /**
           * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
@@ -244,7 +246,7 @@ namespace codal
           *
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
           */
-        virtual int send(uint8_t* buf, int len, uint8_t address, uint8_t service_number, JDBaudRate communicationRate);
+        int send(uint8_t* buf, int len, uint8_t address, uint8_t service_number, uint64_t* udid, JDBaudRate br);
 
         /**
          * Returns a bool indicating whether the JACDAC driver has been started.

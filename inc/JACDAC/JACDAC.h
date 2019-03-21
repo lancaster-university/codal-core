@@ -46,6 +46,7 @@ namespace codal
     class JACDAC : public CodalComponent
     {
         friend class JDControlService;
+        friend class JDPhysicalLayer;
 
         /**
          * Invoked by JACDAC when a packet is received from the serial bus.

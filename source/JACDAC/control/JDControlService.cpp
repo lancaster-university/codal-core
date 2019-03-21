@@ -287,7 +287,7 @@ int JDControlService::setDeviceName(ManagedString name)
 int JDControlService::send(uint8_t* buf, int len)
 {
     if (JACDAC::instance)
-        return JACDAC::instance->bus.send(buf, len, 0, 0, JDBaudRate::Baud1M);
+        return JACDAC::instance->bus.send(buf, len, 0, 0, NULL, JDBaudRate::Baud1M);
 
     return DEVICE_NO_RESOURCES;
 }
@@ -303,7 +303,6 @@ int JDControlService::handleServiceInformation(JDDevice* device, JDServiceInform
   **/
 int JDControlService::handlePacket(JDPacket* pkt)
 {
-
     if (pkt->service_number == this->rngService.service_number)
     {
         this->rngService.handlePacket(pkt);

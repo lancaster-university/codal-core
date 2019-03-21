@@ -6,6 +6,7 @@
 #include "CodalFiber.h"
 #include "SingleWireSerial.h"
 #include "Timer.h"
+#include "JACDAC.h"
 
 #define MAXIMUM_INTERBYTE_CC        0
 #define MAXIMUM_LO_DATA_CC          0 // reuse the above channel
@@ -61,16 +62,26 @@ inline uint32_t ceil_pow2(uint32_t v)
     return v;
 }
 
-/**
- * Calculate a 12 bit crc based on CSMA2000 polynomial. Takes more time to compute than fletcher16, but offers more consistency guarantees.
- *
- * @param data the byte buffer
- * @param len the length of the byte buffer.
- *
- * @note it would be faster if the crc table was precomputed.
- **/
-static uint16_t crc12(uint8_t *data, uint32_t len) {
+static uint16_t crc12(uint64_t* udid, uint8_t *data, uint32_t len) {
     uint16_t crc = 0xfff;
+    uint8_t* udidPtr = (uint8_t*)udid;
+
+    int i = 0;
+    if (udid != NULL)
+    {
+        while (i < 8)
+        {
+            crc ^= (*udidPtr++ << 8);
+            for (int i = 0; i < 8; ++i)
+            {
+                if (crc & 0x800)
+                    crc = crc << 1 ^ 0xF13;
+                else
+                    crc = crc << 1;
+            }
+            i++;
+        }
+    }
 
     while (len--)
     {
@@ -303,9 +314,17 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                 timer.clearCompare(MAXIMUM_INTERBYTE_CC);
 
                 uint8_t* crcPointer = (uint8_t*)&rxBuf->device_address;
-                uint16_t crc = crc12(crcPointer, rxBuf->size + JD_SERIAL_CRC_HEADER_SIZE); // include size and address in the checksum.
+                uint16_t crc = 0;
 
-                #warning fix crc calculation
+                JDDevice* device = JACDAC::instance->controlService.getDevice(rxBuf->device_address);
+
+                JD_DMESG("A: %d dev: %p",rxBuf->device_address, device);
+
+                if (device)
+                    crc = crc12(&device->udid, crcPointer, rxBuf->size + 2); // include size and address in the checksum.
+                else
+                    crc = crc12(NULL, crcPointer, rxBuf->size + 2); // include size and address in the checksum.
+
                 if (crc == rxBuf->crc)
                 {
                     rxBuf->communication_rate = (uint8_t)currentBaud;
@@ -316,8 +335,6 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                     Event(id, JD_SERIAL_EVT_DATA_READY);
                     JD_DMESG("DMA RXD");
                 }
-                // could we do something cool to indicate an incorrect CRC?
-                // i.e. drive the bus low....?
                 else
                 {
                     JD_DMESG("CRCE: %d, comp: %d",rxBuf->crc, crc);
@@ -595,6 +612,29 @@ void JDPhysicalLayer::sendPacket()
     return;
 }
 
+int JDPhysicalLayer::send(JDPacket* tx)
+{
+    if (tx == NULL)
+        return DEVICE_INVALID_PARAMETER;
+
+    JDPacket* pkt = (JDPacket *)malloc(sizeof(JDPacket));
+    memset(pkt, 0, sizeof(JDPacket));
+    memcpy(pkt, tx, sizeof(JDPacket));
+
+    int ret = addToTxArray(pkt);
+
+    JD_DMESG("QU %d", pkt->size);
+
+    if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
+    {
+        JD_DMESG("DR EN %d", timer.captureCounter());
+        status |= JD_SERIAL_TX_DRAIN_ENABLE;
+        timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
+    }
+
+    return ret;
+}
+
 /**
  * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
  * If an ongoing asynchronous transmission is happening, JD is added to the txQueue. If this is the first packet in a while
@@ -604,9 +644,10 @@ void JDPhysicalLayer::sendPacket()
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int JDPhysicalLayer::send(JDPacket* tx, bool compute_crc)
+int JDPhysicalLayer::send(JDPacket* tx, uint64_t* udid)
 {
     JD_DMESG("SEND");
+
     // if checks is not set, we skip error checking.
     if (tx == NULL)
         return DEVICE_INVALID_PARAMETER;
@@ -620,36 +661,14 @@ int JDPhysicalLayer::send(JDPacket* tx, bool compute_crc)
     if (!isRunning() || status & JD_SERIAL_BUS_LO_ERROR)
         return DEVICE_INVALID_STATE;
 
-    JD_DMESG("QUEU");
+    if (tx->communication_rate < (uint8_t) maxBaud)
+        tx->communication_rate = (uint8_t)maxBaud;
 
-    JDPacket* pkt = (JDPacket *)malloc(sizeof(JDPacket));
-    memset(pkt, 0, sizeof(JDPacket));
-    memcpy(pkt, tx, sizeof(JDPacket));
+    // crc is calculated from the address field onwards
+    uint8_t* crcPointer = (uint8_t*)&tx->device_address;
+    tx->crc = crc12(udid, crcPointer, tx->size + JD_SERIAL_CRC_HEADER_SIZE);
 
-    if (pkt->communication_rate < (uint8_t) maxBaud)
-        pkt->communication_rate = (uint8_t)maxBaud;
-
-    JD_DMESG("QU %d", pkt->size);
-
-    // if compute_crc is not set, we assume the user is competent enough to use their own crc mechanisms.
-    if (compute_crc)
-    {
-        // crc is calculated from the address field onwards
-        uint8_t* crcPointer = (uint8_t*)&pkt->device_address;
-        pkt->crc = crc12(crcPointer, pkt->size + JD_SERIAL_CRC_HEADER_SIZE);
-    }
-
-    int ret = addToTxArray(pkt);
-
-    if (!(status & JD_SERIAL_TX_DRAIN_ENABLE))
-    {
-        JD_DMESG("DR EN %d", timer.captureCounter());
-        status |= JD_SERIAL_TX_DRAIN_ENABLE;
-        int ret = timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
-        JD_DMESG("SC: %d",ret);
-    }
-
-    return ret;
+    return send(tx);
 }
 
 /**
@@ -663,7 +682,7 @@ int JDPhysicalLayer::send(JDPacket* tx, bool compute_crc)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int JDPhysicalLayer::send(uint8_t* buf, int len, uint8_t address, uint8_t service_number, JDBaudRate br)
+int JDPhysicalLayer::send(uint8_t* buf, int len, uint8_t address, uint8_t service_number, uint64_t* udid, JDBaudRate br)
 {
     if (buf == NULL || len <= 0 || len > JD_SERIAL_MAX_PAYLOAD_SIZE || service_number > JD_SERIAL_MAX_SERVICE_NUMBER)
     {
@@ -682,7 +701,7 @@ int JDPhysicalLayer::send(uint8_t* buf, int len, uint8_t address, uint8_t servic
 
     memcpy(pkt.data, buf, len);
 
-    return send(&pkt);
+    return send(&pkt, udid);
 }
 
 /**

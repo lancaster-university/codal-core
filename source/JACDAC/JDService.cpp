@@ -42,7 +42,7 @@ int JDService::addAdvertisementData(uint8_t* data)
 int JDService::send(uint8_t* buf, int len)
 {
     if (JACDAC::instance && this->device)
-        return JACDAC::instance->bus.send(buf, len, this->device->device_address, this->service_number, (JDBaudRate)this->device->communication_rate);
+        return JACDAC::instance->bus.send(buf, len, this->device->device_address, this->service_number, &this->device->udid, (JDBaudRate)this->device->communication_rate);
 
     return DEVICE_NO_RESOURCES;
 }
