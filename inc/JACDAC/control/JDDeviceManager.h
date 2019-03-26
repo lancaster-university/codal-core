@@ -11,6 +11,10 @@
 
 #define JD_DEVICE_MAX_HOST_SERVICES                     16
 
+#ifndef JD_DEVICE_DEFAULT_COMMUNICATION_RATE
+#define JD_DEVICE_DEFAULT_COMMUNICATION_RATE            JD_SERIAL_BAUD_1M
+#endif
+
 struct JDDevice
 {
     uint64_t udid;

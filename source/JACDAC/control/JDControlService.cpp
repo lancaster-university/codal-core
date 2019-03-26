@@ -207,6 +207,8 @@ int JDControlService::enumerate()
         // set the device state for the control service.
         this->device->device_flags |= JD_DEVICE_FLAGS_PROPOSING;
 
+        this->device->communication_rate = JD_DEVICE_DEFAULT_COMMUNICATION_RATE;
+
         this->device->rolling_counter = 0;
         this->device->next = NULL;
         this->device->name = NULL;

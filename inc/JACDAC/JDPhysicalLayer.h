@@ -89,6 +89,11 @@ DEALINGS IN THE SOFTWARE.
 #define JD_RX_ARRAY_SIZE               10
 #define JD_TX_ARRAY_SIZE               10
 
+#define JD_SERIAL_BAUD_1M              1
+#define JD_SERIAL_BAUD_500K            2
+#define JD_SERIAL_BAUD_250K            4
+#define JD_SERIAL_BAUD_125K            8
+
 #if CONFIG_ENABLED(JD_DEBUG)
 #define JD_DMESG      codal_dmesg
 #else
