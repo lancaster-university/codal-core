@@ -132,10 +132,10 @@ namespace codal
      **/
     enum class JDBaudRate : uint8_t
     {
-        Baud1M = 1,
-        Baud500K = 2,
-        Baud250K = 4,
-        Baud125K = 8
+        Baud1M = JD_SERIAL_BAUD_1M,
+        Baud500K = JD_SERIAL_BAUD_500K,
+        Baud250K = JD_SERIAL_BAUD_250K,
+        Baud125K = JD_SERIAL_BAUD_125K
     };
 
     enum JDBusErrorState : uint16_t
