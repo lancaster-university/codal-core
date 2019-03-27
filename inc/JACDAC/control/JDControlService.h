@@ -29,7 +29,7 @@ namespace codal
      **/
     struct JDControlPacket
     {
-        uint64_t udid; // the "unique" serial number of the device.
+        uint64_t unique_device_identifier; // the "unique" serial number of the device.
         uint8_t device_address;
         uint8_t device_flags;
         uint8_t data[];

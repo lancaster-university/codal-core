@@ -6,7 +6,7 @@ using namespace codal;
 int JDDeviceManager::initialiseDevice(JDDevice* remoteDevice, JDControlPacket* controlPacket, uint8_t communicationRate)
 {
     remoteDevice->device_address = controlPacket->device_address;
-    remoteDevice->udid = controlPacket->udid;
+    remoteDevice->unique_device_identifier = controlPacket->unique_device_identifier;
     remoteDevice->device_flags = controlPacket->device_flags;
     remoteDevice->communication_rate = communicationRate;
     remoteDevice->rolling_counter = 0;
@@ -57,13 +57,13 @@ JDDevice* JDDeviceManager::getDevice(uint8_t device_address)
     return NULL;
 }
 
-JDDevice* JDDeviceManager::getDevice(uint8_t device_address, uint64_t udid)
+JDDevice* JDDeviceManager::getDevice(uint8_t device_address, uint64_t unique_device_identifier)
 {
     JDDevice* head = this->devices;
 
     while(head)
     {
-        if (head->device_address == device_address && head->udid == udid)
+        if (head->device_address == device_address && head->unique_device_identifier == unique_device_identifier)
             return head;
 
         head = head->next;
@@ -91,7 +91,7 @@ JDDevice* JDDeviceManager::addDevice(JDControlPacket* controlPacket, uint8_t com
         while(head->next)
         {
             // guard against duplicates.
-            if (head->device_address == newRemote->device_address && head->udid == newRemote->udid)
+            if (head->device_address == newRemote->device_address && head->unique_device_identifier == newRemote->unique_device_identifier)
             {
                 free(newRemote);
                 return head;
@@ -129,7 +129,7 @@ int JDDeviceManager::removeDevice(JDDevice* device)
         while (curr)
         {
             // found!!
-            if (curr->device_address == device->device_address && curr->udid == device->udid)
+            if (curr->device_address == device->device_address && curr->unique_device_identifier == device->unique_device_identifier)
             {
                 prev->next = curr->next;
                 return DEVICE_OK;

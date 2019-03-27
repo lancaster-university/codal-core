@@ -58,7 +58,7 @@ void JDPacketSniffer::logDevices()
 
     while (head)
     {
-        DMESG("A: %d, udidL: %d N: %s CR: %d", head->device_address, (uint32_t)head->udid, head->name ? head->name : 0, head->communication_rate);
+        DMESG("A: %d, unique_device_identifierL: %d N: %s CR: %d", head->device_address, (uint32_t)head->unique_device_identifier, head->name ? head->name : 0, head->communication_rate);
         head = head->next;
     }
 }

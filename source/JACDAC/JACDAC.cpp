@@ -257,7 +257,7 @@ void JACDAC::logState()
         JDService* current = JACDAC::instance->services[i];
 
         if (current)
-            DMESG("Driver %d initialised[%d] device_address[%d] serial[%d] class[%d], mode[%s%s%s]", i, current->isConnected(), (current->device) ? current->device->device_address : -1, (current->device) ? current->device->udid : -1, current->service_class, current->mode == BroadcastHostService ? "B" : "", current->mode == HostService ? "H" : "", current->mode == ClientService ? "C" : "");
+            DMESG("Driver %d initialised[%d] device_address[%d] serial[%d] class[%d], mode[%s%s%s]", i, current->isConnected(), (current->device) ? current->device->device_address : -1, (current->device) ? current->device->unique_device_identifier : -1, current->service_class, current->mode == BroadcastHostService ? "B" : "", current->mode == HostService ? "H" : "", current->mode == ClientService ? "C" : "");
     }
 }
 

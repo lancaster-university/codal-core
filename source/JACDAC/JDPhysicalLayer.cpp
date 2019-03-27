@@ -62,16 +62,16 @@ inline uint32_t ceil_pow2(uint32_t v)
     return v;
 }
 
-static uint16_t crc12(uint64_t* udid, uint8_t *data, uint32_t len) {
+static uint16_t crc12(uint64_t* unique_device_identifier, uint8_t *data, uint32_t len) {
     uint16_t crc = 0xfff;
-    uint8_t* udidPtr = (uint8_t*)udid;
+    uint8_t* unique_device_identifierPtr = (uint8_t*)unique_device_identifier;
 
     int i = 0;
-    if (udid != NULL)
+    if (unique_device_identifier != NULL)
     {
         while (i < 8)
         {
-            crc ^= (*udidPtr++ << 8);
+            crc ^= (*unique_device_identifierPtr++ << 8);
             for (int i = 0; i < 8; ++i)
             {
                 if (crc & 0x800)
@@ -321,7 +321,7 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                 JD_DMESG("A: %d dev: %p",rxBuf->device_address, device);
 
                 if (device)
-                    crc = crc12(&device->udid, crcPointer, rxBuf->size + 2); // include size and address in the checksum.
+                    crc = crc12(&device->unique_device_identifier, crcPointer, rxBuf->size + 2); // include size and address in the checksum.
                 else
                     crc = crc12(NULL, crcPointer, rxBuf->size + 2); // include size and address in the checksum.
 
@@ -644,7 +644,7 @@ int JDPhysicalLayer::send(JDPacket* tx)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int JDPhysicalLayer::send(JDPacket* tx, uint64_t* udid)
+int JDPhysicalLayer::send(JDPacket* tx, uint64_t* unique_device_identifier)
 {
     JD_DMESG("SEND");
 
@@ -666,7 +666,7 @@ int JDPhysicalLayer::send(JDPacket* tx, uint64_t* udid)
 
     // crc is calculated from the address field onwards
     uint8_t* crcPointer = (uint8_t*)&tx->device_address;
-    tx->crc = crc12(udid, crcPointer, tx->size + JD_SERIAL_CRC_HEADER_SIZE);
+    tx->crc = crc12(unique_device_identifier, crcPointer, tx->size + JD_SERIAL_CRC_HEADER_SIZE);
 
     return send(tx);
 }
@@ -682,7 +682,7 @@ int JDPhysicalLayer::send(JDPacket* tx, uint64_t* udid)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int JDPhysicalLayer::send(uint8_t* buf, int len, uint8_t address, uint8_t service_number, uint64_t* udid, JDBaudRate br)
+int JDPhysicalLayer::send(uint8_t* buf, int len, uint8_t address, uint8_t service_number, uint64_t* unique_device_identifier, JDBaudRate br)
 {
     if (buf == NULL || len <= 0 || len > JD_SERIAL_MAX_PAYLOAD_SIZE || service_number > JD_SERIAL_MAX_SERVICE_NUMBER)
     {
@@ -701,7 +701,7 @@ int JDPhysicalLayer::send(uint8_t* buf, int len, uint8_t address, uint8_t servic
 
     memcpy(pkt.data, buf, len);
 
-    return send(&pkt, udid);
+    return send(&pkt, unique_device_identifier);
 }
 
 /**

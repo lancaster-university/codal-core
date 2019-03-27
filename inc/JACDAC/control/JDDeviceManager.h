@@ -17,7 +17,7 @@
 
 struct JDDevice
 {
-    uint64_t udid;
+    uint64_t unique_device_identifier;
     uint8_t device_flags;
     uint8_t device_address;
     uint8_t communication_rate;
@@ -49,7 +49,7 @@ namespace codal
 
         JDDevice* getDevice(uint8_t device_address);
 
-        JDDevice* getDevice(uint8_t device_address, uint64_t udid);
+        JDDevice* getDevice(uint8_t device_address, uint64_t unique_device_identifier);
 
         JDDevice* addDevice(JDControlPacket* controlPacket, uint8_t communicationRate);
 
