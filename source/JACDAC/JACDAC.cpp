@@ -266,9 +266,9 @@ int JACDAC::start()
     if (this->status & JD_STARTED)
         return DEVICE_OK;
 
-    bus.start();
-
     controlService.enumerate();
+
+    bus.start();
 
     this->status |= JD_STARTED;
     return DEVICE_OK;
