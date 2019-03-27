@@ -9,7 +9,6 @@ void JDPacketSniffer::timerCallback(Event)
 {
     JDDevice* head = this->deviceManager.getDevice();
 
-    target_disable_irq();
     while (head)
     {
         JDDevice* dev = head;
@@ -23,7 +22,6 @@ void JDPacketSniffer::timerCallback(Event)
             free(dev);
         }
     }
-    target_enable_irq();
 }
 
 JDPacketSniffer::JDPacketSniffer() : JDService(JD_SERVICE_CLASS_BRIDGE, ClientService)
@@ -58,11 +56,9 @@ void JDPacketSniffer::logDevices()
 {
     JDDevice* head = this->deviceManager.getDevice();
 
-    target_disable_irq();
     while (head)
     {
         DMESG("A: %d, udidL: %d N: %s CR: %d", head->device_address, (uint32_t)head->udid, head->name ? head->name : 0, head->communication_rate);
         head = head->next;
     }
-    target_enable_irq();
 }
