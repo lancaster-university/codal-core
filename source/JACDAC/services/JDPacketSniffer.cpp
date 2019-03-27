@@ -54,7 +54,7 @@ int JDPacketSniffer::handlePacket(JDPacket* p)
 
 void JDPacketSniffer::logDevices()
 {
-    JDDevice* head = this->deviceManager.getDevice();
+    JDDevice* head = this->deviceManager.getDeviceList();
 
     while (head)
     {
