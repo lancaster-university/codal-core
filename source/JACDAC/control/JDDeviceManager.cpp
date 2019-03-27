@@ -125,15 +125,14 @@ int JDDeviceManager::removeDevice(JDDevice* device)
     {
         while (curr)
         {
+            prev = curr;
+            curr = curr->next;
             // found!!
             if (curr->device_address == device->device_address && curr->udid == device->udid)
             {
                 prev->next = curr->next;
                 return DEVICE_OK;
             }
-
-            prev = curr;
-            curr = curr->next;
         }
     }
 
