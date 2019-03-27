@@ -88,7 +88,7 @@ JDDevice* JDDeviceManager::addDevice(JDControlPacket* controlPacket, uint8_t com
     {
         JDDevice* head = this->devices;
 
-        while(head)
+        while(head->next)
         {
             // guard against duplicates.
             if (head->device_address == newRemote->device_address && head->udid == newRemote->udid)
@@ -119,21 +119,22 @@ int JDDeviceManager::removeDevice(JDDevice* device)
     JDDevice* curr = this->devices;
     JDDevice* prev = NULL;
 
-    while (curr)
+    if (device == curr)
+        this->devices = curr->next;
+    else
     {
-        // found!!
-        if (curr->device_address == device->device_address && curr->udid == device->udid)
+        while (curr)
         {
-            if (prev == NULL)
-                this->devices = curr->next;
-            else
+            // found!!
+            if (curr->device_address == device->device_address && curr->udid == device->udid)
+            {
                 prev->next = curr->next;
+                return DEVICE_OK;
+            }
 
-            return DEVICE_OK;
+            prev = curr;
+            curr = curr->next;
         }
-
-        prev = curr;
-        curr = curr->next;
     }
 
     return DEVICE_INVALID_PARAMETER;
