@@ -226,6 +226,9 @@ int JDControlService::enumerate()
     free(this->enumerationData);
     this->enumerationData = NULL;
 
+    if (this->device->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
+        free(this->device->name);
+
     free(this->device);
     this->device = NULL;
 
