@@ -7,7 +7,7 @@ using namespace codal;
 
 void JDPacketSniffer::timerCallback(Event)
 {
-    JDDevice* head = this->deviceManager.getDevice();
+    JDDevice* head = this->deviceManager.getDeviceList();
 
     while (head)
     {

@@ -37,7 +37,7 @@ JDDeviceManager::JDDeviceManager()
     this->devices = NULL;
 }
 
-JDDevice* JDDeviceManager::getDevice()
+JDDevice* JDDeviceManager::getDeviceList()
 {
     return this->devices;
 }

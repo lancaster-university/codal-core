@@ -45,7 +45,7 @@ namespace codal
 
         public:
 
-        JDDevice* getDevice();
+        JDDevice* getDeviceList();
 
         JDDevice* getDevice(uint8_t device_address);
 

@@ -165,7 +165,7 @@ void JDControlService::timerCallback(Event)
     }
 
     // now check to see if remote devices have timed out.
-    JDDevice* head = this->deviceManager.getDevice();
+    JDDevice* head = this->deviceManager.getDeviceList();
 
     while (head)
     {
