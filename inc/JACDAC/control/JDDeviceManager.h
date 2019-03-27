@@ -18,8 +18,8 @@
 struct JDDevice
 {
     uint64_t unique_device_identifier;
-    uint8_t device_flags;
     uint8_t device_address;
+    uint8_t device_flags;
     uint8_t communication_rate;
     uint8_t rolling_counter;
     uint16_t servicemap_bitmsk;
