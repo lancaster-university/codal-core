@@ -305,6 +305,10 @@ int JDControlService::handleServiceInformation(JDDevice* device, JDServiceInform
   **/
 int JDControlService::handlePacket(JDPacket* pkt)
 {
+    // if the driver has not started yet, drain packets.
+    if (!(this->status & JD_CONTROL_SERVICE_STATUS_ENUMERATE))
+        return DEVICE_OK;
+
     if (pkt->service_number == this->rngService.service_number)
     {
         this->rngService.handlePacket(pkt);
@@ -371,16 +375,23 @@ int JDControlService::handlePacket(JDPacket* pkt)
     // if here, address validation has completed successfully... process service information
     uint8_t* dataPointer = cp->data;
     int service_number = 0;
-
+    uint8_t nameSize = 0;
     // skip name:
     // the size of the name is the first byte of the data payload (if present)
     if (cp->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
-        dataPointer += *dataPointer;
+    {
+        JD_DMESG("HAS NAME %d", *dataPointer);
+        nameSize = (*dataPointer) + 1; // plus one for the size byte itself.
+    }
 
-    while (dataPointer < cp->data + (pkt->size - JD_CONTROL_PACKET_HEADER_SIZE))
+    dataPointer += nameSize;
+    uint8_t* dpStart = dataPointer;
+
+    JD_DMESG("USDEV: a %d, s %d, c %d, i %d, t %c%c%c", this->device->device_address, this->device->udid, this->service_class, this->status & JD_SERVICE_STATUS_FLAGS_INITIALISED ? 1 : 0, this->mode == BroadcastHostService ? 'B' : ' ', this->mode == HostService ? 'H' : ' ', this->mode == ClientService ? 'C' : ' ');
+    while (dataPointer < dpStart + (pkt->size - JD_CONTROL_PACKET_HEADER_SIZE - nameSize))
     {
         JDServiceInformation* serviceInfo = (JDServiceInformation *)dataPointer;
-
+        JD_DMESG("SI: addr %d, sn %d, class %d", cp->device_address, service_number, serviceInfo->service_class);
         for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
         {
             JDService* current = JACDAC::instance->services[i];
@@ -398,7 +409,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
 
                 // this boolean is used to override stringent address checks (not needed for broadcast services as they receive all packets) to prevent code duplication
                 bool broadcast_override = current->mode == BroadcastHostService;
-                JD_DMESG("d a %d, s %d, c %d, i %d, t %c%c%c", current->state.device_address, current->state.udid, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_INITIALISED ? 1 : 0, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? 'B' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? 'L' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? 'R' : ' ');
+                JD_DMESG("INITDSer: a %d, s %d, c %d, i %d, t %c%c%c", current->device->device_address, current->device->udid, current->service_class, current->status & JD_SERVICE_STATUS_FLAGS_INITIALISED ? 1 : 0, current->mode == BroadcastHostService ? 'B' : ' ', current->mode == HostService ? 'H' : ' ', current->mode == ClientService ? 'C' : ' ');
 
                 // check if applicable
                 if ((address_check && serial_check && class_check) || (class_check && broadcast_override))
@@ -425,14 +436,14 @@ int JDControlService::handlePacket(JDPacket* pkt)
                     // any non zero return value will cause packet routing to continue
                     if (current->handleServiceInformation(remoteDevice, serviceInfo) == DEVICE_OK)
                     {
-                        JD_DMESG("S ABSORBED %d", current->state.device_address);
+                        JD_DMESG("uS ABSORBED %d %d", current->device->device_address, current->service_class);
                         break;
                     }
                 }
             }
             else if (class_check && current->mode == ClientService)
             {
-                JD_DMESG("ITER a %d, s %d, c %d, t %c%c%c", current->state.device_address, current->state.udid, current->state.service_class, current->state.flags & JD_SERVICE_STATE_FLAGS_BROADCAST ? 'B' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_HOST ? 'L' : ' ', current->state.flags & JD_SERVICE_STATE_FLAGS_CLIENT ? 'R' : ' ');
+                JD_DMESG("UNINITDSer a %d, s %d, c %d, t %c%c%c", current->device->device_address, current->device->udid, current->service_class, current->mode == BroadcastHostService ? 'B' : ' ', current->mode == HostService? 'H' : ' ', current->mode == ClientService ? 'C' : ' ');
 
                 // this service instance is looking for a specific device (either a udid or name)
                 if (current->requiredDevice)
@@ -454,7 +465,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
                     }
                 }
 
-                JD_DMESG("FOUND NEW: %d %d %d", current->state.device_address, current->state.service_class);
+                JD_DMESG("FOUND NEW: %d %d %d", current->device->device_address, current->service_class);
                 remoteDevice = this->deviceManager.addDevice(cp, pkt->communication_rate);
 
                 if (current->handleServiceInformation(remoteDevice, (JDServiceInformation*)dataPointer) == DEVICE_OK)
@@ -467,7 +478,6 @@ int JDControlService::handlePacket(JDPacket* pkt)
                 }
             }
         }
-
         service_number++;
         dataPointer += JD_SERVICE_INFO_HEADER_SIZE + serviceInfo->advertisement_size;
     }
