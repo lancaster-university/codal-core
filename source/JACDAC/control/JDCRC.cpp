@@ -7,7 +7,7 @@ uint16_t codal::jd_crc(uint8_t *data, uint32_t len, JDDevice* device)
     int i = 0;
     if (device != NULL)
     {
-        uint8_t* udidPtr = (uint8_t*)device->unique_device_identifier;
+        uint8_t* udidPtr = (uint8_t*)&device->unique_device_identifier;
         while (i < 8)
         {
             crc ^= (*udidPtr++ << 8);
