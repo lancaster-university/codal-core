@@ -94,6 +94,8 @@ namespace codal
          **/
         JDControlService(ManagedString deviceName);
 
+        void routePacket(JDPacket* p);
+
         /**
          * Overridden for future use. It might be useful to control the behaviour of the logic service in the future.
          **/
@@ -158,9 +160,14 @@ namespace codal
          **/
         ManagedString getDeviceName();
 
+        /**
+         * Sets the current device name.
+         *
+         * @param name the name for the device.
+         *
+         * @returns DEVICE_OK on success.
+         **/
         int setDeviceName(ManagedString name);
-
-        JDDevice* getDevice(uint8_t device_address);
     };
 }
 

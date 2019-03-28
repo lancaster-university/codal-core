@@ -2,7 +2,9 @@
 #include "JDControlService.h"
 #include "CodalDmesg.h"
 #include "Timer.h"
+#include "JDCRC.h"
 #include "JACDAC.h"
+#include "CodalUtil.h"
 
 using namespace codal;
 
@@ -292,7 +294,7 @@ int JDControlService::setDeviceName(ManagedString name)
 int JDControlService::send(uint8_t* buf, int len)
 {
     if (JACDAC::instance)
-        return JACDAC::instance->bus.send(buf, len, 0, 0, NULL, JDBaudRate::Baud1M);
+        return JACDAC::instance->bus.send(buf, len, 0, NULL);
 
     return DEVICE_NO_RESOURCES;
 }
@@ -301,6 +303,97 @@ int JDControlService::handleServiceInformation(JDDevice* device, JDServiceInform
 {
     // nop for now... could be useful in the future for controlling the mode of the logic service?
     return DEVICE_OK;
+}
+
+void JDControlService::routePacket(JDPacket* pkt)
+{
+    JD_DMESG("pkt REC AD: %d sno: %d SZ:%d",pkt->device_address, pkt->service_number, pkt->size);
+
+    JDDevice* device = NULL;
+
+    if (pkt->device_address == this->device->device_address)
+        device = this->device;
+    else
+        device = this->getRemoteDevice(pkt->device_address);
+
+    uint8_t* addressPointer = (uint8_t*)&pkt->device_address;
+    uint16_t crc = jd_crc(addressPointer, pkt->size + 2, device); // include size and address in the checksum.
+
+    bool crcCheck = (crc == pkt->crc);
+
+    if (crcCheck)
+    {
+        if (device == NULL)
+        {
+            this->handlePacket(pkt);
+        }
+        else
+        {
+            uint32_t broadcast_class = 0;
+
+            // map from device broadcast map to potentially the service number of one of our enumerated broadcast hosts
+            int16_t host_service_number = -1;
+
+            if (device->servicemap_bitmsk & 1 << pkt->service_number)
+            {
+                uint8_t sn = device->broadcast_servicemap[pkt->service_number / 2];
+
+                if (pkt->service_number % 2 == 0)
+                    host_service_number = sn & 0x0F;
+                else
+                    host_service_number = sn & 0xF0 >> 4;
+
+                // we now match on the control service device looking for host services.
+                device = this->device;
+            }
+
+            // handle initialised services
+            for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
+            {
+                JDService* service = JACDAC::instance->services[i];
+
+                if (!service)
+                    continue;
+
+                if (service->device == device && service->service_number == pkt->service_number)
+                {
+                    JD_DMESG("DRIV a:%d sn:%d c:%d i:%d f %d", service->state.device_address, service->state.serial_number, service->state.service_class, service->state.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, service->state.flags);
+
+                    if (host_service_number >= 0)
+                    {
+                        JD_DMESG("BROADCAST MATCH CL: %d", service->service_class);
+                        broadcast_class = service->service_class;
+                        break;
+                    }
+                    // break if DEVICE_OK is returned (indicates the packet has been handled)
+                    else if (service->handlePacket(pkt) == DEVICE_OK)
+                    {
+                        broadcast_class = service->service_class;
+                        break;
+                    }
+                }
+            }
+
+            // we matched a broadcast host, route to all broadcast hosts on the device.
+            if (broadcast_class)
+            {
+                for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
+                {
+                    JDService* service = JACDAC::instance->services[i];
+
+                    if (!service)
+                        continue;
+
+                    if (service->service_class == broadcast_class && service->mode == BroadcastHostService)
+                    {
+                        // break if DEVICE_OK is returned (indicates the packet has been handled)
+                        if (service->handlePacket(pkt) == DEVICE_OK)
+                            break;
+                    }
+                }
+            }
+        }
+    }
 }
 
 /**
@@ -490,8 +583,5 @@ int JDControlService::handlePacket(JDPacket* pkt)
 
 JDDevice* JDControlService::getRemoteDevice(uint8_t device_address)
 {
-    if (this->status & JD_CONTROL_SERVICE_STATUS_ENUMERATED && device_address == this->device->device_address)
-        return this->device;
-
     return this->deviceManager.getDevice(device_address);
 }

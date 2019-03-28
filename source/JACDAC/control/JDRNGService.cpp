@@ -6,7 +6,7 @@ using namespace codal;
 int JDRNGService::send(uint8_t* buf, int len)
 {
     if (JACDAC::instance)
-        return JACDAC::instance->bus.send(buf, len, 0, this->service_number, NULL, JDBaudRate::Baud1M);
+        return JACDAC::instance->bus.send(buf, len, this->service_number, NULL);
 
     return DEVICE_NO_RESOURCES;
 }
