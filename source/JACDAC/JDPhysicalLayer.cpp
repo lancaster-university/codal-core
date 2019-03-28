@@ -316,7 +316,7 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                 uint8_t* crcPointer = (uint8_t*)&rxBuf->device_address;
                 uint16_t crc = 0;
 
-                JDDevice* device = JACDAC::instance->controlService.getDevice(rxBuf->device_address);
+                JDDevice* device = JACDAC::instance->controlService.getRemoteDevice(rxBuf->device_address);
 
                 JD_DMESG("A: %d dev: %p",rxBuf->device_address, device);
 
