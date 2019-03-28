@@ -1,5 +1,6 @@
 #include "JDDeviceManager.h"
 #include "JDControlService.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -87,20 +88,25 @@ JDDevice* JDDeviceManager::addDevice(JDControlPacket* controlPacket, uint8_t com
     else
     {
         JDDevice* head = this->devices;
+        JDDevice* prev = this->devices;
 
-        while(head->next)
+        while(head)
         {
             // guard against duplicates.
             if (head->device_address == newRemote->device_address && head->unique_device_identifier == newRemote->unique_device_identifier)
             {
+                if (newRemote->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
+                    free (newRemote->name);
+
                 free(newRemote);
                 return head;
             }
 
+            prev = head;
             head = head->next;
         }
 
-        head->next = newRemote;
+        prev->next = newRemote;
     }
 
     return newRemote;
