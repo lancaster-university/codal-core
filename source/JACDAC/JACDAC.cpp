@@ -39,7 +39,6 @@ JACDAC* JACDAC::instance = NULL;
 void JACDAC::onPacketReceived(Event)
 {
     JDPacket* pkt = NULL;
-    JDDevice* device = NULL;
 
     while((pkt = bus.getPacket()) != NULL)
     {
