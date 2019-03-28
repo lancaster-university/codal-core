@@ -65,12 +65,13 @@ void USBJACDAC::idleCallback()
 int USBJACDAC::classRequest(UsbEndpointIn &ctrl, USBSetup& setup)
 {
     DMESG("JD CLASS REQ");
+    return DEVICE_OK;
 }
 
 int USBJACDAC::stdRequest(UsbEndpointIn &ctrl, USBSetup& setup)
 {
     DMESG("JD STD REQ");
-    is_setup = true;
+    return DEVICE_OK;
 }
 
 int USBJACDAC::endpointRequest()
