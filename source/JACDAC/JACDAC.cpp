@@ -52,7 +52,7 @@ void JACDAC::onPacketReceived(Event)
             if (this->controlService.device && pkt->device_address == this->controlService.device->device_address)
                 device = this->controlService.device;
             else
-                device = this->controlService.getDevice(pkt->device_address);
+                device = this->controlService.getRemoteDevice(pkt->device_address);
 
             if (device)
             {

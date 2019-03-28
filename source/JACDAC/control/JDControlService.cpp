@@ -488,7 +488,10 @@ int JDControlService::handlePacket(JDPacket* pkt)
     return DEVICE_OK;
 }
 
-JDDevice* JDControlService::getDevice(uint8_t device_address)
+JDDevice* JDControlService::getRemoteDevice(uint8_t device_address)
 {
+    if (this->status & JD_CONTROL_SERVICE_STATUS_ENUMERATED && device_address == this->device->device_address)
+        return this->device;
+
     return this->deviceManager.getDevice(device_address);
 }

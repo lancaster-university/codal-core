@@ -33,15 +33,20 @@ DEALINGS IN THE SOFTWARE.
 #include "ManagedString.h"
 #include "codal_target_hal.h"
 
-// BEGIN    JACDAC
-
 #define JD_STARTED                                      0x02
+
+#ifndef JD_SERVICE_ARRAY_SIZE
 #define JD_SERVICE_ARRAY_SIZE                           20
+#endif
 
 namespace codal
 {
     /**
-     * This class handles packets produced by the JACDAC physical layer and passes them to our high level services.
+     * This class is the composition of the physical and control layers. It process packets
+     * produced by the JACDAC physical layer and passes them to our high level services using the
+     * control layer.
+     *
+     * This composition forms JACDAC.
      **/
     class JACDAC : public CodalComponent
     {
@@ -58,10 +63,10 @@ namespace codal
          **/
         void onPacketReceived(Event);
 
-        // An instance of our logic service
+        // An instance of the control service responsible for routing packets to services
         JDControlService controlService;
 
-        // A pointer to a bridge service (if set, defaults to NULL).
+        // A pointer to a bridge service (if set). Defaults to NULL.
         JDService* bridge;
 
         public:
@@ -69,7 +74,7 @@ namespace codal
         // this array holds all services on the device
         static JDService* services[JD_SERVICE_ARRAY_SIZE];
 
-        // a reference to a JACDAC instance
+        // a reference to a the physical bus instance
         JDPhysicalLayer& bus;
 
         // a singleton pointer to the current instance of JACDAC.
@@ -78,7 +83,10 @@ namespace codal
         /**
          * Constructor
          *
-         * @param JD A reference to JACDAC for communicators
+         * @param bus A reference to an instance of JDPhysicalLayer for the transmission of packets.
+         *
+         * @param deviceName a ManagedString containing the desired name of the device.
+         *                   This can be set using setDeviceName post construction.
          *
          * @param id for the message bus, defaults to  SERVICE_STATE_ID_JACDAC_PROTOCOL
          **/
@@ -93,52 +101,50 @@ namespace codal
          * @param bridge the service to forward all packets to another networking medium
          *        this service will receive all packets via the handlePacket call. If NULL
          *        is given, the bridge member variable is cleared.
-         *
-         * @note one limitation is that the bridge service does not receive packets over the radio itself.
-         *       Ultimately the bridge should punt packets back intro JACDAC for correct handling.
          **/
         int setBridge(JDService* bridge);
 
         /**
-         * Set the name to use for error codes and panics
+         * Set the name to be used when enumerated on the bus.
          *
-         * @param s the name to use for error codes and panic's
-         *
-         * @note Must be 6 characters or smaller.
+         * @param s the name to use
          **/
         static int setDeviceName(ManagedString s);
 
         /**
-         * Retrieve the name used for error codes and panics
+         * Get the name to used when enumerated on the bus.
          *
-         * @return the name used for error codes and panics
+         * @return the current name being used
          **/
         static ManagedString getDeviceName();
 
         /**
-         * Adds a service to the services array. The logic service iterates over this array.
+         * Adds a service to the services array. The control service iterates over this array.
          *
          * @param device a reference to the service to add.
          *
-         * @return SERVICE_STATE_OK on success.
+         * @return DEVICE_OK on success.
          **/
         virtual int add(JDService& device);
 
         /**
-         * removes a service from the services array. The logic service iterates over this array.
+         * removes a service from the services array. The control service iterates over this array.
          *
          * @param device a reference to the service to remove.
          *
-         * @return SERVICE_STATE_OK on success.
+         * @return DEVICE_OK on success.
          **/
         virtual int remove(JDService& device);
 
         /**
-         * A static method to send an entire, premade JDPacket on the bus. Used by the logic service.
+         * A static method to send an entire, premade JDPacket on the bus.
          *
-         * @param pkt the packet to send.
+         * @param pkt the JDPacket struct to send.
          *
-         * @return SERVICE_STATE_OK on success.
+         * @return DEVICE_OK on success.
+         *
+         * @note This struct is copied into memory managed by the physical layer. Users
+         *       are responsible for freeing memory allocated to the given JDPacket (pkt).
          **/
         static int send(JDPacket* pkt);
 
@@ -147,8 +153,18 @@ namespace codal
          **/
         void logState();
 
+        /**
+         * Starts the jacdac bus and enumerates this device (if required).
+         *
+         * @return DEVICE_OK on success.
+         **/
         int start();
 
+        /**
+         * Stops the jacdac bus and stops enumeration by the control service (if required).
+         *
+         * @return DEVICE_OK on success.
+         **/
         int stop();
     };
 
