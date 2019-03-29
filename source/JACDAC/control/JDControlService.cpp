@@ -18,7 +18,7 @@ uint64_t generate_eui64(uint64_t device_identifier)
 
     // set the address to locally administered (it wasn't assigned as globally unique, it's made up).
     // https://community.cisco.com/t5/networking-documents/understanding-ipv6-eui-64-bit-address/ta-p/3116953
-    bytePtr[7] &= ~0x02;
+    bytePtr[6] &= ~0x02;
 
     return unique_device_identifier;
 }
@@ -125,7 +125,7 @@ void JDControlService::timerCallback(Event)
         {
             this->device->rolling_counter++;
 
-            if (this->device->rolling_counter > 3)
+            if (this->device->rolling_counter >= JD_CONTROL_ROLLING_TIMEOUT_VAL)
             {
                 this->status &= ~JD_CONTROL_SERVICE_STATUS_ENUMERATING;
                 this->status |= JD_CONTROL_SERVICE_STATUS_ENUMERATED;
@@ -175,7 +175,7 @@ void JDControlService::timerCallback(Event)
         head = head->next;
         dev->rolling_counter++;
 
-        if (dev->rolling_counter > 3)
+        if (dev->rolling_counter >= JD_CONTROL_ROLLING_TIMEOUT_VAL)
         {
             this->deviceManager.removeDevice(dev);
             this->deviceDisconnected(dev);
@@ -556,7 +556,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
                         // the size of the name is the first byte of the data payload (if present)
                         uint8_t len = *cp->data;
 
-                        if (ManagedString((char *)cp->data + 1, len) == ManagedString((char *)current->requiredDevice->name))
+                        if (ManagedString((char *)cp->data + 1, len) != ManagedString((char *)current->requiredDevice->name))
                             continue;
                     }
                 }

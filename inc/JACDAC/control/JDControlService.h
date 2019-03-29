@@ -14,7 +14,9 @@
 #define JD_CONTROL_SERVICE_EVT_CHANGED                      2
 #define JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK               3
 
-#define JD_CONTROL_PACKET_HEADER_SIZE                   10
+#define JD_CONTROL_PACKET_HEADER_SIZE                       10
+
+#define JD_CONTROL_ROLLING_TIMEOUT_VAL                      3
 
 namespace codal
 {
