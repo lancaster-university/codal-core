@@ -441,7 +441,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
 
                     rejectCP.device_address = cp->device_address;
                     rejectCP.unique_device_identifier = cp->unique_device_identifier;
-                    rejectCP.device_flags = cp->device_flags | JD_DEVICE_FLAGS_REJECT;
+                    rejectCP.device_flags = JD_DEVICE_FLAGS_REJECT;
                     send((uint8_t *)&rejectCP, JD_CONTROL_PACKET_HEADER_SIZE);
                     JD_DMESG("ASK OTHER TO REASSIGN");
                 }
