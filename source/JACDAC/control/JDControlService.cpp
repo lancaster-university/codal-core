@@ -420,7 +420,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
     JDControlPacket *cp = (JDControlPacket *)pkt->data;
 
     // address collision check
-    if (device->device_address == cp->device_address && this->status & (JD_CONTROL_SERVICE_STATUS_ENUMERATING | JD_CONTROL_SERVICE_STATUS_ENUMERATED))
+    if (this->status & (JD_CONTROL_SERVICE_STATUS_ENUMERATING | JD_CONTROL_SERVICE_STATUS_ENUMERATED) && device->device_address == cp->device_address)
     {
         // a different device is using our address!!
         if (device->unique_device_identifier != cp->unique_device_identifier)
