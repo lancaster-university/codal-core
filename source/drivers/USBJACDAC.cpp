@@ -34,6 +34,9 @@ USBJACDAC::USBJACDAC() : JDService(JD_SERVICE_CLASS_BRIDGE, ClientService)
     inBuf = (uint8_t*) malloc(USB_JACDAC_BUFFER_SIZE);
     outBuf = (uint8_t*) malloc(USB_JACDAC_BUFFER_SIZE);
 
+    inBuffPtr = 0;
+    outBuffPtr = 0;
+
     this->status |= DEVICE_COMPONENT_STATUS_IDLE_TICK | DEVICE_COMPONENT_RUNNING;
 }
 
@@ -41,24 +44,23 @@ void USBJACDAC::idleCallback()
 {
     if (inBuffPtr)
     {
-        int len = min(inBuffPtr, 64);
+        DMESG("IBFPTR %d",inBuffPtr);
+        int len = sizeof(JDPacket);
         in->write(inBuf, len);
         memmove(inBuf, inBuf + len, inBuffPtr - len);
         inBuffPtr -= len;
+        DMESG("IBFPTR AF %d",inBuffPtr);
     }
-    else if (outBuffPtr)
+    else if (outBuffPtr > sizeof(JDPacket))
     {
+        DMESG("OBFPTR %d", outBuffPtr);
         JDPacket* tx = (JDPacket*) outBuf;
-        JDPacket* pkt = (JDPacket*)malloc(sizeof(JDPacket));
-
-        memcpy(pkt, outBuf, tx->size);
 
         if (JACDAC::instance)
-            JACDAC::instance->send(pkt);
+            JACDAC::instance->send(tx);
 
-        free(pkt);
-        memmove(outBuf, outBuf + tx->size + JD_SERIAL_HEADER_SIZE, outBuffPtr - (tx->size + JD_SERIAL_HEADER_SIZE));
-        outBuffPtr -= tx->size + JD_SERIAL_HEADER_SIZE;
+        memmove(outBuf, outBuf + sizeof(JDPacket), outBuffPtr - sizeof(JDPacket));
+        outBuffPtr -= sizeof(JDPacket);
     }
 }
 
@@ -97,13 +99,11 @@ const InterfaceInfo *USBJACDAC::getInterfaceInfo()
 
 int USBJACDAC::handlePacket(JDPacket* packet)
 {
-    if (inBuffPtr + packet->size + JD_SERIAL_HEADER_SIZE > USB_JACDAC_BUFFER_SIZE)
+    if (inBuffPtr + sizeof(JDPacket) > USB_JACDAC_BUFFER_SIZE)
         return DEVICE_OK;
 
-    uint8_t* buf = (uint8_t*)packet;
-
-    memcpy(&this->inBuf[inBuffPtr], buf, packet->size + JD_SERIAL_HEADER_SIZE);
-    inBuffPtr += packet->size + JD_SERIAL_HEADER_SIZE;
+    memcpy(&this->inBuf[inBuffPtr], (uint8_t*)packet, sizeof(JDPacket));
+    inBuffPtr += sizeof(JDPacket);
 
     return DEVICE_OK;
 }
