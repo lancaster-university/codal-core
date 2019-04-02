@@ -173,10 +173,12 @@ namespace codal
          **/
         int setDeviceName(ManagedString name);
 
+        int setRemoteDeviceName(uint8_t device_address, ManagedString name);
+
         /**
          *
          **/
-        int triggerRemoteIndication(uint8_t deviceAddress);
+        int triggerRemoteIdentification(uint8_t deviceAddress);
     };
 }
 

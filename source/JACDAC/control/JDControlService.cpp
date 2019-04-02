@@ -41,12 +41,16 @@ void JDControlService::deviceDisconnected(JDDevice* device)
 
 void JDControlService::deviceEnumerated()
 {
+    DMESG("ENUMERATE");
     // iterate over services on the device and provide connect / disconnect events.
     for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
     {
         JDService* current = JACDAC::instance->services[i];
 
-        if (current == NULL || current == this || current->mode == ClientService)
+        // if the service number of a client service is already initialised, we assume it's a control layer service and
+        // initialise it with a device.
+        DMESG("SER: %p", current);
+        if (current == NULL || current == this || (current->mode == ClientService && current->service_number == JD_SERVICE_NUMBER_UNITIALISED_VAL))
             continue;
 
         current->device = this->device;
@@ -188,6 +192,10 @@ int JDControlService::enumerate()
 {
     if (this->status & JD_CONTROL_SERVICE_STATUS_ENUMERATE)
         return DEVICE_INVALID_STATE;
+
+    // these services aren't automatically added at construction as jacdac is being initialised.
+    JACDAC::instance->add(this->configurationService);
+    JACDAC::instance->add(this->rngService);
 
     if (enumerationData == NULL)
     {
@@ -384,6 +392,11 @@ void JDControlService::routePacket(JDPacket* pkt)
             }
         }
     }
+    else
+    {
+        DMESG("CRC ERR: %d %d", pkt->device_address, pkt->service_number);
+    }
+
 }
 
 /**
@@ -391,18 +404,21 @@ void JDControlService::routePacket(JDPacket* pkt)
   **/
 int JDControlService::handlePacket(JDPacket* pkt)
 {
+    DMESG("HP %d %d", pkt->device_address, pkt->service_number);
     // if the driver has not started yet, drain packets.
     if (!(this->status & JD_CONTROL_SERVICE_STATUS_ENUMERATE))
         return DEVICE_OK;
 
     if (pkt->service_number == this->rngService.service_number)
     {
+        DMESG("RNG SERV");
         this->rngService.handlePacket(pkt);
         return DEVICE_OK;
     }
 
     if (pkt->service_number == this->configurationService.service_number)
     {
+        DMESG("CONF SERV");
         this->configurationService.handlePacket(pkt);
         return DEVICE_OK;
     }
@@ -582,9 +598,14 @@ ManagedString JDControlService::getDeviceName()
     return this->name;
 }
 
-int JDControlService::triggerRemoteIndication(uint8_t deviceAddress)
+int JDControlService::setRemoteDeviceName(uint8_t device_address, ManagedString name)
 {
-    return this->configurationService.triggerRemoteIndication(deviceAddress);
+    return this->configurationService.setRemoteDeviceName(device_address, name);
+}
+
+int JDControlService::triggerRemoteIdentification(uint8_t deviceAddress)
+{
+    return this->configurationService.triggerRemoteIdentification(deviceAddress);
 }
 
 JDDevice* JDControlService::getRemoteDevice(uint8_t device_address)

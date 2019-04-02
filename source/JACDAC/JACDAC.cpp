@@ -142,6 +142,22 @@ ManagedString JACDAC::getDeviceName()
     return JACDAC::instance->controlService.getDeviceName();
 }
 
+int JACDAC::triggerRemoteIdentification(uint8_t device_address)
+{
+    if (JACDAC::instance == NULL)
+        return DEVICE_INVALID_STATE;
+
+    return JACDAC::instance->controlService.triggerRemoteIdentification(device_address);
+}
+
+int JACDAC::setRemoteDeviceName(uint8_t device_address, ManagedString name)
+{
+    if (JACDAC::instance == NULL)
+        return DEVICE_INVALID_STATE;
+
+    return JACDAC::instance->controlService.setRemoteDeviceName(device_address, name);
+}
+
 void JACDAC::logState()
 {
     if (JACDAC::instance == NULL)

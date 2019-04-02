@@ -24,6 +24,8 @@ namespace codal
 
         virtual int handlePacket(JDPacket* p) override;
 
+        JDDevice* getDeviceList();
+
         void logDevices();
     };
 }

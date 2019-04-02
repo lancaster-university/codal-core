@@ -12,6 +12,7 @@ void JDPacketSniffer::timerCallback(Event)
     while (head)
     {
         JDDevice* dev = head;
+        DMESG("JDPS %p",dev);
         head = head->next;
         dev->rolling_counter++;
 
@@ -32,6 +33,11 @@ JDPacketSniffer::JDPacketSniffer() : JDService(JD_SERVICE_CLASS_BRIDGE, ClientSe
         system_timer_event_every(500, this->id, JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK);
     }
 
+}
+
+JDDevice* JDPacketSniffer::getDeviceList()
+{
+    return this->deviceManager.getDeviceList();
 }
 
 int JDPacketSniffer::handlePacket(JDPacket* p)

@@ -1,5 +1,6 @@
 #include "JDConfigurationService.h"
 #include "JACDAC.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -19,10 +20,12 @@ JDConfigurationService::JDConfigurationService(uint16_t id) : JDService(JD_SERVI
 
 int JDConfigurationService::handlePacket(JDPacket* p)
 {
+    JDConfigurationPacket* pkt = (JDConfigurationPacket *)p->data;
+
+    DMESG("DEV: %p, this %p", this->device, this);
+
     if (this->device)
     {
-        JDConfigurationPacket* pkt = (JDConfigurationPacket *)p->data;
-
         if (pkt->device_address == this->device->device_address)
         {
             if (pkt->request_type == JD_CONTROL_CONFIGURATION_SERVICE_REQUEST_TYPE_NAME)
@@ -32,8 +35,8 @@ int JDConfigurationService::handlePacket(JDPacket* p)
                 Event(this->id, JD_CONTROL_CONFIGURATION_EVT_NAME);
             }
 
-            if (pkt->request_type == JD_CONTROL_CONFIGURATION_SERVICE_REQUEST_TYPE_INDICATE)
-                Event(this->id, JD_CONTROL_CONFIGURATION_EVT_INDICATE);
+            if (pkt->request_type == JD_CONTROL_CONFIGURATION_SERVICE_REQUEST_TYPE_IDENTIFY)
+                Event(this->id, JD_CONTROL_CONFIGURATION_EVT_IDENTIFY);
         }
     }
 
@@ -65,7 +68,7 @@ int JDConfigurationService::setRemoteDeviceName(uint8_t device_address, ManagedS
     return DEVICE_OK;
 }
 
-int JDConfigurationService::triggerRemoteIndication(uint8_t device_address)
+int JDConfigurationService::triggerRemoteIdentification(uint8_t device_address)
 {
     if (device_address == 0)
         return DEVICE_INVALID_PARAMETER;
@@ -73,7 +76,7 @@ int JDConfigurationService::triggerRemoteIndication(uint8_t device_address)
     JDConfigurationPacket cfg;
 
     cfg.device_address = device_address;
-    cfg.request_type = JD_CONTROL_CONFIGURATION_SERVICE_REQUEST_TYPE_INDICATE;
+    cfg.request_type = JD_CONTROL_CONFIGURATION_SERVICE_REQUEST_TYPE_IDENTIFY;
 
     send((uint8_t *)&cfg, JD_CONTROL_CONFIGURATION_SERVICE_PACKET_HEADER_SIZE);
 
