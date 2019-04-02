@@ -207,7 +207,7 @@ namespace codal
           *
           * @param baud Defaults to 1mbaud
           */
-        JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busStateLED = NULL, Pin* commStateLED = NULL, JDBaudRate baud = JDBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC0);
+        JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busStateLED = NULL, Pin* commStateLED = NULL, JDBaudRate baud = JDBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC_PHYS);
 
         /**
           * Retrieves the first packet on the rxQueue regardless of the device_class

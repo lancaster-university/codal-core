@@ -42,6 +42,7 @@ void JACDAC::onPacketReceived(Event)
 
     while((pkt = bus.getPacket()) != NULL)
     {
+        DMESG("PKT: a %d sn: %d",pkt->device_address, pkt->service_number);
         controlService.routePacket(pkt);
 
         // if we have a bridge service, route all packets to it.

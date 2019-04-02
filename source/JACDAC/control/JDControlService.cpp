@@ -58,8 +58,7 @@ int JDControlService::formControlPacket()
 {
     uint16_t size = 0;
 
-    ManagedString nsName = this->namingService.getName();
-    int nsNameLen = nsName.length();
+    int nsNameLen = this->name.length();
 
     // copy the name into the control packet (if we have one)
     if (nsNameLen)
@@ -67,7 +66,7 @@ int JDControlService::formControlPacket()
         this->device->device_flags |= JD_DEVICE_FLAGS_HAS_NAME;
         uint8_t* name = enumerationData->data;
         name[0] = nsNameLen;
-        memcpy(name + 1, nsName.toCharArray(), name[0]);
+        memcpy(name + 1, this->name.toCharArray(), name[0]);
 
         size += name[0] + 1;
     }
@@ -265,8 +264,9 @@ int JDControlService::disconnect()
     return DEVICE_OK;
 }
 
-JDControlService::JDControlService(ManagedString deviceName) : JDService(JD_SERVICE_CLASS_CONTROL, HostService), namingService(deviceName)
+JDControlService::JDControlService(ManagedString name) : JDService(JD_SERVICE_CLASS_CONTROL, HostService), configurationService()
 {
+    this->name = name;
     this->device = NULL;
     this->remoteDevices = NULL;
     this->enumerationData = NULL;
@@ -279,16 +279,6 @@ JDControlService::JDControlService(ManagedString deviceName) : JDService(JD_SERV
         EventModel::defaultEventBus->listen(this->id, JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK, this, &JDControlService::timerCallback);
         system_timer_event_every(500, this->id, JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK);
     }
-}
-
-ManagedString JDControlService::getDeviceName()
-{
-    return this->namingService.getName();
-}
-
-int JDControlService::setDeviceName(ManagedString name)
-{
-    return this->namingService.setName(name);
 }
 
 int JDControlService::send(uint8_t* buf, int len)
@@ -411,9 +401,9 @@ int JDControlService::handlePacket(JDPacket* pkt)
         return DEVICE_OK;
     }
 
-    if (pkt->service_number == this->namingService.service_number)
+    if (pkt->service_number == this->configurationService.service_number)
     {
-        this->namingService.handlePacket(pkt);
+        this->configurationService.handlePacket(pkt);
         return DEVICE_OK;
     }
 
@@ -579,6 +569,22 @@ int JDControlService::handlePacket(JDPacket* pkt)
     }
 
     return DEVICE_OK;
+}
+
+int JDControlService::setDeviceName(ManagedString name)
+{
+    this->name = name;
+    return DEVICE_OK;
+}
+
+ManagedString JDControlService::getDeviceName()
+{
+    return this->name;
+}
+
+int JDControlService::triggerRemoteIndication(uint8_t deviceAddress)
+{
+    return this->configurationService.triggerRemoteIndication(deviceAddress);
 }
 
 JDDevice* JDControlService::getRemoteDevice(uint8_t device_address)

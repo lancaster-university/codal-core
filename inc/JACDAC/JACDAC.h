@@ -87,10 +87,10 @@ namespace codal
          *
          * @param deviceName a ManagedString containing the desired name of the device.
          *                   This can be set using setDeviceName post construction.
-         *
+         *π
          * @param id for the message bus, defaults to  SERVICE_STATE_ID_JACDAC_PROTOCOL
          **/
-        JACDAC(JDPhysicalLayer& bus, ManagedString deviceName = ManagedString(), uint16_t id = DEVICE_ID_JACDAC_PROTOCOL);
+        JACDAC(JDPhysicalLayer& bus, ManagedString deviceName = ManagedString(), uint16_t id = DEVICE_ID_JACDAC);
 
         /**
          * Sets the bridge member variable to the given JDService pointer.

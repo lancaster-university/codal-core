@@ -3,7 +3,7 @@
 
 #include "JDService.h"
 #include "JDRNGService.h"
-#include "JDNamingService.h"
+#include "JDConfigurationService.h"
 #include "ManagedString.h"
 
 #define JD_CONTROL_SERVICE_STATUS_ENUMERATE                 0x02
@@ -48,7 +48,9 @@ namespace codal
 
         JDDeviceManager deviceManager;
         JDRNGService rngService;
-        JDNamingService namingService;
+        JDConfigurationService configurationService;
+        ManagedString name;
+
 
         /**
          * This member function periodically iterates across all devices and performs various actions. It handles the sending
@@ -94,7 +96,7 @@ namespace codal
          *
          * @param deviceName the device name to use on the bus.
          **/
-        JDControlService(ManagedString deviceName);
+        JDControlService(ManagedString name);
 
         void routePacket(JDPacket* p);
 
@@ -170,6 +172,11 @@ namespace codal
          * @returns DEVICE_OK on success.
          **/
         int setDeviceName(ManagedString name);
+
+        /**
+         *
+         **/
+        int triggerRemoteIndication(uint8_t deviceAddress);
     };
 }
 

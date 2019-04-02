@@ -3,7 +3,7 @@
 #ifndef JD_RNG_SERVICE_H
 #define JD_RNG_SERVICE_H
 
-#define JD_CONTROL_RNG_SERVICE_NUMBER                   1
+#define JD_CONTROL_RNG_SERVICE_NUMBER                   2
 
 #define JD_CONTROL_RNG_SERVICE_REQUEST_TYPE_REQ         1
 #define JD_CONTROL_RNG_SERVICE_REQUEST_TYPE_RESP        2

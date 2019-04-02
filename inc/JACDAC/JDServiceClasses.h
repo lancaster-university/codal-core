@@ -13,7 +13,7 @@
 
 #define JD_SERVICE_CLASS_CONTROL                        0
 #define JD_SERVICE_CLASS_CONTROL_RNG                    1
-#define JD_SERVICE_CLASS_CONTROL_NAMING                 2
+#define JD_SERVICE_CLASS_CONTROL_CONFIGURATION          2
 #define JD_SERVICE_CLASS_CONTROL_TEST                   3
 
 #define JD_SERVICE_CLASS_JOYSTICK                       4
