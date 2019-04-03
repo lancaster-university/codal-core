@@ -20,9 +20,6 @@
 #define JD_SERVICE_CLASS_MESSAGE_BUS                    5
 #define JD_SERVICE_CLASS_BRIDGE                         6
 #define JD_SERVICE_CLASS_BUTTON                         7
-#define JD_SERVICE_CLASS_PIN                            8
-#define JD_SERVICE_CLASS_RELIABILITY_TESTER             9
-#define JD_SERVICE_CLASS_ACCELEROMETER                  10
-#define JD_SERVICE_CLASS_CAPTOUCH_BUTTON                11
+#define JD_SERVICE_CLASS_ACCELEROMETER                  8
 
 #endif
