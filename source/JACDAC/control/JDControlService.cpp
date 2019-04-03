@@ -221,9 +221,20 @@ int JDControlService::enumerate()
         this->device->name = NULL;
     }
 
-    int size = formControlPacket();
+    int hostServiceCount = 0;
 
-    if (size > JD_CONTROL_PACKET_HEADER_SIZE)
+    for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
+    {
+        JDService* current = JACDAC::instance->services[i];
+
+        if (current == NULL)
+            continue;
+
+        if (current->mode == HostService || current->mode == BroadcastHostService)
+            hostServiceCount++;
+    }
+
+    if (hostServiceCount > 0)
     {
         this->status |= (JD_CONTROL_SERVICE_STATUS_ENUMERATING | JD_CONTROL_SERVICE_STATUS_ENUMERATE);
         return DEVICE_OK;
