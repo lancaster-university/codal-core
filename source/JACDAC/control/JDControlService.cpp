@@ -227,7 +227,7 @@ int JDControlService::enumerate()
     {
         JDService* current = JACDAC::instance->services[i];
 
-        if (current == NULL)
+        if (current == NULL || current == this)
             continue;
 
         if (current->mode == HostService || current->mode == BroadcastHostService)
