@@ -11,7 +11,7 @@
 #define JD_SERVICE_EVT_CONNECTED                        65520
 #define JD_SERVICE_EVT_DISCONNECTED                     65521
 #define JD_SERVICE_EVT_ERROR                            65526
-#define JD_SERVICE_NUMBER_UNITIALISED_VAL               65535  // used as the service_number when a service is not initialised
+#define JD_SERVICE_NUMBER_UNINITIALISED_VAL             65535  // used as the service_number when a service is not initialised
 #define JD_SERVICE_STATUS_FLAGS_INITIALISED             0x02 // device service is running
 
 #define JD_SERVICE_INFO_HEADER_SIZE                     6

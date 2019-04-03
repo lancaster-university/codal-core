@@ -22,8 +22,8 @@ struct JDConfigurationPacket
 {
     uint8_t device_address;
     uint8_t request_type;
-    uint8_t* data;
-}__attribute((__packed__));
+    uint8_t data[];
+} __attribute((__packed__));
 
 namespace codal
 {

@@ -21,8 +21,7 @@ JDConfigurationService::JDConfigurationService(uint16_t id) : JDService(JD_SERVI
 int JDConfigurationService::handlePacket(JDPacket* p)
 {
     JDConfigurationPacket* pkt = (JDConfigurationPacket *)p->data;
-
-    DMESG("DEV: %p, this %p", this->device, this);
+    JD_DMESG("CFG size: %d", p->size);
 
     if (this->device)
     {
@@ -30,8 +29,9 @@ int JDConfigurationService::handlePacket(JDPacket* p)
         {
             if (pkt->request_type == JD_CONTROL_CONFIGURATION_SERVICE_REQUEST_TYPE_NAME)
             {
-                int len = *pkt->data;
-                JACDAC::instance->setDeviceName(ManagedString((char *)pkt->data + 1, len));
+                uint8_t* namePtr = pkt->data;
+                int len = *namePtr++;
+                JACDAC::instance->setDeviceName(ManagedString((char *)namePtr, len));
                 Event(this->id, JD_CONTROL_CONFIGURATION_EVT_NAME);
             }
 

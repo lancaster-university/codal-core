@@ -56,7 +56,7 @@ JDService::JDService(uint32_t service_class, JDServiceMode m)
     this->device = NULL;
     this->requiredDevice = NULL;
     this->service_class = service_class;
-    this->service_number = JD_SERVICE_NUMBER_UNITIALISED_VAL;
+    this->service_number = JD_SERVICE_NUMBER_UNINITIALISED_VAL;
 
     if (JACDAC::instance)
         JACDAC::instance->add(*this);

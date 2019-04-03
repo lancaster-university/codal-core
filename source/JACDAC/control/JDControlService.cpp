@@ -34,7 +34,7 @@ void JDControlService::deviceDisconnected(JDDevice* device)
             continue;
 
         current->device = NULL;
-        current->service_number = JD_SERVICE_NUMBER_UNITIALISED_VAL;
+        current->service_number = JD_SERVICE_NUMBER_UNINITIALISED_VAL;
         current->hostDisconnected();
     }
 }
@@ -48,7 +48,7 @@ void JDControlService::deviceEnumerated()
 
         // if the service number of a client service is already initialised, we assume it's a control layer service and
         // initialise it with a device.
-        if (current == NULL || current == this || (current->mode == ClientService && current->service_number == JD_SERVICE_NUMBER_UNITIALISED_VAL))
+        if (current == NULL || current == this || (current->mode == ClientService && current->service_number == JD_SERVICE_NUMBER_UNINITIALISED_VAL))
             continue;
 
         current->device = this->device;
@@ -69,7 +69,6 @@ int JDControlService::formControlPacket()
         uint8_t* name = enumerationData->data;
         name[0] = nsNameLen;
         memcpy(name + 1, this->name.toCharArray(), name[0]);
-
         size += name[0] + 1;
     }
 
@@ -89,12 +88,14 @@ int JDControlService::formControlPacket()
             continue;
 
         // the device has modified its service numbers whilst enumerated.
-        if (current->service_number != JD_SERVICE_NUMBER_UNITIALISED_VAL && current->service_number != service_number)
+        if (current->service_number != JD_SERVICE_NUMBER_UNINITIALISED_VAL && current->service_number != service_number)
             target_panic(DEVICE_JACDAC_ERROR);
 
         current->service_number = service_number;
 
         info = (JDServiceInformation *)(enumerationData->data + size);
+
+        // DMESG("IPTR: %p %d",info, (unsigned long)info % 4);
 
         info->service_flags = current->service_flags;
         info->service_class = current->service_class;

@@ -12,7 +12,6 @@ void JDPacketSniffer::timerCallback(Event)
     while (head)
     {
         JDDevice* dev = head;
-        DMESG("JDPS %p",dev);
         head = head->next;
         dev->rolling_counter++;
 
