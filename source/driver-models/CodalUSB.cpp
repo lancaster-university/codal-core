@@ -150,7 +150,7 @@ static const uint8_t msOS20Descriptor[] = {
     'A', 0, '}', 0, 0, 0, 0, 0};
 #endif
 
-static const InterfaceInfo dummyIfaceInfo = {
+static const InterfaceInfo codalDummyIfaceInfo = {
     NULL,
     0,
     0,
@@ -167,8 +167,8 @@ static const InterfaceInfo dummyIfaceInfo = {
 };
 
 
-const InterfaceInfo *DummyIface::getInterfaceInfo() {
-    return &dummyIfaceInfo;
+const InterfaceInfo *CodalDummyUSBInterface::getInterfaceInfo() {
+    return &codalDummyIfaceInfo;
 }
 
 CodalUSB::CodalUSB()
