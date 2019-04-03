@@ -41,7 +41,6 @@ void JDControlService::deviceDisconnected(JDDevice* device)
 
 void JDControlService::deviceEnumerated()
 {
-    DMESG("ENUMERATE");
     // iterate over services on the device and provide connect / disconnect events.
     for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
     {
@@ -49,7 +48,6 @@ void JDControlService::deviceEnumerated()
 
         // if the service number of a client service is already initialised, we assume it's a control layer service and
         // initialise it with a device.
-        DMESG("SER: %p", current);
         if (current == NULL || current == this || (current->mode == ClientService && current->service_number == JD_SERVICE_NUMBER_UNITIALISED_VAL))
             continue;
 
