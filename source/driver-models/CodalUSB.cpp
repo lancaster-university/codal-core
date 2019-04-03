@@ -34,8 +34,9 @@ DEALINGS IN THE SOFTWARE.
 
 CodalUSB *CodalUSB::usbInstance = NULL;
 
-//#define LOG DMESG
-#define LOG(...)
+
+#define LOG DMESG
+// #define LOG(...)
 
 static uint8_t usb_initialised = 0;
 // usb_20.pdf
@@ -149,6 +150,27 @@ static const uint8_t msOS20Descriptor[] = {
     'A', 0, '}', 0, 0, 0, 0, 0};
 #endif
 
+static const InterfaceInfo dummyIfaceInfo = {
+    NULL,
+    0,
+    0,
+    {
+        0,    // numEndpoints
+        0xff, /// class code - vendor-specific
+        0xff,   // subclass
+        0xff,    // protocol
+        0x00, // string
+        0x00, // alt
+    },
+    {0, 0},
+    {0, 0},
+};
+
+
+const InterfaceInfo *DummyIface::getInterfaceInfo() {
+    return &dummyIfaceInfo;
+}
+
 CodalUSB::CodalUSB()
 {
     usbInstance = this;
@@ -224,7 +246,7 @@ int CodalUSB::sendConfig()
         {
             // OK
         }
-        
+
         if (info->iface.numEndpoints >= 1)
         {
             EndpointDescriptor epdescIn = {
@@ -237,7 +259,7 @@ int CodalUSB::sendConfig()
             };
             ADD_DESC(epdescIn);
         }
-        
+
         if (info->iface.numEndpoints >= 2)
         {
             EndpointDescriptor epdescOut = {
@@ -422,9 +444,11 @@ void CodalUSB::setupRequest(USBSetup &setup)
 
     if ((request_type & USB_REQ_TYPE) == USB_REQ_STANDARD)
     {
+        LOG("STD REQ");
         switch (setup.bRequest)
         {
         case USB_REQ_GET_STATUS:
+            LOG("STA");
             if (request_type == (USB_REQ_DEVICETOHOST | USB_REQ_STANDARD | USB_REQ_DEVICE))
             {
                 wStatus = usb_status;
@@ -433,6 +457,7 @@ void CodalUSB::setupRequest(USBSetup &setup)
             break;
 
         case USB_REQ_CLEAR_FEATURE:
+            LOG("CLR FEA");
             if ((request_type == (USB_REQ_HOSTTODEVICE | USB_REQ_STANDARD | USB_REQ_DEVICE)) &&
                 (wValue == USB_DEVICE_REMOTE_WAKEUP))
                 usb_status &= ~USB_FEATURE_REMOTE_WAKEUP_ENABLED;
@@ -450,28 +475,34 @@ void CodalUSB::setupRequest(USBSetup &setup)
             sendzlp();
             break;
         case USB_REQ_SET_FEATURE:
+            LOG("SET FEA");
             if ((request_type == (USB_REQ_HOSTTODEVICE | USB_REQ_STANDARD | USB_REQ_DEVICE)) &&
                 (wValue == USB_DEVICE_REMOTE_WAKEUP))
                 usb_status |= USB_FEATURE_REMOTE_WAKEUP_ENABLED;
             sendzlp();
             break;
         case USB_REQ_SET_ADDRESS:
+            LOG("SET ADDR");
             usb_set_address_pre(wValue);
             sendzlp();
             usb_set_address(wValue);
             break;
         case USB_REQ_GET_DESCRIPTOR:
+            LOG("GET DESC");
             status = sendDescriptors(setup);
             break;
         case USB_REQ_SET_DESCRIPTOR:
+            LOG("SET DESC");
             stall();
             break;
         case USB_REQ_GET_CONFIGURATION:
+            LOG("GET CONF");
             wStatus = 1;
             send(&wStatus, 1);
             break;
 
         case USB_REQ_SET_CONFIGURATION:
+            LOG("SET CONF");
             if (USB_REQ_DEVICE == (request_type & USB_REQ_DESTINATION))
             {
                 usb_initialised = setup.wValueL;

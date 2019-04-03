@@ -51,6 +51,8 @@ namespace codal
         virtual const InterfaceInfo *getInterfaceInfo() override;
         virtual int handlePacket(JDPacket*) override;
 
+        virtual bool enableWebUSB() override { return true; }
+
         virtual void idleCallback() override;
     };
 }
