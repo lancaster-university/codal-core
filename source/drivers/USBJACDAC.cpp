@@ -42,16 +42,18 @@ USBJACDAC::USBJACDAC() : JDService(JD_SERVICE_CLASS_BRIDGE, ClientService)
 
 void USBJACDAC::idleCallback()
 {
-    if (inBuffPtr)
+    if (inBuffPtr >= sizeof(JDPacket))
     {
         DMESG("IBFPTR %d",inBuffPtr);
-        int len = sizeof(JDPacket);
-        in->write(inBuf, len);
-        memmove(inBuf, inBuf + len, inBuffPtr - len);
-        inBuffPtr -= len;
+        in->write(inBuf, sizeof(JDPacket));
+        inBuffPtr -= sizeof(JDPacket);
+
+        if (inBuffPtr > 0)
+            memmove(inBuf, inBuf + sizeof(JDPacket), inBuffPtr);
         DMESG("IBFPTR AF %d",inBuffPtr);
     }
-    else if (outBuffPtr > sizeof(JDPacket))
+
+    if (outBuffPtr >= sizeof(JDPacket))
     {
         DMESG("OBFPTR %d", outBuffPtr);
         JDPacket* tx = (JDPacket*) outBuf;
@@ -59,8 +61,11 @@ void USBJACDAC::idleCallback()
         if (JACDAC::instance)
             JACDAC::instance->send(tx);
 
-        memmove(outBuf, outBuf + sizeof(JDPacket), outBuffPtr - sizeof(JDPacket));
         outBuffPtr -= sizeof(JDPacket);
+
+        if (outBuffPtr > 0)
+            memmove(outBuf, outBuf + sizeof(JDPacket), outBuffPtr);
+        DMESG("OBFPTR AF %d",outBuffPtr);
     }
 }
 

@@ -129,7 +129,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
     if (es != JDBusErrorState::Continuation && !(status & es))
     {
         // set_gpio3(1);
-        JD_DMESG("FIRST");
+        DMESG("ERR %d",es);
         if (es == JD_SERIAL_BUS_TIMEOUT_ERROR || es == JD_SERIAL_BUS_UART_ERROR)
         {
             error_count++;
@@ -212,6 +212,8 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
             uint32_t endTime = timer.captureCounter();
             uint32_t bytesReceived = sws.getBytesReceived();
 
+            JD_DMESG("lbc: %d br: %d",lastBufferedCount, bytesReceived);
+
             // if we've not received data since last check
             // we break up the if statements to ensure that startTime is not updated if we're waiting for bytes.
             if (lastBufferedCount == bytesReceived)
@@ -265,8 +267,10 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                 if (rxBuf->size)
                 {
                     sws.receiveDMA(((uint8_t*)rxBuf) + JD_SERIAL_HEADER_SIZE, rxBuf->size);
-                    timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + JD_MAX_INTERBYTE_SPACING);
+                    // here we start a new dma transaction, reset lastBufferedCount...
+                    lastBufferedCount = 0;
 
+                    timer.setCompare(MAXIMUM_INTERBYTE_CC, timer.captureCounter() + JD_MAX_INTERBYTE_SPACING);
                     status |= JD_SERIAL_RECEIVING;
                 }
 
