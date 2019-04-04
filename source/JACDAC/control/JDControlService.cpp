@@ -366,7 +366,7 @@ void JDControlService::routePacket(JDPacket* pkt)
                         continue;
 
                     if (service->device->device_address == device->device_address && service->service_number == host_service_number) {
-                        DMESG("BROADCAST MATCH CL: %d", service->service_class);
+                        JD_DMESG("BROADCAST MATCH CL: %d", service->service_class);
                         broadcast_class = service->service_class;
                         break;
                     }
