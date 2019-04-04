@@ -9,8 +9,6 @@
 #define JD_CONSOLE_LOG_PRIORITY_WARNING     2
 #define JD_CONSOLE_LOG_PRIORITY_DEBUG       3
 
-#define JD_CONSOLE_LOG_STATUS_RECEIVER      0x02
-
 namespace codal
 {
     enum JDConsoleLogPriority

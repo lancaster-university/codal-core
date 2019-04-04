@@ -7,14 +7,11 @@ JDConsoleService::JDConsoleService(bool receiver) :
     JDService(JD_SERVICE_CLASS_CONSOLE, (receiver) ? BroadcastHostService : HostService)
 {
     status = 0;
-
-    if (receiver)
-        status |= JD_CONSOLE_LOG_STATUS_RECEIVER;
 }
 
 int JDConsoleService::handlePacket(JDPacket* pkt)
 {
-    if (status & JD_CONSOLE_LOG_STATUS_RECEIVER)
+    if (mode == BroadcastHostService)
     {
         JDConsolePacket* consolePkt =  (JDConsolePacket*)pkt->data;
         char* priorityMsg = (char *)"";
