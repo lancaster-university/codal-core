@@ -158,6 +158,14 @@ int JACDAC::setRemoteDeviceName(uint8_t device_address, ManagedString name)
     return JACDAC::instance->controlService.setRemoteDeviceName(device_address, name);
 }
 
+JDDevice* JACDAC::getRemoteDevice(uint8_t device_address)
+{
+    if (JACDAC::instance == NULL)
+        return NULL;
+
+    return JACDAC::instance->controlService.getRemoteDevice(device_address);
+}
+
 void JACDAC::logState()
 {
     if (JACDAC::instance == NULL)

@@ -21,5 +21,6 @@
 #define JD_SERVICE_CLASS_BRIDGE                         6
 #define JD_SERVICE_CLASS_BUTTON                         7
 #define JD_SERVICE_CLASS_ACCELEROMETER                  8
+#define JD_SERVICE_CLASS_CONSOLE                        9
 
 #endif
