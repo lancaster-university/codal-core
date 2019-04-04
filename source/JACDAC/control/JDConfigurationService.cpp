@@ -12,7 +12,7 @@ int JDConfigurationService::send(uint8_t* buf, int len)
     return DEVICE_NO_RESOURCES;
 }
 
-JDConfigurationService::JDConfigurationService(uint16_t id) : JDService(JD_SERVICE_CLASS_CONTROL_CONFIGURATION, ClientService)
+JDConfigurationService::JDConfigurationService(uint16_t id) : JDService(JD_SERVICE_CLASS_CONTROL_CONFIGURATION, ControlLayerService)
 {
     this->service_number = JD_CONTROL_CONFIGURATION_SERVICE_NUMBER;
     this->id = id;

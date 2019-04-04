@@ -30,7 +30,8 @@ void JDControlService::deviceDisconnected(JDDevice* device)
     {
         JDService* current = JACDAC::instance->services[i];
 
-        if (current == NULL || current == this || current->device != device)
+        // don't disconnect control layer services
+        if (current == NULL || current->device != device || current->mode == ControlLayerService)
             continue;
 
         current->device = NULL;
@@ -46,9 +47,7 @@ void JDControlService::deviceEnumerated()
     {
         JDService* current = JACDAC::instance->services[i];
 
-        // if the service number of a client service is already initialised, we assume it's a control layer service and
-        // initialise it with a device.
-        if (current == NULL || current == this || (current->mode == ClientService && current->service_number == JD_SERVICE_NUMBER_UNINITIALISED_VAL))
+        if (current == NULL || current == this || current->mode == ClientService)
             continue;
 
         current->device = this->device;
@@ -228,11 +227,10 @@ int JDControlService::enumerate()
     {
         JDService* current = JACDAC::instance->services[i];
 
-        if (current == NULL || current == this)
+        if (current == NULL || current->mode == ClientService || current->mode == ControlLayerService)
             continue;
 
-        if (current->mode == HostService || current->mode == BroadcastHostService)
-            hostServiceCount++;
+        hostServiceCount++;
     }
 
     if (hostServiceCount > 0)
@@ -282,7 +280,7 @@ int JDControlService::disconnect()
     return DEVICE_OK;
 }
 
-JDControlService::JDControlService(ManagedString name) : JDService(JD_SERVICE_CLASS_CONTROL, HostService), configurationService()
+JDControlService::JDControlService(ManagedString name) : JDService(JD_SERVICE_CLASS_CONTROL, ControlLayerService), configurationService()
 {
     this->name = name;
     this->device = NULL;
@@ -508,7 +506,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
         {
             JDService* current = JACDAC::instance->services[i];
 
-            if (current == NULL)
+            if (current == NULL || current->mode == ControlLayerService)
                 continue;
 
             bool class_check = current->service_class == serviceInfo->service_class;
