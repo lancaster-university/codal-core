@@ -224,7 +224,7 @@ int CodalUSB::sendConfig()
         {
             // OK
         }
-        
+
         if (info->iface.numEndpoints >= 1)
         {
             EndpointDescriptor epdescIn = {
@@ -237,7 +237,7 @@ int CodalUSB::sendConfig()
             };
             ADD_DESC(epdescIn);
         }
-        
+
         if (info->iface.numEndpoints >= 2)
         {
             EndpointDescriptor epdescOut = {
@@ -337,33 +337,40 @@ int CodalUSB::add(CodalUSBInterface &interface)
     usb_assert(!usb_configured);
 
     uint8_t epsConsumed = interface.getInterfaceInfo()->allocateEndpoints;
+    if (epsConsumed > 1) epsConsumed = 1;
 
     if (endpointsUsed + epsConsumed > DEVICE_USB_ENDPOINTS)
         return DEVICE_NO_RESOURCES;
 
-    interface.interfaceIdx = 0xff;
-
     CodalUSBInterface *iface;
-    interface.next = NULL;
 
-    for (iface = interfaces; iface; iface = iface->next)
+    if (interfaces == NULL)
     {
-        if (!iface->next)
-            break;
-#if CONFIG_ENABLED(DEVICE_WEBUSB)
-        // adding a non-web interface - it comes before all web interfaces
-        if (!interface.enableWebUSB() && iface->next->enableWebUSB())
-        {
-            interface.next = iface->next;
-            break;
-        }
-#endif
-    }
-
-    if (iface)
-        iface->next = &interface;
-    else
+        interface.next = NULL;
         interfaces = &interface;
+    }
+    else
+    {
+        // interfaceIdx is 0xff by default, or otherwise the requested
+        // interface number; we keep the list sorted - Windows requires that
+        if (interface.interfaceIdx < interfaces->interfaceIdx)
+        {
+            interface.next = interfaces;
+            interfaces = &interface;
+        }
+        else
+            for (iface = interfaces; iface; iface = iface->next)
+            {
+                if (!iface->next || interface.interfaceIdx < iface->next->interfaceIdx)
+                {
+                    interface.next = iface->next;
+                    iface->next = &interface;
+                    break;
+                }
+            }
+
+        usb_assert(iface != NULL);
+    }
 
     endpointsUsed += epsConsumed;
 
@@ -409,7 +416,7 @@ int CodalUSB::interfaceRequest(USBSetup &setup, bool isClass)
 void CodalUSB::setupRequest(USBSetup &setup)
 {
     LOG("SETUP Req=%x type=%x val=%x:%x idx=%x len=%d", setup.bRequest, setup.bmRequestType,
-          setup.wValueH, setup.wValueL, setup.wIndex, setup.wLength);
+        setup.wValueH, setup.wValueL, setup.wIndex, setup.wLength);
 
     int status = DEVICE_OK;
 
@@ -530,7 +537,7 @@ void CodalUSB::interruptHandler()
 void CodalUSB::initEndpoints()
 {
     uint8_t endpointCount = 1;
-    uint8_t ifaceCount = 0;
+    uint8_t ifaceNum = 0;
 
     if (ctrlIn)
     {
@@ -547,7 +554,10 @@ void CodalUSB::initEndpoints()
 
     for (CodalUSBInterface *iface = interfaces; iface; iface = iface->next)
     {
-        iface->interfaceIdx = ifaceCount++;
+        if (iface->interfaceIdx == 0xff)
+            iface->interfaceIdx = ++ifaceNum;
+        else
+            ifaceNum = iface->interfaceIdx;
 
 #if CONFIG_ENABLED(DEVICE_WEBUSB)
         if (firstWebUSBInterfaceIdx == 0xff && iface->enableWebUSB())
@@ -556,8 +566,14 @@ void CodalUSB::initEndpoints()
 
         const InterfaceInfo *info = iface->getInterfaceInfo();
 
-        usb_assert(0 <= info->allocateEndpoints && info->allocateEndpoints <= 2);
-        usb_assert(info->allocateEndpoints <= info->iface.numEndpoints &&
+        int alloc = info->allocateEndpoints;
+        
+        #ifdef STM32F4
+        if (alloc == 2) alloc = 1;
+        #endif
+
+        usb_assert(0 <= alloc && alloc <= 2);
+        usb_assert(alloc <= info->iface.numEndpoints &&
                    info->iface.numEndpoints <= 2);
 
         if (iface->in)
@@ -577,12 +593,12 @@ void CodalUSB::initEndpoints()
             iface->in = new UsbEndpointIn(endpointCount, info->epIn.attr);
             if (info->iface.numEndpoints > 1)
             {
-                iface->out = new UsbEndpointOut(endpointCount + (info->allocateEndpoints - 1),
+                iface->out = new UsbEndpointOut(endpointCount + (alloc - 1),
                                                 info->epIn.attr);
             }
         }
 
-        endpointCount += info->allocateEndpoints;
+        endpointCount += alloc;
     }
 
     usb_assert(endpointsUsed == endpointCount);
