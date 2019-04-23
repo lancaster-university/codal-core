@@ -103,6 +103,15 @@ DEALINGS IN THE SOFTWARE.
 
 namespace codal
 {
+    struct JDStatistics
+    {
+        uint32_t bus_lo_error;
+        uint32_t bus_uart_error;
+        uint32_t bus_timeout_error;
+        uint32_t packets_sent;
+        uint32_t packets_received;
+    };
+
     struct JDPacket
     {
         uint16_t crc:12, service_number:4; // crc is stored in the first 12 bits, service number in the final 4 bits

@@ -21,7 +21,7 @@
 
 using namespace codal;
 
-uint32_t error_count = 0;
+JDStatistics statistics;
 JDPhysicalLayer* JDPhysicalLayer::instance = NULL;
 
 struct BaudByte
@@ -128,11 +128,19 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
     // first time entering the error state?
     if (es != JDBusErrorState::Continuation && !(status & es))
     {
+        if (es == JD_SERIAL_BUS_TIMEOUT_ERROR)
+            statistics.bus_timeout_error++;
+
+        if (es == JD_SERIAL_BUS_UART_ERROR)
+            statistics.bus_uart_error++;
+
+        if (es == JD_SERIAL_BUS_LO_ERROR)
+            statistics.bus_lo_error++;
+
         // set_gpio3(1);
         DMESG("ERR %d",es);
         if (es == JD_SERIAL_BUS_TIMEOUT_ERROR || es == JD_SERIAL_BUS_UART_ERROR)
         {
-            error_count++;
             sws.abortDMA();
             sws.setMode(SingleWireDisconnected);
 
@@ -248,8 +256,6 @@ void JDPhysicalLayer::dmaComplete(Event evt)
     if (evt.value == SWS_EVT_ERROR)
     {
         timer.clearCompare(MAXIMUM_INTERBYTE_CC);
-
-        error_count++;
         status &= ~(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING);
         JD_DMESG("BUART ERR");
         errorState(JDBusErrorState::BusUARTError);
@@ -266,6 +272,7 @@ void JDPhysicalLayer::dmaComplete(Event evt)
 
                 if (rxBuf->size)
                 {
+
                     sws.receiveDMA(((uint8_t*)rxBuf) + JD_SERIAL_HEADER_SIZE, rxBuf->size);
                     // here we start a new dma transaction, reset lastBufferedCount...
                     lastBufferedCount = 0;
@@ -288,6 +295,7 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                 addToRxArray(rxBuf);
                 rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
                 Event(id, JD_SERIAL_EVT_DATA_READY);
+                statistics.packets_received++;
                 DMESG("DMA RXD");
             }
         }
@@ -297,6 +305,7 @@ void JDPhysicalLayer::dmaComplete(Event evt)
             status &= ~(JD_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
+            statistics.packets_sent++;
             JD_DMESG("DMA TXD");
         }
     }
