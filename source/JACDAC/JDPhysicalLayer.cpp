@@ -15,13 +15,11 @@
 
 #define TIMER_CHANNELS_REQUIRED     2
 
-#define JD_MAGIC_BUFFER_VALUE       0x1a
-
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
 using namespace codal;
 
-JDStatistics statistics;
+JDDiagnostics diagnostics;
 JDPhysicalLayer* JDPhysicalLayer::instance = NULL;
 
 struct BaudByte
@@ -88,7 +86,6 @@ void JDPhysicalLayer::_gpioCallback(int state)
 
     if (state)
     {
-
         status |= JD_SERIAL_BUS_STATE;
 
         if (status & JD_SERIAL_ERR_MSK)
@@ -129,13 +126,13 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
     if (es != JDBusErrorState::Continuation && !(status & es))
     {
         if (es == JD_SERIAL_BUS_TIMEOUT_ERROR)
-            statistics.bus_timeout_error++;
+            diagnostics.bus_timeout_error++;
 
         if (es == JD_SERIAL_BUS_UART_ERROR)
-            statistics.bus_uart_error++;
+            diagnostics.bus_uart_error++;
 
         if (es == JD_SERIAL_BUS_LO_ERROR)
-            statistics.bus_lo_error++;
+            diagnostics.bus_lo_error++;
 
         // set_gpio3(1);
         DMESG("ERR %d",es);
@@ -295,7 +292,7 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                 addToRxArray(rxBuf);
                 rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
                 Event(id, JD_SERIAL_EVT_DATA_READY);
-                statistics.packets_received++;
+                diagnostics.packets_received++;
                 DMESG("DMA RXD");
             }
         }
@@ -305,7 +302,7 @@ void JDPhysicalLayer::dmaComplete(Event evt)
             status &= ~(JD_SERIAL_TRANSMITTING);
             free(txBuf);
             txBuf = NULL;
-            statistics.packets_sent++;
+            diagnostics.packets_sent++;
             JD_DMESG("DMA TXD");
         }
     }
@@ -748,6 +745,16 @@ JDBusState JDPhysicalLayer::getState()
     return JDBusState::Low;
 }
 
+
+uint8_t JDPhysicalLayer::getErrorState()
+{
+    return (this->status & JD_SERIAL_ERR_MSK) >> 4;
+}
+
+JDDiagnostics JDPhysicalLayer::getDiagnostics()
+{
+    return diagnostics;
+}
 
 int JDPhysicalLayer::setMaximumBaud(JDBaudRate baud)
 {

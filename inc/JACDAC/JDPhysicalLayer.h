@@ -103,7 +103,8 @@ DEALINGS IN THE SOFTWARE.
 
 namespace codal
 {
-    struct JDStatistics
+    // a struct containing the various diagnostics of the JACDAC physical layer.
+    struct JDDiagnostics
     {
         uint32_t bus_lo_error;
         uint32_t bus_uart_error;
@@ -285,6 +286,9 @@ namespace codal
          * * Lo if something is currently pulling the line low.
          **/
         JDBusState getState();
+
+        uint8_t getErrorState();
+        JDDiagnostics getDiagnostics();
 
         /**
          * Sets the maximum baud rate which is used as a default (if no communication rate is given in any packet), and as
