@@ -59,7 +59,6 @@ void USBJACDAC::idleCallback()
         if (inBuffPtr > 0)
             memmove(inBuf, inBuf + sizeof(JDPacket), inBuffPtr);
         DMESG("IBFPTR AF %d",inBuffPtr);
-        status &= ~JACDAC_USB_STATUS_CLEAR_TO_SEND;
     }
 
     if (outBuffPtr >= sizeof(JDPacket))
