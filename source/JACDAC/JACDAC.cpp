@@ -121,7 +121,7 @@ int JACDAC::setBridge(JDService* bridge)
 int JACDAC::send(JDPacket* pkt)
 {
     if (instance)
-        return instance->bus.send(pkt);
+        return instance->bus.send(pkt, NULL, true);
 
     return DEVICE_NO_RESOURCES;
 }

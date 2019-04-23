@@ -561,10 +561,19 @@ void JDPhysicalLayer::sendPacket()
     return;
 }
 
-int JDPhysicalLayer::send(JDPacket* tx)
+int JDPhysicalLayer::queuePacket(JDPacket* tx)
 {
     if (tx == NULL)
         return DEVICE_INVALID_PARAMETER;
+
+    // don't queue packets if JDPhysicalLayer is not running, or the bus is being held LO.
+    if (!isRunning() || status & JD_SERIAL_BUS_LO_ERROR)
+        return DEVICE_INVALID_STATE;
+
+    uint8_t nextTail = (this->txTail + 1) % JD_TX_ARRAY_SIZE;
+
+    if (nextTail == this->txHead)
+        return DEVICE_NO_RESOURCES;
 
     JDPacket* pkt = (JDPacket *)malloc(sizeof(JDPacket));
     memset(pkt, 0, sizeof(JDPacket));
@@ -593,31 +602,23 @@ int JDPhysicalLayer::send(JDPacket* tx)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int JDPhysicalLayer::send(JDPacket* tx, JDDevice* device)
+int JDPhysicalLayer::send(JDPacket* tx, JDDevice* device, bool computeCRC)
 {
     JD_DMESG("SEND");
-
-    // if checks is not set, we skip error checking.
     if (tx == NULL)
         return DEVICE_INVALID_PARAMETER;
-
-    uint8_t nextTail = (this->txTail + 1) % JD_TX_ARRAY_SIZE;
-
-    if (nextTail == this->txHead)
-        return DEVICE_NO_RESOURCES;
-
-    // don't queue packets if JDPhysicalLayer is not running, or the bus is being held LO.
-    if (!isRunning() || status & JD_SERIAL_BUS_LO_ERROR)
-        return DEVICE_INVALID_STATE;
 
     if (tx->communication_rate < (uint8_t) maxBaud)
         tx->communication_rate = (uint8_t)maxBaud;
 
     // crc is calculated from the address field onwards
-    uint8_t* addressPointer = (uint8_t*)&tx->device_address;
-    tx->crc = jd_crc(addressPointer, tx->size + JD_SERIAL_CRC_HEADER_SIZE, device);
+    if (computeCRC)
+    {
+        uint8_t* addressPointer = (uint8_t*)&tx->device_address;
+        tx->crc = jd_crc(addressPointer, tx->size + JD_SERIAL_CRC_HEADER_SIZE, device);
+    }
 
-    return send(tx);
+    return queuePacket(tx);
 }
 
 /**
@@ -659,7 +660,7 @@ int JDPhysicalLayer::send(uint8_t* buf, int len, uint8_t service_number, JDDevic
 
     memcpy(pkt.data, buf, len);
 
-    return send(&pkt, device);
+    return send(&pkt, device, true);
 }
 
 /**

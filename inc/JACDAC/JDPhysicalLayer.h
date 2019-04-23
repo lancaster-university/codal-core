@@ -182,6 +182,15 @@ namespace codal
         void initialise();
         void errorState(JDBusErrorState);
 
+        /**
+          * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
+          * If an ongoing asynchronous transmission is happening, JD is added to the txQueue. If this is the first packet in a while
+          * asynchronous transmission is begun.
+          *
+          * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
+          */
+        virtual int queuePacket(JDPacket *p);
+
     public:
 
         static JDPhysicalLayer* instance;
@@ -226,20 +235,7 @@ namespace codal
           */
         virtual void stop();
 
-        /**
-          * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
-          * If an ongoing asynchronous transmission is happening, JD is added to the txQueue. If this is the first packet in a while
-          * asynchronous transmission is begun.
-          *
-          * @param JD the packet to send.
-          *
-          * @param compute_crc default = true. When true, the crc is calculated in this member function... if set to false, the crc field is left untouched.
-          *
-          * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if JD is NULL, or DEVICE_NO_RESOURCES if the queue is full.
-          */
-        virtual int send(JDPacket *p);
-
-        int send(JDPacket* tx, JDDevice* device);
+        int send(JDPacket* tx, JDDevice* device, bool computeCRC = true);
 
         /**
           * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
