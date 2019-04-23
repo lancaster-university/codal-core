@@ -289,11 +289,16 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                 // CRC is computed at the control layer.
                 rxBuf->communication_rate = (uint8_t)currentBaud;
                 // move rxbuf to rxArray and allocate new buffer.
-                addToRxArray(rxBuf);
-                rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
-                Event(id, JD_SERIAL_EVT_DATA_READY);
-                diagnostics.packets_received++;
-                DMESG("DMA RXD");
+                int ret = addToRxArray(rxBuf);
+                if (ret == DEVICE_OK)
+                {
+                    rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
+                    Event(id, JD_SERIAL_EVT_DATA_READY);
+                    diagnostics.packets_received++;
+                    DMESG("DMA RXD");
+                }
+                else
+                    diagnostics.packets_dropped++;
             }
         }
 

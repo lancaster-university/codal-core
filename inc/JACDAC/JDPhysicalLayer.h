@@ -111,6 +111,7 @@ namespace codal
         uint32_t bus_timeout_error;
         uint32_t packets_sent;
         uint32_t packets_received;
+        uint32_t packets_dropped;
     };
 
     struct JDPacket
