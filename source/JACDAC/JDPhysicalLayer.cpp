@@ -398,6 +398,12 @@ void JDPhysicalLayer::initialise()
     memset(rxArray, 0, sizeof(JDPacket*) * JD_RX_ARRAY_SIZE);
     memset(txArray, 0, sizeof(JDPacket*) * JD_TX_ARRAY_SIZE);
 
+    this->txTail = 0;
+    this->txHead = 0;
+
+    this->rxTail = 0;
+    this->rxHead = 0;
+
     status = 0;
 
     // 32 bit 1 us timer.
