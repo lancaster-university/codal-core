@@ -35,8 +35,8 @@ DEALINGS IN THE SOFTWARE.
 CodalUSB *CodalUSB::usbInstance = NULL;
 
 
-#define LOG DMESG
-// #define LOG(...)
+// #define LOG DMESG
+#define LOG(...)
 
 static uint8_t usb_initialised = 0;
 // usb_20.pdf
