@@ -17,6 +17,12 @@
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
+#define COMM_LED_LO ((this->status & JD_SERIAL_COMM_ACTIVE_LO) ? 1 : 0)
+#define COMM_LED_HI ((this->status & JD_SERIAL_COMM_ACTIVE_LO) ? 0 : 1)
+
+#define BUS_LED_LO ((this->status & JD_SERIAL_BUS_ACTIVE_LO) ? 1 : 0)
+#define BUS_LED_HI ((this->status & JD_SERIAL_BUS_ACTIVE_LO) ? 0 : 1)
+
 using namespace codal;
 
 JDDiagnostics diagnostics;
@@ -142,7 +148,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
             sws.setMode(SingleWireDisconnected);
 
             if (commLED)
-                commLED->setDigitalValue(0);
+                commLED->setDigitalValue(COMM_LED_LO);
         }
 
         status &= ~JD_SERIAL_BUS_STATE;
@@ -159,7 +165,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
         Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
 
         if (busLED)
-            busLED->setDigitalValue(0);
+            busLED->setDigitalValue(BUS_LED_LO);
 
         // set_gpio3(0);
 
@@ -174,7 +180,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
     if (status & JD_SERIAL_BUS_STATE && endTime - startTime >= JD_BUS_NORMALITY_PERIOD)
     {
         if (busLED)
-            busLED->setDigitalValue(1);
+            busLED->setDigitalValue(BUS_LED_HI);
 
         status &= ~(JD_SERIAL_ERR_MSK);
         // resume normality
@@ -322,7 +328,7 @@ void JDPhysicalLayer::dmaComplete(Event evt)
     timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
 
     if (commLED)
-        commLED->setDigitalValue(0);
+        commLED->setDigitalValue(COMM_LED_LO);
 }
 
 void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
@@ -372,7 +378,7 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     timer.setCompare(MAXIMUM_LO_DATA_CC, startTime + JD_BYTE_AT_125KBAUD);
 
     if (commLED)
-        commLED->setDigitalValue(1);
+        commLED->setDigitalValue(COMM_LED_HI);
 }
 
 void JDPhysicalLayer::setState(JDSerialState state)
@@ -402,8 +408,22 @@ void JDPhysicalLayer::setState(JDSerialState state)
     sp.eventOn(eventType);
 }
 
-void JDPhysicalLayer::initialise()
+/**
+ * Constructor
+ *
+ * @param p the transmission pin to use
+ *
+ * @param sws an instance of sws created using p.
+ */
+JDPhysicalLayer::JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busLED, Pin* commStateLED, bool busLEDActiveLo, bool commLEDActiveLo, JDBaudRate maxBaudRate, uint16_t id) : sws(sws), sp(sws.p), timer(timer), busLED(busLED), commLED(commStateLED)
 {
+    this->id = id;
+    this->maxBaud = maxBaudRate;
+    instance = this;
+
+    // at least two channels are required.
+    CODAL_ASSERT(timer.getChannelCount() >= TIMER_CHANNELS_REQUIRED, DEVICE_HARDWARE_CONFIGURATION_ERROR);
+
     rxBuf = NULL;
     txBuf = NULL;
     memset(rxArray, 0, sizeof(JDPacket*) * JD_RX_ARRAY_SIZE);
@@ -415,7 +435,7 @@ void JDPhysicalLayer::initialise()
     this->rxTail = 0;
     this->rxHead = 0;
 
-    status = 0;
+    status = 0 | ((busLEDActiveLo) ? JD_SERIAL_BUS_ACTIVE_LO : 0) | ((commLEDActiveLo) ? JD_SERIAL_COMM_ACTIVE_LO : 0);
 
     // 32 bit 1 us timer.
     timer.setBitMode(BitMode32);
@@ -427,25 +447,6 @@ void JDPhysicalLayer::initialise()
     sp.getDigitalValue(PullMode::None);
 
     sws.setDMACompletionHandler(this, &JDPhysicalLayer::dmaComplete);
-}
-
-/**
- * Constructor
- *
- * @param p the transmission pin to use
- *
- * @param sws an instance of sws created using p.
- */
-JDPhysicalLayer::JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busLED, Pin* commStateLED, JDBaudRate maxBaudRate, uint16_t id) : sws(sws), sp(sws.p), timer(timer), busLED(busLED), commLED(commStateLED)
-{
-    this->id = id;
-    this->maxBaud = maxBaudRate;
-    instance = this;
-
-    // at least two channels are required.
-    CODAL_ASSERT(timer.getChannelCount() >= TIMER_CHANNELS_REQUIRED, DEVICE_HARDWARE_CONFIGURATION_ERROR);
-
-    initialise();
 }
 
 /**
@@ -478,7 +479,7 @@ void JDPhysicalLayer::start()
     setState(JDSerialState::ListeningForPulse);
 
     if (busLED)
-        busLED->setDigitalValue(1);
+        busLED->setDigitalValue(BUS_LED_HI);
 
     Event(this->id, JD_SERIAL_EVT_BUS_CONNECTED);
 }
@@ -501,7 +502,7 @@ void JDPhysicalLayer::stop()
     setState(JDSerialState::Off);
 
     if (busLED)
-        busLED->setDigitalValue(0);
+        busLED->setDigitalValue(BUS_LED_LO);
 
     Event(this->id, JD_SERIAL_EVT_BUS_DISCONNECTED);
 }
@@ -524,10 +525,10 @@ void JDPhysicalLayer::sendPacket()
             JD_DMESG("BUS LO");
 
             if (busLED)
-                busLED->setDigitalValue(0);
+                busLED->setDigitalValue(BUS_LED_LO);
 
             if (commLED)
-                commLED->setDigitalValue(0);
+                commLED->setDigitalValue(COMM_LED_LO);
 
             JD_DMESG("TXLO ERR");
             errorState(JDBusErrorState::BusLoError);
@@ -569,7 +570,7 @@ void JDPhysicalLayer::sendPacket()
         // JD_DMESG("TX S");
         sws.sendDMA((uint8_t *)txBuf, txBuf->size + JD_SERIAL_HEADER_SIZE);
         if (commLED)
-            commLED->setDigitalValue(1);
+            commLED->setDigitalValue(COMM_LED_HI);
         return;
     }
 

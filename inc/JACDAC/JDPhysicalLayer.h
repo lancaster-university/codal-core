@@ -67,6 +67,9 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_BUS_TOGGLED           0x0200
 #define JD_SERIAL_LO_PULSE_START        0x0400
 
+#define JD_SERIAL_BUS_ACTIVE_LO         0x0800
+#define JD_SERIAL_COMM_ACTIVE_LO        0x0100
+
 #define JD_SERIAL_EVT_DATA_READY       1
 #define JD_SERIAL_EVT_BUS_ERROR        2
 #define JD_SERIAL_EVT_CRC_ERROR        3
@@ -190,7 +193,6 @@ namespace codal
         int addToTxArray(JDPacket* packet);
         int addToRxArray(JDPacket* packet);
         void sendPacket();
-        void initialise();
         void errorState(JDBusErrorState);
 
         /**
@@ -227,7 +229,7 @@ namespace codal
           *
           * @param baud Defaults to 1mbaud
           */
-        JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busStateLED = NULL, Pin* commStateLED = NULL, JDBaudRate baud = JDBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC_PHYS);
+        JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busStateLED = NULL, Pin* commStateLED = NULL, bool busLEDActiveLo = false, bool commLEDActiveLo = false, JDBaudRate baud = JDBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC_PHYS);
 
         /**
           * Retrieves the first packet on the rxQueue regardless of the device_class
