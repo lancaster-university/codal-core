@@ -30,23 +30,27 @@ DEALINGS IN THE SOFTWARE.
 
 #define USB_JACDAC_BUFFER_SIZE      2048
 
+#define JACDAC_USB_STATUS_CLEAR_TO_SEND 0x02
+
 #if CONFIG_ENABLED(DEVICE_USB)
 
 namespace codal
 {
     class USBJACDAC : public CodalUSBInterface, public JDService
     {
-        uint8_t* inBuf;
-        uint8_t* outBuf;
+        uint8_t inBuf[USB_JACDAC_BUFFER_SIZE];
+        uint8_t outBuf[USB_JACDAC_BUFFER_SIZE];
 
         uint16_t inBuffPtr;
         uint16_t outBuffPtr;
 
-        public:
+        JDPhysicalLayer* phys;
+
+    public:
         USBJACDAC();
 
+        int setPhysicalLayer(JDPhysicalLayer &phys);
         virtual int classRequest(UsbEndpointIn &ctrl, USBSetup& setup) override;
-        virtual int stdRequest(UsbEndpointIn &ctrl, USBSetup& setup) override;
         virtual int endpointRequest() override;
         virtual const InterfaceInfo *getInterfaceInfo() override;
         virtual int handlePacket(JDPacket*) override;

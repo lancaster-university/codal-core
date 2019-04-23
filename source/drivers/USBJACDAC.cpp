@@ -2,10 +2,8 @@
 #include "USBJACDAC.h"
 #include "CodalDmesg.h"
 
-#define SLIP_END                0xC0
-#define SLIP_ESC                0xDB
-#define SLIP_ESC_END            0xDC
-#define SLIP_ESC_ESC            0xDD
+#define USB_JACDAC_REQ_INIT         0x11
+#define USB_JACDAC_REQ_DIAGNOSTICS  0x22
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
@@ -29,20 +27,29 @@ static const InterfaceInfo ifaceInfo = {
     {USB_EP_TYPE_BULK, 0},
 };
 
+struct USBJACDACDiagnostics {
+    uint32_t bus_state;
+    uint32_t bus_lo_error;
+    uint32_t bus_uart_error;
+    uint32_t bus_timeout_error;
+    uint32_t packets_sent;
+    uint32_t packets_received;
+};
+
 USBJACDAC::USBJACDAC() : JDService(JD_SERVICE_CLASS_BRIDGE, ClientService)
 {
-    inBuf = (uint8_t*) malloc(USB_JACDAC_BUFFER_SIZE);
-    outBuf = (uint8_t*) malloc(USB_JACDAC_BUFFER_SIZE);
-
     inBuffPtr = 0;
     outBuffPtr = 0;
 
     this->status |= DEVICE_COMPONENT_STATUS_IDLE_TICK | DEVICE_COMPONENT_RUNNING;
+
+    if (JACDAC::instance)
+        this->phys = &JACDAC::instance->bus;
 }
 
 void USBJACDAC::idleCallback()
 {
-    if (inBuffPtr >= sizeof(JDPacket))
+    if (inBuffPtr >= sizeof(JDPacket) && (this->status & JACDAC_USB_STATUS_CLEAR_TO_SEND))
     {
         DMESG("IBFPTR %d",inBuffPtr);
         in->write(inBuf, sizeof(JDPacket));
@@ -51,6 +58,7 @@ void USBJACDAC::idleCallback()
         if (inBuffPtr > 0)
             memmove(inBuf, inBuf + sizeof(JDPacket), inBuffPtr);
         DMESG("IBFPTR AF %d",inBuffPtr);
+        status &= ~JACDAC_USB_STATUS_CLEAR_TO_SEND;
     }
 
     if (outBuffPtr >= sizeof(JDPacket))
@@ -69,25 +77,46 @@ void USBJACDAC::idleCallback()
     }
 }
 
-int USBJACDAC::classRequest(UsbEndpointIn &ctrl, USBSetup& setup)
+int USBJACDAC::setPhysicalLayer(JDPhysicalLayer &phys)
 {
-    DMESG("JD CLASS REQ");
+    this->phys = &phys;
     return DEVICE_OK;
 }
 
-int USBJACDAC::stdRequest(UsbEndpointIn &ctrl, USBSetup& setup)
+int USBJACDAC::classRequest(UsbEndpointIn &ctrl, USBSetup& setup)
 {
-    DMESG("JD STD REQ");
-    return DEVICE_OK;
+    uint8_t dummy = 0;
+    USBJACDACDiagnostics diags;
+    JDDiagnostics jdDiags;
+
+    switch(setup.bRequest)
+    {
+        // INIT request signals that the host is listening for data so
+        // writes will be received and not infinitely blocked.
+        case USB_JACDAC_REQ_INIT:
+            this->status |= JACDAC_USB_STATUS_CLEAR_TO_SEND;
+            ctrl.write(&dummy, 0);
+            return DEVICE_OK;
+
+        case USB_JACDAC_REQ_DIAGNOSTICS:
+            if (this->phys)
+            {
+                diags.bus_state = this->phys->getErrorState();
+                jdDiags = this->phys->getDiagnostics();
+                memcpy(&diags.bus_lo_error, &jdDiags, sizeof(JDDiagnostics));
+                ctrl.write(&diags, sizeof(USBJACDACDiagnostics));
+                return DEVICE_OK;
+            }
+    }
+
+    return DEVICE_NOT_SUPPORTED;
 }
 
 int USBJACDAC::endpointRequest()
 {
-    DMESG("JD EP REQ");
     uint8_t buf[64];
     int len = out->read(buf, sizeof(buf));
 
-    DMESG("PKT: %d", len);
     if (len <= 0 || outBuffPtr + len > USB_JACDAC_BUFFER_SIZE)
         return len;
 
