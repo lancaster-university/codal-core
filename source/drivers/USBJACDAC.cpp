@@ -34,6 +34,7 @@ struct USBJACDACDiagnostics {
     uint32_t bus_timeout_error;
     uint32_t packets_sent;
     uint32_t packets_received;
+    uint32_t packets_dropped;
 };
 
 USBJACDAC::USBJACDAC() : JDService(JD_SERVICE_CLASS_BRIDGE, ClientService)
@@ -93,8 +94,13 @@ int USBJACDAC::classRequest(UsbEndpointIn &ctrl, USBSetup& setup)
     {
         // INIT request signals that the host is listening for data so
         // writes will be received and not infinitely blocked.
+        // a non-zero value begins streaming.
         case USB_JACDAC_REQ_INIT:
-            this->status |= JACDAC_USB_STATUS_CLEAR_TO_SEND;
+            if (setup.wValueL)
+                this->status |= JACDAC_USB_STATUS_CLEAR_TO_SEND;
+            else
+                this->status &= ~JACDAC_USB_STATUS_CLEAR_TO_SEND;
+
             ctrl.write(&dummy, 0);
             return DEVICE_OK;
 
