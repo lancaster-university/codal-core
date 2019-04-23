@@ -152,6 +152,8 @@ namespace codal
 
         static int setRemoteDeviceName(uint8_t device_address, ManagedString name);
 
+        static JDDevice* getRemoteDevice(uint8_t device_address);
+
         /**
          * Logs the current state of JACDAC services.
          **/

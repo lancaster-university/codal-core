@@ -30,7 +30,8 @@ void JDControlService::deviceDisconnected(JDDevice* device)
     {
         JDService* current = JACDAC::instance->services[i];
 
-        if (current == NULL || current == this || current->device != device)
+        // don't disconnect control layer services
+        if (current == NULL || current->device != device || current->mode == ControlLayerService)
             continue;
 
         current->device = NULL;
@@ -46,9 +47,7 @@ void JDControlService::deviceEnumerated()
     {
         JDService* current = JACDAC::instance->services[i];
 
-        // if the service number of a client service is already initialised, we assume it's a control layer service and
-        // initialise it with a device.
-        if (current == NULL || current == this || (current->mode == ClientService && current->service_number == JD_SERVICE_NUMBER_UNINITIALISED_VAL))
+        if (current == NULL || current == this || current->mode == ClientService)
             continue;
 
         current->device = this->device;
@@ -84,7 +83,7 @@ int JDControlService::formControlPacket()
     {
         JDService* current = JACDAC::instance->services[i];
 
-        if (current == NULL || current == this || current->mode == ClientService)
+        if (current == NULL || current->mode == ControlLayerService || current->mode == ClientService)
             continue;
 
         // the device has modified its service numbers whilst enumerated.
@@ -213,7 +212,7 @@ int JDControlService::enumerate()
         this->device->device_address = 1 + random(254);
 
         // set the device state for the control service.
-        this->device->device_flags |= JD_DEVICE_FLAGS_PROPOSING;
+        this->device->device_flags = JD_DEVICE_FLAGS_PROPOSING;
 
         this->device->communication_rate = JD_DEVICE_DEFAULT_COMMUNICATION_RATE;
 
@@ -228,11 +227,10 @@ int JDControlService::enumerate()
     {
         JDService* current = JACDAC::instance->services[i];
 
-        if (current == NULL || current == this)
+        if (current == NULL || current->mode == ClientService || current->mode == ControlLayerService)
             continue;
 
-        if (current->mode == HostService || current->mode == BroadcastHostService)
-            hostServiceCount++;
+        hostServiceCount++;
     }
 
     if (hostServiceCount > 0)
@@ -282,7 +280,7 @@ int JDControlService::disconnect()
     return DEVICE_OK;
 }
 
-JDControlService::JDControlService(ManagedString name) : JDService(JD_SERVICE_CLASS_CONTROL, HostService), configurationService()
+JDControlService::JDControlService(ManagedString name) : JDService(JD_SERVICE_CLASS_CONTROL, ControlLayerService), configurationService()
 {
     this->name = name;
     this->device = NULL;
@@ -337,8 +335,6 @@ void JDControlService::routePacket(JDPacket* pkt)
         }
         else
         {
-            uint32_t broadcast_class = 0;
-
             // map from device broadcast map to potentially the service number of one of our enumerated broadcast hosts
             int16_t host_service_number = -1;
 
@@ -355,49 +351,54 @@ void JDControlService::routePacket(JDPacket* pkt)
                 device = this->device;
             }
 
-            // handle initialised services
-            for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
+            bool broadcast = (host_service_number >= 0);
+
+            // we matched a broadcast host, route to all broadcast hosts on the device.
+            if (broadcast)
             {
-                JDService* service = JACDAC::instance->services[i];
+                uint32_t broadcast_class = 0;
 
-                if (!service)
-                    continue;
-
-                if (service->device == device && service->service_number == pkt->service_number)
+                for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
                 {
-                    JD_DMESG("DRIV a:%d sn:%d c:%d i:%d f %d", service->state.device_address, service->state.serial_number, service->state.service_class, service->state.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, service->state.flags);
+                    JDService* service = JACDAC::instance->services[i];
 
-                    if (host_service_number >= 0)
-                    {
+                    if (!service || !service->device || service->mode == ClientService || service->mode == ControlLayerService)
+                        continue;
+
+                    if (service->device->device_address == device->device_address && service->service_number == host_service_number) {
                         JD_DMESG("BROADCAST MATCH CL: %d", service->service_class);
                         broadcast_class = service->service_class;
                         break;
                     }
-                    // break if DEVICE_OK is returned (indicates the packet has been handled)
-                    else if (service->handlePacket(pkt) == DEVICE_OK)
-                    {
-                        broadcast_class = service->service_class;
-                        break;
-                    }
+                }
+
+                for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
+                {
+                    JDService* service = JACDAC::instance->services[i];
+
+                    if (!service || !service->device || service->mode != BroadcastHostService)
+                        continue;
+
+                    if (service->service_class == broadcast_class)
+                        // break if DEVICE_OK is returned (indicates the packet has been handled)
+                        if (service->handlePacket(pkt) == DEVICE_OK)
+                            break;
                 }
             }
-
-            // we matched a broadcast host, route to all broadcast hosts on the device.
-            if (broadcast_class)
+            else
             {
                 for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
                 {
                     JDService* service = JACDAC::instance->services[i];
 
-                    if (!service)
+                    if (!service || !service->device || service->mode == ControlLayerService)
                         continue;
 
-                    if (service->service_class == broadcast_class && service->mode == BroadcastHostService)
-                    {
-                        // break if DEVICE_OK is returned (indicates the packet has been handled)
+                    JD_DMESG("DRIV a:%d sn:%d c:%d i:%d f %d", service->state.device_address, service->state.serial_number, service->state.service_class, service->state.flags & JD_DEVICE_FLAGS_INITIALISED ? 1 : 0, service->state.flags);
+
+                    if (service->device->device_address == device->device_address && service->service_number == pkt->service_number)
                         if (service->handlePacket(pkt) == DEVICE_OK)
                             break;
-                    }
                 }
             }
         }
@@ -508,7 +509,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
         {
             JDService* current = JACDAC::instance->services[i];
 
-            if (current == NULL)
+            if (current == NULL || current->mode == ControlLayerService)
                 continue;
 
             bool class_check = current->service_class == serviceInfo->service_class;

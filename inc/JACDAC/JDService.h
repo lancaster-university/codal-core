@@ -19,6 +19,7 @@
 #define JD_SERVICE_MODE_CLIENT                          1
 #define JD_SERVICE_MODE_HOST                            2
 #define JD_SERVICE_MODE_BROADCAST_HOST                  3
+#define JD_SERVICE_MODE_CONTROL_LAYER                   4
 
 namespace codal
 {
@@ -28,7 +29,8 @@ namespace codal
     {
         ClientService = JD_SERVICE_MODE_CLIENT, // the service is seeking the use of another device's resource
         HostService = JD_SERVICE_MODE_HOST, // the service is hosting a resource for others to use.
-        BroadcastHostService = JD_SERVICE_MODE_BROADCAST_HOST // the service is enumerated with its own address, and receives all packets of the same class (including control packets)
+        BroadcastHostService = JD_SERVICE_MODE_BROADCAST_HOST, // the service is enumerated with its own address, and receives all packets of the same class (including control packets)
+        ControlLayerService = JD_SERVICE_MODE_CONTROL_LAYER // this service is not consider an enumerable service.
     };
 
     struct JDServiceInformation

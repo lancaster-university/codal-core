@@ -11,7 +11,7 @@ int JDRNGService::send(uint8_t* buf, int len)
     return DEVICE_NO_RESOURCES;
 }
 
-JDRNGService::JDRNGService() : JDService(JD_SERVICE_CLASS_CONTROL_RNG, ClientService)
+JDRNGService::JDRNGService() : JDService(JD_SERVICE_CLASS_CONTROL_RNG, ControlLayerService)
 {
     this->service_number = JD_CONTROL_RNG_SERVICE_NUMBER;
 }

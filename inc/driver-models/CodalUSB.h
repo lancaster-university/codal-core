@@ -256,7 +256,7 @@ public:
     virtual bool enableWebUSB() { return false; }
 };
 
-class DummyIface : public CodalUSBInterface {
+class CodalDummyUSBInterface : public CodalUSBInterface {
   public:
     virtual const InterfaceInfo *getInterfaceInfo();
 };
