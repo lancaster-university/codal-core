@@ -17,11 +17,11 @@
 
 #define ARRAY_SIZE(arr) (sizeof(arr) / sizeof(arr[0]))
 
-#define COMM_LED_LO ((this->status & JD_SERIAL_COMM_ACTIVE_LO) ? 1 : 0)
-#define COMM_LED_HI ((this->status & JD_SERIAL_COMM_ACTIVE_LO) ? 0 : 1)
+#define COMM_LED_LO ((this->commLEDActiveLo) ? 1 : 0)
+#define COMM_LED_HI ((this->commLEDActiveLo) ? 0 : 1)
 
-#define BUS_LED_LO ((this->status & JD_SERIAL_BUS_ACTIVE_LO) ? 1 : 0)
-#define BUS_LED_HI ((this->status & JD_SERIAL_BUS_ACTIVE_LO) ? 0 : 1)
+#define BUS_LED_LO ((this->busLEDActiveLo) ? 1 : 0)
+#define BUS_LED_HI ((this->busLEDActiveLo) ? 0 : 1)
 
 using namespace codal;
 
@@ -435,7 +435,10 @@ JDPhysicalLayer::JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer
     this->rxTail = 0;
     this->rxHead = 0;
 
-    status = 0 | ((busLEDActiveLo) ? JD_SERIAL_BUS_ACTIVE_LO : 0) | ((commLEDActiveLo) ? JD_SERIAL_COMM_ACTIVE_LO : 0);
+    this->busLEDActiveLo = busLEDActiveLo;
+    this->commLEDActiveLo = commLEDActiveLo;
+
+    status = 0;
 
     // 32 bit 1 us timer.
     timer.setBitMode(BitMode32);

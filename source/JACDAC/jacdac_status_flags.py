@@ -16,8 +16,7 @@ def process_flags(num):
         "JD_SERIAL_BUS_TOGGLED": 0x0200,
         "JD_SERIAL_LO_PULSE_START": 0x0400,
 
-        "JD_SERIAL_BUS_ACTIVE_LO": 0x0800,
-        "JD_SERIAL_COMM_ACTIVE_LO": 0x0100
+        "DEVICE_COMPONENT_RUNNING": 0x1000
     }
 
     for flag in flags.keys():

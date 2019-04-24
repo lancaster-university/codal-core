@@ -67,9 +67,6 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_BUS_TOGGLED           0x0200
 #define JD_SERIAL_LO_PULSE_START        0x0400
 
-#define JD_SERIAL_BUS_ACTIVE_LO         0x0800
-#define JD_SERIAL_COMM_ACTIVE_LO        0x1000
-
 #define JD_SERIAL_EVT_DATA_READY       1
 #define JD_SERIAL_EVT_BUS_ERROR        2
 #define JD_SERIAL_EVT_CRC_ERROR        3
@@ -177,6 +174,9 @@ namespace codal
 
         Pin* busLED;
         Pin* commLED;
+
+        bool busLEDActiveLo;
+        bool commLEDActiveLo;
 
         JDSerialState state;
 
