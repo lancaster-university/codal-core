@@ -42,10 +42,11 @@ USBJACDAC::USBJACDAC() : JDService(JD_SERVICE_CLASS_BRIDGE, ClientService)
     inBuffPtr = 0;
     outBuffPtr = 0;
 
+    this->phys = NULL;
     this->status |= DEVICE_COMPONENT_STATUS_IDLE_TICK | DEVICE_COMPONENT_RUNNING;
 
     if (JACDAC::instance)
-        this->phys = &JACDAC::instance->bus;
+        setPhysicalLayer(JACDAC::instance->bus);
 }
 
 void USBJACDAC::idleCallback()
@@ -66,8 +67,22 @@ void USBJACDAC::idleCallback()
         DMESG("OBFPTR %d", outBuffPtr);
         JDPacket* tx = (JDPacket*) outBuf;
 
-        if (JACDAC::instance)
-            JACDAC::instance->send(tx);
+        // we expect any stack will already calculate the crc etc. so just place the packet on the bus.
+        if (this->phys)
+        {
+            this->phys->send(tx, NULL, false);
+
+            JDPacket* pkt = (JDPacket *)malloc(sizeof(JDPacket));
+            memcpy(pkt, tx, sizeof(JDPacket));
+
+            // queue locally on the device as well (if we can)
+            int ret = this->phys->addToRxArray(pkt);
+
+            if (ret == DEVICE_OK)
+                Event(this->phys->id, JD_SERIAL_EVT_DATA_READY);
+            else
+                free(pkt);
+        }
 
         outBuffPtr -= sizeof(JDPacket);
 
@@ -80,6 +95,7 @@ void USBJACDAC::idleCallback()
 int USBJACDAC::setPhysicalLayer(JDPhysicalLayer &phys)
 {
     this->phys = &phys;
+    this->phys->sniffer = this;
     return DEVICE_OK;
 }
 

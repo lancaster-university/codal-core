@@ -103,6 +103,7 @@ DEALINGS IN THE SOFTWARE.
 
 namespace codal
 {
+    class JDService;
     // a struct containing the various diagnostics of the JACDAC physical layer.
     struct JDDiagnostics
     {
@@ -163,9 +164,13 @@ namespace codal
     */
     class JDPhysicalLayer : public CodalComponent
     {
+        friend class USBJACDAC;
+
         JDBaudRate maxBaud;
         JDBaudRate currentBaud;
         uint8_t bufferOffset;
+
+        JDService* sniffer;
 
     protected:
         DMASingleWireSerial&  sws;
@@ -182,7 +187,6 @@ namespace codal
 
         uint32_t startTime;
         uint32_t lastBufferedCount;
-
 
         void loPulseDetected(uint32_t);
         void setState(JDSerialState s);

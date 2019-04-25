@@ -299,12 +299,13 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                 if (ret == DEVICE_OK)
                 {
                     rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
-                    Event(id, JD_SERIAL_EVT_DATA_READY);
                     diagnostics.packets_received++;
                     DMESG("DMA RXD");
                 }
                 else
                     diagnostics.packets_dropped++;
+
+                Event(id, JD_SERIAL_EVT_DATA_READY);
             }
         }
 
@@ -419,6 +420,8 @@ JDPhysicalLayer::JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer
 {
     this->id = id;
     this->maxBaud = maxBaudRate;
+    this->sniffer = NULL;
+
     instance = this;
 
     // at least two channels are required.
@@ -459,6 +462,11 @@ JDPhysicalLayer::JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer
  */
 JDPacket* JDPhysicalLayer::getPacket()
 {
+    JDPacket* pkt = popRxArray();
+
+    if (pkt && this->sniffer)
+        sniffer->handlePacket(pkt);
+
     return popRxArray();
 }
 
@@ -601,6 +609,9 @@ int JDPhysicalLayer::queuePacket(JDPacket* tx)
     memcpy(pkt, tx, sizeof(JDPacket));
 
     int ret = addToTxArray(pkt);
+
+    if (ret == DEVICE_OK && this->sniffer)
+        sniffer->handlePacket(pkt);
 
     JD_DMESG("QU %d", pkt->size);
 
