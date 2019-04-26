@@ -110,7 +110,7 @@ void KeyValueStorage::scratchKeyValueStore(KeyValueStore store)
   */
 void KeyValueStorage::scratchKeyValuePair(KeyValuePair pair, int scratchOffset)
 {
-    memcpy(this->scratch + scratchOffset, &pair, sizeof(KeyValueStore));
+    memcpy(this->scratch + scratchOffset, &pair, sizeof(KeyValuePair));
 }
 
 /**
@@ -129,8 +129,7 @@ void KeyValueStorage::scratchKeyValuePair(KeyValuePair pair, int scratchOffset)
   */
 int KeyValueStorage::put(const char *key, uint8_t *data, int dataSize)
 {
-    KeyValuePair pair = KeyValuePair();
-
+    KeyValuePair pair;
     int keySize = strlen(key) + 1;
 
     if(keySize > (int)sizeof(pair.key) || dataSize > (int)sizeof(pair.value) || dataSize < 0)
@@ -156,8 +155,6 @@ int KeyValueStorage::put(const char *key, uint8_t *data, int dataSize)
     uint32_t* flashPointer = this->flashPagePtr;
 
     int storeSize = size();
-
-    DMESG("SSZ %d", storeSize);
 
     //our KeyValueStore struct is always at 0
     flashPointer += kvStoreSize;
@@ -264,7 +261,7 @@ KeyValuePair* KeyValueStorage::get(const char* key)
     for(i = 0; i < storeSize; i++)
     {
         memcpy(pair, flashPtr, sizeof(KeyValuePair));
-
+        // DMESG("k %s value: %d %d %d %d",pair->key, pair->value[0], pair->value[1], pair->value[2], pair->value[3]);
         if(strcmp(key,(char *)pair->key) == 0)
             break;
 
