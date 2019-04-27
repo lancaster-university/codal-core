@@ -43,7 +43,7 @@ USBJACDAC::USBJACDAC() : JDService(JD_SERVICE_CLASS_BRIDGE, ClientService)
     outBuffPtr = 0;
 
     this->phys = NULL;
-    this->status |= DEVICE_COMPONENT_STATUS_IDLE_TICK | DEVICE_COMPONENT_RUNNING;
+    this->status = DEVICE_COMPONENT_STATUS_IDLE_TICK | DEVICE_COMPONENT_RUNNING;
 
     if (JACDAC::instance)
         setPhysicalLayer(JACDAC::instance->bus);
