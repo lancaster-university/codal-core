@@ -298,9 +298,9 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                 int ret = addToRxArray(rxBuf);
                 if (ret == DEVICE_OK)
                 {
+                    DMESG("RXD[%d,%d]",this->rxHead, this->rxTail);
                     rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
                     diagnostics.packets_received++;
-                    DMESG("DMA RXD");
                 }
                 else
                     diagnostics.packets_dropped++;
@@ -467,7 +467,7 @@ JDPacket* JDPhysicalLayer::getPacket()
     if (pkt && this->sniffer)
         sniffer->handlePacket(pkt);
 
-    return popRxArray();
+    return pkt;
 }
 
 /**
@@ -808,12 +808,14 @@ JDPacket* JDPhysicalLayer::popRxArray()
     if (this->rxTail == this->rxHead)
         return NULL;
 
+    target_disable_irq();
     uint8_t nextHead = (this->rxHead + 1) % JD_RX_ARRAY_SIZE;
     JDPacket* p = rxArray[this->rxHead];
     this->rxArray[this->rxHead] = NULL;
-    target_disable_irq();
     this->rxHead = nextHead;
     target_enable_irq();
+
+    // DMESG("POP[%d,%d]",this->rxHead, this->rxTail);
 
     return p;
 }
