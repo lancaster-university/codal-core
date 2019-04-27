@@ -211,6 +211,8 @@ int LIS3DH::updateSample()
         if (result !=0)
             return DEVICE_I2C_ERROR;
 
+        target_wait_us(3);
+
         // Acknowledge the interrupt.
         i2c.readRegister(address, LIS3DH_INT1_SRC, &src, 1);
 
