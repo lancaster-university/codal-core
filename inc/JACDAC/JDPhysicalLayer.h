@@ -87,8 +87,13 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_MAX_BAUD             1000000
 #define JD_SERIAL_TX_MAX_BACKOFF       1000
 
+#ifndef JD_RX_ARRAY_SIZE
 #define JD_RX_ARRAY_SIZE               10
+#endif
+
+#ifndef JD_TX_ARRAY_SIZE
 #define JD_TX_ARRAY_SIZE               10
+#endif
 
 #define JD_SERIAL_BAUD_1M              1
 #define JD_SERIAL_BAUD_500K            2
