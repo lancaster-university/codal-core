@@ -568,7 +568,7 @@ void JDPhysicalLayer::sendPacket()
         // check if we have stuff to send, txBuf will be set if a previous send failed.
         if (this->txHead != this->txTail || txBuf)
         {
-            DMESG("TX B");
+            JD_DMESG("TX B");
             test_status |= JD_SERIAL_TRANSMITTING;
 
             // we may have a packet that we previously tried to send, but was aborted for some reason.
@@ -596,8 +596,9 @@ void JDPhysicalLayer::sendPacket()
     // we've returned after a DMA transfer has been flagged (above)... start
     if (test_status & JD_SERIAL_TRANSMITTING)
     {
-        DMESG("TX S");
+        // DMESG("TX S");
         startTime = timer.captureCounter();
+        lastBufferedCount = 0;
         sws.sendDMA((uint8_t *)txBuf, txBuf->size + JD_SERIAL_HEADER_SIZE);
         timer.setCompare(MAXIMUM_LO_DATA_CC, startTime + JD_BYTE_AT_125KBAUD);
 
