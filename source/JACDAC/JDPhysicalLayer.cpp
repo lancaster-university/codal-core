@@ -135,6 +135,7 @@ void JDPhysicalLayer::_gpioCallback(int state)
         else if (test_status & JD_SERIAL_LO_PULSE_START)
         {
             // set_gpio(1);
+            CODAL_ASSERT(!(test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER)),test_status)
             JD_UNSET_FLAGS(JD_SERIAL_LO_PULSE_START);
             timer.clearCompare(MAXIMUM_INTERBYTE_CC);
             loPulseDetected((now > startTime) ? now - startTime : startTime - now);
@@ -564,7 +565,7 @@ void JDPhysicalLayer::sendPacket()
 {
     JD_DMESG("SENDP");
     // if we are receiving, the tx timer will be resumed upon reception.
-    if (test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_LO_PULSE_START))
+    if (test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_LO_PULSE_START | JD_SERIAL_ERR_MSK))
     {
         // DMESG("RXing %d",test_status);
         return;
