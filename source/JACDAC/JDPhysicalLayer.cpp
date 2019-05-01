@@ -9,13 +9,34 @@
 #include "JACDAC.h"
 #include "JDCRC.h"
 
-#define JD_SET_FLAGS(flags) do {\
-                            test_status |= (flags);\
-                            }while(0)\
+#define TRACK_STATE
 
-#define JD_UNSET_FLAGS(flags) do {\
-                                test_status &= ~(flags);\
-                              }while(0)\
+#ifdef TRACK_STATE
+#define PHYS_STATE_SIZE         128
+
+#warning TRACK_STATE_ON
+
+uint32_t phys_state[PHYS_STATE_SIZE] = {0};
+uint32_t phys_pointer = 0;
+
+inline void write_state(uint32_t state)
+{
+    phys_state[phys_pointer] = state;
+    phys_pointer = (phys_pointer + 1) % PHYS_STATE_SIZE;
+}
+#else
+inline void write_state(uint32_t){}
+#endif
+
+#define JD_SET_FLAGS(flags) do {                        \
+                            test_status |= (flags);     \
+                            write_state(test_status);   \
+                            }while(0)
+
+#define JD_UNSET_FLAGS(flags) do {                          \
+                                test_status &= ~(flags);    \
+                                write_state(test_status);   \
+                              }while(0)                     \
 
 #define MAXIMUM_INTERBYTE_CC        0
 #define MAXIMUM_LO_DATA_CC          0 // reuse the above channel
