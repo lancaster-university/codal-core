@@ -12,7 +12,7 @@
 #define TRACK_STATE
 
 #ifdef TRACK_STATE
-#define PHYS_STATE_SIZE         128
+#define PHYS_STATE_SIZE         512
 
 #warning TRACK_STATE_ON
 
