@@ -396,9 +396,9 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     // 1 us to here
     if ((JDBaudRate)pulseTime != this->currentBaud)
     {
+        DMESG("SB: %d",baudToByteMap[pulseTime - 1].baud);
         sws.setBaud(baudToByteMap[pulseTime - 1].baud);
         this->currentBaud = (JDBaudRate)pulseTime;
-        JD_DMESG("SB: %d",baudToByteMap[pulseTime - 1].baud);
     }
     // set_gpio(0);
 
