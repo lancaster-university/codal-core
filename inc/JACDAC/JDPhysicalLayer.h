@@ -161,7 +161,7 @@ namespace codal
         Continuation = 0,
         BusLoError = JD_SERIAL_BUS_LO_ERROR,
         BusTimeoutError = JD_SERIAL_BUS_TIMEOUT_ERROR,
-        BusUARTError = BusTimeoutError // a different error code, but we want the same behaviour.
+        BusUARTError = JD_SERIAL_BUS_UART_ERROR // a different error code, but we want the same behaviour.
     };
 
     /**
