@@ -246,7 +246,6 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
 
     if (channels & (1 << MAXIMUM_INTERBYTE_CC))
     {
-
         if (test_status & JD_SERIAL_LO_PULSE_START)
         {
             JD_UNSET_FLAGS(JD_SERIAL_LO_PULSE_START);
@@ -565,7 +564,7 @@ void JDPhysicalLayer::sendPacket()
 {
     JD_DMESG("SENDP");
     // if we are receiving, the tx timer will be resumed upon reception.
-    if (test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER))
+    if (test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_LO_PULSE_START))
     {
         // DMESG("RXing %d",test_status);
         return;
