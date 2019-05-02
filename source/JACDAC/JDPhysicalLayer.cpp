@@ -230,6 +230,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
         // set_gpio3(0);
 
         // setup tx interrupt
+        JD_SET_FLAGS(JD_SERIAL_TX_DRAIN_ENABLE,21);
         timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
         // DMESG("EXITE %d",test_status);
         return;
@@ -375,6 +376,7 @@ jd_phys_dma_exit:
     setState(JDSerialState::ListeningForPulse);
     JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
 
+    JD_SET_FLAGS(JD_SERIAL_TX_DRAIN_ENABLE,22);
     timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
 
     if (commLED)
@@ -627,6 +629,7 @@ void JDPhysicalLayer::sendPacket()
             }
 
             // configure to come back after the minimum lo_data gap has been observed.
+            JD_SET_FLAGS(JD_SERIAL_TX_DRAIN_ENABLE,23);
             timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + JD_MIN_INTERLODATA_SPACING);
             return;
         }
