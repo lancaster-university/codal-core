@@ -580,8 +580,9 @@ void JDPhysicalLayer::sendPacket()
     {
         // DMESG("IN TX");
         // if the bus is lo, we shouldn't transmit (collision)
-        if (setState(JDSerialState::Off) == 0)
+        if (sp.getDigitalValue(PullMode::Up) == 0)
         {
+            sp.eventOn(DEVICE_PIN_EVENT_NONE);
             JD_DMESG("BUS LO");
 
             if (busLED)
