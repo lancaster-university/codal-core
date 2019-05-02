@@ -13,8 +13,8 @@
 
 #ifdef TRACK_STATE
 
-#define PHYS_STATE_SIZE         128
-// #define PHYS_STATE_SIZE         512
+// #define PHYS_STATE_SIZE         128
+#define PHYS_STATE_SIZE         512
 
 #warning TRACK_STATE_ON
 
@@ -127,6 +127,8 @@ void JDPhysicalLayer::_gpioCallback(int state)
 
         if (test_status & JD_SERIAL_ERR_MSK)
         {
+            // all flags
+            CODAL_ASSERT(!(test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING)),test_status)
             startTime = now;
             timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + JD_BYTE_AT_125KBAUD);
             // set_gpio2(0);
@@ -135,7 +137,7 @@ void JDPhysicalLayer::_gpioCallback(int state)
         else if (test_status & JD_SERIAL_LO_PULSE_START)
         {
             // set_gpio(1);
-            CODAL_ASSERT(!(test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER)),test_status)
+            CODAL_ASSERT(!(test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING)),test_status)
             JD_UNSET_FLAGS(JD_SERIAL_LO_PULSE_START,1);
             timer.clearCompare(MAXIMUM_INTERBYTE_CC);
             loPulseDetected((now > startTime) ? now - startTime : startTime - now);
@@ -169,6 +171,8 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
     // first time entering the error state?
     if (es != JDBusErrorState::Continuation)
     {
+        JD_UNSET_FLAGS(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_LO_PULSE_START | JD_SERIAL_TRANSMITTING | JD_SERIAL_BUS_STATE, 4);
+
         if (es == JD_SERIAL_BUS_TIMEOUT_ERROR)
             diagnostics.bus_timeout_error++;
 
@@ -189,17 +193,13 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
                 commLED->setDigitalValue(COMM_LED_LO);
         }
 
-        JD_UNSET_FLAGS(JD_SERIAL_BUS_STATE,4);
-
         // update the bus state before enabling our IRQ.
         JD_SET_FLAGS(es | (sp.getDigitalValue(PullMode::Up) ? JD_SERIAL_BUS_STATE : 0),5);
         // DMESG("EST %d",test_status);
         startTime = timer.captureCounter();
 
         timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + JD_BYTE_AT_125KBAUD);
-        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
         setState(JDSerialState::ErrorRecovery);
-        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
 
         // Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
 
@@ -223,9 +223,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
         // DMESG("B4 %d",test_status);
         JD_UNSET_FLAGS(JD_SERIAL_ERR_MSK,6);
         // resume normality
-        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
         setState(JDSerialState::ListeningForPulse);
-        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
         // set_gpio4(0);
         // set_gpio3(0);
 
@@ -246,7 +244,9 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
     if (test_status & JD_SERIAL_ERR_MSK)
     {
         // DMESG("CONT ERR %d",test_status);
+        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
         errorState(JDBusErrorState::Continuation);
+        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
         return;
     }
 
@@ -254,9 +254,10 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
     {
         if (test_status & JD_SERIAL_LO_PULSE_START)
         {
-            JD_UNSET_FLAGS(JD_SERIAL_LO_PULSE_START,7);
             JD_DMESG("BL ERR");
+            JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
             errorState(JDBusErrorState::BusLoError);
+            JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
             return;
         }
         else if (test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING))
@@ -274,9 +275,10 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
             {
                 if (endTime - startTime >= comparison)
                 {
-                    JD_UNSET_FLAGS(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING,8);
                     JD_DMESG("BTO1");
+                    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
                     errorState(JDBusErrorState::BusTimeoutError);
+                    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
                     return;
                 }
             }
@@ -306,9 +308,12 @@ void JDPhysicalLayer::dmaComplete(Event evt)
     if (evt.value == SWS_EVT_ERROR)
     {
         timer.clearCompare(MAXIMUM_INTERBYTE_CC);
-        JD_UNSET_FLAGS(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING,9);
+        // we should never have the lo pulse flag set here.
+        CODAL_ASSERT(!(test_status & JD_SERIAL_LO_PULSE_START), test_status);
         // DMESG("BUART ERR %d",test_status);
+        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
         errorState(JDBusErrorState::BusUARTError);
+        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
         return;
     }
     else
@@ -372,9 +377,7 @@ jd_phys_dma_exit:
     // force transition to output so that the pin is reconfigured.
     // also drive the bus high for a little bit.
     sp.setDigitalValue(1);
-    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
     setState(JDSerialState::ListeningForPulse);
-    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
 
     JD_SET_FLAGS(JD_SERIAL_TX_DRAIN_ENABLE,22);
     timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
@@ -399,7 +402,9 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     // we support 1, 2, 4, 8 as our powers of 2.
     if (pulseTime < (uint8_t)this->maxBaud || pulseTime > 8)
     {
+        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
         errorState(JDBusErrorState::BusUARTError);
+        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
         return;
     }
 
@@ -415,9 +420,7 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     // 1 more us
     // set_gpio(1);
     // set_gpio(1);
-    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
     setState(JDSerialState::Off);
-    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
 
     // 10 us
     // DMESG("LO");
@@ -436,32 +439,23 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     // DMESG("RXSTRT");
 }
 
-void JDPhysicalLayer::setState(JDSerialState state)
+int JDPhysicalLayer::setState(JDSerialState state)
 {
-    sp.getDigitalValue(PullMode::Up);
-
     uint32_t eventType = 0;
 
-    // to ensure atomicity of the state machine, we disable one set of event and enable the other.
     if (state == JDSerialState::ListeningForPulse)
-    {
         eventType = DEVICE_PIN_INTERRUPT_ON_EDGE;
-    }
 
     if (state == JDSerialState::ErrorRecovery)
-    {
         eventType = DEVICE_PIN_INTERRUPT_ON_EDGE;
-    }
 
     if (state == JDSerialState::Off)
-    {
         eventType = DEVICE_PIN_EVENT_NONE;
-    }
-
-    this->state = state;
 
     sp.eventOn(eventType);
-    // DMESG("PLST: %d",test_status);
+
+    this->state = state;
+    return sp.getDigitalValue(PullMode::Up);
 }
 
 /**
@@ -541,9 +535,7 @@ void JDPhysicalLayer::start()
     JD_SET_FLAGS(DEVICE_COMPONENT_RUNNING,15);
 
     // check if the bus is lo here and change our led
-    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
     setState(JDSerialState::ListeningForPulse);
-    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
 
     if (busLED)
         busLED->setDigitalValue(BUS_LED_HI);
@@ -566,9 +558,7 @@ void JDPhysicalLayer::stop()
         rxBuf = NULL;
     }
 
-    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
     setState(JDSerialState::Off);
-    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
 
     if (busLED)
         busLED->setDigitalValue(BUS_LED_LO);
@@ -589,8 +579,8 @@ void JDPhysicalLayer::sendPacket()
     if (!(test_status & JD_SERIAL_TRANSMITTING))
     {
         // DMESG("IN TX");
-        // if the bus is lo, we shouldn't transmit
-        if (sp.getDigitalValue(PullMode::Up) == 0)
+        // if the bus is lo, we shouldn't transmit (collision)
+        if (setState(JDSerialState::Off) == 0)
         {
             JD_DMESG("BUS LO");
 
@@ -601,7 +591,9 @@ void JDPhysicalLayer::sendPacket()
                 commLED->setDigitalValue(COMM_LED_LO);
 
             JD_DMESG("TXLO ERR");
+            JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
             errorState(JDBusErrorState::BusLoError);
+            JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
             return;
         }
 

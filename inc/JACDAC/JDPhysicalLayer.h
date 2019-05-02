@@ -196,7 +196,7 @@ namespace codal
         uint32_t lastBufferedCount;
 
         void loPulseDetected(uint32_t);
-        void setState(JDSerialState s);
+        int setState(JDSerialState s);
         void dmaComplete(Event evt);
 
         JDPacket* popRxArray();
