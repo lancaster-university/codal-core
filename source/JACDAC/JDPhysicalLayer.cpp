@@ -576,13 +576,16 @@ void JDPhysicalLayer::sendPacket()
         return;
     }
 
+    target_disable_irq();
+    sp.eventOn(DEVICE_PIN_EVENT_NONE);
+    target_enable_irq();
+
     if (!(test_status & JD_SERIAL_TRANSMITTING))
     {
         // DMESG("IN TX");
         // if the bus is lo, we shouldn't transmit (collision)
         if (sp.getDigitalValue(PullMode::Up) == 0)
         {
-            sp.eventOn(DEVICE_PIN_EVENT_NONE);
             JD_DMESG("BUS LO");
 
             if (busLED)
