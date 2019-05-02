@@ -67,6 +67,8 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_BUS_TOGGLED           0x0200
 #define JD_SERIAL_LO_PULSE_START        0x0400
 
+#define JD_SERIAL_DEBUG_BIT             0x8000
+
 #define JD_SERIAL_EVT_DATA_READY       1
 #define JD_SERIAL_EVT_BUS_ERROR        2
 #define JD_SERIAL_EVT_CRC_ERROR        3

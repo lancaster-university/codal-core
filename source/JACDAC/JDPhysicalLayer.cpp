@@ -12,7 +12,9 @@
 #define TRACK_STATE
 
 #ifdef TRACK_STATE
+
 #define PHYS_STATE_SIZE         128
+// #define PHYS_STATE_SIZE         512
 
 #warning TRACK_STATE_ON
 
@@ -195,7 +197,9 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
         startTime = timer.captureCounter();
 
         timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + JD_BYTE_AT_125KBAUD);
+        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
         setState(JDSerialState::ErrorRecovery);
+        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
 
         // Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
 
@@ -219,7 +223,9 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
         // DMESG("B4 %d",test_status);
         JD_UNSET_FLAGS(JD_SERIAL_ERR_MSK,6);
         // resume normality
+        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
         setState(JDSerialState::ListeningForPulse);
+        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
         // set_gpio4(0);
         // set_gpio3(0);
 
@@ -365,7 +371,9 @@ jd_phys_dma_exit:
     // force transition to output so that the pin is reconfigured.
     // also drive the bus high for a little bit.
     sp.setDigitalValue(1);
+    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
     setState(JDSerialState::ListeningForPulse);
+    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
 
     timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
 
@@ -405,8 +413,9 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     // 1 more us
     // set_gpio(1);
     // set_gpio(1);
-    sp.eventOn(DEVICE_PIN_EVENT_NONE);
-    sp.setPull(PullMode::None);
+    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
+    setState(JDSerialState::Off);
+    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
 
     // 10 us
     // DMESG("LO");
@@ -530,7 +539,9 @@ void JDPhysicalLayer::start()
     JD_SET_FLAGS(DEVICE_COMPONENT_RUNNING,15);
 
     // check if the bus is lo here and change our led
+    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
     setState(JDSerialState::ListeningForPulse);
+    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
 
     if (busLED)
         busLED->setDigitalValue(BUS_LED_HI);
@@ -553,7 +564,9 @@ void JDPhysicalLayer::stop()
         rxBuf = NULL;
     }
 
+    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
     setState(JDSerialState::Off);
+    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
 
     if (busLED)
         busLED->setDigitalValue(BUS_LED_LO);
@@ -760,23 +773,10 @@ bool JDPhysicalLayer::isRunning()
  **/
 bool JDPhysicalLayer::isConnected()
 {
-    if (test_status & JD_SERIAL_RECEIVING || (test_status & JD_SERIAL_TRANSMITTING && !(test_status & JD_SERIAL_BUS_LO_ERROR)))
-        return true;
-
-    // this flag is set if the bus is being held lo.
-    if (test_status & JD_SERIAL_BUS_LO_ERROR)
+    if (test_status & JD_SERIAL_ERR_MSK)
         return false;
 
-    // if we are neither transmitting or receiving, examine the bus.
-    int busVal = sp.getDigitalValue(PullMode::Up);
-
-    // re-enable events!
-    setState(JDSerialState::ListeningForPulse);
-
-    if (busVal)
-        return true;
-
-    return false;
+    return true;
 }
 
 /**
@@ -805,7 +805,10 @@ JDBusState JDPhysicalLayer::getState()
     // if we are neither transmitting or receiving, examine the bus.
     int busVal = sp.getDigitalValue(PullMode::Up);
     // re-enable events!
+    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
     setState(JDSerialState::ListeningForPulse);
+    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
+
 
     if (busVal)
         return JDBusState::High;
