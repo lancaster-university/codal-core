@@ -580,6 +580,8 @@ void JDPhysicalLayer::sendPacket()
     if (!(test_status & JD_SERIAL_TRANSMITTING) && (this->txHead != this->txTail || txBuf))
     {
         // there is a chance for a very narrow race condition above.
+        // below we disable interrupt to ensure we're not interrupted by the
+        // gpio callback which operates at a higher interrupt priority.
         target_disable_irq();
         int busState = setState(JDSerialState::Off);
         target_enable_irq();
