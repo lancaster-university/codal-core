@@ -244,9 +244,7 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
     if (test_status & JD_SERIAL_ERR_MSK)
     {
         // DMESG("CONT ERR %d",test_status);
-        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
         errorState(JDBusErrorState::Continuation);
-        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
         return;
     }
 
@@ -255,9 +253,7 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
         if (test_status & JD_SERIAL_LO_PULSE_START)
         {
             JD_DMESG("BL ERR");
-            JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
             errorState(JDBusErrorState::BusLoError);
-            JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
             return;
         }
         else if (test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING))
@@ -276,9 +272,7 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
                 if (endTime - startTime >= comparison)
                 {
                     JD_DMESG("BTO1");
-                    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
                     errorState(JDBusErrorState::BusTimeoutError);
-                    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
                     return;
                 }
             }
@@ -311,9 +305,7 @@ void JDPhysicalLayer::dmaComplete(Event evt)
         // we should never have the lo pulse flag set here.
         CODAL_ASSERT(!(test_status & JD_SERIAL_LO_PULSE_START), test_status);
         // DMESG("BUART ERR %d",test_status);
-        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
         errorState(JDBusErrorState::BusUARTError);
-        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
         return;
     }
     else
@@ -402,9 +394,7 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     // we support 1, 2, 4, 8 as our powers of 2.
     if (pulseTime < (uint8_t)this->maxBaud || pulseTime > 8)
     {
-        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
         errorState(JDBusErrorState::BusUARTError);
-        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
         return;
     }
 
@@ -598,9 +588,7 @@ void JDPhysicalLayer::sendPacket()
                 commLED->setDigitalValue(COMM_LED_LO);
 
             JD_DMESG("TXLO ERR");
-            JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
             errorState(JDBusErrorState::BusLoError);
-            JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,31);
             return;
         }
 
@@ -664,6 +652,8 @@ int JDPhysicalLayer::queuePacket(JDPacket* tx)
     if (nextTail == this->txHead)
         return DEVICE_NO_RESOURCES;
 
+    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,100);
+
     JDPacket* pkt = (JDPacket *)malloc(sizeof(JDPacket));
     memset(pkt, 0, sizeof(JDPacket));
     memcpy(pkt, tx, sizeof(JDPacket));
@@ -681,7 +671,7 @@ int JDPhysicalLayer::queuePacket(JDPacket* tx)
         JD_SET_FLAGS(JD_SERIAL_TX_DRAIN_ENABLE,19);
         timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
     }
-
+    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,100);
     return ret;
 }
 
