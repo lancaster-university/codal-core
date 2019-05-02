@@ -792,28 +792,14 @@ bool JDPhysicalLayer::isConnected()
  **/
 JDBusState JDPhysicalLayer::getState()
 {
+
     if (test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER))
         return JDBusState::Receiving;
 
     if (test_status & JD_SERIAL_TRANSMITTING)
         return JDBusState::Transmitting;
 
-    // this flag is set if the bus is being held lo.
-    if (test_status & JD_SERIAL_BUS_LO_ERROR)
-        return JDBusState::Low;
-
-    // if we are neither transmitting or receiving, examine the bus.
-    int busVal = sp.getDigitalValue(PullMode::Up);
-    // re-enable events!
-    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
-    setState(JDSerialState::ListeningForPulse);
-    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,17);
-
-
-    if (busVal)
-        return JDBusState::High;
-
-    return JDBusState::Low;
+    return JDBusState::Unknown;
 }
 
 

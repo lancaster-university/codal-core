@@ -188,12 +188,12 @@ void JACDAC::logState()
             busStateStr = "Transmitting";
             break;
 
-        case JDBusState::High:
-            busStateStr = "High";
+        case JDBusState::Error:
+            busStateStr = "Error";
             break;
 
-        case JDBusState::Low:
-            busStateStr = "Low";
+        case JDBusState::Unknown:
+            busStateStr = "Unknown";
             break;
     }
 
@@ -204,7 +204,7 @@ void JACDAC::logState()
         JDService* current = JACDAC::instance->services[i];
 
         if (current)
-            DMESG("Driver %d initialised[%d] device_address[%d] serial[%d] class[%d], mode[%s%s%s]", i, current->isConnected(), (current->device) ? current->device->device_address : -1, (current->device) ? current->device->unique_device_identifier : -1, current->service_class, current->mode == BroadcastHostService ? "B" : "", current->mode == HostService ? "H" : "", current->mode == ClientService ? "C" : "");
+            DMESG("Service %d initialised[%d] device_address[%d] serial[%d] class[%d], mode[%s%s%s]", i, current->isConnected(), (current->device) ? current->device->device_address : -1, (current->device) ? current->device->unique_device_identifier : -1, current->service_class, current->mode == BroadcastHostService ? "B" : "", current->mode == HostService ? "H" : "", current->mode == ClientService ? "C" : "");
     }
 }
 

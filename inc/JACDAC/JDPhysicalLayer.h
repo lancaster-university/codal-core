@@ -135,8 +135,8 @@ namespace codal
     {
         Receiving,
         Transmitting,
-        High,
-        Low
+        Error,
+        Unknown
     };
 
     enum class JDSerialState : uint8_t
