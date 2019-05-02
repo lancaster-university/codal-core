@@ -576,15 +576,16 @@ void JDPhysicalLayer::sendPacket()
         return;
     }
 
-    target_disable_irq();
-    sp.eventOn(DEVICE_PIN_EVENT_NONE);
-    target_enable_irq();
-
-    if (!(test_status & JD_SERIAL_TRANSMITTING))
+    // if we're not transmitting and we have stuff to transmit
+    if (!(test_status & JD_SERIAL_TRANSMITTING) && (this->txHead != this->txTail || txBuf))
     {
-        // DMESG("IN TX");
+        // there is a chance for a very narrow race condition above.
+        target_disable_irq();
+        int busState = setState(JDSerialState::Off);
+        target_enable_irq();
+
         // if the bus is lo, we shouldn't transmit (collision)
-        if (sp.getDigitalValue(PullMode::Up) == 0)
+        if (busState == 0)
         {
             JD_DMESG("BUS LO");
 
@@ -603,32 +604,29 @@ void JDPhysicalLayer::sendPacket()
 
         // If we get here, we assume we have control of the bus.
         // check if we have stuff to send, txBuf will be set if a previous send failed.
-        if (this->txHead != this->txTail || txBuf)
+        JD_DMESG("TX B");
+        JD_SET_FLAGS(JD_SERIAL_TRANSMITTING,17);
+
+        // we may have a packet that we previously tried to send, but was aborted for some reason.
+        if (txBuf == NULL)
+            txBuf = popTxArray();
+
+        target_disable_irq();
+        sp.setDigitalValue(0);
+        target_wait_us(baudToByteMap[(uint8_t)txBuf->communication_rate - 1].time_per_byte);
+        sp.setDigitalValue(1);
+        target_enable_irq();
+
+        if (txBuf->communication_rate != (uint8_t)currentBaud)
         {
-            JD_DMESG("TX B");
-            JD_SET_FLAGS(JD_SERIAL_TRANSMITTING,17);
-
-            // we may have a packet that we previously tried to send, but was aborted for some reason.
-            if (txBuf == NULL)
-                txBuf = popTxArray();
-
-            target_disable_irq();
-            sp.setDigitalValue(0);
-            target_wait_us(baudToByteMap[(uint8_t)txBuf->communication_rate - 1].time_per_byte);
-            sp.setDigitalValue(1);
-            target_enable_irq();
-
-            if (txBuf->communication_rate != (uint8_t)currentBaud)
-            {
-                sws.setBaud(baudToByteMap[(uint8_t)txBuf->communication_rate - 1].baud);
-                currentBaud = (JDBaudRate)txBuf->communication_rate;
-            }
-
-            // configure to come back after the minimum lo_data gap has been observed.
-            JD_SET_FLAGS(JD_SERIAL_TX_DRAIN_ENABLE,23);
-            timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + JD_MIN_INTERLODATA_SPACING);
-            return;
+            sws.setBaud(baudToByteMap[(uint8_t)txBuf->communication_rate - 1].baud);
+            currentBaud = (JDBaudRate)txBuf->communication_rate;
         }
+
+        // configure to come back after the minimum lo_data gap has been observed.
+        JD_SET_FLAGS(JD_SERIAL_TX_DRAIN_ENABLE,23);
+        timer.setCompare(MINIMUM_INTERFRAME_CC, timer.captureCounter() + JD_MIN_INTERLODATA_SPACING);
+        return;
     }
 
     // we've returned after a DMA transfer has been flagged (above)... start
