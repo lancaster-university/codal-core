@@ -13,8 +13,8 @@
 
 #ifdef TRACK_STATE
 
-// #define PHYS_STATE_SIZE         128
-#define PHYS_STATE_SIZE         512
+#define PHYS_STATE_SIZE         128
+// #define PHYS_STATE_SIZE         512
 
 #warning TRACK_STATE_ON
 
@@ -132,7 +132,10 @@ void JDPhysicalLayer::_gpioCallback(int state)
         if (test_status & JD_SERIAL_ERR_MSK)
         {
             // all flags
-            CODAL_ASSERT(!(test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING)),test_status)
+            // CODAL_ASSERT(!(test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING)),test_status)
+            if (test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING))
+                target_reset();
+
             startTime = now;
             timer.setCompare(MAXIMUM_INTERBYTE_CC, startTime + JD_BYTE_AT_125KBAUD);
             // set_gpio2(0);
@@ -141,7 +144,10 @@ void JDPhysicalLayer::_gpioCallback(int state)
         else if (test_status & JD_SERIAL_LO_PULSE_START)
         {
             // set_gpio(1);
-            CODAL_ASSERT(!(test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING)),test_status)
+            // CODAL_ASSERT(!(test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING)),test_status)
+            if (test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING))
+                target_reset();
+
             JD_UNSET_FLAGS(JD_SERIAL_LO_PULSE_START,1);
             timer.clearCompare(MAXIMUM_INTERBYTE_CC);
             loPulseDetected((now > startTime) ? now - startTime : startTime - now);
@@ -591,11 +597,12 @@ void JDPhysicalLayer::sendPacket()
         // there is a chance for a very narrow race condition above.
         // below we disable interrupt to ensure we're not interrupted by the
         // gpio callback which operates at a higher interrupt priority.
-        target_disable_irq();
+
         JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT,1201);
+        target_disable_irq();
         int busState = setState(JDSerialState::Off);
-        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,1201);
         target_enable_irq();
+        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT,1201);
 
         // if the bus is lo, we shouldn't transmit (collision)
         if (busState == 0)
