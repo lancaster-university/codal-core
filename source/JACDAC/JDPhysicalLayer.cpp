@@ -22,14 +22,18 @@ uint32_t phys_state[PHYS_STATE_SIZE] = {0};
 uint32_t phys_pointer = 0;
 
 #define JD_SET_FLAGS(flags,num) do {                        \
+                            target_disable_irq();       \
                             test_status |= (flags);     \
                             phys_state[phys_pointer] = test_status | (__LINE__ << 16) | 1 << 31;  \
+                            target_enable_irq();        \
                             phys_pointer = (phys_pointer + 1) % PHYS_STATE_SIZE;    \
                             }while(0)
 
 #define JD_UNSET_FLAGS(flags,num) do {                          \
+                                target_disable_irq();       \
                                 test_status &= ~(flags);    \
                                 phys_state[phys_pointer] = test_status | (__LINE__ << 16); \
+                                target_enable_irq();        \
                                 phys_pointer = (phys_pointer + 1) % PHYS_STATE_SIZE;    \
                               }while(0)
 
