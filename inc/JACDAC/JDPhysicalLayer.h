@@ -114,6 +114,7 @@ namespace codal
     // a struct containing the various diagnostics of the JACDAC physical layer.
     struct JDDiagnostics
     {
+        uint32_t bus_state;
         uint32_t bus_lo_error;
         uint32_t bus_uart_error;
         uint32_t bus_timeout_error;

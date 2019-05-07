@@ -822,6 +822,7 @@ uint8_t JDPhysicalLayer::getErrorState()
 
 JDDiagnostics JDPhysicalLayer::getDiagnostics()
 {
+    diagnostics.bus_state = getErrorState();
     return diagnostics;
 }
 
