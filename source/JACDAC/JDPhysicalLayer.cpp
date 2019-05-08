@@ -9,12 +9,12 @@
 #include "JACDAC.h"
 #include "JDCRC.h"
 
-// #define TRACK_STATE
+#define TRACK_STATE
 
 #ifdef TRACK_STATE
 
-#define PHYS_STATE_SIZE         128
-// #define PHYS_STATE_SIZE         512
+// #define PHYS_STATE_SIZE         128
+#define PHYS_STATE_SIZE         512
 
 #warning TRACK_STATE_ON
 
@@ -139,9 +139,7 @@ void JDPhysicalLayer::_gpioCallback(int state)
             CODAL_ASSERT(!(test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING)),test_status)
 
             startTime = now;
-            JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
             timer.setCompare(TIMEOUT_CC, startTime + JD_BYTE_AT_125KBAUD);
-            JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
         }
         else if (test_status & JD_SERIAL_RX_LO_PULSE)
         {
@@ -157,10 +155,8 @@ void JDPhysicalLayer::_gpioCallback(int state)
 
         if (!(test_status & JD_SERIAL_ERR_MSK))
         {
-            JD_SET_FLAGS(JD_SERIAL_RX_LO_PULSE);
-            JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
             timer.setCompare(TIMEOUT_CC, startTime + baudToByteMap[(uint8_t)JDBaudRate::Baud125K - 1].time_per_byte);
-            JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
+            JD_SET_FLAGS(JD_SERIAL_RX_LO_PULSE);
         }
         else
         {
@@ -203,9 +199,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
         // DMESG("EST %d",test_status);
         startTime = timer.captureCounter();
 
-        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
         timer.setCompare(TIMEOUT_CC, startTime + JD_BYTE_AT_125KBAUD);
-        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
         setState(JDSerialState::ErrorRecovery);
         // Event(this->id, JD_SERIAL_EVT_BUS_ERROR);
 
@@ -253,14 +247,18 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
     if (test_status & JD_SERIAL_ERR_MSK)
     {
         // DMESG("CONT ERR %d",test_status);
+        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
         errorState(JDBusErrorState::Continuation);
+        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
         return;
     }
 
     if (test_status & JD_SERIAL_RX_LO_PULSE)
     {
         JD_DMESG("BL ERR");
+        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
         errorState(JDBusErrorState::BusLoError);
+        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
         return;
     }
 
@@ -280,7 +278,9 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
             {
                 JD_DMESG("BTO1");
 
+                JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
                 errorState(JDBusErrorState::BusTimeoutError);
+                JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
                 return;
             }
         }
@@ -291,9 +291,7 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
             lastBufferedCount = byteCount;
         }
 
-        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
         timer.setCompare(TIMEOUT_CC, endTime + JD_BYTE_AT_125KBAUD);
-        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
         // set_gpio3(0);
         return;
     }
@@ -310,7 +308,9 @@ void JDPhysicalLayer::dmaComplete(Event evt)
         // we should never have the lo pulse flag set here.
         CODAL_ASSERT(!(test_status & JD_SERIAL_RX_LO_PULSE), test_status);
         // DMESG("BUART ERR %d",test_status);
+        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
         errorState(JDBusErrorState::BusUARTError);
+        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
         return;
     }
     else
@@ -398,7 +398,9 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     // we support 1, 2, 4, 8 as our powers of 2.
     if (pulseTime < (uint8_t)this->maxBaud || pulseTime > 8)
     {
+        JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
         errorState(JDBusErrorState::BusUARTError);
+        JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
         return;
     }
 
@@ -587,7 +589,9 @@ void JDPhysicalLayer::sendPacket()
                 commLED->setDigitalValue(COMM_LED_LO);
 
             JD_DMESG("TXLO ERR");
+            JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
             errorState(JDBusErrorState::BusLoError);
+            JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
             return;
         }
 
