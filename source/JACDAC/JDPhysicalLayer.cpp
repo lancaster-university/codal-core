@@ -503,6 +503,7 @@ JDPhysicalLayer::JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer
     timer.setBitMode(BitMode32);
     timer.setClockSpeed(1000);
     timer.setIRQ(jacdac_timer_irq);
+    timer.setIRQPriority(1);
     timer.enable();
 
     sp.setIRQ(jacdac_gpio_irq);
