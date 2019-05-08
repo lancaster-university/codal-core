@@ -9,18 +9,20 @@
 #include "JACDAC.h"
 #include "JDCRC.h"
 
-#ifdef GPIO_DEBUG
-extern void SET_GPIO(int);
-extern void SET_GPIO1(int);
-//unused
-extern void SET_GPIO2(int);
-// error
-extern void SET_GPIO3(int);
+// #define GPIO_DEBUG
 
-#define SET_GPIO(val)(SET_GPIO(val))
-#define SET_GPIO1(val)(SET_GPIO1(val))
-#define SET_GPIO2(val)(SET_GPIO2(val))
-#define SET_GPIO3(val)(SET_GPIO3(val))
+#ifdef GPIO_DEBUG
+extern void set_gpio(int);
+extern void set_gpio1(int);
+//unused
+extern void set_gpio2(int);
+// error
+extern void set_gpio3(int);
+
+#define SET_GPIO(val)(set_gpio(val))
+#define SET_GPIO1(val)(set_gpio1(val))
+#define SET_GPIO2(val)(set_gpio2(val))
+#define SET_GPIO3(val)(set_gpio3(val))
 #else
 #define SET_GPIO(...)((void)0)
 #define SET_GPIO1(...)((void)0)
@@ -186,6 +188,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
     if (es != JDBusErrorState::Continuation)
     {
         SET_GPIO3(1);
+        setState(JDSerialState::Off);
         JD_UNSET_FLAGS(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_RX_LO_PULSE | JD_SERIAL_TRANSMITTING | JD_SERIAL_BUS_STATE);
 
         if (es == JD_SERIAL_BUS_TIMEOUT_ERROR)
@@ -207,6 +210,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
                 commLED->setDigitalValue(COMM_LED_LO);
         }
 
+        JD_UNSET_FLAGS(JD_SERIAL_BUS_STATE);
         // update the bus state before enabling our IRQ.
         JD_SET_FLAGS(es | (sp.getDigitalValue(PullMode::Up) ? JD_SERIAL_BUS_STATE : 0));
         // DMESG("EST %d",test_status);
