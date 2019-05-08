@@ -336,9 +336,6 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                     DMESG("RXH %d ", rxBuf->size);
                     return;
                 }
-
-                // CODAL_ASSERT(rxBuf->size != 0,test_status);
-                goto jd_phys_dma_exit;
             }
             else if (test_status & JD_SERIAL_RECEIVING)
             {
@@ -371,7 +368,6 @@ void JDPhysicalLayer::dmaComplete(Event evt)
         }
     }
 
-jd_phys_dma_exit:
     sws.setMode(SingleWireDisconnected);
 
     // force transition to output so that the pin is reconfigured.
