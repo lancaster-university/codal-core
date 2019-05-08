@@ -9,7 +9,7 @@
 #include "JACDAC.h"
 #include "JDCRC.h"
 
-// #define GPIO_DEBUG
+#define GPIO_DEBUG
 
 #ifdef GPIO_DEBUG
 extern void set_gpio(int);
@@ -147,7 +147,7 @@ void JDPhysicalLayer::_gpioCallback(int state)
     if (state)
     {
         JD_SET_FLAGS(JD_SERIAL_BUS_STATE);
-
+        // SET_GPIO1(1);
         if (test_status & JD_SERIAL_ERR_MSK)
         {
             // all flags
@@ -165,6 +165,7 @@ void JDPhysicalLayer::_gpioCallback(int state)
     }
     else
     {
+        // SET_GPIO1(0);
         JD_UNSET_FLAGS(JD_SERIAL_BUS_STATE);
         startTime = now;
 
@@ -187,6 +188,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
     // first time entering the error state?
     if (es != JDBusErrorState::Continuation)
     {
+        SET_GPIO(0);
         SET_GPIO3(1);
         setState(JDSerialState::Off);
         JD_UNSET_FLAGS(JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_RX_LO_PULSE | JD_SERIAL_TRANSMITTING | JD_SERIAL_BUS_STATE);
@@ -317,11 +319,12 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
 
 void JDPhysicalLayer::dmaComplete(Event evt)
 {
+    timer.clearCompare(TIMEOUT_CC);
+
     // DMESG("DMAC");
     if (evt.value == SWS_EVT_ERROR)
     {
-        SET_GPIO1(0);
-        SET_GPIO(0);
+        // SET_GPIO1(0);
         // we should never have the lo pulse flag set here.
         CODAL_ASSERT(!(test_status & JD_SERIAL_RX_LO_PULSE), test_status);
         // DMESG("BUART ERR %d",test_status);
@@ -343,8 +346,8 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                     // DMESG("RXSET");
                     // here we start a new dma transaction, reset lastBufferedCount...
                     sws.receiveDMA(((uint8_t*)rxBuf) + JD_SERIAL_HEADER_SIZE, rxBuf->size);
-                    SET_GPIO(0);
-                    SET_GPIO1(1);
+
+                    // SET_GPIO1(1);
 
                     JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
                     lastBufferedCount = 0;
@@ -374,7 +377,8 @@ void JDPhysicalLayer::dmaComplete(Event evt)
                     diagnostics.packets_dropped++;
 
                 Event(id, JD_SERIAL_EVT_DATA_READY);
-                SET_GPIO1(0);
+                // SET_GPIO1(0);
+                SET_GPIO(0);
             }
         }
 
