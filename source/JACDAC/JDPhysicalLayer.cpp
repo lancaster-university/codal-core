@@ -9,7 +9,7 @@
 #include "JACDAC.h"
 #include "JDCRC.h"
 
-#define GPIO_DEBUG
+// #define GPIO_DEBUG
 
 #ifdef GPIO_DEBUG
 extern void set_gpio(int);
@@ -30,7 +30,7 @@ extern void set_gpio3(int);
 #define SET_GPIO3(...)((void)0)
 #endif
 
-#define TRACK_STATE
+// #define TRACK_STATE
 
 #ifdef TRACK_STATE
 
@@ -138,6 +138,12 @@ void jacdac_timer_irq(uint16_t channels)
 {
     if (JDPhysicalLayer::instance)
         JDPhysicalLayer::instance->_timerCallback(channels);
+}
+
+void jacdac_sws_dma_irq(uint16_t errCode)
+{
+    if (JDPhysicalLayer::instance)
+        JDPhysicalLayer::instance->_dmaCallback(errCode);
 }
 
 void JDPhysicalLayer::_gpioCallback(int state)
@@ -317,13 +323,65 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
     SET_GPIO2(0);
 }
 
-void JDPhysicalLayer::dmaComplete(Event evt)
+void JDPhysicalLayer::_dmaCallback(uint16_t errCode)
 {
+    SET_GPIO(1);
     timer.clearCompare(TIMEOUT_CC);
 
-    // DMESG("DMAC");
-    if (evt.value == SWS_EVT_ERROR)
+    // rx complete, queue packet for later handling
+    if (errCode == SWS_EVT_DATA_RECEIVED)
     {
+        if (test_status & JD_SERIAL_RECEIVING_HEADER)
+        {
+            JD_UNSET_FLAGS(JD_SERIAL_RECEIVING_HEADER);
+            if (rxBuf->size)
+            {
+                // here we start a new dma transaction, reset lastBufferedCount...
+                lastBufferedCount = 0;
+                sws.receiveDMA(((uint8_t*)rxBuf) + JD_SERIAL_HEADER_SIZE, rxBuf->size);
+                timer.setCompare(TIMEOUT_CC, startTime + JD_MAX_INTERBYTE_SPACING);
+                CODAL_ASSERT(!(test_status & JD_SERIAL_RECEIVING), test_status);
+                JD_SET_FLAGS(JD_SERIAL_RECEIVING);
+                SET_GPIO(0);
+                return;
+            }
+        }
+        else if (test_status & JD_SERIAL_RECEIVING)
+        {
+            JD_UNSET_FLAGS(JD_SERIAL_RECEIVING);
+
+            // CRC is computed at the control layer.
+            rxBuf->communication_rate = (uint8_t)currentBaud;
+            // move rxbuf to rxArray and allocate new buffer.
+            int ret = addToRxArray(rxBuf);
+            if (ret == DEVICE_OK)
+            {
+                DMESG("RXD[%d,%d]",this->rxHead, this->rxTail);
+                rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
+                diagnostics.packets_received++;
+            }
+            else
+                diagnostics.packets_dropped++;
+
+            Event(id, JD_SERIAL_EVT_DATA_READY);
+            // SET_GPIO1(0);
+            SET_GPIO(0);
+        }
+    }
+
+    if (errCode == SWS_EVT_DATA_SENT)
+    {
+        JD_UNSET_FLAGS(JD_SERIAL_TRANSMITTING);
+        free(txBuf);
+        txBuf = NULL;
+        diagnostics.packets_sent++;
+        // DMESG("DMA TXD");
+    }
+
+    // DMESG("DMAC");
+    if (errCode == SWS_EVT_ERROR)
+    {
+        SET_GPIO(0);
         // SET_GPIO1(0);
         // we should never have the lo pulse flag set here.
         CODAL_ASSERT(!(test_status & JD_SERIAL_RX_LO_PULSE), test_status);
@@ -331,67 +389,11 @@ void JDPhysicalLayer::dmaComplete(Event evt)
         JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
         errorState(JDBusErrorState::BusUARTError);
         JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
+
         return;
     }
-    else
-    {
-        // rx complete, queue packet for later handling
-        if (evt.value == SWS_EVT_DATA_RECEIVED)
-        {
-            if (test_status & JD_SERIAL_RECEIVING_HEADER)
-            {
-                JD_UNSET_FLAGS(JD_SERIAL_RECEIVING_HEADER);
-                if (rxBuf->size)
-                {
-                    // DMESG("RXSET");
-                    // here we start a new dma transaction, reset lastBufferedCount...
-                    sws.receiveDMA(((uint8_t*)rxBuf) + JD_SERIAL_HEADER_SIZE, rxBuf->size);
 
-                    // SET_GPIO1(1);
-
-                    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
-                    lastBufferedCount = 0;
-                    timer.setCompare(TIMEOUT_CC, startTime + JD_MAX_INTERBYTE_SPACING);
-                    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
-                    CODAL_ASSERT(!(test_status & JD_SERIAL_RECEIVING), test_status);
-                    JD_SET_FLAGS(JD_SERIAL_RECEIVING);
-                    DMESG("RXH %d ", rxBuf->size);
-                    return;
-                }
-            }
-            else if (test_status & JD_SERIAL_RECEIVING)
-            {
-                JD_UNSET_FLAGS(JD_SERIAL_RECEIVING);
-
-                // CRC is computed at the control layer.
-                rxBuf->communication_rate = (uint8_t)currentBaud;
-                // move rxbuf to rxArray and allocate new buffer.
-                int ret = addToRxArray(rxBuf);
-                if (ret == DEVICE_OK)
-                {
-                    DMESG("RXD[%d,%d]",this->rxHead, this->rxTail);
-                    rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
-                    diagnostics.packets_received++;
-                }
-                else
-                    diagnostics.packets_dropped++;
-
-                Event(id, JD_SERIAL_EVT_DATA_READY);
-                // SET_GPIO1(0);
-                SET_GPIO(0);
-            }
-        }
-
-        if (evt.value == SWS_EVT_DATA_SENT)
-        {
-            JD_UNSET_FLAGS(JD_SERIAL_TRANSMITTING);
-            free(txBuf);
-            txBuf = NULL;
-            diagnostics.packets_sent++;
-            // DMESG("DMA TXD");
-        }
-    }
-
+    SET_GPIO(0);
     sws.setMode(SingleWireDisconnected);
 
     // force transition to output so that the pin is reconfigured.
@@ -445,16 +447,16 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
 
     lastBufferedCount = 0;
     sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_HEADER_SIZE);
-    SET_GPIO(1);
 
     // 14 more us
     JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
-    timer.setCompare(TIMEOUT_CC, startTime + JD_BYTE_AT_125KBAUD);
+    timer.clearCompare(TIMEOUT_CC);
+    // timer.setCompare(TIMEOUT_CC, startTime + JD_BYTE_AT_125KBAUD);
     JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
 
     if (commLED)
         commLED->setDigitalValue(COMM_LED_HI);
-    DMESG("RXSTRT");
+    // DMESG("RXSTRT");
 }
 
 int JDPhysicalLayer::setState(JDSerialState state)
@@ -517,7 +519,7 @@ JDPhysicalLayer::JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer
     sp.setIRQ(jacdac_gpio_irq);
     sp.getDigitalValue(PullMode::None);
 
-    sws.setDMACompletionHandler(this, &JDPhysicalLayer::dmaComplete);
+    sws.setIRQ(jacdac_sws_dma_irq);
 }
 
 /**

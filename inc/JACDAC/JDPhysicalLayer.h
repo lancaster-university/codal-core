@@ -323,6 +323,7 @@ namespace codal
         JDBaudRate getMaximumBaud();
 
         void _timerCallback(uint16_t channels);
+        void _dmaCallback(uint16_t errCode);
         void _gpioCallback(int state);
     };
 } // namespace codal
