@@ -33,12 +33,23 @@ namespace codal
 
         public:
         Pin& p;
-
-        // virtual void dataReceived(uint8_t*, int len);
+        void (*cb) (uint16_t errCode); // one of SWS_EVT...
 
         SingleWireSerial(Pin& p, uint16_t id = DEVICE_ID_SINGLE_WIRE_SERIAL) : p(p)
         {
             this->id = id;
+            this->cb = NULL;
+        }
+
+        /**
+         * Sets the timer_pointer member variable.
+         *
+         * @returns DEVICE_OK on success.
+         **/
+        virtual int setIRQ(void (*cb) (uint16_t errCode))
+        {
+            this->cb = cb;
+            return DEVICE_OK;
         }
 
         virtual int putc(char c) = 0;
