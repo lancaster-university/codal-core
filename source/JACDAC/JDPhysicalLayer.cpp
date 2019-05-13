@@ -312,7 +312,6 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
 
     if (test_status & JD_SERIAL_RX_LO_PULSE)
     {
-        CODAL_ASSERT(0, channels);
         errorState(JDBusErrorState::BusLoError);
         SET_GPIO2(0);
         JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
@@ -322,7 +321,7 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
 
     // if we reach here, we are neither transmitting, receiving or in an error state
     // check the flag one last time as we can be preempted by the GPIO interrupt
-    if (!(test_status & JD_SERIAL_RX_LO_PULSE) && (this->txHead != this->txTail || txBuf))
+    if ((this->txHead != this->txTail || txBuf))
     {
         if (!(test_status & (JD_SERIAL_TX_LO_PULSE | JD_SERIAL_TRANSMITTING)) && setState(JDSerialState::Off) == 0)
         {
