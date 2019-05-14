@@ -65,7 +65,20 @@
 namespace codal
 {
 
-ST7735::ST7735(SPI &spi, Pin &cs, Pin &dc) : spi(spi), cs(cs), dc(dc), work(NULL)
+SPIScreenIO::SPIScreenIO(SPI &spi) : spi(spi) {}
+
+void SPIScreenIO::send(const void *txBuffer, uint32_t txSize)
+{
+    spi.transfer((const uint8_t *)txBuffer, txSize, NULL, 0);
+}
+
+void SPIScreenIO::startSend(const void *txBuffer, uint32_t txSize, PVoidCallback doneHandler,
+                            void *handlerArg)
+{
+    spi.startTransfer((const uint8_t *)txBuffer, txSize, NULL, 0, doneHandler, handlerArg);
+}
+
+ST7735::ST7735(ScreenIO &io, Pin &cs, Pin &dc) : io(io), cs(cs), dc(dc), work(NULL)
 {
     double16 = false;
 }
@@ -238,7 +251,7 @@ void ST7735::sendColorsStep(ST7735 *st)
             base[i + 32 + 64] = (palette[i] >> 2) & 0x3f;
         }
         st->startRAMWR(0x2D);
-        st->spi.transfer(work->dataBuf, 128, NULL, 0);
+        st->io.send(work->dataBuf, 128);
         st->cs.setDigitalValue(1);
     }
 
@@ -286,7 +299,7 @@ void ST7735::sendColorsStep(ST7735 *st)
 
 void ST7735::startTransfer(unsigned size)
 {
-    spi.startTransfer(work->dataBuf, size, NULL, 0, (PVoidCallback)&ST7735::sendColorsStep, this);
+    io.startSend(work->dataBuf, size, (PVoidCallback)&ST7735::sendColorsStep, this);
 }
 
 void ST7735::startRAMWR(int cmd)
@@ -386,12 +399,12 @@ void ST7735::sendCmd(uint8_t *buf, int len)
     buf = cmdBuf;
     dc.setDigitalValue(0);
     cs.setDigitalValue(0);
-    spi.transfer(buf, 1, NULL, 0);
+    io.send(buf, 1);
     dc.setDigitalValue(1);
     len--;
     buf++;
     if (len > 0)
-        spi.transfer(buf, len, NULL, 0);
+        io.send(buf, len);
     cs.setDigitalValue(1);
 }
 

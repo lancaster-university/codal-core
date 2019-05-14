@@ -148,7 +148,7 @@ static const uint8_t initcmd[] = {
 namespace codal
 {
 
-ILI9341::ILI9341(SPI &spi, Pin &cs, Pin &dc) : ST7735(spi, cs, dc)
+ILI9341::ILI9341(ScreenIO &io, Pin &cs, Pin &dc) : ST7735(io, cs, dc)
 {
     double16 = true;
 }
