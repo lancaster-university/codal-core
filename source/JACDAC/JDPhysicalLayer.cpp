@@ -30,7 +30,7 @@ extern void set_gpio3(int);
 #define SET_GPIO3(...)((void)0)
 #endif
 
-// #define TRACK_STATE
+#define TRACK_STATE
 
 #ifdef TRACK_STATE
 
@@ -198,6 +198,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
     // first time entering the error state?
     if (es != JDBusErrorState::Continuation)
     {
+        DMESG("ERROR! %d",es);
         SET_GPIO(0);
         SET_GPIO3(1);
         setState(JDSerialState::Off);
@@ -214,6 +215,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
 
         if (es == JD_SERIAL_BUS_TIMEOUT_ERROR || es == JD_SERIAL_BUS_UART_ERROR)
         {
+            DMESG("ABRT");
             sws.abortDMA();
             sws.setMode(SingleWireDisconnected);
 
@@ -262,7 +264,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
 void JDPhysicalLayer::_timerCallback(uint16_t channels)
 {
     target_disable_irq();
-    JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
+    // JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
     SET_GPIO2(1);
     // DMESG("TC %d",test_status);
     if (test_status & JD_SERIAL_ERR_MSK)
@@ -349,7 +351,7 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
         return;
     }
     SET_GPIO2(0);
-    JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
+    // JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
     timer.setCompare(TX_CALLBACK_CC, timer.captureCounter() + 100 + target_random(JD_SERIAL_TX_MAX_BACKOFF));
     target_enable_irq();
 }
@@ -374,8 +376,10 @@ void JDPhysicalLayer::_dmaCallback(uint16_t errCode)
                 CODAL_ASSERT(!(test_status & JD_SERIAL_RECEIVING), test_status);
                 JD_SET_FLAGS(JD_SERIAL_RECEIVING);
                 SET_GPIO(0);
+                // DMESG("RXH %d",rxBuf->size);
                 return;
             }
+            // DMESG("RXH %d",rxBuf->size);
         }
         else if (test_status & JD_SERIAL_RECEIVING)
         {
@@ -416,7 +420,7 @@ void JDPhysicalLayer::_dmaCallback(uint16_t errCode)
         // SET_GPIO1(0);
         // we should never have the lo pulse flag set here.
         CODAL_ASSERT(!(test_status & JD_SERIAL_RX_LO_PULSE), test_status);
-        // DMESG("BUART ERR %d",test_status);
+        DMESG("BUART ERR %d",test_status);
         errorState(JDBusErrorState::BusUARTError);
         return;
     }
