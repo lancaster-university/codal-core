@@ -212,7 +212,6 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
         if (es == JD_SERIAL_BUS_LO_ERROR)
             diagnostics.bus_lo_error++;
 
-        DMESG("ERR %d",es);
         if (es == JD_SERIAL_BUS_TIMEOUT_ERROR || es == JD_SERIAL_BUS_UART_ERROR)
         {
             sws.abortDMA();
@@ -341,6 +340,7 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
     }
     SET_GPIO2(0);
     JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
+    timer.setCompare(TX_CALLBACK_CC, timer.captureCounter() + 100 + target_random(JD_SERIAL_TX_MAX_BACKOFF));
     target_enable_irq();
 }
 
@@ -464,9 +464,7 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_HEADER_SIZE);
 
     // 14 more us
-#warning this is here
-    timer.clearCompare(TIMEOUT_CC);
-    // timer.setCompare(TIMEOUT_CC, startTime + JD_BYTE_AT_125KBAUD);
+    timer.setCompare(TIMEOUT_CC, startTime + JD_BYTE_AT_125KBAUD);
 
     if (commLED)
         commLED->setDigitalValue(COMM_LED_HI);
@@ -562,8 +560,6 @@ void JDPhysicalLayer::start()
     if (rxBuf == NULL)
         rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
 
-    JD_DMESG("JD START");
-
     JD_SET_FLAGS(DEVICE_COMPONENT_RUNNING);
 
     // check if the bus is lo here and change our led
@@ -643,12 +639,8 @@ void JDPhysicalLayer::sendPacket()
         timer.setCompare(TIMEOUT_CC, startTime + JD_BYTE_AT_125KBAUD);
         if (commLED)
             commLED->setDigitalValue(COMM_LED_HI);
-        DMESG("TXSTRT");
         return;
     }
-
-    JD_DMESG("RECONFG");
-    timer.setCompare(TX_CALLBACK_CC, timer.captureCounter() + 100 + target_random(JD_SERIAL_TX_MAX_BACKOFF));
 }
 
 int JDPhysicalLayer::queuePacket(JDPacket* tx)
