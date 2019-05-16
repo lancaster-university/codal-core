@@ -275,6 +275,13 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
         return;
     }
 
+    if (test_status & JD_SERIAL_TX_LO_PULSE)
+    {
+        sendPacket();
+        target_enable_irq();
+        return;
+    }
+
     if (test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING))
     {
         target_enable_irq();
@@ -320,9 +327,27 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
 
     // if we reach here, we are neither transmitting, receiving or in an error state
     // check the flag one last time as we can be preempted by the GPIO interrupt
-    sendPacket();
+    if ((this->txHead != this->txTail || txBuf))
+    {
+        if (setState(JDSerialState::Off) == 0)
+        {
+            JD_DMESG("BUS LO");
+
+            if (busLED)
+                busLED->setDigitalValue(BUS_LED_LO);
+
+            if (commLED)
+                commLED->setDigitalValue(COMM_LED_LO);
+
+            JD_DMESG("TXLO ERR");
+            errorState(JDBusErrorState::BusLoError);
+        }
+        else
+            sendPacket();
+    }
     SET_GPIO2(0);
     JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
+    timer.setCompare(TX_CALLBACK_CC, timer.captureCounter() + 100 + target_random(JD_SERIAL_TX_MAX_BACKOFF));
     target_enable_irq();
 }
 
@@ -581,23 +606,8 @@ void JDPhysicalLayer::stop()
 void JDPhysicalLayer::sendPacket()
 {
     // if we're not transmitting and we have stuff to transmit
-    if (!(test_status & (JD_SERIAL_TX_LO_PULSE | JD_SERIAL_TRANSMITTING)) && (this->txHead != this->txTail || txBuf))
+    if (!(test_status & (JD_SERIAL_TX_LO_PULSE | JD_SERIAL_TRANSMITTING)))
     {
-        if (setState(JDSerialState::Off) == 0)
-        {
-            JD_DMESG("BUS LO");
-
-            if (busLED)
-                busLED->setDigitalValue(BUS_LED_LO);
-
-            if (commLED)
-                commLED->setDigitalValue(COMM_LED_LO);
-
-            JD_DMESG("TXLO ERR");
-            errorState(JDBusErrorState::BusLoError);
-            return;
-        }
-
         // If we get here, we assume we have control of the bus.
         // check if we have stuff to send, txBuf will be set if a previous send failed.
         JD_DMESG("TX B");
@@ -636,8 +646,6 @@ void JDPhysicalLayer::sendPacket()
             commLED->setDigitalValue(COMM_LED_HI);
         return;
     }
-
-    timer.setCompare(TX_CALLBACK_CC, timer.captureCounter() + 100 + target_random(JD_SERIAL_TX_MAX_BACKOFF));
 }
 
 int JDPhysicalLayer::queuePacket(JDPacket* tx)
