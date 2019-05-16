@@ -344,6 +344,9 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
         }
         else
             sendPacket();
+
+        target_enable_irq();
+        return;
     }
     SET_GPIO2(0);
     JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
