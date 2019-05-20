@@ -28,6 +28,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Pin.h"
 #include "SPI.h"
 #include "Event.h"
+#include "ScreenIO.h"
 
 namespace codal
 {
@@ -41,24 +42,6 @@ struct ST7735WorkBuffer;
 #define MADCTL_RGB 0x00
 #define MADCTL_BGR 0x08
 #define MADCTL_MH 0x04
-
-class ScreenIO
-{
-public:
-    virtual void send(const void *txBuffer, uint32_t txSize) = 0;
-    virtual void startSend(const void *txBuffer, uint32_t txSize, PVoidCallback doneHandler,
-                           void *handlerArg) = 0;
-};
-
-class SPIScreenIO : public ScreenIO
-{
-public:
-    SPI &spi;
-    SPIScreenIO(SPI &spi);
-    virtual void send(const void *txBuffer, uint32_t txSize);
-    virtual void startSend(const void *txBuffer, uint32_t txSize, PVoidCallback doneHandler,
-                           void *handlerArg);
-};
 
 class ST7735 : public CodalComponent
 {
