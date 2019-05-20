@@ -124,7 +124,7 @@ static const uint8_t initcmd[] = {
   ILI9341_PWCTR2  , 1, 0x10,             // Power control SAP[2:0];BT[3:0]
   ILI9341_VMCTR1  , 2, 0x3e, 0x28,       // VCM control
   ILI9341_VMCTR2  , 1, 0x86,             // VCM control2
-  ILI9341_MADCTL  , 1, 0x48,             // Memory Access Control
+  ILI9341_MADCTL  , 1, 0x08,             // Memory Access Control
   ILI9341_VSCRSADD, 1, 0x00,             // Vertical scroll zero
   ILI9341_PIXFMT  , 1, 0x55,
   ILI9341_FRMCTR1 , 2, 0x00, 0x18,
@@ -148,7 +148,7 @@ static const uint8_t initcmd[] = {
 namespace codal
 {
 
-ILI9341::ILI9341(SPI &spi, Pin &cs, Pin &dc) : ST7735(spi, cs, dc)
+ILI9341::ILI9341(ScreenIO &io, Pin &cs, Pin &dc) : ST7735(io, cs, dc)
 {
     double16 = true;
 }
