@@ -56,6 +56,7 @@ DEALINGS IN THE SOFTWARE.
 #define ACCELEROMETER_EVT_6G                       9
 #define ACCELEROMETER_EVT_8G                       10
 #define ACCELEROMETER_EVT_SHAKE                    11
+#define ACCELEROMETER_EVT_2G                       12
 
 /**
   * Gesture recogniser constants
@@ -64,6 +65,7 @@ DEALINGS IN THE SOFTWARE.
 #define ACCELEROMETER_TILT_TOLERANCE               200
 #define ACCELEROMETER_FREEFALL_TOLERANCE           400
 #define ACCELEROMETER_SHAKE_TOLERANCE              400
+#define ACCELEROMETER_2G_TOLERANCE                 2048
 #define ACCELEROMETER_3G_TOLERANCE                 3072
 #define ACCELEROMETER_6G_TOLERANCE                 6144
 #define ACCELEROMETER_8G_TOLERANCE                 8192
@@ -73,6 +75,7 @@ DEALINGS IN THE SOFTWARE.
 
 #define ACCELEROMETER_REST_THRESHOLD               (ACCELEROMETER_REST_TOLERANCE * ACCELEROMETER_REST_TOLERANCE)
 #define ACCELEROMETER_FREEFALL_THRESHOLD           ((uint32_t)ACCELEROMETER_FREEFALL_TOLERANCE * (uint32_t)ACCELEROMETER_FREEFALL_TOLERANCE)
+#define ACCELEROMETER_2G_THRESHOLD                 ((uint32_t)ACCELEROMETER_2G_TOLERANCE * (uint32_t)ACCELEROMETER_2G_TOLERANCE)
 #define ACCELEROMETER_3G_THRESHOLD                 ((uint32_t)ACCELEROMETER_3G_TOLERANCE * (uint32_t)ACCELEROMETER_3G_TOLERANCE)
 #define ACCELEROMETER_6G_THRESHOLD                 ((uint32_t)ACCELEROMETER_6G_TOLERANCE * (uint32_t)ACCELEROMETER_6G_TOLERANCE)
 #define ACCELEROMETER_8G_THRESHOLD                 ((uint32_t)ACCELEROMETER_8G_TOLERANCE * (uint32_t)ACCELEROMETER_8G_TOLERANCE)
@@ -86,7 +89,7 @@ namespace codal
                     x:1,
                     y:1,
                     z:1,
-                    unused,
+                    impulse_2,
                     impulse_3,
                     impulse_6,
                     impulse_8,
