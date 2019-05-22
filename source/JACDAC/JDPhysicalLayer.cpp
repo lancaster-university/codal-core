@@ -30,7 +30,7 @@ extern void set_gpio3(int);
 #define SET_GPIO3(...)((void)0)
 #endif
 
-#define TRACK_STATE
+// #define TRACK_STATE
 
 #ifdef TRACK_STATE
 
@@ -167,6 +167,7 @@ void JDPhysicalLayer::_gpioCallback(int state)
         {
             CODAL_ASSERT(!(test_status & (JD_SERIAL_RECEIVING | JD_SERIAL_RECEIVING_HEADER | JD_SERIAL_TRANSMITTING)),test_status)
             JD_UNSET_FLAGS(JD_SERIAL_RX_LO_PULSE);
+            SET_GPIO(1);
             loPulseDetected((now > startTime) ? now - startTime : startTime - now);
         }
     }
@@ -178,15 +179,12 @@ void JDPhysicalLayer::_gpioCallback(int state)
 
         if (!(test_status & JD_SERIAL_ERR_MSK))
         {
-            if (test_status & JD_SERIAL_DEBUG_BIT)
-                CODAL_ASSERT(0,0xff);
-
             timer.setCompare(TIMEOUT_CC, startTime + (2 * JD_BYTE_AT_125KBAUD));
             JD_SET_FLAGS(JD_SERIAL_RX_LO_PULSE);
         }
         else
         {
-            // DMESG("B");
+            // JD_DMESG("B");
         }
     }
     SET_GPIO(0);
@@ -198,7 +196,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
     // first time entering the error state?
     if (es != JDBusErrorState::Continuation)
     {
-        DMESG("ERROR! %d",es);
+        JD_DMESG("ERROR! %d",es);
         SET_GPIO(0);
         SET_GPIO3(1);
         setState(JDSerialState::Off);
@@ -215,7 +213,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
 
         if (es == JD_SERIAL_BUS_TIMEOUT_ERROR || es == JD_SERIAL_BUS_UART_ERROR)
         {
-            DMESG("ABRT");
+            JD_DMESG("ABRT");
             sws.abortDMA();
             sws.setMode(SingleWireDisconnected);
 
@@ -226,7 +224,7 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
         JD_UNSET_FLAGS(JD_SERIAL_BUS_STATE);
         // update the bus state before enabling our IRQ.
         JD_SET_FLAGS(es | (sp.getDigitalValue(PullMode::Up) ? JD_SERIAL_BUS_STATE : 0));
-        // DMESG("EST %d",test_status);
+        // JD_DMESG("EST %d",test_status);
         startTime = timer.captureCounter();
 
         timer.setCompare(TIMEOUT_CC, startTime + JD_BYTE_AT_125KBAUD);
@@ -246,14 +244,14 @@ void JDPhysicalLayer::errorState(JDBusErrorState es)
     {
         if (busLED)
             busLED->setDigitalValue(BUS_LED_HI);
-        // DMESG("B4 %d",test_status);
+        // JD_DMESG("B4 %d",test_status);
         JD_UNSET_FLAGS(JD_SERIAL_ERR_MSK);
         // resume normality
         setState(JDSerialState::ListeningForPulse);
 
         // setup tx interrupt
         timer.setCompare(TX_CALLBACK_CC, timer.captureCounter() + (JD_MIN_INTERFRAME_SPACING + target_random(JD_SERIAL_TX_MAX_BACKOFF)));
-        // DMESG("EXITE %d",test_status);
+        // JD_DMESG("EXITE %d",test_status);
         SET_GPIO3(0);
         return;
     }
@@ -266,10 +264,10 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
     target_disable_irq();
     // JD_SET_FLAGS(JD_SERIAL_DEBUG_BIT);
     SET_GPIO2(1);
-    // DMESG("TC %d",test_status);
+    // JD_DMESG("TC %d",test_status);
     if (test_status & JD_SERIAL_ERR_MSK)
     {
-        // DMESG("CONT ERR %d",test_status);
+        // JD_DMESG("CONT ERR %d",test_status);
         errorState(JDBusErrorState::Continuation);
         SET_GPIO2(0);
         JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
@@ -290,7 +288,7 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
         uint32_t comparison = ((test_status & JD_SERIAL_RECEIVING_HEADER && lastBufferedCount == 0) ? JD_MAX_INTERLODATA_SPACING : JD_MAX_INTERBYTE_SPACING);
         uint32_t endTime = timer.captureCounter();
         uint32_t byteCount = (test_status & JD_SERIAL_TRANSMITTING) ? sws.getBytesTransmitted() : sws.getBytesReceived();
-        // DMESG("lbc: %d br: %d",lastBufferedCount, byteCount);
+        JD_DMESG("lbc: %d br: %d",lastBufferedCount, byteCount);
 
         // if we've not received data since last check
         // we break up the if statements to ensure that startTime is not updated if we're waiting for bytes.
@@ -298,7 +296,7 @@ void JDPhysicalLayer::_timerCallback(uint16_t channels)
         {
             if (endTime - startTime >= comparison)
             {
-                JD_DMESG("BTO1");
+                JD_DMESG("%d",test_status);
                 errorState(JDBusErrorState::BusTimeoutError);
                 SET_GPIO2(0);
                 JD_UNSET_FLAGS(JD_SERIAL_DEBUG_BIT);
@@ -361,11 +359,15 @@ void JDPhysicalLayer::_dmaCallback(uint16_t errCode)
     SET_GPIO(1);
     timer.clearCompare(TIMEOUT_CC);
 
+    JD_DMESG("DMA %d", errCode);
+    CODAL_ASSERT(errCode != 0, 0xF00);
+
     // rx complete, queue packet for later handling
     if (errCode == SWS_EVT_DATA_RECEIVED)
     {
         if (test_status & JD_SERIAL_RECEIVING_HEADER)
         {
+            JD_DMESG("HEAD");
             JD_UNSET_FLAGS(JD_SERIAL_RECEIVING_HEADER);
             if (rxBuf->size)
             {
@@ -376,10 +378,10 @@ void JDPhysicalLayer::_dmaCallback(uint16_t errCode)
                 CODAL_ASSERT(!(test_status & JD_SERIAL_RECEIVING), test_status);
                 JD_SET_FLAGS(JD_SERIAL_RECEIVING);
                 SET_GPIO(0);
-                // DMESG("RXH %d",rxBuf->size);
+                // JD_DMESG("RXH %d",rxBuf->size);
                 return;
             }
-            // DMESG("RXH %d",rxBuf->size);
+            // JD_DMESG("RXH %d",rxBuf->size);
         }
         else if (test_status & JD_SERIAL_RECEIVING)
         {
@@ -391,7 +393,7 @@ void JDPhysicalLayer::_dmaCallback(uint16_t errCode)
             int ret = addToRxArray(rxBuf);
             if (ret == DEVICE_OK)
             {
-                DMESG("RXD[%d,%d]",this->rxHead, this->rxTail);
+                JD_DMESG("RXD[%d,%d]",this->rxHead, this->rxTail);
                 rxBuf = (JDPacket*)malloc(sizeof(JDPacket));
                 diagnostics.packets_received++;
             }
@@ -410,17 +412,17 @@ void JDPhysicalLayer::_dmaCallback(uint16_t errCode)
         free(txBuf);
         txBuf = NULL;
         diagnostics.packets_sent++;
-        // DMESG("DMA TXD");
+        // JD_DMESG("DMA TXD");
     }
 
-    // DMESG("DMAC");
+    // JD_DMESG("DMAC");
     if (errCode == SWS_EVT_ERROR)
     {
         SET_GPIO(0);
         // SET_GPIO1(0);
         // we should never have the lo pulse flag set here.
         CODAL_ASSERT(!(test_status & JD_SERIAL_RX_LO_PULSE), test_status);
-        DMESG("BUART ERR %d",test_status);
+        JD_DMESG("BUART ERR %d",test_status);
         errorState(JDBusErrorState::BusUARTError);
         return;
     }
@@ -455,6 +457,7 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     // we support 1, 2, 4, 8 as our powers of 2.
     if (pulseTime < (uint8_t)this->maxBaud || pulseTime > 8)
     {
+        SET_GPIO2(0);
         errorState(JDBusErrorState::BusUARTError);
         return;
     }
@@ -471,7 +474,7 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     setState(JDSerialState::Off);
 
     // 10 us
-    // DMESG("LO");
+    // JD_DMESG("LO");
     JD_SET_FLAGS(JD_SERIAL_RECEIVING_HEADER);
 
     lastBufferedCount = 0;
@@ -482,7 +485,7 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
 
     if (commLED)
         commLED->setDigitalValue(COMM_LED_HI);
-    // DMESG("RXSTRT");
+    // JD_DMESG("RXSTRT");
 }
 
 int JDPhysicalLayer::setState(JDSerialState state)
@@ -577,6 +580,7 @@ void JDPhysicalLayer::start()
     JD_SET_FLAGS(DEVICE_COMPONENT_RUNNING);
 
     // check if the bus is lo here and change our led
+    sp.getDigitalValue(PullMode::Up);
     setState(JDSerialState::ListeningForPulse);
 
     timer.setCompare(TX_CALLBACK_CC, timer.captureCounter() + 100 + target_random(JD_SERIAL_TX_MAX_BACKOFF));
@@ -660,8 +664,8 @@ int JDPhysicalLayer::queuePacket(JDPacket* tx)
     if (tx == NULL)
         return DEVICE_INVALID_PARAMETER;
 
-    // don't queue packets if JDPhysicalLayer is not running, or the bus is being held LO.
-    if (!isRunning() || test_status & JD_SERIAL_BUS_LO_ERROR)
+    // don't queue packets if JDPhysicalLayer is not running
+    if (!isRunning())
         return DEVICE_INVALID_STATE;
 
     uint8_t nextTail = (this->txTail + 1) % JD_TX_ARRAY_SIZE;
@@ -848,7 +852,7 @@ JDPacket* JDPhysicalLayer::popRxArray()
     this->rxHead = nextHead;
     target_enable_irq();
 
-    // DMESG("POP[%d,%d]",this->rxHead, this->rxTail);
+    // JD_DMESG("POP[%d,%d]",this->rxHead, this->rxTail);
 
     return p;
 }
