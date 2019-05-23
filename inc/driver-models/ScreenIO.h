@@ -22,21 +22,22 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#ifndef DEVICE_ILI9341_H
-#define DEVICE_ILI9341_H
+#ifndef CODAL_SCREENIO_H
+#define CODAL_SCREENIO_H
 
-#include "ST7735.h"
+#include "CodalConfig.h"
 
 namespace codal
 {
 
-class ILI9341 : public ST7735
+class ScreenIO
 {
 public:
-    ILI9341(ScreenIO &io, Pin &cs, Pin &dc);
-    int init();
+    virtual void send(const void *txBuffer, uint32_t txSize) = 0;
+    virtual void startSend(const void *txBuffer, uint32_t txSize, PVoidCallback doneHandler,
+                           void *handlerArg) = 0;
 };
 
-}
+} // namespace codal
 
 #endif

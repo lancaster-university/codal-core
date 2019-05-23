@@ -60,6 +60,7 @@ Accelerometer::Accelerometer(CoordinateSpace &cspace, uint16_t id) : sample(), s
     this->shake.z = 0;
     this->shake.count = 0;
     this->shake.timer = 0;
+    this->shake.impulse_2 = 1;
     this->shake.impulse_3 = 1;
     this->shake.impulse_6 = 1;
     this->shake.impulse_8 = 1;
@@ -223,8 +224,13 @@ void Accelerometer::updateGesture()
     // For these events, we don't perform any low pass filtering.
     uint32_t force = instantaneousAccelerationSquared();
 
-    if (force > ACCELEROMETER_3G_THRESHOLD)
+    if (force > ACCELEROMETER_2G_THRESHOLD)
     {
+        if (force > ACCELEROMETER_2G_THRESHOLD && !shake.impulse_2)
+        {
+            Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_2G);
+            shake.impulse_2 = 1;            
+        }
         if (force > ACCELEROMETER_3G_THRESHOLD && !shake.impulse_3)
         {
             Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_3G);
@@ -248,7 +254,7 @@ void Accelerometer::updateGesture()
     if (impulseSigma < ACCELEROMETER_GESTURE_DAMPING)
         impulseSigma++;
     else
-        shake.impulse_3 = shake.impulse_6 = shake.impulse_8 = 0;
+        shake.impulse_2 = shake.impulse_3 = shake.impulse_6 = shake.impulse_8 = 0;
 
 
     // Determine what it looks like we're doing based on the latest sample...
