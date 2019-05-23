@@ -493,9 +493,10 @@ int codal::system_timer_calibrate_cycles()
     if(system_timer == NULL)
         return DEVICE_NOT_SUPPORTED;
 
-    uint32_t start = system_timer_current_time_us();
+    uint32_t start = system_timer->getTimeUs();
     system_timer_wait_cycles(10000);
-    cycleScale = (10000) / (system_timer_current_time_us() - start - 5);
+    uint32_t end = system_timer->getTimeUs();
+    cycleScale = (10000) / (end - start - 5);
 
     return DEVICE_OK;
 }
