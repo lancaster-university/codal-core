@@ -1,7 +1,7 @@
-#ifndef JD_ACCELEROMETER_DRIVER_H
-#define JD_ACCELEROMETER_DRIVER_H
+#ifndef JD_ACCELEROMETER_SERVICE_H
+#define JD_ACCELEROMETER_SERVICE_H
 
-#include "JDProtocol.h"
+#include "JACDAC.h"
 #include "Accelerometer.h"
 
 #define JD_ACCEL_EVT_SEND_DATA      1
@@ -23,7 +23,7 @@ namespace codal
         int16_t event_value;
     }__attribute__((packed));
 
-    class JDAccelerometerDriver : public JDDriver
+    class JDAccelerometerService : public JDService
     {
         Accelerometer* accelerometer;
         Sample3D latest;
@@ -32,16 +32,14 @@ namespace codal
         void forwardEvent(Event evt);
 
         public:
-        JDAccelerometerDriver(Accelerometer& accel);
-        JDAccelerometerDriver();
+        JDAccelerometerService(Accelerometer& accel);
+        JDAccelerometerService();
 
         int getX();
         int getY();
         int getZ();
 
-        virtual int handleControlPacket(JDPkt* cp);
-
-        virtual int handlePacket(JDPkt* p);
+        virtual int handlePacket(JDPacket* p);
     };
 }
 

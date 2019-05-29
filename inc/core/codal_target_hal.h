@@ -35,15 +35,15 @@ extern "C"
 
     void target_reset();
 
-    void target_wait(unsigned long milliseconds);
+    void target_wait(uint32_t milliseconds);
 
-    void target_wait_us(unsigned long us);
+    void target_wait_us(uint32_t us);
 
     int target_seed_random(uint32_t rand);
 
     int target_random(int max);
 
-    uint32_t target_get_serial();
+    uint64_t target_get_serial();
 
     void target_wait_for_event();
   

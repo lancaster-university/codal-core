@@ -1,11 +1,11 @@
-#include "JDAccelerometerDriver.h"
+#include "JDAccelerometerService.h"
 #include "CodalDmesg.h"
 #include "Timer.h"
 #include "EventModel.h"
 
 using namespace codal;
 
-void JDAccelerometerDriver::sendData(Event)
+void JDAccelerometerService::sendData(Event)
 {
     this->latest = this->accelerometer->getSample();
 
@@ -16,10 +16,10 @@ void JDAccelerometerDriver::sendData(Event)
     p.y = latest.y;
     p.z = latest.z;
 
-    JDProtocol::send((uint8_t*)&p, sizeof(AccelerometerPacket), this->device.address);
+    send((uint8_t*)&p, sizeof(AccelerometerPacket));
 }
 
-void JDAccelerometerDriver::forwardEvent(Event evt)
+void JDAccelerometerService::forwardEvent(Event evt)
 {
     if (evt.value == ACCELEROMETER_EVT_3G || evt.value == ACCELEROMETER_EVT_6G || evt.value ==  ACCELEROMETER_EVT_8G || evt.value ==  ACCELEROMETER_EVT_DATA_UPDATE)
         return;
@@ -29,43 +29,38 @@ void JDAccelerometerDriver::forwardEvent(Event evt)
     p.packet_type = 1;
     p.event_value = evt.value;
 
-    JDProtocol::send((uint8_t*)&p, sizeof(AccelerometerGesturePacket), this->device.address);
+    send((uint8_t*)&p, sizeof(AccelerometerGesturePacket));
 }
 
-JDAccelerometerDriver::JDAccelerometerDriver(Accelerometer& accel) : JDDriver(JDDevice(HostDriver, JD_DRIVER_CLASS_ACCELEROMETER)), accelerometer(&accel)
+JDAccelerometerService::JDAccelerometerService(Accelerometer& accel) : JDService(JD_SERVICE_CLASS_ACCELEROMETER, HostService), accelerometer(&accel)
 {
     system_timer_event_every(50, this->id, JD_ACCEL_EVT_SEND_DATA);
 
     if (EventModel::defaultEventBus)
     {
-        EventModel::defaultEventBus->listen(this->id, JD_ACCEL_EVT_SEND_DATA, this, &JDAccelerometerDriver::sendData);
-        EventModel::defaultEventBus->listen(DEVICE_ID_GESTURE, DEVICE_EVT_ANY, this, &JDAccelerometerDriver::forwardEvent);
+        EventModel::defaultEventBus->listen(this->id, JD_ACCEL_EVT_SEND_DATA, this, &JDAccelerometerService::sendData);
+        EventModel::defaultEventBus->listen(DEVICE_ID_GESTURE, DEVICE_EVT_ANY, this, &JDAccelerometerService::forwardEvent);
     }
 }
 
-JDAccelerometerDriver::JDAccelerometerDriver() : JDDriver(JDDevice(VirtualDriver, JD_DRIVER_CLASS_ACCELEROMETER)), accelerometer(NULL)
+JDAccelerometerService::JDAccelerometerService() : JDService(JD_SERVICE_CLASS_ACCELEROMETER, ClientService), accelerometer(NULL)
 {
 }
 
-int JDAccelerometerDriver::getX()
+int JDAccelerometerService::getX()
 {
     return latest.x;
 }
-int JDAccelerometerDriver::getY()
+int JDAccelerometerService::getY()
 {
     return latest.y;
 }
-int JDAccelerometerDriver::getZ()
+int JDAccelerometerService::getZ()
 {
     return latest.z;
 }
 
-int JDAccelerometerDriver::handleControlPacket(JDPkt* cp)
-{
-    return DEVICE_OK;
-}
-
-int JDAccelerometerDriver::handlePacket(JDPkt* p)
+int JDAccelerometerService::handlePacket(JDPacket* p)
 {
     AccelerometerPacket* data = (AccelerometerPacket*)p->data;
 

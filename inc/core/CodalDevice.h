@@ -99,7 +99,7 @@ namespace codal
           * Determines a unique 32 bit ID for this device, if provided by the hardware.
           * @return A 32 bit unique identifier.
           */
-        virtual uint32_t getSerialNumber()
+        virtual uint64_t getSerialNumber()
         {
             return target_get_serial();
         }

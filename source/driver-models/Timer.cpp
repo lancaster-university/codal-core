@@ -47,6 +47,7 @@ using namespace codal;
 // Default system wide timer, if created.
 //
 Timer* codal::system_timer = NULL;
+static uint32_t cycleScale = 0;
 
 void timer_callback(uint16_t chan)
 {
@@ -114,6 +115,8 @@ Timer::Timer(LowLevelTimer& t, uint8_t ccPeriodChannel, uint8_t ccEventChannel) 
 
     delta = 0;
     sigma = timer.captureCounter();
+
+    system_timer_calibrate_cycles();
 }
 
 /**
@@ -476,18 +479,69 @@ int codal::system_timer_cancel_event(uint16_t id, uint16_t value)
 }
 
 /**
- * Spin wait for a given number of microseconds.
+ * An auto calibration method that uses the hardware timer to compute the number of cycles
+ * per us.
  *
- * @param period the interval between events
- * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
+ * The result of this method is then used to compute accurate us waits using instruction counting in system_timer_wait_us.
+ *
+ * If this method is not called, a less accurate timer implementation is used in system_timer_wait_us.
+ *
+ * @return DEVICE_OK on success, and DEVICE_NOT_SUPPORTED if no system_timer yet exists.
  */
-int codal::system_timer_wait_us(CODAL_TIMESTAMP period)
+int codal::system_timer_calibrate_cycles()
 {
     if(system_timer == NULL)
         return DEVICE_NOT_SUPPORTED;
 
-    CODAL_TIMESTAMP start = system_timer->getTimeUs();
-    while(system_timer->getTimeUs() < start + period);
+    uint32_t start = system_timer->getTimeUs();
+    system_timer_wait_cycles(10000);
+    uint32_t end = system_timer->getTimeUs();
+    cycleScale = (10000) / (end - start - 5);
+
+    return DEVICE_OK;
+}
+
+/**
+ * Spin wait for a given number of cycles.
+ *
+ * @param cycles the number of nops to execute
+ * @return DEVICE_OK
+ */
+void codal::system_timer_wait_cycles(uint32_t cycles)
+{
+    __asm__ __volatile__(
+        ".syntax unified\n"
+        "1:              \n"
+        "   subs %0, #1   \n" // subtract 1 from %0 (n)
+        "   bne 1b       \n" // if result is not 0 jump to 1
+        : "+r" (cycles)           // '%0' is n variable with RW constraints
+        :                    // no input
+        :                    // no clobber
+    );
+}
+
+/**
+ * Spin wait using the timer for a given number of microseconds.
+ *
+ * @param period the period to wait for.
+ *
+ * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
+ *
+ * @note this provides a good starting point for non-timing critical applications. For more accurate timings,
+ * please use a cycle-based wait approach (see system_timer_wait_cycles)
+ */
+int codal::system_timer_wait_us(uint32_t period)
+{
+    if(system_timer == NULL)
+        return DEVICE_NOT_SUPPORTED;
+
+    if(cycleScale)
+        system_timer_wait_cycles(period * cycleScale);
+    else
+    {
+        CODAL_TIMESTAMP start = system_timer->getTimeUs();
+        while(system_timer->getTimeUs() < start + period);
+    }
 
     return DEVICE_OK;
 }
@@ -497,8 +551,10 @@ int codal::system_timer_wait_us(CODAL_TIMESTAMP period)
  *
  * @param period the interval between events
  * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
+ * @note this provides a good starting point for non-timing critical applications. For more accurate timings,
+ * please use a cycle-based wait approach (see system_timer_wait_cycles)
  */
-int codal::system_timer_wait_ms(CODAL_TIMESTAMP period)
+int codal::system_timer_wait_ms(uint32_t period)
 {
     return system_timer_wait_us(period * 1000);
 }

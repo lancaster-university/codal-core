@@ -94,7 +94,10 @@ enum PanicCode{
     // Non-recoverable error in USB driver
     DEVICE_USB_ERROR = 50,
 
+    // Non-recoverable error in the JACDAC stack
+    DEVICE_JACDAC_ERROR = 60,
+
     // hardware incorrect configuration
-    DEVICE_HARDWARE_CONFIGURATION_ERROR = 90
+    DEVICE_HARDWARE_CONFIGURATION_ERROR = 90,
 };
 #endif

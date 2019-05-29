@@ -256,6 +256,11 @@ public:
     virtual bool enableWebUSB() { return false; }
 };
 
+class CodalDummyUSBInterface : public CodalUSBInterface {
+  public:
+    virtual const InterfaceInfo *getInterfaceInfo();
+};
+
 class CodalUSB
 {
     uint8_t endpointsUsed;
