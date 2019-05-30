@@ -83,7 +83,7 @@ static const char *default_strings[] = {
 #if CONFIG_ENABLED(DEVICE_WEBUSB)
 #define VENDOR_WEBUSB 0x40
 #define VENDOR_MS20 0x41
-#define WINUSB_SIZE 170
+#define WINUSB_SIZE 162
 
 static const uint8_t bosDescriptor[] = {
     0x05,       // Length
@@ -120,13 +120,6 @@ static const uint8_t msOS20Descriptor[] = {
     0x00, 0x00,             // MS OS 2.0 descriptor set header
     0x00, 0x00, 0x03, 0x06, // Windows version (8.1) (0x06030000)
     WINUSB_SIZE, 0x00,      // Size, MS OS 2.0 descriptor set
-
-    // Microsoft OS 2.0 function subset header
-    0x08, 0x00,             // Descriptor size (8 bytes)
-    0x02, 0x00,             // MS OS 2.0 function subset header
-    0xff,                   // first interface no; msOS20Descriptor[14]
-    0x00,                   // Reserved
-    WINUSB_SIZE - 10, 0x00, // Size, MS OS 2.0 function subset
 
     // Microsoft OS 2.0 compatible ID descriptor (table 13)
     20, 0x00,                     // wLength
@@ -527,8 +520,8 @@ void CodalUSB::setupRequest(USBSetup &setup)
             {
                 uint8_t buf[sizeof(msOS20Descriptor)];
                 memcpy(buf, msOS20Descriptor, sizeof(buf));
-                usb_assert(buf[14] == 0xff);
-                buf[14] = firstWebUSBInterfaceIdx;
+                //usb_assert(buf[14] == 0xff);
+                //buf[14] = firstWebUSBInterfaceIdx;
                 send(buf, sizeof(buf));
             }
             break;
