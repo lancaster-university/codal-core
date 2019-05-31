@@ -265,7 +265,7 @@ class CodalUSB
 {
     uint8_t endpointsUsed;
     uint8_t startDelayCount;
-    uint8_t firstWebUSBInterfaceIdx;
+    uint8_t numWebUSBInterfaces;
 
     int sendConfig();
     int sendDescriptors(USBSetup &setup);
