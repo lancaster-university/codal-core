@@ -34,7 +34,6 @@ DEALINGS IN THE SOFTWARE.
 
 CodalUSB *CodalUSB::usbInstance = NULL;
 
-
 // #define LOG DMESG
 #define LOG(...)
 
@@ -83,7 +82,9 @@ static const char *default_strings[] = {
 #if CONFIG_ENABLED(DEVICE_WEBUSB)
 #define VENDOR_WEBUSB 0x40
 #define VENDOR_MS20 0x41
-#define WINUSB_SIZE 170
+
+#define WINUSB_SIZE()                                                                              \
+    (sizeof(msOS20Descriptor) + numWebUSBInterfaces * sizeof(msOS20FunctionDescriptor))
 
 static const uint8_t bosDescriptor[] = {
     0x05,       // Length
@@ -109,24 +110,18 @@ static const uint8_t bosDescriptor[] = {
     0xDF, 0x60, 0xDD, 0xD8, 0x89, 0x45, 0xC7, 0x4C, // MS OS 2.0 GUID
     0x9C, 0xD2, 0x65, 0x9D, 0x9E, 0x64, 0x8A, 0x9F, // MS OS 2.0 GUID
     0x00, 0x00, 0x03, 0x06,                         // Windows version
-    WINUSB_SIZE, 0x00,                              // Descriptor set length
-    VENDOR_MS20,                                    // Vendor request code
-    0x00                                            // Alternate enumeration code
+    0xff, 0xff,  // Descriptor set length; bosDescriptor[sizeof(bosDescriptor)-4]
+    VENDOR_MS20, // Vendor request code
+    0x00         // Alternate enumeration code
 };
 
-static const uint8_t msOS20Descriptor[] = {
-    // Microsoft OS 2.0 descriptor set header (table 10)
-    0x0A, 0x00,             // Descriptor size (10 bytes)
-    0x00, 0x00,             // MS OS 2.0 descriptor set header
-    0x00, 0x00, 0x03, 0x06, // Windows version (8.1) (0x06030000)
-    WINUSB_SIZE, 0x00,      // Size, MS OS 2.0 descriptor set
-
+static const uint8_t msOS20FunctionDescriptor[] = {
     // Microsoft OS 2.0 function subset header
-    0x08, 0x00,             // Descriptor size (8 bytes)
-    0x02, 0x00,             // MS OS 2.0 function subset header
-    0xff,                   // first interface no; msOS20Descriptor[14]
-    0x00,                   // Reserved
-    WINUSB_SIZE - 10, 0x00, // Size, MS OS 2.0 function subset
+    0x08, 0x00, // Descriptor size (8 bytes)
+    0x02, 0x00, // MS OS 2.0 function subset header
+    0xff,       // first interface no; msOS20FunctionDescriptor[4]
+    0x00,       // Reserved
+    160, 0x00,  // Size, MS OS 2.0 function subset
 
     // Microsoft OS 2.0 compatible ID descriptor (table 13)
     20, 0x00,                     // wLength
@@ -148,6 +143,14 @@ static const uint8_t msOS20Descriptor[] = {
     '7', 0, '7', 0, '-', 0, '4', 0, '6', 0, 'F', 0, 'E', 0, '-', 0, '9', 0, '3', 0, '3', 0, 'B', 0,
     '-', 0, '3', 0, '1', 0, 'C', 0, 'B', 0, '9', 0, 'C', 0, '5', 0, 'A', 0, 'A', 0, '3', 0, 'B', 0,
     'A', 0, '}', 0, 0, 0, 0, 0};
+
+static const uint8_t msOS20Descriptor[] = {
+    // Microsoft OS 2.0 descriptor set header (table 10)
+    0x0A, 0x00,             // Descriptor size (10 bytes)
+    0x00, 0x00,             // MS OS 2.0 descriptor set header
+    0x00, 0x00, 0x03, 0x06, // Windows version (8.1) (0x06030000)
+    0xff, 0xff,             // Size, MS OS 2.0 descriptor set
+};
 #endif
 
 static const InterfaceInfo codalDummyIfaceInfo = {
@@ -157,8 +160,8 @@ static const InterfaceInfo codalDummyIfaceInfo = {
     {
         0,    // numEndpoints
         0xff, /// class code - vendor-specific
-        0xff,   // subclass
-        0xff,    // protocol
+        0xff, // subclass
+        0xff, // protocol
         0x00, // string
         0x00, // alt
     },
@@ -166,8 +169,8 @@ static const InterfaceInfo codalDummyIfaceInfo = {
     {0, 0},
 };
 
-
-const InterfaceInfo *CodalDummyUSBInterface::getInterfaceInfo() {
+const InterfaceInfo *CodalDummyUSBInterface::getInterfaceInfo()
+{
     return &codalDummyIfaceInfo;
 }
 
@@ -182,7 +185,7 @@ CodalUSB::CodalUSB()
     deviceDescriptor = &default_device_desc;
     startDelayCount = 1;
     interfaces = NULL;
-    firstWebUSBInterfaceIdx = 0xff;
+    numWebUSBInterfaces = 0;
 }
 
 void CodalUSBInterface::fillInterfaceInfo(InterfaceDescriptor *descp)
@@ -302,10 +305,12 @@ int CodalUSB::sendDescriptors(USBSetup &setup)
         return send(deviceDescriptor, sizeof(DeviceDescriptor));
 
 #if CONFIG_ENABLED(DEVICE_WEBUSB)
-    if (type == USB_BOS_DESCRIPTOR_TYPE && firstWebUSBInterfaceIdx != 0xff)
+    if (type == USB_BOS_DESCRIPTOR_TYPE && numWebUSBInterfaces > 0)
     {
         uint8_t buf[sizeof(bosDescriptor)];
         memcpy(buf, bosDescriptor, sizeof(buf));
+        buf[sizeof(bosDescriptor) - 4] = WINUSB_SIZE() & 0xff;
+        buf[sizeof(bosDescriptor) - 3] = WINUSB_SIZE() >> 8;
         return send(buf, sizeof(buf));
     }
 #endif
@@ -431,7 +436,7 @@ int CodalUSB::interfaceRequest(USBSetup &setup, bool isClass)
 void CodalUSB::setupRequest(USBSetup &setup)
 {
     LOG("SETUP Req=%x type=%x val=%x:%x idx=%x len=%d", setup.bRequest, setup.bmRequestType,
-          setup.wValueH, setup.wValueL, setup.wIndex, setup.wLength);
+        setup.wValueH, setup.wValueL, setup.wIndex, setup.wLength);
 
     int status = DEVICE_OK;
 
@@ -519,16 +524,31 @@ void CodalUSB::setupRequest(USBSetup &setup)
         switch (setup.bRequest)
         {
         case VENDOR_MS20:
-            if (firstWebUSBInterfaceIdx == 0xff)
+            if (numWebUSBInterfaces == 0)
             {
                 status = DEVICE_NOT_SUPPORTED;
             }
             else
             {
-                uint8_t buf[sizeof(msOS20Descriptor)];
-                memcpy(buf, msOS20Descriptor, sizeof(buf));
-                usb_assert(buf[14] == 0xff);
-                buf[14] = firstWebUSBInterfaceIdx;
+                uint8_t buf[WINUSB_SIZE()];
+                memcpy(buf, msOS20Descriptor, sizeof(msOS20Descriptor));
+                buf[8] = WINUSB_SIZE();
+                buf[9] = WINUSB_SIZE() >> 8;
+                uint32_t ptr = sizeof(msOS20Descriptor);
+
+                for (CodalUSBInterface *iface = interfaces; iface; iface = iface->next)
+                {
+                    if (iface->enableWebUSB())
+                    {
+                        memcpy(buf + ptr, msOS20FunctionDescriptor,
+                               sizeof(msOS20FunctionDescriptor));
+                        buf[ptr + 4] = iface->interfaceIdx;
+                        ptr += sizeof(msOS20FunctionDescriptor);
+                    }
+                }
+
+                usb_assert(ptr == sizeof(buf));
+
                 send(buf, sizeof(buf));
             }
             break;
@@ -573,7 +593,7 @@ void CodalUSB::initEndpoints()
     ctrlOut = new UsbEndpointOut(0, USB_EP_TYPE_CONTROL);
 
 #if CONFIG_ENABLED(DEVICE_WEBUSB)
-    firstWebUSBInterfaceIdx = 0xff;
+    numWebUSBInterfaces = 0;
 #endif
 
     for (CodalUSBInterface *iface = interfaces; iface; iface = iface->next)
@@ -581,8 +601,8 @@ void CodalUSB::initEndpoints()
         iface->interfaceIdx = ifaceCount++;
 
 #if CONFIG_ENABLED(DEVICE_WEBUSB)
-        if (firstWebUSBInterfaceIdx == 0xff && iface->enableWebUSB())
-            firstWebUSBInterfaceIdx = iface->interfaceIdx;
+        if (iface->enableWebUSB())
+            numWebUSBInterfaces++;
 #endif
 
         const InterfaceInfo *info = iface->getInterfaceInfo();
