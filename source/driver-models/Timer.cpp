@@ -509,6 +509,7 @@ int codal::system_timer_calibrate_cycles()
  */
 void codal::system_timer_wait_cycles(uint32_t cycles)
 {
+#ifdef __arm__
     __asm__ __volatile__(
         ".syntax unified\n"
         "1:              \n"
@@ -518,6 +519,10 @@ void codal::system_timer_wait_cycles(uint32_t cycles)
         :                    // no input
         :                    // no clobber
     );
+#else
+    while (cycles--)
+        __asm__ __volatile__("nop");
+#endif
 }
 
 /**
