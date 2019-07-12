@@ -37,6 +37,13 @@ DEALINGS IN THE SOFTWARE.
 
 #define INITIAL_STACK_DEPTH (fiber_initial_stack_base() - 0x04)
 
+#ifdef ESP323
+#define DEVICE_FOB_SUPPORT 0
+#define DEVICE_PARTIAL_SCHEDULER 1
+#else
+#define DEVICE_FOB_SUPPORT 1
+#define DEVICE_PARTIAL_SCHEDULER 0
+#endif
 
 /*
  * Statically allocated values used to create and destroy Fibers.
@@ -371,6 +378,7 @@ static Fiber* handle_fob()
 {
     Fiber *f = currentFiber;
 
+#if CONFIG_ENABLED(DEVICE_FOB_SUPPORT)
     // This is a blocking call, so if we're in a fork on block context,
     // it's time to spawn a new fiber...
     if (f->flags & DEVICE_FIBER_FLAG_FOB)
@@ -388,6 +396,8 @@ static Fiber* handle_fob()
             f = forkedFiber;
         }
     }
+#endif
+
     return f;
 }
 
@@ -496,10 +506,14 @@ int codal::fiber_wake_on_event(uint16_t id, uint16_t value)
     return DEVICE_OK;
 }
 
+#if CONFIG_ENABLED(DEVICE_FOB_SUPPORT)
 #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
-#define HAS_THREAD_USER_DATA (currentFiber->user_data != NULL)
+#define CAN_USE_FOB (currentFiber->user_data != NULL)
 #else
-#define HAS_THREAD_USER_DATA false
+#define CAN_USE_FOB false
+#endif
+#else
+#define CAN_USE_FOB true
 #endif
 
 /**
@@ -524,7 +538,7 @@ int codal::invoke(void (*entry_fn)(void))
     if (!fiber_scheduler_running())
         return DEVICE_NOT_SUPPORTED;
 
-    if (currentFiber->flags & (DEVICE_FIBER_FLAG_FOB | DEVICE_FIBER_FLAG_PARENT | DEVICE_FIBER_FLAG_CHILD) || HAS_THREAD_USER_DATA)
+    if (currentFiber->flags & (DEVICE_FIBER_FLAG_FOB | DEVICE_FIBER_FLAG_PARENT | DEVICE_FIBER_FLAG_CHILD) || CAN_USE_FOB)
     {
         // If we attempt a fork on block whilst already in a fork on block context, or if the thread 
         // already has user data set, simply launch a fiber to deal with the request and we're done.
@@ -590,7 +604,7 @@ int codal::invoke(void (*entry_fn)(void *), void *param)
     if (!fiber_scheduler_running())
         return DEVICE_NOT_SUPPORTED;
 
-    if (currentFiber->flags & (DEVICE_FIBER_FLAG_FOB | DEVICE_FIBER_FLAG_PARENT | DEVICE_FIBER_FLAG_CHILD) || HAS_THREAD_USER_DATA)
+    if (currentFiber->flags & (DEVICE_FIBER_FLAG_FOB | DEVICE_FIBER_FLAG_PARENT | DEVICE_FIBER_FLAG_CHILD) || CAN_USE_FOB)
     {
         // If we attempt a fork on block whilst already in a fork on block context, or if the thread 
         // already has user data set, simply launch a fiber to deal with the request and we're done.
@@ -845,23 +859,15 @@ int codal::scheduler_runqueue_empty()
     return (runQueue == NULL);
 }
 
-/**
-  * Calls the Fiber scheduler.
-  * The calling Fiber will likely be blocked, and control given to another waiting fiber.
-  * Call this function to yield control of the processor when you have nothing more to do.
-  */
-void codal::schedule()
+#if !CONFIG_ENABLED(DEVICE_PARTIAL_SCHEDULER)
+static
+#endif
+void codal::_select_next_fiber()
 {
-    if (!fiber_scheduler_running())
-        return;
-
-    // First, take a reference to the currently running fiber;
-    Fiber *oldFiber = currentFiber;
-
+#if CONFIG_ENABLED(DEVICE_FOB_SUPPORT)
     // First, see if we're in Fork on Block context. If so, we simply want to store the full context
     // of the currently running thread in a newly created fiber, and restore the context of the
     // currently running fiber, back to the point where it entered FOB.
-
     if (currentFiber->flags & DEVICE_FIBER_FLAG_FOB)
     {
         // Record that the fibers have a parent/child relationship
@@ -887,6 +893,7 @@ void codal::schedule()
         // and continue processing.
         return;
     }
+#endif
 
     // We're in a normal scheduling context, so perform a round robin algorithm across runnable fibers.
     // OK - if we've nothing to do, then run the IDLE task (power saving sleep)
@@ -900,6 +907,23 @@ void codal::schedule()
     else
         // Otherwise, just pick the head of the run queue.
         currentFiber = runQueue;
+}
+
+#if !CONFIG_ENABLED(DEVICE_PARTIAL_SCHEDULER)
+/**
+  * Calls the Fiber scheduler.
+  * The calling Fiber will likely be blocked, and control given to another waiting fiber.
+  * Call this function to yield control of the processor when you have nothing more to do.
+  */
+void codal::schedule()
+{
+    if (!fiber_scheduler_running())
+        return;
+
+    // First, take a reference to the currently running fiber;
+    Fiber *oldFiber = currentFiber;
+
+    _select_next_fiber();
 
     if (currentFiber == idleFiber && oldFiber->flags & DEVICE_FIBER_FLAG_DO_NOT_PAGE)
     {
@@ -949,6 +973,7 @@ void codal::schedule()
         }
     }
 }
+#endif
 
 /**
   * Set of tasks to perform when idle.
