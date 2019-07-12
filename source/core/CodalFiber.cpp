@@ -859,10 +859,11 @@ int codal::scheduler_runqueue_empty()
     return (runQueue == NULL);
 }
 
-#if !CONFIG_ENABLED(DEVICE_PARTIAL_SCHEDULER)
-static
+#if CONFIG_ENABLED(DEVICE_PARTIAL_SCHEDULER)
+extern "C" void select_next_fiber()
+#else
+static void _select_next_fiber()
 #endif
-void codal::_select_next_fiber()
 {
 #if CONFIG_ENABLED(DEVICE_FOB_SUPPORT)
     // First, see if we're in Fork on Block context. If so, we simply want to store the full context
