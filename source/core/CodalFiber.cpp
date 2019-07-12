@@ -37,7 +37,7 @@ DEALINGS IN THE SOFTWARE.
 
 #define INITIAL_STACK_DEPTH (fiber_initial_stack_base() - 0x04)
 
-#ifdef ESP323
+#ifdef ESP32
 #define DEVICE_FOB_SUPPORT 0
 #define DEVICE_PARTIAL_SCHEDULER 1
 #else
@@ -52,7 +52,9 @@ DEALINGS IN THE SOFTWARE.
 namespace codal
 {
 Fiber *currentFiber = NULL;                        // The context in which the current fiber is executing.
+#if CONFIG_ENABLED(DEVICE_FOB_SUPPORT)
 static Fiber *forkedFiber = NULL;                  // The context in which a newly created child fiber is executing.
+#endif
 static Fiber *idleFiber = NULL;                    // the idle task - performs a power efficient sleep, and system maintenance tasks.
 
 /*
