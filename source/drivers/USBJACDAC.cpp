@@ -124,7 +124,7 @@ int USBJACDAC::classRequest(UsbEndpointIn &ctrl, USBSetup& setup)
             {
                 diags.bus_state = this->phys->getErrorState();
                 jdDiags = this->phys->getDiagnostics();
-                memcpy(&diags.bus_lo_error, &jdDiags, sizeof(JDDiagnostics));
+                memcpy(&diags, &jdDiags, sizeof(JDDiagnostics));
                 ctrl.write(&diags, sizeof(USBJACDACDiagnostics));
                 return DEVICE_OK;
             }
