@@ -20,6 +20,7 @@ namespace codal{
         I2C& i2c;
         Pin             &int1;              // Data ready interrupt.
         uint16_t        address;            // I2C address of this accelerometer.
+        int16_t         temp;
         Sample3D        gyro;             // The gyro value
 
     public:
