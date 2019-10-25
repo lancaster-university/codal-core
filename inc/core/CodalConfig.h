@@ -110,7 +110,7 @@ DEALINGS IN THE SOFTWARE.
 // I/O Options
 //
 #ifndef DEVICE_COMPONENT_COUNT
-#define DEVICE_COMPONENT_COUNT               30
+#define DEVICE_COMPONENT_COUNT               100
 #endif
 //
 // Define the default mode in which the digital input pins are configured.

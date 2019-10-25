@@ -106,8 +106,6 @@ int Accelerometer::update(Sample3D s)
   */
 uint32_t Accelerometer::instantaneousAccelerationSquared()
 {
-    requestUpdate();
-
     // Use pythagoras theorem to determine the combined force acting on the device.
     return (uint32_t)sample.x*(uint32_t)sample.x + (uint32_t)sample.y*(uint32_t)sample.y + (uint32_t)sample.z*(uint32_t)sample.z;
 }
