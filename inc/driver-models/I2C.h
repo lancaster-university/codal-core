@@ -95,7 +95,7 @@ public:
       *
       * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the the write request failed.
       */
-    int write(uint16_t address, uint8_t data);
+    virtual int write(uint16_t address, uint8_t data);
 
     /**
     * Issues a standard, I2C command write to the I2C bus.
