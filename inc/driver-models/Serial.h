@@ -49,8 +49,8 @@ namespace codal
     enum SerialMode
     {
         ASYNC,
-    	SYNC_SPINWAIT,
-    	SYNC_SLEEP
+        SYNC_SPINWAIT,
+        SYNC_SLEEP
     };
 
     enum SerialInterruptType
@@ -253,7 +253,9 @@ namespace codal
           */
         int read(SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE);
 
-        void printf(const char* format, ...);
+#if CONFIG_ENABLED(CODAL_PROVIDE_PRINTF)
+        virtual void printf(const char* format, ...);
+#endif
 
         int getChar(SerialMode mode);
 

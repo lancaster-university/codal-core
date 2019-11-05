@@ -426,6 +426,7 @@ int Serial::send(uint8_t *buffer, int bufferLen, SerialMode mode)
     return bytesWritten;
 }
 
+#if CONFIG_ENABLED(CODAL_PROVIDE_PRINTF)
 void Serial::printf(const char* format, ...)
 {
     va_list arg;
@@ -506,6 +507,7 @@ void Serial::printf(const char* format, ...)
 
     va_end(arg);
 }
+#endif
 
 /**
  * Reads a single character from the rxBuff
