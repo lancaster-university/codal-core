@@ -185,6 +185,10 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_WEBUSB                         1
 #endif
 
+#ifndef CODAL_PROVIDE_PRINTF
+#define CODAL_PROVIDE_PRINTF           1
+#endif
+
 //
 // Helper macro used by the codal device runtime to determine if a boolean configuration option is set.
 //
