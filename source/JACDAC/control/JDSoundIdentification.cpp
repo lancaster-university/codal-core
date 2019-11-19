@@ -21,7 +21,6 @@ void JDSoundIdentification::identify(Event)
     //                     C4       E4      G4      C5
     float frequencies[5] = {261.63, 329.63, 392.00, 532.25};
 
-    int state = 0;
     for (int j = 0; j < JD_DEFAULT_INDICATION_TIME; j++)
         for (int i = 0; i < 5; i++)
         {
