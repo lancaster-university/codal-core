@@ -861,8 +861,6 @@ int Serial::redirect(Pin& tx, Pin& rx)
 
     disableInterrupt(RxInterrupt);
 
-    #warning define API for pin swap...
-
     configurePins(tx, rx);
 
     enableInterrupt(RxInterrupt);
