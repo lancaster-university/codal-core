@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -66,7 +65,13 @@ enum ErrorCode{
     DEVICE_NO_DATA = -1012,
 
     // function is not implemented.
-    DEVICE_NOT_IMPLEMENTED = -1013
+    DEVICE_NOT_IMPLEMENTED = -1013,
+
+    // SPI Communication error occured
+    DEVICE_SPI_ERROR = -1014,
+
+    // An invalid state was detected (i.e. not initialised)
+    DEVICE_INVALID_STATE = -1015,
 };
 
 /**
@@ -88,5 +93,11 @@ enum PanicCode{
 
     // Non-recoverable error in USB driver
     DEVICE_USB_ERROR = 50,
+
+    // Non-recoverable error in the JACDAC stack
+    DEVICE_JACDAC_ERROR = 60,
+
+    // hardware incorrect configuration
+    DEVICE_HARDWARE_CONFIGURATION_ERROR = 90,
 };
 #endif

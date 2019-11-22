@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -44,7 +43,7 @@ using namespace codal;
  * @param pin The physical pin on the device to sense.
  * @param sensor The touch sensor driver for this touch sensitive pin.
  */
-TouchButton::TouchButton(Pin &pin, TouchSensor &sensor, int threshold) : Button(pin, pin.id, DEVICE_BUTTON_ALL_EVENTS, ACTIVE_LOW, PullNone), touchSensor(sensor)
+TouchButton::TouchButton(Pin &pin, TouchSensor &sensor, int threshold) : Button(pin, pin.id, DEVICE_BUTTON_ALL_EVENTS, ACTIVE_LOW, PullMode::None), touchSensor(sensor)
 {
     // Disable periodic events. These will come from our TouchSensor.
     this->threshold = threshold;

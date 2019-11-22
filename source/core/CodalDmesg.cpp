@@ -1,11 +1,35 @@
-#include "CodalDmesg.h"
+/*
+The MIT License (MIT)
 
+Copyright (c) 2017 Lancaster University.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+*/
+
+#include "CodalDmesg.h"
 #if DEVICE_DMESG_BUFFER_SIZE > 0
 
-#include <cstdarg>
+#include "CodalDevice.h"
 #include "CodalCompat.h"
 
 CodalLogStore codalLogStore;
+static void (*dmesg_flush_fn)(void) = NULL;
 
 using namespace codal;
 
@@ -13,11 +37,13 @@ static void logwrite(const char *msg);
 
 static void logwriten(const char *msg, int l)
 {
-    const int jump = sizeof(codalLogStore.buffer) / 4;
-    if (codalLogStore.ptr >= sizeof(codalLogStore.buffer) - jump)
+    if (codalLogStore.ptr + l >= sizeof(codalLogStore.buffer))
     {
+        const int jump = sizeof(codalLogStore.buffer) / 4;
         codalLogStore.ptr -= jump;
         memmove(codalLogStore.buffer, codalLogStore.buffer + jump, codalLogStore.ptr);
+        // zero-out the rest so it looks OK in the debugger
+        memset(codalLogStore.buffer + codalLogStore.ptr, 0, sizeof(codalLogStore.buffer) - codalLogStore.ptr);
     }
     if (l + codalLogStore.ptr >= sizeof(codalLogStore.buffer))
     {
@@ -75,10 +101,31 @@ void codal_dmesg(const char *format, ...)
     va_end(arg);
 }
 
+void codal_dmesgf(const char *format, ...)
+{
+    va_list arg;
+    va_start(arg, format);
+    codal_vdmesg(format, arg);
+    va_end(arg);
+    codal_dmesg_flush();
+}
+
+void codal_dmesg_set_flush_fn(void (*fn)(void))
+{
+    dmesg_flush_fn = fn;
+}
+
+void codal_dmesg_flush()
+{
+    if (dmesg_flush_fn)
+        dmesg_flush_fn();
+}
+
 void codal_vdmesg(const char *format, va_list ap)
 {
     const char *end = format;
 
+    target_disable_irq();
     while (*end)
     {
         if (*end++ == '%')
@@ -114,7 +161,8 @@ void codal_vdmesg(const char *format, va_list ap)
         }
     }
     logwriten(format, end - format);
-    logwrite("\n");
+    logwrite("\r\n");
+    target_enable_irq();
 }
 
 #endif

@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -27,7 +26,6 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_DEVICE_H
 
 #include "CodalConfig.h"
-#include "device_types.h"
 #include "ErrorNo.h"
 #include "codal_target_hal.h"
 #include "CodalFiber.h"
@@ -44,15 +42,12 @@ namespace codal
     class CodalDevice
     {
         public:
-        uint32_t random_value;
 
         /**
           * The default constructor of a DeviceComponent
           */
         CodalDevice()
         {
-            if (random_value == 0)
-                random_value = 0xC0DA1;
         }
 
         /**
@@ -102,12 +97,11 @@ namespace codal
 
         /**
           * Determines a unique 32 bit ID for this device, if provided by the hardware.
-          * default: 0.
           * @return A 32 bit unique identifier.
           */
-        virtual uint32_t getSerialNumber()
+        virtual uint64_t getSerialNumber()
         {
-            return 0;
+            return target_get_serial();
         }
 
         /**
@@ -129,7 +123,10 @@ namespace codal
          * @param max the upper range to generate a number for. This number cannot be negative.
          * @return A random, natural number between 0 and the max-1. Or DEVICE_INVALID_VALUE if max is <= 0.
          */
-        int random(int max);
+        int random(int max)
+        {
+            return target_random(max);
+        }
 
         /**
          * Seed the random number generator (RNG).
@@ -139,8 +136,7 @@ namespace codal
          */
         virtual int seedRandom(uint32_t seed)
         {
-            random_value = seed;
-            return DEVICE_OK;
+            return target_seed_random(seed);
         }
     };
 }

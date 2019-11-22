@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -52,6 +51,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalFiber.h"
 #include "ErrorNo.h"
 #include "NotifyEvents.h"
+#include "codal_target_hal.h"
 
 using namespace codal;
 
@@ -179,7 +179,7 @@ void MessageBus::queueEvent(Event &evt)
     EventQueueItem *item = new EventQueueItem(evt);
 
     // The queue was empty when we entered this function, so queue our event at the start of the queue.
-    __disable_irq();
+    target_disable_irq();
 
     if (prev == NULL)
     {
@@ -197,7 +197,7 @@ void MessageBus::queueEvent(Event &evt)
 
     queueLength++;
 
-    __enable_irq();
+    target_enable_irq();
 }
 
 /**
@@ -209,7 +209,7 @@ EventQueueItem* MessageBus::dequeueEvent()
 {
     EventQueueItem *item = NULL;
 
-    __disable_irq();
+    target_disable_irq();
 
     if (evt_queue_head != NULL)
     {
@@ -222,7 +222,7 @@ EventQueueItem* MessageBus::dequeueEvent()
         queueLength--;
     }
 
-    __enable_irq();
+    target_enable_irq();
 
 
     return item;
@@ -527,7 +527,7 @@ int MessageBus::remove(Listener *listener)
 }
 
 /**
-  * Returns the microBitListener with the given position in our list.
+  * Returns the Listener with the given position in our list.
   *
   * @param n The position in the list to return.
   *

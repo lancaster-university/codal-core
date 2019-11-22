@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -27,9 +26,6 @@ DEALINGS IN THE SOFTWARE.
 #define NONLINEAR_ANALOG_SENSOR_H
 
 #include "CodalConfig.h"
-#include "CodalComponent.h"
-#include "Pin.h"
-#include "Event.h"
 #include "AnalogSensor.h"
 
 namespace codal
@@ -40,11 +36,11 @@ namespace codal
      */
     class NonLinearAnalogSensor : public AnalogSensor
     {
-        float           nominalValue;       // The value (in SI units) of a nominal position.
-        float           nominalReading;     // The reading (in sensed level) at that nominal position.
-        float           beta;               // The Steinhart B parameter.
-        float           seriesResistor;     // the resitance (in ohms) of the associated series resistor.
-        float           zeroOffset;         // A user defined "zero" point (negative asymptote).
+        float nominalValue;   // The value (in SI units) of a nominal position.
+        float nominalReading; // The reading (in sensed level) at that nominal position.
+        float beta;           // The Steinhart B parameter.
+        float seriesResistor; // the resitance (in ohms) of the associated series resistor.
+        float zeroOffset;     // A user defined "zero" point (negative asymptote).
 
         public:
 

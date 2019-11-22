@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -53,11 +52,16 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 
-// The maximum number of heap segments that can be created.
-#define DEVICE_MAXIMUM_HEAPS          2
+// Flag to indicate that a given block is FREE/USED (top bit of a CPU word)
+#define DEVICE_HEAP_BLOCK_FREE		(1 << (sizeof(PROCESSOR_WORD_TYPE) * 8 - 1))
+#define DEVICE_HEAP_BLOCK_SIZE      (sizeof(PROCESSOR_WORD_TYPE))
 
-// Flag to indicate that a given block is FREE/USED
-#define DEVICE_HEAP_BLOCK_FREE		0x80000000
+struct HeapDefinition
+{
+    PROCESSOR_WORD_TYPE *heap_start;		// Physical address of the start of this heap.
+    PROCESSOR_WORD_TYPE *heap_end;		    // Physical address of the end of this heap.
+};
+extern PROCESSOR_WORD_TYPE codal_heap_start;
 
 /**
   * Create and initialise a given memory region as for heap storage.
@@ -75,6 +79,40 @@ DEALINGS IN THE SOFTWARE.
   * code, and user code targetting the runtime. External code can choose to include this file, or
   * simply use the standard heap.
   */
-int device_create_heap(uint32_t start, uint32_t end);
+int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end);
+
+/**
+ * Returns the size of a given heap.
+ * 
+ * @param heap_index index between 0 and DEVICE_MAXIMUM_HEAPS-1
+ * 
+ * @return the size of heap in bytes, or zero if no such heap exists.
+ */
+uint32_t device_heap_size(uint8_t heap_index);
+
+
+/**
+  * Attempt to allocate a given amount of memory from any of our configured heap areas.
+  *
+  * @param size The amount of memory, in bytes, to allocate.
+  *
+  * @return A pointer to the allocated memory, or NULL if insufficient memory is available.
+  */
+extern "C" void* device_malloc(size_t size);
+
+/**
+  * Release a given area of memory from the heap.
+  *
+  * @param mem The memory area to release.
+  */
+extern "C" void device_free(void *mem);
+
+/**
+  * Copy existing contents of ptr to a new memory block of given size.
+  *
+  * @param ptr The existing memory block (can be NULL)
+  * @param size The size of new block (can be smaller or larger than the old one)
+  */
+extern "C" void* device_realloc(void* ptr, size_t size);
 
 #endif

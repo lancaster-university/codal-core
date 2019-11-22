@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -27,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "CodalFiber.h"
 #include "Timer.h"
+#include "codal_target_hal.h"
 
 using namespace codal;
 
@@ -121,7 +121,7 @@ void TouchSensor::onSampleEvent(Event)
 
     // Wait for any charge to drain.
     // TODO: minimise this value.
-    wait_ms(1);
+    target_wait(1);
 
     // raise the drive pin, and start testing the receiver pins...
     drivePin.setDigitalValue(1);

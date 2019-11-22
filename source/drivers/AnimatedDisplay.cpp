@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -27,7 +26,7 @@ DEALINGS IN THE SOFTWARE.
   * Class definition for AnimatedDisplay.
   *
   * This class provides a high level abstraction level to show text and graphic animations on a
-  * Display, e.g. on the MicroBit LED matrix display.
+  * Display, e.g. on an LED matrix display.
   */
 
 #include "AnimatedDisplay.h"
@@ -41,7 +40,7 @@ using namespace codal;
   *
   * Create a software representation of an animated display.
   * This class provides a high level abstraction level to show text and graphic animations on a
-  * Display, e.g. on the MicroBit LED matrix display.
+  * Display, e.g. on an LED matrix display.
   *
   * @param display The Display instance that is used to show the text and graphic animations of this class
   * @param id The id the display should use when sending events on the MessageBus. Defaults to DEVICE_ID_DISPLAY.
@@ -145,8 +144,8 @@ void AnimatedDisplay::updateScrollText()
 
             v++;
         }
-    } 
-    
+    }
+
     scrollingPosition++;
 
     if (scrollingPosition == display.getWidth() + DISPLAY_SPACING)
@@ -276,7 +275,7 @@ void AnimatedDisplay::fiberWait()
 {
     if (fiber_wait_for_event(DEVICE_ID_DISPLAY, DISPLAY_EVT_ANIMATION_COMPLETE) == DEVICE_NOT_SUPPORTED)
         while(animationMode != ANIMATION_MODE_NONE && animationMode != ANIMATION_MODE_STOPPED)
-            __WFE();
+            target_wait_for_event();
 }
 
 /**

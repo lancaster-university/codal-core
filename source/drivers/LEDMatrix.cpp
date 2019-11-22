@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -43,11 +42,11 @@ const int greyScaleTimings[LED_MATRIX_GREYSCALE_BIT_DEPTH] = {1, 23, 70, 163, 35
   * The display is initially blank.
   *
   * @param map The mapping information that relates pin inputs/outputs to physical screen coordinates.
-  * @param id The id the display should use when sending events on the MessageBus. Defaults to MICROBIT_ID_DISPLAY.
+  * @param id The id the display should use when sending events on the MessageBus. Defaults to DEVICE_ID_DISPLAY.
   */
 LEDMatrix::LEDMatrix(const MatrixMap &map, uint16_t id) : Display(map.width, map.height, id), matrixMap(map)
 {
-    this->rotation = MATRIX_DISPLAY_ROTATION_0; 
+    this->rotation = MATRIX_DISPLAY_ROTATION_0;
     this->greyscaleBitMsk = 0x01;
     this->timingCount = 0;
     this->setBrightness(LED_MATRIX_DEFAULT_BRIGHTNESS);
@@ -189,19 +188,19 @@ void LEDMatrix::renderGreyscale()
         int y = matrixMap.map[index].y;
         int t = x;
 
-        if(rotation == MICROBIT_DISPLAY_ROTATION_90)
+        if(rotation == MATRIX_DISPLAY_ROTATION_90)
         {
                 x = width - 1 - y;
                 y = t;
         }
 
-        if(rotation == MICROBIT_DISPLAY_ROTATION_180)
+        if(rotation == MATRIX_DISPLAY_ROTATION_180)
         {
                 x = width - 1 - x;
                 y = height - 1 - y;
         }
 
-        if(rotation == MICROBIT_DISPLAY_ROTATION_270)
+        if(rotation == MATRIX_DISPLAY_ROTATION_270)
         {
                 x = y;
                 y = height - 1 - t;
@@ -263,7 +262,7 @@ int LEDMatrix::getDisplayMode()
   * Axis aligned values only.
   *
   * @code
-  * display.rotateTo(MICROBIT_DISPLAY_ROTATION_180); //rotates 180 degrees from original orientation
+  * display.rotateTo(MATRIX_DISPLAY_ROTATION_180); //rotates 180 degrees from original orientation
   * @endcode
   */
 void LEDMatrix::rotateTo(DisplayRotation rotation)

@@ -1,8 +1,31 @@
+/*
+The MIT License (MIT)
+
+Copyright (c) 2017 Lancaster University.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+*/
+
 #ifndef CODAL_DMESG_H
 #define CODAL_DMESG_H
 
 #include "CodalConfig.h"
-#include <cstdarg>
 
 #if DEVICE_DMESG_BUFFER_SIZE > 0
 
@@ -10,18 +33,22 @@
 #error "Too small DMESG buffer"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct CodalLogStore
 {
     uint32_t ptr;
     char buffer[DEVICE_DMESG_BUFFER_SIZE];
 };
-extern CodalLogStore codalLogStore;
+extern struct CodalLogStore codalLogStore;
 
 /**
   * Log formatted message to an internal buffer.
   *
   * Supported format strings:
-  *    %c - single character 
+  *    %c - single character
   *    %d - decimal number
   *    %x - hexadecimal number (with 0x)
   *    %p - hexadecimal number padded with zeros (and with 0x)
@@ -40,10 +67,19 @@ extern CodalLogStore codalLogStore;
   * @endcode
   */
 void codal_dmesg(const char *format, ...);
+void codal_dmesgf(const char *format, ...);
 
-void codal_vdmesg(const char *format, std::va_list ap);
+void codal_dmesg_set_flush_fn(void (*fn)(void));
+void codal_dmesg_flush();
 
-#define DMESG codal_dmesg
+void codal_vdmesg(const char *format, va_list ap);
+
+#define DMESG  codal_dmesg
+#define DMESGF  codal_dmesgf
+
+#ifdef __cplusplus
+}
+#endif
 
 #else
 

@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -31,43 +30,4 @@ using namespace codal;
 void CodalDevice::sleep(unsigned long milliseconds)
 {
     fiber_sleep(milliseconds);
-}
-
-int CodalDevice::random(int max)
-{
-    uint32_t m, result;
-
-    if (max <= 0)
-        return DEVICE_INVALID_PARAMETER;
-
-    // Our maximum return value is actually one less than passed
-    max--;
-
-    do
-    {
-        m = (uint32_t)max;
-        result = 0;
-        do
-        {
-            // Cycle the LFSR (Linear Feedback Shift Register).
-            // We use an optimal sequence with a period of 2^32-1, as defined by Bruce Schneier here
-            // (a true legend in the field!),
-            // For those interested, it's documented in his paper:
-            // "Pseudo-Random Sequence Generator for 32-Bit CPUs: A fast, machine-independent
-            // generator for 32-bit Microprocessors"
-            // https://www.schneier.com/paper-pseudorandom-sequence.html
-            uint32_t rnd = random_value;
-
-            rnd = ((((rnd >> 31) ^ (rnd >> 6) ^ (rnd >> 4) ^ (rnd >> 2) ^ (rnd >> 1) ^ rnd) &
-                    0x0000001)
-                   << 31) |
-                  (rnd >> 1);
-
-            random_value = rnd;
-
-            result = ((result << 1) | (rnd & 0x00000001));
-        } while (m >>= 1);
-    } while (result > (uint32_t)max);
-
-    return result;
 }

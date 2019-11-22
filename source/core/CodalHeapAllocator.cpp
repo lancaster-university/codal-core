@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -50,36 +49,28 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 #include "CodalHeapAllocator.h"
+#include "platform_includes.h"
 #include "CodalDevice.h"
 #include "CodalCompat.h"
 #include "CodalDmesg.h"
 #include "ErrorNo.h"
-#include <malloc.h>
 
 using namespace codal;
 
 #if CONFIG_ENABLED(DEVICE_HEAP_ALLOCATOR)
 
 // A list of all active heap regions, and their dimensions in memory.
-struct HeapDefinition
-{
-    uint32_t *heap_start;		// Physical address of the start of this heap.
-    uint32_t *heap_end;		    // Physical address of the end of this heap.
-};
-
 HeapDefinition heap[DEVICE_MAXIMUM_HEAPS] = { };
 uint8_t heap_count = 0;
 
 #if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
-
 // Diplays a usage summary about a given heap...
 void device_heap_print(HeapDefinition &heap)
 {
-    uint32_t	blockSize;
-    uint32_t	*block;
+    PROCESSOR_WORD_TYPE	blockSize;
+    PROCESSOR_WORD_TYPE	*block;
     int         totalFreeBlock = 0;
     int         totalUsedBlock = 0;
-    int         cols = 0;
 
     if (heap.heap_start == NULL)
     {
@@ -87,39 +78,36 @@ void device_heap_print(HeapDefinition &heap)
         return;
     }
 
-    DMESG("heap_start : %p\n", heap.heap_start);
-    DMESG("heap_end   : %p\n", heap.heap_end);
+    DMESG("heap_start : %d\n", heap.heap_start);
+    DMESG("heap_end   : %d\n", heap.heap_end);
     DMESG("heap_size  : %d\n", (int)heap.heap_end - (int)heap.heap_start);
 
     // Disable IRQ temporarily to ensure no race conditions!
-    __disable_irq();
+    target_disable_irq();
 
     block = heap.heap_start;
     while (block < heap.heap_end)
     {
-    blockSize = *block & ~DEVICE_HEAP_BLOCK_FREE;
-        DMESG("[%c:%d] ", *block & DEVICE_HEAP_BLOCK_FREE ? 'F' : 'U', blockSize*4);
-        if (cols++ == 20)
-        {
-            DMESG("\n");
-            cols = 0;
-        }
+        blockSize = *block & ~DEVICE_HEAP_BLOCK_FREE;
+        if (*block & DEVICE_HEAP_BLOCK_FREE)
+            DMESG("[F:%d] ", blockSize*DEVICE_HEAP_BLOCK_SIZE);
+        else
+            DMESG("[U:%d] ", blockSize*DEVICE_HEAP_BLOCK_SIZE);
 
         if (*block & DEVICE_HEAP_BLOCK_FREE)
             totalFreeBlock += blockSize;
         else
             totalUsedBlock += blockSize;
 
-    block += blockSize;
+        block += blockSize;
     }
 
     // Enable Interrupts
     target_enable_irq();
 
     DMESG("\n");
-
-    DMESG("mb_total_free : %d\n", totalFreeBlock*4);
-    DMESG("mb_total_used : %d\n", totalUsedBlock*4);
+    DMESG("mb_total_free : %d\n", totalFreeBlock*DEVICE_HEAP_BLOCK_SIZE);
+    DMESG("mb_total_used : %d\n", totalUsedBlock*DEVICE_HEAP_BLOCK_SIZE);
 }
 
 
@@ -133,13 +121,6 @@ void device_heap_print()
     }
 }
 #endif
-
-void device_initialise_heap(HeapDefinition &heap)
-{
-    // Simply mark the entire heap as free.
-    *heap.heap_start = ((uint32_t) heap.heap_end - (uint32_t) heap.heap_start) / DEVICE_HEAP_BLOCK_SIZE;
-    *heap.heap_start |= DEVICE_HEAP_BLOCK_FREE;
-}
 
 /**
   * Create and initialise a given memory region as for heap storage.
@@ -157,25 +138,31 @@ void device_initialise_heap(HeapDefinition &heap)
   * code, and user code targetting the runtime. External code can choose to include this file, or
   * simply use the standard heap.
   */
-int device_create_heap(uint32_t start, uint32_t end)
+
+int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end)
 {
+    HeapDefinition *h = &heap[heap_count];
+
+#if CONFIG_ENABLED(CODAL_LOW_LEVEL_VALIDATION)
     // Ensure we don't exceed the maximum number of heap segments.
     if (heap_count == DEVICE_MAXIMUM_HEAPS)
         return DEVICE_NO_RESOURCES;
 
     // Sanity check. Ensure range is valid, large enough and word aligned.
-    if (end <= start || end - start < DEVICE_HEAP_BLOCK_SIZE*2 || end % 4 != 0 || start % 4 != 0)
+    if (end <= start || end - start < DEVICE_HEAP_BLOCK_SIZE*2 || end % DEVICE_HEAP_BLOCK_SIZE != 0 || start % DEVICE_HEAP_BLOCK_SIZE != 0)
         return DEVICE_INVALID_PARAMETER;
+#endif
 
     // Disable IRQ temporarily to ensure no race conditions!
     target_disable_irq();
 
     // Record the dimensions of this new heap
-    heap[heap_count].heap_start = (uint32_t *)start;
-    heap[heap_count].heap_end = (uint32_t *)end;
+    h->heap_start = (PROCESSOR_WORD_TYPE *)start;
+    h->heap_end = (PROCESSOR_WORD_TYPE *)end;
 
     // Initialise the heap as being completely empty and available for use.
-    device_initialise_heap(heap[heap_count]);
+    *h->heap_start = DEVICE_HEAP_BLOCK_FREE | (((PROCESSOR_WORD_TYPE) h->heap_end - (PROCESSOR_WORD_TYPE) h->heap_start) / DEVICE_HEAP_BLOCK_SIZE);
+
     heap_count++;
 
     // Enable Interrupts
@@ -188,6 +175,14 @@ int device_create_heap(uint32_t start, uint32_t end)
     return DEVICE_OK;
 }
 
+uint32_t device_heap_size(uint8_t heap_index)
+{
+    if (heap_index >= heap_count)
+        return 0;    
+    HeapDefinition *h = &heap[heap_index];
+    return (uint8_t*)h->heap_end - (uint8_t*)h->heap_start;
+}
+
 /**
   * Attempt to allocate a given amount of memory from a given heap area.
   *
@@ -196,15 +191,15 @@ int device_create_heap(uint32_t start, uint32_t end)
   *
   * @return A pointer to the allocated memory, or NULL if insufficient memory is available.
   */
-void *device_malloc(size_t size, HeapDefinition &heap)
+void *device_malloc_in(size_t size, HeapDefinition &heap)
 {
-    uint32_t	blockSize = 0;
-    uint32_t	blocksNeeded = size % DEVICE_HEAP_BLOCK_SIZE == 0 ? size / DEVICE_HEAP_BLOCK_SIZE : size / DEVICE_HEAP_BLOCK_SIZE + 1;
-    uint32_t	*block;
-    uint32_t	*next;
+    PROCESSOR_WORD_TYPE	blockSize = 0;
+    PROCESSOR_WORD_TYPE	blocksNeeded = size % DEVICE_HEAP_BLOCK_SIZE == 0 ? size / DEVICE_HEAP_BLOCK_SIZE : size / DEVICE_HEAP_BLOCK_SIZE + 1;
+    PROCESSOR_WORD_TYPE	*block;
+    PROCESSOR_WORD_TYPE	*next;
 
     if (size <= 0)
-    return NULL;
+        return NULL;
 
     // Account for the index block;
     blocksNeeded++;
@@ -265,12 +260,12 @@ void *device_malloc(size_t size, HeapDefinition &heap)
     }
     else
     {
-    // We need to split the block.
-    uint32_t *splitBlock = block + blocksNeeded;
-    *splitBlock = blockSize - blocksNeeded;
-    *splitBlock |= DEVICE_HEAP_BLOCK_FREE;
+        // We need to split the block.
+        PROCESSOR_WORD_TYPE *splitBlock = block + blocksNeeded;
+        *splitBlock = blockSize - blocksNeeded;
+        *splitBlock |= DEVICE_HEAP_BLOCK_FREE;
 
-    *block = blocksNeeded;
+        *block = blocksNeeded;
     }
 
     // Enable Interrupts
@@ -286,28 +281,45 @@ void *device_malloc(size_t size, HeapDefinition &heap)
   *
   * @return A pointer to the allocated memory, or NULL if insufficient memory is available.
   */
-void* malloc (size_t size)
+void* device_malloc (size_t size)
 {
     static uint8_t initialised = 0;
     void *p;
 
+    if (size <= 0)
+        return NULL;
+
     if (!initialised)
     {
-        device_create_heap(CODAL_HEAP_START, CODAL_HEAP_END);
+        heap_count = 0;
+
+#if CONFIG_ENABLED(CODAL_LOW_LEVEL_VALIDATION)
+        if(device_create_heap((PROCESSOR_WORD_TYPE)(codal_heap_start), (PROCESSOR_WORD_TYPE)(DEVICE_STACK_BASE) - (PROCESSOR_WORD_TYPE)(DEVICE_STACK_SIZE)) == DEVICE_INVALID_PARAMETER)
+            target_panic(DEVICE_HEAP_ERROR);
+#else
+        device_create_heap((PROCESSOR_WORD_TYPE)(codal_heap_start), (PROCESSOR_WORD_TYPE)(DEVICE_STACK_BASE) - (PROCESSOR_WORD_TYPE)(DEVICE_STACK_SIZE));
+#endif
         initialised = 1;
     }
 
+#if (DEVICE_MAXIMUM_HEAPS == 1)
+    p = device_malloc_in(size, heap[0]);
+#else
     // Assign the memory from the first heap created that has space.
     for (int i=0; i < heap_count; i++)
     {
-        p = device_malloc(size, heap[i]);
+        p = device_malloc_in(size, heap[i]);
         if (p != NULL)
-        {
+            break;
+    }
+#endif
+
+    if (p != NULL)
+    {
 #if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
             DMESG("device_malloc: ALLOCATED: %d [%p]\n", size, p);
 #endif
             return p;
-        }
     }
 
     // We're totally out of options (and memory!).
@@ -328,10 +340,11 @@ void* malloc (size_t size)
   *
   * @param mem The memory area to release.
   */
-void free (void *mem)
+void device_free (void *mem)
 {
-    uint32_t	*memory = (uint32_t *)mem;
-    uint32_t	*cb = memory-1;
+    PROCESSOR_WORD_TYPE	*memory = (PROCESSOR_WORD_TYPE *)mem;
+    PROCESSOR_WORD_TYPE	*cb = memory-1;
+    int i=0;
 
 #if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
     if (heap_count > 0)
@@ -342,7 +355,10 @@ void free (void *mem)
        return;
 
     // If this memory was created from a heap registered with us, free it.
-    for (int i=0; i < heap_count; i++)
+
+#if (DEVICE_MAXIMUM_HEAPS > 1)
+    for (i=0; i < heap_count; i++)
+#endif
     {
         if(memory > heap[i].heap_start && memory < heap[i].heap_end)
         {
@@ -363,13 +379,17 @@ void* calloc (size_t num, size_t size)
 {
     void *mem = malloc(num*size);
 
-    if (mem)
-        memclr(mem, num*size);
+    if (mem) {
+        // without this write, GCC will happily optimize malloc() above into calloc()
+        // and remove the memset
+        ((uint32_t*)mem)[0] = 1;
+        memset(mem, 0, num*size);
+    }
 
     return mem;
 }
 
-void* realloc (void* ptr, size_t size)
+extern "C" void* device_realloc (void* ptr, size_t size)
 {
     void *mem = malloc(size);
 
@@ -378,18 +398,22 @@ void* realloc (void* ptr, size_t size)
     {
 
         // Otherwise we need to copy and free up the old data.
-        uint32_t *cb = ((uint32_t *)ptr) - 1;
-        uint32_t blockSize = *cb & ~DEVICE_HEAP_BLOCK_FREE;
+        PROCESSOR_WORD_TYPE *cb = ((PROCESSOR_WORD_TYPE *)ptr) - 1;
+        PROCESSOR_WORD_TYPE blockSize = *cb & ~DEVICE_HEAP_BLOCK_FREE;
 
-        memcpy(mem, ptr, min(blockSize, size));
+        memcpy(mem, ptr, min(blockSize * sizeof(PROCESSOR_WORD_TYPE), size));
         free(ptr);
     }
 
     return mem;
 }
 
-// make sure the libc allocator is not pulled in
+void *malloc(size_t sz) __attribute__ ((weak, alias ("device_malloc")));
+void free(void *mem) __attribute__ ((weak, alias ("device_free")));
+void* realloc (void* ptr, size_t size) __attribute__ ((weak, alias ("device_realloc")));
 
+
+// make sure the libc allocator is not pulled in
 void *_malloc_r(struct _reent *, size_t len)
 {
     return malloc(len);

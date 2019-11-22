@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -18,7 +17,7 @@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
 THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
@@ -37,7 +36,7 @@ namespace codal
 {
     /**
      * Class definition for FXOS8700Accelerometer.
-     * This class provides a simple wrapper between the hybrid FXOS8700 accelerometer and higher level accelerometer funcitonality.
+     * This class provides a simple wrapper between the hybrid FXOS8700 accelerometer and higher level accelerometer functionality.
      */
     class FXOS8700Accelerometer : public Accelerometer
     {
@@ -49,7 +48,7 @@ namespace codal
           * Constructor.
           * Create a software abstraction of an accelerometer.
           *
-          * @param fxos8700 A reference to the hardware driver for the FXOS8700 hybrid accelerometer/magnetometer. 
+          * @param fxos8700 A reference to the hardware driver for the FXOS8700 hybrid accelerometer/magnetometer.
           * @param coordinateSpace The orientation of the sensor. Defaults to: SIMPLE_CARTESIAN
           * @param id The unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
           *
@@ -85,7 +84,7 @@ namespace codal
 
         /**
          * Poll to see if new data is available from the hardware. If so, update it.
-         * n.b. it is not necessary to explicitly call this funciton to update data 
+         * n.b. it is not necessary to explicitly call this function to update data
          * (it normally happens in the background when the scheduler is idle), but a check is performed
          * if the user explicitly requests up to date data.
          *
@@ -110,4 +109,4 @@ namespace codal
 }
 
 #endif
-        
+

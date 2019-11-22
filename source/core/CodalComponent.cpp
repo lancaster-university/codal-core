@@ -1,3 +1,27 @@
+/*
+The MIT License (MIT)
+
+Copyright (c) 2017 Lancaster University.
+
+Permission is hereby granted, free of charge, to any person obtaining a
+copy of this software and associated documentation files (the "Software"),
+to deal in the Software without restriction, including without limitation
+the rights to use, copy, modify, merge, publish, distribute, sublicense,
+and/or sell copies of the Software, and to permit persons to whom the
+Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+DEALINGS IN THE SOFTWARE.
+*/
+
 #include "CodalComponent.h"
 #include "CodalFiber.h"
 #include "EventModel.h"
@@ -8,6 +32,10 @@ using namespace codal;
 CodalComponent* CodalComponent::components[DEVICE_COMPONENT_COUNT];
 
 uint8_t CodalComponent::configuration = 0;
+
+#if DEVICE_COMPONENT_COUNT > 255
+#error "DEVICE_COMPONENT_COUNT has to fit in uint8_t"
+#endif
 
 /**
   * The periodic callback for all components.
@@ -88,5 +116,27 @@ void CodalComponent::removeComponent()
         }
 
         i++;
+    }
+}
+
+/**
+ * Puts all components in (or out of) sleep (low power) mode.
+ */
+void CodalComponent::setAllSleep(bool doSleep)
+{
+    // usually, dependencies of component X are added before X itself,
+    // so iterate backwards (so from high-level components to low-level)
+    // when putting stuff to sleep, and forwards when waking up
+    if (doSleep)
+    {
+        for (int i = DEVICE_COMPONENT_COUNT - 1; i >= 0; i--)
+            if (components[i])
+                components[i]->setSleep(true);
+    }
+    else
+    {
+        for (unsigned i = 0; i < DEVICE_COMPONENT_COUNT; i++)
+            if (components[i])
+                components[i]->setSleep(false);
     }
 }

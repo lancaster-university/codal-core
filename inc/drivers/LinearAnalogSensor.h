@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -27,9 +26,6 @@ DEALINGS IN THE SOFTWARE.
 #define LINEAR_ANALOG_SENSOR_H
 
 #include "CodalConfig.h"
-#include "CodalComponent.h"
-#include "Pin.h"
-#include "Event.h"
 #include "AnalogSensor.h"
 
 
@@ -41,9 +37,11 @@ namespace codal
      */
     class LinearAnalogSensor : public AnalogSensor
     {
-        uint16_t     inputFloor;        // The minimum level in the input range.
-        float        outputFloor;       // The minimum level in the output range.
-        float        conversionFactor;  // no of output units per input unit.
+        private:
+        
+        uint16_t inputFloor;        // The minimum level in the input range.
+        float outputFloor;       // The minimum level in the output range.
+        float conversionFactor;  // no of output units per input unit.
 
         public:
 

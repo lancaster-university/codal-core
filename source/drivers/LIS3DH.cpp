@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -32,11 +31,68 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "LIS3DH.h"
 #include "ErrorNo.h"
-#include "Event.h"
 #include "CodalCompat.h"
 #include "CodalFiber.h"
 
 using namespace codal;
+
+//
+// Configuration table for available g force ranges.
+// Maps g -> LIS3DH_CTRL_REG4 [5..4]
+//
+static const KeyValueTableEntry accelerometerRangeData[] = {
+    {2, 0},
+    {4, 1},
+    {8, 2},
+    {16, 3}
+};
+CREATE_KEY_VALUE_TABLE(accelerometerRange, accelerometerRangeData);
+
+//
+// Configuration table for available data update frequency.
+// maps microsecond period -> LIS3DH_CTRL_REG1 data rate selection bits
+//
+static const KeyValueTableEntry accelerometerPeriodData[] = {
+    {2500,      0x70},
+    {5000,      0x60},
+    {10000,     0x50},
+    {20000,     0x40},
+    {40000,     0x30},
+    {100000,    0x20},
+    {1000000,   0x10}
+};
+CREATE_KEY_VALUE_TABLE(accelerometerPeriod, accelerometerPeriodData);
+
+/**
+  * Constructor.
+  * Create a software abstraction of an accelerometer.
+  *
+  * @param _i2c an instance of DeviceI2C used to communicate with the onboard accelerometer.
+  * @param _int1 the pin connected to the LIS3DH IRQ line.
+  * @param coordinateSpace The orientation of the sensor.
+  * @param address the default I2C address of the accelerometer. Defaults to: LIS3DH_DEFAULT_ADDR.
+  * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
+  *
+  * @code
+  * DeviceI2C i2c = DeviceI2C(I2C_SDA0, I2C_SCL0);
+  *
+  * LIS3DH accelerometer = LIS3DH(i2c);
+  * @endcode
+ */
+LIS3DH::LIS3DH(I2C& _i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address,  uint16_t id) : Accelerometer(coordinateSpace, id), i2c(_i2c), int1(_int1), sample()
+{
+    // Store our identifiers.
+    this->id = id;
+    this->status = 0;
+    this->address = address;
+
+    // Update our internal state for 50Hz at +/- 2g (50Hz has a period af 20ms).
+    this->samplePeriod = 20;
+    this->sampleRange = 2;
+
+    // Configure and enable the accelerometer.
+    configure();
+}
 
 /**
   * Configures the accelerometer for G range and sample rate defined
@@ -48,104 +104,41 @@ using namespace codal;
   */
 int LIS3DH::configure()
 {
-    const LIS3DHSampleRangeConfig  *actualSampleRange;
-    const LIS3DHSampleRateConfig  *actualSampleRate;
     int result;
+    uint8_t value;
 
     // First find the nearest sample rate to that specified.
-    actualSampleRate = &LIS3DHSampleRate[LIS3DH_SAMPLE_RATES-1];
-    for (int i=LIS3DH_SAMPLE_RATES-1; i>=0; i--)
-    {
-        if(LIS3DHSampleRate[i].period < this->samplePeriod * 1000)
-            break;
-
-        actualSampleRate = &LIS3DHSampleRate[i];
-    }
-
-    // Now find the nearest sample range to that specified.
-    actualSampleRange = &LIS3DHSampleRange[LIS3DH_SAMPLE_RANGES-1];
-    for (int i=LIS3DH_SAMPLE_RANGES-1; i>=0; i--)
-    {
-        if(LIS3DHSampleRange[i].range < this->sampleRange)
-            break;
-
-        actualSampleRange = &LIS3DHSampleRange[i];
-    }
-
-    // OK, we have the correct data. Update our local state.
-    this->samplePeriod = actualSampleRate->period / 1000;
-    this->sampleRange = actualSampleRange->range;
+    samplePeriod = accelerometerPeriod.getKey(samplePeriod * 1000) / 1000;
+    sampleRange = accelerometerRange.getKey(sampleRange);
 
     // Now configure the accelerometer accordingly.
-
     // Firstly, Configure for normal precision operation at the sample rate requested.
-    result = i2c.write(address, LIS3DH_CTRL_REG1, actualSampleRate->value | 0x07);
+    value = accelerometerPeriod.get(samplePeriod * 1000) | 0x07;
+    result = i2c.writeRegister(address, LIS3DH_CTRL_REG1, value);
     if (result != 0)
         return DEVICE_I2C_ERROR;
 
     // Enable the INT1 interrupt pin when XYZ data is available.
-    result = i2c.write(address, LIS3DH_CTRL_REG3, 0x10);
+    value = 0x10;
+    result = i2c.writeRegister(address, LIS3DH_CTRL_REG3, value);
     if (result != 0)
         return DEVICE_I2C_ERROR;
 
     // Configure for the selected g range.
-    result = i2c.write(address, LIS3DH_CTRL_REG4,  actualSampleRange->value << 4);
+    value = accelerometerRange.get(sampleRange) << 4;
+    result = i2c.writeRegister(address, LIS3DH_CTRL_REG4,  value);
     if (result != 0)
         return DEVICE_I2C_ERROR;
 
     // Configure for a latched interrupt request.
-    result = i2c.write(address, LIS3DH_CTRL_REG5, 0x08);
+    value = 0x08;
+    result = i2c.writeRegister(address, LIS3DH_CTRL_REG5, value);
     if (result != 0)
         return DEVICE_I2C_ERROR;
 
     return DEVICE_OK;
 }
 
-/**
-  * Constructor.
-  * Create a software abstraction of an accelerometer.
-  *
-  * @param _i2c an instance of I2C used to communicate with the onboard accelerometer.
-  *
-  * @param address the default I2C address of the accelerometer. Defaults to: LIS3DH_DEFAULT_ADDR.
-  *
-  * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
-  *
-  * @code
-  * I2C i2c = I2C(I2C_SDA0, I2C_SCL0);
-  *
-  * LIS3DH accelerometer = LIS3DH(i2c);
-  * @endcode
- */
-LIS3DH::LIS3DH(I2C& _i2c, Pin &_int1, uint16_t address,  uint16_t id, CoordinateSystem coordinateSystem) : i2c(_i2c), int1(_int1), sample()
-{
-    // Store our identifiers.
-    this->id = id;
-    this->status = 0;
-    this->address = address;
-
-    // Update our internal state for 50Hz at +/- 2g (50Hz has a period af 20ms).
-    this->samplePeriod = 20;
-    this->sampleRange = 2;
-
-    // Initialise gesture history
-    this->sigma = 0;
-    this->impulseSigma = 0;
-    this->lastGesture = ACCELEROMETER_EVT_NONE;
-    this->currentGesture = ACCELEROMETER_EVT_NONE;
-    this->shake.x = 0;
-    this->shake.y = 0;
-    this->shake.z = 0;
-    this->shake.count = 0;
-    this->shake.timer = 0;
-    this->shake.impulse_3 = 1;
-    this->shake.impulse_6 = 1;
-    this->shake.impulse_8 = 1;
-    this->coordinateSystem = coordinateSystem;
-
-    // Configure and enable the accelerometer.
-    configure();
-}
 
 /**
   * Attempts to read the 8 bit ID from the accelerometer, this can be used for
@@ -162,11 +155,28 @@ int LIS3DH::whoAmI()
     uint8_t data;
     int result;
 
-    result = i2c.read(address, LIS3DH_WHOAMI, &data, 1);
+    result = i2c.readRegister(address, LIS3DH_WHOAMI, &data, 1);
     if (result !=0)
         return DEVICE_I2C_ERROR;
 
     return (int)data;
+}
+
+/**
+ * Poll to see if new data is available from the hardware. If so, update it.
+ * n.b. it is not necessary to explicitly call this function to update data
+ * (it normally happens in the background when the scheduler is idle), but a check is performed
+ * if the user explicitly requests up to date data.
+ *
+ * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the update fails.
+ *
+ * @note This method should be overidden by the hardware driver to implement the requested
+ * changes in hardware.
+ */
+int LIS3DH::requestUpdate()
+{
+    updateSample();
+    return DEVICE_OK;
 }
 
 /**
@@ -196,13 +206,15 @@ int LIS3DH::updateSample()
 
         // read the XYZ data (16 bit)
         // n.b. we need to set the MSB bit to enable multibyte transfers from this device (WHY? Who Knows!)
-        result = i2c.read(address, 0x80 | LIS3DH_OUT_X_L, (uint8_t *)data, 6);
+        result = i2c.readRegister(address, 0x80 | LIS3DH_OUT_X_L, (uint8_t *)data, 6);
 
         if (result !=0)
             return DEVICE_I2C_ERROR;
 
+        target_wait_us(3);
+
         // Acknowledge the interrupt.
-        i2c.read(address, LIS3DH_INT1_SRC, &src, 1);
+        i2c.readRegister(address, LIS3DH_INT1_SRC, &src, 1);
 
         // read MSB values...
         sample.x = data[1];
@@ -226,202 +238,15 @@ int LIS3DH::updateSample()
         sample.y *= this->sampleRange;
         sample.z *= this->sampleRange;
 
-        // Indicate that pitch and roll data is now stale, and needs to be recalculated if needed.
-        status &= ~ACCELEROMETER_IMU_DATA_VALID;
-
-        // Update gesture tracking
-        updateGesture();
+        // no need to align to ENU coordinate system  (LIS3DH is ENU aligned)
 
         // Indicate that a new sample is available
-        Event e(id, ACCELEROMETER_EVT_DATA_UPDATE);
+        update(sample);
     }
 
     return DEVICE_OK;
 };
 
-/**
-  * A service function.
-  * It calculates the current scalar acceleration of the device (x^2 + y^2 + z^2).
-  * It does not, however, square root the result, as this is a relatively high cost operation.
-  *
-  * This is left to application code should it be needed.
-  *
-  * @return the sum of the square of the acceleration of the device across all axes.
-  */
-int LIS3DH::instantaneousAccelerationSquared()
-{
-    updateSample();
-
-    // Use pythagoras theorem to determine the combined force acting on the device.
-    return (int)sample.x*(int)sample.x + (int)sample.y*(int)sample.y + (int)sample.z*(int)sample.z;
-}
-
-/**
- * Service function.
- * Determines a 'best guess' posture of the device based on instantaneous data.
- *
- * This makes no use of historic data, and forms the input to the filter implemented in updateGesture().
- *
- * @return A 'best guess' of the current posture of the device, based on instanataneous data.
- */
-uint16_t LIS3DH::instantaneousPosture()
-{
-    bool shakeDetected = false;
-
-    // Test for shake events.
-    // We detect a shake by measuring zero crossings in each axis. In other words, if we see a strong acceleration to the left followed by
-    // a strong acceleration to the right, then we can infer a shake. Similarly, we can do this for each axis (left/right, up/down, in/out).
-    //
-    // If we see enough zero crossings in succession (ACCELEROMETER_SHAKE_COUNT_THRESHOLD), then we decide that the device
-    // has been shaken.
-    if ((getX() < -ACCELEROMETER_SHAKE_TOLERANCE && shake.x) || (getX() > ACCELEROMETER_SHAKE_TOLERANCE && !shake.x))
-    {
-        shakeDetected = true;
-        shake.x = !shake.x;
-    }
-
-    if ((getY() < -ACCELEROMETER_SHAKE_TOLERANCE && shake.y) || (getY() > ACCELEROMETER_SHAKE_TOLERANCE && !shake.y))
-    {
-        shakeDetected = true;
-        shake.y = !shake.y;
-    }
-
-    if ((getZ() < -ACCELEROMETER_SHAKE_TOLERANCE && shake.z) || (getZ() > ACCELEROMETER_SHAKE_TOLERANCE && !shake.z))
-    {
-        shakeDetected = true;
-        shake.z = !shake.z;
-    }
-
-    // If we detected a zero crossing in this sample period, count this.
-    if (shakeDetected && shake.count < ACCELEROMETER_SHAKE_COUNT_THRESHOLD)
-    {
-        shake.count++;
-
-        if (shake.count == 1)
-            shake.timer = 0;
-
-        if (shake.count == ACCELEROMETER_SHAKE_COUNT_THRESHOLD)
-        {
-            shake.shaken = 1;
-            shake.timer = 0;
-            return ACCELEROMETER_EVT_SHAKE;
-        }
-    }
-
-    // measure how long we have been detecting a SHAKE event.
-    if (shake.count > 0)
-    {
-        shake.timer++;
-
-        // If we've issued a SHAKE event already, and sufficient time has assed, allow another SHAKE event to be issued.
-        if (shake.shaken && shake.timer >= ACCELEROMETER_SHAKE_RTX)
-        {
-            shake.shaken = 0;
-            shake.timer = 0;
-            shake.count = 0;
-        }
-
-        // Decay our count of zero crossings over time. We don't want them to accumulate if the user performs slow moving motions.
-        else if (!shake.shaken && shake.timer >= ACCELEROMETER_SHAKE_DAMPING)
-        {
-            shake.timer = 0;
-            if (shake.count > 0)
-                shake.count--;
-        }
-    }
-
-    if (instantaneousAccelerationSquared() < ACCELEROMETER_FREEFALL_THRESHOLD)
-        return ACCELEROMETER_EVT_FREEFALL;
-
-    // Determine our posture.
-    if (getX() < (-1000 + ACCELEROMETER_TILT_TOLERANCE))
-        return ACCELEROMETER_EVT_TILT_LEFT;
-
-    if (getX() > (1000 - ACCELEROMETER_TILT_TOLERANCE))
-        return ACCELEROMETER_EVT_TILT_RIGHT;
-
-    if (getY() < (-1000 + ACCELEROMETER_TILT_TOLERANCE))
-        return ACCELEROMETER_EVT_TILT_DOWN;
-
-    if (getY() > (1000 - ACCELEROMETER_TILT_TOLERANCE))
-        return ACCELEROMETER_EVT_TILT_UP;
-
-    if (getZ() < (-1000 + ACCELEROMETER_TILT_TOLERANCE))
-        return ACCELEROMETER_EVT_FACE_UP;
-
-    if (getZ() > (1000 - ACCELEROMETER_TILT_TOLERANCE))
-        return ACCELEROMETER_EVT_FACE_DOWN;
-
-    return ACCELEROMETER_EVT_NONE;
-}
-
-/**
-  * Updates the basic gesture recognizer. This performs instantaneous pose recognition, and also some low pass filtering to promote
-  * stability.
-  */
-void LIS3DH::updateGesture()
-{
-    // Check for High/Low G force events - typically impulses, impacts etc.
-    // Again, during such spikes, these event take priority of the posture of the device.
-    // For these events, we don't perform any low pass filtering.
-    int force = instantaneousAccelerationSquared();
-
-    if (force > ACCELEROMETER_3G_THRESHOLD)
-    {
-        if (force > ACCELEROMETER_3G_THRESHOLD && !shake.impulse_3)
-        {
-            Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_3G);
-            shake.impulse_3 = 1;
-        }
-        if (force > ACCELEROMETER_6G_THRESHOLD && !shake.impulse_6)
-        {
-            Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_6G);
-            shake.impulse_6 = 1;
-        }
-        if (force > ACCELEROMETER_8G_THRESHOLD && !shake.impulse_8)
-        {
-            Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_8G);
-            shake.impulse_8 = 1;
-        }
-
-        impulseSigma = 0;
-    }
-
-    // Reset the impulse event onve the acceleration has subsided.
-    if (impulseSigma < ACCELEROMETER_GESTURE_DAMPING)
-        impulseSigma++;
-    else
-        shake.impulse_3 = shake.impulse_6 = shake.impulse_8 = 0;
-
-
-    // Determine what it looks like we're doing based on the latest sample...
-    uint16_t g = instantaneousPosture();
-
-    if (g == ACCELEROMETER_EVT_SHAKE)
-    {
-        Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_SHAKE);
-        return;
-    }
-
-    // Perform some low pass filtering to reduce jitter from any detected effects
-    if (g == currentGesture)
-    {
-        if (sigma < ACCELEROMETER_GESTURE_DAMPING)
-            sigma++;
-    }
-    else
-    {
-        currentGesture = g;
-        sigma = 0;
-    }
-
-    // If we've reached threshold, update our record and raise the relevant event...
-    if (currentGesture != lastGesture && sigma >= ACCELEROMETER_GESTURE_DAMPING)
-    {
-        lastGesture = currentGesture;
-        Event e(DEVICE_ID_GESTURE, lastGesture);
-    }
-}
 
 /**
   * Attempts to set the sample rate of the accelerometer to the specified value (in ms).
@@ -440,8 +265,8 @@ void LIS3DH::updateGesture()
   */
 int LIS3DH::setPeriod(int period)
 {
-    this->samplePeriod = period;
-    return this->configure();
+    samplePeriod = period;
+    return configure();
 }
 
 /**
@@ -471,8 +296,8 @@ int LIS3DH::getPeriod()
   */
 int LIS3DH::setRange(int range)
 {
-    this->sampleRange = range;
-    return this->configure();
+    sampleRange = range;
+    return configure();
 }
 
 /**
@@ -486,186 +311,18 @@ int LIS3DH::getRange()
 }
 
 /**
-  * Reads the value of the X axis from the latest update retrieved from the accelerometer.
-  *
-  * @param system The coordinate system to use. By default, a simple cartesian system is provided.
-  *
-  * @return The force measured in the X axis, in milli-g.
-  *
-  * @code
-  * accelerometer.getX();
-  * @endcode
-  */
-int LIS3DH::getX()
+ * Reads the accelerometer data from the latest update retrieved from the accelerometer.
+ * Data is provided in ENU format, relative to the device package (and makes no attempt
+ * to align axes to the device).
+ *
+ * @return The force measured in each axis, in milli-g.
+ *
+ */
+Sample3D LIS3DH::getSample()
 {
-    updateSample();
-
-    switch (coordinateSystem)
-    {
-        case SIMPLE_CARTESIAN:
-            return sample.y;
-
-        case NORTH_EAST_DOWN:
-        case NORTH_EAST_UP:
-            return -sample.x;
-
-        case RAW:
-        default:
-            return sample.x;
-    }
+    return sample;
 }
 
-/**
-  * Reads the value of the Y axis from the latest update retrieved from the accelerometer.
-  *
-  * @return The force measured in the Y axis, in milli-g.
-  *
-  * @code
-  * accelerometer.getY();
-  * @endcode
-  */
-int LIS3DH::getY()
-{
-    updateSample();
-
-    switch (coordinateSystem)
-    {
-        case SIMPLE_CARTESIAN:
-            return sample.x;
-
-        case NORTH_EAST_DOWN:
-        case NORTH_EAST_UP:
-            return sample.y;
-
-        case RAW:
-        default:
-            return sample.y;
-    }
-}
-
-/**
-  * Reads the value of the Z axis from the latest update retrieved from the accelerometer.
-  *
-  * @return The force measured in the Z axis, in milli-g.
-  *
-  * @code
-  * accelerometer.getZ();
-  * @endcode
-  */
-int LIS3DH::getZ()
-{
-    updateSample();
-
-    switch (coordinateSystem)
-    {
-
-        case SIMPLE_CARTESIAN:
-        case NORTH_EAST_UP:
-            return -sample.z;
-
-        case NORTH_EAST_DOWN:
-        case RAW:
-        default:
-            return sample.z;
-    }
-}
-
-/**
-  * Provides a rotation compensated pitch of the device, based on the latest update retrieved from the accelerometer.
-  *
-  * @return The pitch of the device, in degrees.
-  *
-  * @code
-  * accelerometer.getPitch();
-  * @endcode
-  */
-int LIS3DH::getPitch()
-{
-    return (int) ((360*getPitchRadians()) / (2*PI));
-}
-
-/**
-  * Provides a rotation compensated pitch of the device, based on the latest update retrieved from the accelerometer.
-  *
-  * @return The pitch of the device, in radians.
-  *
-  * @code
-  * accelerometer.getPitchRadians();
-  * @endcode
-  */
-float LIS3DH::getPitchRadians()
-{
-    if (!(status & ACCELEROMETER_IMU_DATA_VALID))
-        recalculatePitchRoll();
-
-    return pitch;
-}
-
-/**
-  * Provides a rotation compensated roll of the device, based on the latest update retrieved from the accelerometer.
-  *
-  * @return The roll of the device, in degrees.
-  *
-  * @code
-  * accelerometer.getRoll();
-  * @endcode
-  */
-int LIS3DH::getRoll()
-{
-    return (int) ((360*getRollRadians()) / (2*PI));
-}
-
-/**
-  * Provides a rotation compensated roll of the device, based on the latest update retrieved from the accelerometer.
-  *
-  * @return The roll of the device, in radians.
-  *
-  * @code
-  * accelerometer.getRollRadians();
-  * @endcode
-  */
-float LIS3DH::getRollRadians()
-{
-    if (!(status & ACCELEROMETER_IMU_DATA_VALID))
-        recalculatePitchRoll();
-
-    return roll;
-}
-
-/**
-  * Recalculate roll and pitch values for the current sample.
-  *
-  * @note We only do this at most once per sample, as the necessary trigonemteric functions are rather
-  *       heavyweight for a CPU without a floating point unit.
-  */
-void LIS3DH::recalculatePitchRoll()
-{
-    double x = (double) getX();
-    double y = (double) getY();
-    double z = (double) getZ();
-
-    roll = atan2(y, z);
-    pitch = atan(-x / (y*sin(roll) + z*cos(roll)));
-
-    status |= ACCELEROMETER_IMU_DATA_VALID;
-}
-
-/**
-  * Retrieves the last recorded gesture.
-  *
-  * @return The last gesture that was detected.
-  *
-  * Example:
-  * @code
-  *
-  * if (accelerometer.getGesture() == SHAKE)
-  *     display.scroll("SHAKE!");
-  * @endcode
-  */
-uint16_t LIS3DH::getGesture()
-{
-    return lastGesture;
-}
 
 /**
   * A periodic callback invoked by the fiber scheduler idle thread.
@@ -684,19 +341,10 @@ LIS3DH::~LIS3DH()
 {
 }
 
-const LIS3DHSampleRangeConfig codal::LIS3DHSampleRange[LIS3DH_SAMPLE_RANGES] = {
-    {2, 0},
-    {4, 1},
-    {8, 2},
-    {16, 3}
-};
-
-const LIS3DHSampleRateConfig codal::LIS3DHSampleRate[LIS3DH_SAMPLE_RATES] = {
-    {2500,      0x70},
-    {5000,      0x60},
-    {10000,     0x50},
-    {20000,     0x40},
-    {40000,     0x30},
-    {100000,    0x20},
-    {1000000,   0x10}
-};
+int LIS3DH::setSleep(bool sleepMode)
+{
+    if (sleepMode)
+        return i2c.writeRegister(this->address, LIS3DH_CTRL_REG1, 0x00);
+    else
+        return configure();
+}

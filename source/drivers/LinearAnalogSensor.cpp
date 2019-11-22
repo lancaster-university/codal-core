@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -28,13 +27,7 @@ DEALINGS IN THE SOFTWARE.
  * Implements a base class for such a sensor, using the Steinhart-Hart equation to delineate a result.
  */
 
-#include "CodalConfig.h"
 #include "LinearAnalogSensor.h"
-#include "ErrorNo.h"
-#include "Event.h"
-#include "CodalCompat.h"
-#include "CodalFiber.h"
-#include "Timer.h"
 
 using namespace codal;
 
@@ -65,21 +58,22 @@ LinearAnalogSensor::LinearAnalogSensor(Pin &pin, uint16_t id, uint16_t inputFloo
  */
 void LinearAnalogSensor::updateSample()
 {
-    float sensorReading, value;
+    float sensorReading;
+    float value;
 
-    sensorReading = (float) (_pin.getAnalogValue() - inputFloor);
+    sensorReading = (float) (this->readValue() - this->inputFloor);
 
-    value = outputFloor + sensorReading * conversionFactor;
+    value = this->outputFloor + sensorReading * this->conversionFactor;
 
     // If this is the first reading performed, take it a a baseline. Otherwise, perform a decay average to smooth out the data.
-    if (!(status & ANALOG_SENSOR_INITIALISED))
+    if (!(this->status & ANALOG_SENSOR_INITIALISED))
     {
-        sensorValue = value;
-        status |=  ANALOG_SENSOR_INITIALISED;
+        this->sensorValue = value;
+        this->status |=  ANALOG_SENSOR_INITIALISED;
     }
     else
     {
-        sensorValue = (sensorValue * (1.0f - sensitivity)) + (value * sensitivity);
+        this->sensorValue = (this->sensorValue * (1.0f - this->sensitivity)) + (value * this->sensitivity);
     }
 
     checkThresholding();

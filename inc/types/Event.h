@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -51,9 +50,14 @@ namespace codal
     {
         public:
 
-        uint16_t source;         // ID of the Device Component that generated the event e.g. DEVICE_ID_BUTTON_A.
-        uint16_t value;          // Component specific code indicating the cause of the event.
-        uint64_t timestamp;      // Time at which the event was generated. us since power on.
+        uint16_t            source;         // ID of the Device Component that generated the event e.g. DEVICE_ID_BUTTON_A.
+        uint16_t            value;          // Component specific code indicating the cause of the event.
+
+#if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
+        uint32_t            timestamp;      // Time at which the event was generated. us since power on.
+#else
+        CODAL_TIMESTAMP     timestamp;      // Time at which the event was generated. us since power on.
+#endif
 
         /**
           * Constructor.
@@ -75,6 +79,29 @@ namespace codal
           * @endcode
           */
         Event(uint16_t source, uint16_t value, EventLaunchMode mode = DEVICE_EVENT_DEFAULT_LAUNCH_MODE);
+
+        /**
+          * Constructor.
+          *
+          * @param src The id of the Device Component that generated the event e.g. DEVICE_ID_BUTTON_A.
+          *
+          * @param value A component specific code indicating the cause of the event.
+          *
+          * @param currentTimeUs The current time in microseconds.
+          *
+          * @param mode Optional definition of how the event should be processed after construction (if at all):
+          *                 CREATE_ONLY: Event is initialised, and no further processing takes place.
+          *                 CREATE_AND_FIRE: Event is initialised, and its event handlers are immediately fired (not suitable for use in interrupts!).
+          *
+          * @code
+          * // Create and launch an event using the default configuration
+          * Event evt(id,DEVICE_BUTTON_EVT_CLICK);
+          *
+          * // Create an event only, do not fire onto an EventModel.
+          * Event evt(id,DEVICE_BUTTON_EVT_CLICK,CREATE_AND_FIRE);
+          * @endcode
+          */
+        Event(uint16_t source, uint16_t value, CODAL_TIMESTAMP currentTimeUs, EventLaunchMode mode = DEVICE_EVENT_DEFAULT_LAUNCH_MODE);
 
         /**
           * Default constructor - initialises all values, and sets timestamp to the current time.

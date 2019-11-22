@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -28,13 +27,7 @@ DEALINGS IN THE SOFTWARE.
  * Implements a base class for such a sensor, using the Steinhart-Hart equation to delineate a result.
  */
 
-#include "CodalConfig.h"
 #include "NonLinearAnalogSensor.h"
-#include "ErrorNo.h"
-#include "Event.h"
-#include "CodalCompat.h"
-#include "CodalFiber.h"
-#include "Timer.h"
 
 using namespace codal;
 
@@ -66,20 +59,21 @@ NonLinearAnalogSensor::NonLinearAnalogSensor(Pin &pin, uint16_t id, float nomina
  */
 void NonLinearAnalogSensor::updateSample()
 {
-    float sensorReading, value;
+    float sensorReading;
+    float value;
 
-    sensorReading = (((1023.0f) * seriesResistor) / _pin.getAnalogValue()) - seriesResistor;
-    value = (1.0f / ((log(sensorReading / nominalReading) / beta) + (1.0f / (nominalValue + zeroOffset)))) - zeroOffset;
+    sensorReading = (((1023.0f) * this->seriesResistor) / this->readValue()) - this->seriesResistor;
+    value = (1.0f / ((log(sensorReading / this->nominalReading) / this->beta) + (1.0f / (this->nominalValue + this->zeroOffset)))) - this->zeroOffset;
 
     // If this is the first reading performed, take it a a baseline. Otherwise, perform a decay average to smooth out the data.
     if (!(status & ANALOG_SENSOR_INITIALISED))
     {
-        sensorValue = value;
-        status |=  ANALOG_SENSOR_INITIALISED;
+        this->sensorValue = value;
+        this->status |=  ANALOG_SENSOR_INITIALISED;
     }
     else
     {
-        sensorValue = (sensorValue * (1.0f - sensitivity)) + (value * sensitivity);
+        this->sensorValue = ((this->sensorValue * (1023 - this->sensitivity)) + ((uint16_t)value * this->sensitivity)) >> 10;
     }
 
     checkThresholding();

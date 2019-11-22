@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -28,9 +27,11 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 #include "CodalComponent.h"
+#include "CodalUtil.h"
+#include "CoordinateSystem.h"
 #include "Pin.h"
 #include "I2C.h"
-#include "CoordinateSystem.h"
+#include "Accelerometer.h"
 
 /**
   * Status flags
@@ -73,97 +74,20 @@ DEALINGS IN THE SOFTWARE.
 #define LIS3DH_INT2_THS        0x36
 #define LIS3DH_INT2_DURATION   0x37
 
-
 /**
   * MMA8653 constants
   */
 #define LIS3DH_WHOAMI_VAL      0x33
 
-#define LIS3DH_SAMPLE_RANGES   4
-#define LIS3DH_SAMPLE_RATES    7
-
-/**
-  * Accelerometer events
-  */
-#define ACCELEROMETER_EVT_DATA_UPDATE              1
-
-/**
-  * Gesture events
-  */
-#define ACCELEROMETER_EVT_NONE                     0
-#define ACCELEROMETER_EVT_TILT_UP                  1
-#define ACCELEROMETER_EVT_TILT_DOWN                2
-#define ACCELEROMETER_EVT_TILT_LEFT                3
-#define ACCELEROMETER_EVT_TILT_RIGHT               4
-#define ACCELEROMETER_EVT_FACE_UP                  5
-#define ACCELEROMETER_EVT_FACE_DOWN                6
-#define ACCELEROMETER_EVT_FREEFALL                 7
-#define ACCELEROMETER_EVT_3G                       8
-#define ACCELEROMETER_EVT_6G                       9
-#define ACCELEROMETER_EVT_8G                       10
-#define ACCELEROMETER_EVT_SHAKE                    11
-
-/**
-  * Gesture recogniser constants
-  */
-#define ACCELEROMETER_REST_TOLERANCE               200
-#define ACCELEROMETER_TILT_TOLERANCE               200
-#define ACCELEROMETER_FREEFALL_TOLERANCE           400
-#define ACCELEROMETER_SHAKE_TOLERANCE              400
-#define ACCELEROMETER_3G_TOLERANCE                 3072
-#define ACCELEROMETER_6G_TOLERANCE                 6144
-#define ACCELEROMETER_8G_TOLERANCE                 8192
-#define ACCELEROMETER_GESTURE_DAMPING              5
-#define ACCELEROMETER_SHAKE_DAMPING                10
-#define ACCELEROMETER_SHAKE_RTX                    30
-
-#define ACCELEROMETER_REST_THRESHOLD               (ACCELEROMETER_REST_TOLERANCE * ACCELEROMETER_REST_TOLERANCE)
-#define ACCELEROMETER_FREEFALL_THRESHOLD           (ACCELEROMETER_FREEFALL_TOLERANCE * ACCELEROMETER_FREEFALL_TOLERANCE)
-#define ACCELEROMETER_3G_THRESHOLD                 (ACCELEROMETER_3G_TOLERANCE * ACCELEROMETER_3G_TOLERANCE)
-#define ACCELEROMETER_6G_THRESHOLD                 (ACCELEROMETER_6G_TOLERANCE * ACCELEROMETER_6G_TOLERANCE)
-#define ACCELEROMETER_8G_THRESHOLD                 (ACCELEROMETER_8G_TOLERANCE * ACCELEROMETER_8G_TOLERANCE)
-#define ACCELEROMETER_SHAKE_COUNT_THRESHOLD        4
-
 namespace codal
 {
-    struct LIS3DHSampleRateConfig
-    {
-        uint32_t        period;
-        uint8_t         value;
-    };
-
-    struct LIS3DHSampleRangeConfig
-    {
-        uint32_t        range;
-        uint8_t         value;
-    };
-
-
-    extern const LIS3DHSampleRangeConfig LIS3DHSampleRange[];
-    extern const LIS3DHSampleRateConfig LIS3DHSampleRate[];
-
-    struct ShakeHistory
-    {
-        uint16_t    shaken:1,
-                    x:1,
-                    y:1,
-                    z:1,
-                    unused,
-                    impulse_3,
-                    impulse_6,
-                    impulse_8,
-                    count:8;
-
-        uint16_t    timer;
-    };
-
     /**
      * Class definition for Accelerometer.
      *
      * Represents an implementation of the Freescale MMA8653 3 axis accelerometer
      * Also includes basic data caching and on demand activation.
      */
-    class LIS3DH : public CodalComponent
+    class LIS3DH : public Accelerometer
     {
         I2C&            i2c;                // The I2C interface to use.
         Pin             &int1;              // Data ready interrupt.
@@ -171,14 +95,6 @@ namespace codal
         uint16_t        samplePeriod;       // The time between samples, in milliseconds.
         uint8_t         sampleRange;        // The sample range of the accelerometer in g.
         Sample3D        sample;             // The last sample read.
-        float           pitch;              // Pitch of the device, in radians.
-        float           roll;               // Roll of the device, in radians.
-        uint8_t         sigma;              // the number of ticks that the instantaneous gesture has been stable.
-        uint8_t         impulseSigma;       // the number of ticks since an impulse event has been generated.
-        uint16_t        lastGesture;        // the last, stable gesture recorded.
-        uint16_t        currentGesture;     // the instantaneous, unfiltered gesture detected.
-        ShakeHistory    shake;              // State information needed to detect shake events.
-        CoordinateSystem coordinateSystem;  // the orientation of the driver
 
         public:
 
@@ -200,7 +116,84 @@ namespace codal
           * Accelerometer accelerometer = Accelerometer(i2c);
           * @endcode
          */
-        LIS3DH(I2C &_i2c, Pin &_int1, uint16_t address = LIS3DH_DEFAULT_ADDR, uint16_t id = DEVICE_ID_ACCELEROMETER, CoordinateSystem coordinateSystem = SIMPLE_CARTESIAN);
+        LIS3DH(I2C &_i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address = LIS3DH_DEFAULT_ADDR,  uint16_t id = DEVICE_ID_ACCELEROMETER);
+
+        /**
+          * Attempts to set the sample rate of the accelerometer to the specified value (in ms).
+          *
+          * @param period the requested time between samples, in milliseconds.
+          *
+          * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
+          *
+          * @code
+          * // sample rate is now 20 ms.
+          * accelerometer.setPeriod(20);
+          * @endcode
+          *
+          * @note The requested rate may not be possible on the hardware. In this case, the
+          * nearest lower rate is chosen.
+          */
+        int setPeriod(int period);
+
+        /**
+          * Reads the currently configured sample rate of the accelerometer.
+          *
+          * @return The time between samples, in milliseconds.
+          */
+        virtual int getPeriod();
+
+        /**
+          * Attempts to set the sample range of the accelerometer to the specified value (in g).
+          *
+          * @param range The requested sample range of samples, in g.
+          *
+          * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
+          *
+          * @code
+          * // the sample range of the accelerometer is now 8G.
+          * accelerometer.setRange(8);
+          * @endcode
+          *
+          * @note The requested range may not be possible on the hardware. In this case, the
+          * nearest lower range is chosen.
+          */
+        int setRange(int range);
+
+        /**
+          * Reads the currently configured sample range of the accelerometer.
+          *
+          * @return The sample range, in g.
+          */
+        virtual int getRange();
+
+        /**
+          * Attempts to read the 8 bit ID from the accelerometer, this can be used for
+          * validation purposes.
+          *
+          * @return the 8 bit ID returned by the accelerometer, or DEVICE_I2C_ERROR if the request fails.
+          *
+          * @code
+          * accelerometer.whoAmI();
+          * @endcode
+          */
+        int whoAmI();
+
+        /**
+          * Reads the accelerometer data from the latest update retrieved from the accelerometer.
+          * Data is provided in ENU format, relative to the device package (and makes no attempt
+          * to align axes to the device).
+          *
+          * @return The force measured in each axis, in milli-g.
+          *
+          */
+        Sample3D getSample();
+
+        /**
+          * A periodic callback invoked by the fiber scheduler idle thread.
+          *
+          * Internally calls updateSample().
+          */
+        virtual void idleCallback();
 
         /**
           * Configures the accelerometer for G range and sample rate defined
@@ -228,206 +221,24 @@ namespace codal
         int updateSample();
 
         /**
-          * Attempts to set the sample rate of the accelerometer to the specified value (in ms).
-          *
-          * @param period the requested time between samples, in milliseconds.
-          *
-          * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
-          *
-          * @code
-          * // sample rate is now 20 ms.
-          * accelerometer.setPeriod(20);
-          * @endcode
-          *
-          * @note The requested rate may not be possible on the hardware. In this case, the
-          * nearest lower rate is chosen.
-          */
-        int setPeriod(int period);
-
-        /**
-          * Reads the currently configured sample rate of the accelerometer.
-          *
-          * @return The time between samples, in milliseconds.
-          */
-        int getPeriod();
-
-        /**
-          * Attempts to set the sample range of the accelerometer to the specified value (in g).
-          *
-          * @param range The requested sample range of samples, in g.
-          *
-          * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
-          *
-          * @code
-          * // the sample range of the accelerometer is now 8G.
-          * accelerometer.setRange(8);
-          * @endcode
-          *
-          * @note The requested range may not be possible on the hardware. In this case, the
-          * nearest lower range is chosen.
-          */
-        int setRange(int range);
-
-        /**
-          * Reads the currently configured sample range of the accelerometer.
-          *
-          * @return The sample range, in g.
-          */
-        int getRange();
-
-        /**
-          * Attempts to read the 8 bit ID from the accelerometer, this can be used for
-          * validation purposes.
-          *
-          * @return the 8 bit ID returned by the accelerometer, or DEVICE_I2C_ERROR if the request fails.
-          *
-          * @code
-          * accelerometer.whoAmI();
-          * @endcode
-          */
-        int whoAmI();
-
-        /**
-          * Reads the value of the X axis from the latest update retrieved from the accelerometer.
-          *
-          * @param system The coordinate system to use. By default, a simple cartesian system is provided.
-          *
-          * @return The force measured in the X axis, in milli-g.
-          *
-          * @code
-          * accelerometer.getX();
-          * @endcode
-          */
-        int getX();
-
-        /**
-          * Reads the value of the Y axis from the latest update retrieved from the accelerometer.
-          *
-          * @return The force measured in the Y axis, in milli-g.
-          *
-          * @code
-          * accelerometer.getY();
-          * @endcode
-          */
-        int getY();
-
-        /**
-          * Reads the value of the Z axis from the latest update retrieved from the accelerometer.
-          *
-          * @return The force measured in the Z axis, in milli-g.
-          *
-          * @code
-          * accelerometer.getZ();
-          * @endcode
-          */
-        int getZ();
-
-        /**
-          * Provides a rotation compensated pitch of the device, based on the latest update retrieved from the accelerometer.
-          *
-          * @return The pitch of the device, in degrees.
-          *
-          * @code
-          * accelerometer.getPitch();
-          * @endcode
-          */
-        int getPitch();
-
-        /**
-          * Provides a rotation compensated pitch of the device, based on the latest update retrieved from the accelerometer.
-          *
-          * @return The pitch of the device, in radians.
-          *
-          * @code
-          * accelerometer.getPitchRadians();
-          * @endcode
-          */
-        float getPitchRadians();
-
-        /**
-          * Provides a rotation compensated roll of the device, based on the latest update retrieved from the accelerometer.
-          *
-          * @return The roll of the device, in degrees.
-          *
-          * @code
-          * accelerometer.getRoll();
-          * @endcode
-          */
-        int getRoll();
-
-        /**
-          * Provides a rotation compensated roll of the device, based on the latest update retrieved from the accelerometer.
-          *
-          * @return The roll of the device, in radians.
-          *
-          * @code
-          * accelerometer.getRollRadians();
-          * @endcode
-          */
-        float getRollRadians();
-
-        /**
-          * Retrieves the last recorded gesture.
-          *
-          * @return The last gesture that was detected.
-          *
-          * Example:
-          * @code
-          *
-          * if (accelerometer.getGesture() == SHAKE)
-          *     display.scroll("SHAKE!");
-          * @endcode
-          */
-        uint16_t getGesture();
-
-        /**
-          * A periodic callback invoked by the fiber scheduler idle thread.
-          *
-          * Internally calls updateSample().
-          */
-        virtual void idleCallback();
+         * Poll to see if new data is available from the hardware. If so, update it.
+         * n.b. it is not necessary to explicitly call this function to update data
+         * (it normally happens in the background when the scheduler is idle), but a check is performed
+         * if the user explicitly requests up to date data.
+         *
+         * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the update fails.
+         *
+         * @note This method should be overidden by the hardware driver to implement the requested
+         * changes in hardware.
+         */
+        virtual int requestUpdate();
 
         /**
           * Destructor.
           */
         ~LIS3DH();
 
-        private:
-
-        /**
-          * Recalculate roll and pitch values for the current sample.
-          *
-          * @note We only do this at most once per sample, as the necessary trigonemteric functions are rather
-          *       heavyweight for a CPU without a floating point unit.
-          */
-        void recalculatePitchRoll();
-
-        /**
-          * Updates the basic gesture recognizer. This performs instantaneous pose recognition, and also some low pass filtering to promote
-          * stability.
-          */
-        void updateGesture();
-
-        /**
-          * A service function.
-          * It calculates the current scalar acceleration of the device (x^2 + y^2 + z^2).
-          * It does not, however, square root the result, as this is a relatively high cost operation.
-          *
-          * This is left to application code should it be needed.
-          *
-          * @return the sum of the square of the acceleration of the device across all axes.
-          */
-        int instantaneousAccelerationSquared();
-
-        /**
-         * Service function.
-         * Determines a 'best guess' posture of the device based on instantaneous data.
-         *
-         * This makes no use of historic data, and forms this input to the filter implemented in updateGesture().
-         *
-         * @return A 'best guess' of the current posture of the device, based on instanataneous data.
-         */
-        uint16_t instantaneousPosture();
+        virtual int setSleep(bool sleepMode);
     };
 }
 

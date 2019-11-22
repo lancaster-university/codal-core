@@ -1,8 +1,7 @@
 /*
 The MIT License (MIT)
 
-Copyright (c) 2016 British Broadcasting Corporation.
-This software is provided by Lancaster University by arrangement with the BBC.
+Copyright (c) 2017 Lancaster University.
 
 Permission is hereby granted, free of charge, to any person obtaining a
 copy of this software and associated documentation files (the "Software"),
@@ -77,7 +76,7 @@ namespace codal
      * Class definition for AnimatedDisplay.
      *
      * This class provides a high level abstraction level to show text and graphic animations on a
-     * Display, e.g. on the MicroBit LED matrix display.
+     * Display, e.g. on the LED matrix display.
      */
     class AnimatedDisplay : public CodalComponent
     {
@@ -111,10 +110,10 @@ namespace codal
         ManagedString scrollingText;
 
         // The index of the character currently being displayed.
-        uint16_t scrollingChar;
+        int16_t scrollingChar;
 
         // The number of pixels the current character has been shifted on the display.
-        uint8_t scrollingPosition;
+        int8_t scrollingPosition;
 
         //
         // State for printString() method.
@@ -126,7 +125,7 @@ namespace codal
         ManagedString printingText;
 
         // The index of the character currently being displayed.
-        uint16_t printingChar;
+        int16_t printingChar;
 
         //
         // State for scrollImage() method.
@@ -200,7 +199,7 @@ namespace codal
          *
          * Create a software representation of an animated display.
          * This class provides a high level abstraction level to show text and graphic animations on a
-         * CodalDisplay, e.g. on the MicroBit LED matrix display.
+         * CodalDisplay, e.g. on the LED matrix display.
          *
          * @param display The CodalDisplay instance that is used to show the text and graphic animations of this class
          *
