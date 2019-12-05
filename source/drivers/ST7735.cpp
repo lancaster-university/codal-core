@@ -65,7 +65,7 @@
 namespace codal
 {
 
-ST7735::ST7735(ScreenIO &io, Pin &cs, Pin &dc) : io(io), cs(cs), dc(dc), work(NULL)
+ST7735::ST7735(ScreenIO &io, Pin &cs, Pin &dc) : io(io), cs(&cs), dc(&dc), work(NULL)
 {
     double16 = false;
 }
@@ -239,7 +239,7 @@ void ST7735::sendColorsStep(ST7735 *st)
         }
         st->startRAMWR(0x2D);
         st->io.send(work->dataBuf, 128);
-        st->cs.setDigitalValue(1);
+        st->endCS();
     }
 
     if (work->x == 0)
@@ -267,7 +267,7 @@ void ST7735::sendColorsStep(ST7735 *st)
     {
         if (work->srcLeft == 0)
         {
-            st->cs.setDigitalValue(1);
+            st->endCS();
             Event(DEVICE_ID_DISPLAY, 100);
         }
         else
@@ -296,8 +296,8 @@ void ST7735::startRAMWR(int cmd)
     cmdBuf[0] = cmd;
     sendCmd(cmdBuf, 1);
 
-    dc.setDigitalValue(1);
-    cs.setDigitalValue(0);
+    setData();
+    beginCS();
 }
 
 void ST7735::sendDone(Event)
@@ -384,15 +384,15 @@ void ST7735::sendCmd(uint8_t *buf, int len)
     if (buf != cmdBuf)
         memcpy(cmdBuf, buf, len);
     buf = cmdBuf;
-    dc.setDigitalValue(0);
-    cs.setDigitalValue(0);
+    setCommand();
+    beginCS();
     io.send(buf, 1);
-    dc.setDigitalValue(1);
+    setData();
     len--;
     buf++;
     if (len > 0)
         io.send(buf, len);
-    cs.setDigitalValue(1);
+    endCS();
 }
 
 void ST7735::sendCmdSeq(const uint8_t *buf)
@@ -425,8 +425,8 @@ void ST7735::setAddrWindow(int x, int y, int w, int h)
 
 int ST7735::init()
 {
-    cs.setDigitalValue(1);
-    dc.setDigitalValue(1);
+    endCS();
+    setData();
 
     fiber_sleep(10); // TODO check if delay needed
     sendCmdSeq(initCmds);

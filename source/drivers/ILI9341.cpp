@@ -155,8 +155,8 @@ ILI9341::ILI9341(ScreenIO &io, Pin &cs, Pin &dc) : ST7735(io, cs, dc)
 
 int ILI9341::init()
 {
-    cs.setDigitalValue(1);
-    dc.setDigitalValue(1);
+    endCS();
+    setData();
 
     fiber_sleep(10);
     sendCmdSeq(initcmd);
