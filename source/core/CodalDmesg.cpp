@@ -93,19 +93,27 @@ static void logwritenum(uint32_t n, bool full, bool hex)
     logwrite(buff);
 }
 
+void codal_dmesg_nocrlf(const char *format, ...)
+{
+    va_list arg;
+    va_start(arg, format);
+    codal_vdmesg(format, false, arg);
+    va_end(arg);
+}
+
 void codal_dmesg(const char *format, ...)
 {
     va_list arg;
     va_start(arg, format);
-    codal_vdmesg(format, arg);
+    codal_vdmesg(format, true, arg);
     va_end(arg);
 }
 
-void codal_dmesgf(const char *format, ...)
+void codal_dmesg_with_flush(const char *format, ...)
 {
     va_list arg;
     va_start(arg, format);
-    codal_vdmesg(format, arg);
+    codal_vdmesg(format, true, arg);
     va_end(arg);
     codal_dmesg_flush();
 }
@@ -121,7 +129,7 @@ void codal_dmesg_flush()
         dmesg_flush_fn();
 }
 
-void codal_vdmesg(const char *format, va_list ap)
+void codal_vdmesg(const char *format, bool crlf, va_list ap)
 {
     const char *end = format;
 
@@ -161,7 +169,10 @@ void codal_vdmesg(const char *format, va_list ap)
         }
     }
     logwriten(format, end - format);
-    logwrite("\r\n");
+
+    if (crlf)
+        logwrite("\r\n");
+
     target_enable_irq();
 }
 
