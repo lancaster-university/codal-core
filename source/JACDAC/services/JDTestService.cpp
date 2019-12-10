@@ -9,7 +9,8 @@ JDTestService::JDTestService(ManagedString serviceName, JDServiceMode m) : JDSer
 
 int JDTestService::handlePacket(JDPacket* p)
 {
-    DMESG("REC N: %d F: %d->%d N: %s M: %c%c%c", *((uint32_t*)p->data), p->device_address, p->service_number, this->name.toCharArray(), (this->mode == ClientService) ? "C":"", (this->mode == HostService) ? "H":"", (this->mode == BroadcastHostService) ? "B":"");
+    uint32_t *data = (uint32_t *)p->data;
+    DMESG("REC N: %d F: %d->%d N: %s M: %c%c%c", *data, p->device_address, p->service_number, this->name.toCharArray(), (this->mode == ClientService) ? "C":"", (this->mode == HostService) ? "H":"", (this->mode == BroadcastHostService) ? "B":"");
     return DEVICE_OK;
 }
 
