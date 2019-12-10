@@ -67,15 +67,17 @@ extern struct CodalLogStore codalLogStore;
   * @endcode
   */
 void codal_dmesg(const char *format, ...);
-void codal_dmesgf(const char *format, ...);
+void codal_dmesg_nocrlf(const char *format, ...);
+void codal_dmesg_with_flush(const char *format, ...);
 
 void codal_dmesg_set_flush_fn(void (*fn)(void));
 void codal_dmesg_flush();
 
-void codal_vdmesg(const char *format, va_list ap);
+void codal_vdmesg(const char *format, bool crlf, va_list ap);
 
-#define DMESG  codal_dmesg
-#define DMESGF  codal_dmesgf
+#define DMESG   codal_dmesg
+#define DMESGN  codal_dmesg_nocrlf
+#define DMESGF  codal_dmesg_with_flush
 
 #ifdef __cplusplus
 }

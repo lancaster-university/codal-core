@@ -74,13 +74,13 @@ void device_heap_print(HeapDefinition &heap)
 
     if (heap.heap_start == NULL)
     {
-        DMESG("--- HEAP NOT INITIALISED ---\n");
+        DMESG("--- HEAP NOT INITIALISED ---");
         return;
     }
 
-    DMESG("heap_start : %d\n", heap.heap_start);
-    DMESG("heap_end   : %d\n", heap.heap_end);
-    DMESG("heap_size  : %d\n", (int)heap.heap_end - (int)heap.heap_start);
+    DMESG("heap_start : %p", heap.heap_start);
+    DMESG("heap_end   : %p", heap.heap_end);
+    DMESG("heap_size  : %d", (int)heap.heap_end - (int)heap.heap_start);
 
     // Disable IRQ temporarily to ensure no race conditions!
     target_disable_irq();
@@ -90,9 +90,9 @@ void device_heap_print(HeapDefinition &heap)
     {
         blockSize = *block & ~DEVICE_HEAP_BLOCK_FREE;
         if (*block & DEVICE_HEAP_BLOCK_FREE)
-            DMESG("[F:%d] ", blockSize*DEVICE_HEAP_BLOCK_SIZE);
+            DMESGN("[F:%d] ", blockSize*DEVICE_HEAP_BLOCK_SIZE);
         else
-            DMESG("[U:%d] ", blockSize*DEVICE_HEAP_BLOCK_SIZE);
+            DMESGN("[U:%d] ", blockSize*DEVICE_HEAP_BLOCK_SIZE);
 
         if (*block & DEVICE_HEAP_BLOCK_FREE)
             totalFreeBlock += blockSize;
@@ -106,8 +106,8 @@ void device_heap_print(HeapDefinition &heap)
     target_enable_irq();
 
     DMESG("\n");
-    DMESG("mb_total_free : %d\n", totalFreeBlock*DEVICE_HEAP_BLOCK_SIZE);
-    DMESG("mb_total_used : %d\n", totalUsedBlock*DEVICE_HEAP_BLOCK_SIZE);
+    DMESG("mb_total_free : %d", totalFreeBlock*DEVICE_HEAP_BLOCK_SIZE);
+    DMESG("mb_total_used : %d", totalUsedBlock*DEVICE_HEAP_BLOCK_SIZE);
 }
 
 
@@ -116,7 +116,7 @@ void device_heap_print()
 {
     for (int i=0; i < heap_count; i++)
     {
-        DMESG("\nHEAP %d: \n", i);
+        DMESG("\nHEAP %d: ", i);
         device_heap_print(heap[i]);
     }
 }
@@ -317,7 +317,7 @@ void* device_malloc (size_t size)
     if (p != NULL)
     {
 #if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
-            DMESG("device_malloc: ALLOCATED: %d [%p]\n", size, p);
+            DMESG("device_malloc: ALLOCATED: %d [%p]", size, p);
 #endif
             return p;
     }
@@ -325,7 +325,7 @@ void* device_malloc (size_t size)
     // We're totally out of options (and memory!).
 #if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
     // Keep everything transparent if we've not been initialised yet
-    DMESG("device_malloc: OUT OF MEMORY [%d]\n", size);
+    DMESG("device_malloc: OUT OF MEMORY [%d]", size);
 #endif
 
 #if CONFIG_ENABLED(DEVICE_PANIC_HEAP_FULL)
@@ -348,7 +348,7 @@ void device_free (void *mem)
 
 #if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
     if (heap_count > 0)
-        DMESG("device_free:   %p\n", mem);
+        DMESG("device_free:   %p", mem);
 #endif
     // Sanity check.
     if (memory == NULL)
