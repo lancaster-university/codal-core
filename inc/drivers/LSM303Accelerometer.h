@@ -99,7 +99,6 @@ namespace codal
     I2C&            i2c;                    // The I2C interface to use.
     Pin&            int1;                   // Data ready interrupt.
     uint16_t        address;                // I2C address of this accelerometer.
-    bool            irqLevel;               // Polarity of interrupt line (active HI/LO)
 
     public:
 
@@ -111,7 +110,7 @@ namespace codal
      * @param id The unique EventModel id of this component. Defaults to: MICROBIT_ID_ACCELEROMETER
      *
      */
-    LSM303Accelerometer(I2C& _i2c, Pin &_int1,  bool activeHi, CoordinateSpace &coordinateSpace, uint16_t address = LSM303_A_DEFAULT_ADDR, uint16_t id = DEVICE_ID_ACCELEROMETER);
+    LSM303Accelerometer(I2C& _i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address = LSM303_A_DEFAULT_ADDR, uint16_t id = DEVICE_ID_ACCELEROMETER);
 
     /**
      * Configures the accelerometer for G range and sample rate defined
