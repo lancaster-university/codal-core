@@ -75,6 +75,10 @@ DEALINGS IN THE SOFTWARE.
 #define LSM303_OUTZ_L_REG_M				  0x6C
 #define LSM303_OUTZ_H_REG_M				  0x6D
 
+/**
+  * LSM303_M constants
+  */
+#define LSM303_M_STATUS_DATA_READY    0x08
 
 /**
  * Class definition for LSM303_M.
