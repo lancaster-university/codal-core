@@ -237,43 +237,35 @@ int FXOS8700::updateSample()
     // Poll interrupt line from device (ACTIVE LOW)
     if(int1.getDigitalValue() == irqLevel)
     {
-        uint8_t data[12];
-        uint8_t *ptr;
+        uint8_t buffer[12];
+        int16_t data[6]; 
+        uint8_t *ptr = (uint8_t *)data;
         int result;
 
         // Read the combined accelerometer and magnetometer data.
-        result = i2c.readRegister(address, FXOS8700_OUT_X_MSB, data, 12);
+        result = i2c.readRegister(address, FXOS8700_OUT_X_MSB, buffer, 12);
 
         if (result !=0)
             return DEVICE_I2C_ERROR;
 
         // read sensor data (and translate into signed little endian)
-        ptr = (uint8_t *)&accelerometerSample;
-        *ptr++ = data[1];
-        *ptr++ = data[0];
-        *ptr++ = data[3];
-        *ptr++ = data[2];
-        *ptr++ = data[5];
-        *ptr++ = data[4];
+        for (int i=0; i<6; i++)
+        {
+            *ptr++ = buffer[(i*2)+1];
+            *ptr++ = buffer[(i*2)];
+        }
 
-        ptr = (uint8_t *)&magnetometerSample;
-        *ptr++ = data[7];
-        *ptr++ = data[6];
-        *ptr++ = data[9];
-        *ptr++ = data[8];
-        *ptr++ = data[11];
-        *ptr++ = data[10];
-
-        // scale the 14 bit data (packed into 16 bits) into SI units (milli-g)
-        accelerometerSample.x = (accelerometerSample.x * this->sampleRange) / 32;
-        accelerometerSample.y = (accelerometerSample.y * this->sampleRange) / 32;
-        accelerometerSample.z = (accelerometerSample.z * this->sampleRange) / 32;
+        // Scale to match SI units (mostly) and package into Sample3D structures
+        accelerometerSample.x = (((int)data[0]) * this->sampleRange) / 32;
+        accelerometerSample.y = (((int)data[1]) * this->sampleRange) / 32;
+        accelerometerSample.z = (((int)data[2]) * this->sampleRange) / 32;
+        magnetometerSample.x = (((int)data[3]) * this->sampleRange) / 32;
+        magnetometerSample.y = (((int)data[4]) * this->sampleRange) / 32;
+        magnetometerSample.z = (((int)data[5]) * this->sampleRange) / 32;
 
         // align to ENU coordinate system
         accelerometerSample.x = -accelerometerSample.x;
         magnetometerSample.x = -magnetometerSample.x;
-
-        //DMESG("ENU: [AX:%d][AY:%d][AZ:%d][MX:%d][MY:%d][MZ:%d]", accelerometerSample.x, accelerometerSample.y, accelerometerSample.z, magnetometerSample.x, magnetometerSample.y, magnetometerSample.z);
 
         if (accelerometerAPI)
             accelerometerAPI->dataReady();
