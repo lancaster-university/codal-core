@@ -178,7 +178,7 @@ int FXOS8700::configure()
   * @param address the default I2C address of the accelerometer. Defaults to: FXS8700_DEFAULT_ADDR.
   *
  */
-FXOS8700::FXOS8700(I2C& _i2c, Pin &_int1, uint16_t address) : i2c(_i2c), int1(_int1), accelerometerSample(), magnetometerSample()
+FXOS8700::FXOS8700(I2C& _i2c, Pin &_int1, bool activeHi, uint16_t address) : i2c(_i2c), int1(_int1), irqLevel(activeHi), accelerometerSample(), magnetometerSample()
 {
     // Store our identifiers.
     this->status = 0;
@@ -235,7 +235,7 @@ int FXOS8700::updateSample()
     status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 
     // Poll interrupt line from device (ACTIVE LOW)
-    if(int1.getDigitalValue() == 0)
+    if(int1.getDigitalValue() == irqLevel)
     {
         uint8_t data[12];
         uint8_t *ptr;
