@@ -123,7 +123,7 @@ int FXOS8700Accelerometer::requestUpdate()
  */
 void FXOS8700Accelerometer::dataReady()
 {
-    // Simply read the data from the hardwae driver, and inject it into the higher level accelerometer buffer.
+    // Simply read the data from the hardware driver, and inject it into the higher level accelerometer buffer.
     update(fxo.getAccelerometerSample());
 }
 
