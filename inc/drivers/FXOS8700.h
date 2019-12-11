@@ -186,6 +186,7 @@ namespace codal
         I2C&            i2c;                    // The I2C interface to use.
         Pin             &int1;                  // Data ready interrupt.
         uint16_t        address;                // I2C address of this accelerometer.
+        bool            irqLevel;               // Polarity of interrupt line (active HI/LO)
         uint16_t        samplePeriod;           // The time between samples, in milliseconds.
         uint8_t         sampleRange;            // The sample range of the accelerometer in g.
         Sample3D        accelerometerSample;    // Scaled but non-transformed data from the sensor.
@@ -205,7 +206,7 @@ namespace codal
           * @param address the default I2C address of the accelerometer. Defaults to: FXOS8700_DEFAULT_ADDR.
           *
          */
-        FXOS8700(I2C &_i2c, Pin &_int1, uint16_t address = FXOS8700_DEFAULT_ADDR);
+        FXOS8700(I2C &_i2c, Pin &_int1, bool activeHi, uint16_t address = FXOS8700_DEFAULT_ADDR);
 
         /**
           * Configures the accelerometer for G range and sample rate defined
