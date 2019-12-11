@@ -156,6 +156,11 @@ DEALINGS IN THE SOFTWARE.
 #define FXOS8700_A_FFMT_THS_Z_MSB   0x77
 #define FXOS8700_A_FFMT_THS_Z_LSB   0x78
 
+// Constants 
+#define FXOS8700_STATUS_DATA_READY  0x07
+
+
+
 
 /**
   * MMA8653 constants

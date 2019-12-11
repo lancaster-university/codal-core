@@ -131,6 +131,13 @@ int LSM303Magnetometer::requestUpdate()
         int16_t *y;
         int16_t *z;
 
+#if CONFIG_ENABLED(DEVICE_I2C_IRQ_SHARED)
+        // Determine if this device has all its data ready (we may be on a shared IRQ line)
+        uint8_t status_reg = i2c.readRegister(address, LSM303_STATUS_REG_M);
+        if((status_reg & LSM303_M_STATUS_DATA_READY) != LSM303_M_STATUS_DATA_READY)
+            return DEVICE_OK;
+#endif
+
         // Read the combined accelerometer and magnetometer data.
         result = i2c.readRegister(address, LSM303_OUTX_L_REG_M | 0x80, data, 6);
 

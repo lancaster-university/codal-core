@@ -86,6 +86,8 @@ DEALINGS IN THE SOFTWARE.
   * LSM303_A constants
   */
 #define LSM303_A_WHOAMI_VAL           0x33
+#define LSM303_A_STATUS_DATA_READY    0x08
+
 namespace codal
 {
   /**

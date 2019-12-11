@@ -242,9 +242,15 @@ int FXOS8700::updateSample()
         uint8_t *ptr = (uint8_t *)data;
         int result;
 
+#if CONFIG_ENABLED(DEVICE_I2C_IRQ_SHARED)
+        // Determine if this device has all its data ready (we may be on a shared IRQ line)
+        uint8_t status_reg = i2c.readRegister(address, FXOS8700_STATUS_REG);
+        if((status_reg & FXOS8700_STATUS_DATA_READY) != FXOS8700_STATUS_DATA_READY)
+            return DEVICE_OK;
+#endif
+     
         // Read the combined accelerometer and magnetometer data.
         result = i2c.readRegister(address, FXOS8700_OUT_X_MSB, buffer, 12);
-
         if (result !=0)
             return DEVICE_I2C_ERROR;
 
