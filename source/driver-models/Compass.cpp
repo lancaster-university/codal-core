@@ -225,6 +225,17 @@ void Compass::clearCalibration()
 }
 
 /**
+ *
+ * Defines the accelerometer to be used for tilt compensation.
+ *
+ * @param acceleromter Reference to the accelerometer to use.
+ */
+void Compass::setAccelerometer(Accelerometer &accelerometer)
+{
+    this->accelerometer = &accelerometer;
+}
+
+/**
  * Configures the device for the sample rate defined
  * in this object. The nearest values are chosen to those defined
  * that are supported by the hardware. The instance variables are then

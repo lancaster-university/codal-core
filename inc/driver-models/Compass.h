@@ -167,6 +167,12 @@ namespace codal
          */
         void clearCalibration();
 
+        /**
+         * Defines the accelerometer to be used for tilt compensation.
+         *
+         * @param acceleromter Reference to the accelerometer to use.
+         */
+        void setAccelerometer(Accelerometer &accelerometer);
 
         /**
           * Configures the device for the sample rate defined
