@@ -69,14 +69,14 @@ namespace codal
         RAW,
         SIMPLE_CARTESIAN,
         NORTH_EAST_DOWN,
-        NORTH_EAST_UP
+        EAST_NORTH_UP
     };
 
     struct Sample3D
     {
-        int16_t         x;
-        int16_t         y;
-        int16_t         z;
+        int         x;
+        int         y;
+        int         z;
 
         Sample3D()
         {
@@ -92,6 +92,28 @@ namespace codal
             this->z = z;
         }
 
+        Sample3D operator-(const Sample3D& other) const
+        {
+            Sample3D result;
+
+            result.x = x - other.x;
+            result.y = y - other.y;
+            result.z = z - other.z;
+
+            return result;
+        }
+
+        Sample3D operator+(const Sample3D& other) const
+        {
+            Sample3D result;
+
+            result.x = x + other.x;
+            result.y = y + other.y;
+            result.z = z + other.z;
+
+            return result;
+        }
+
         bool operator==(const Sample3D& other) const
         {
             return x == other.x && y == other.y && z == other.z;
@@ -101,6 +123,16 @@ namespace codal
         {
             return !(x == other.x && y == other.y && z == other.z);
         }
+
+        float dSquared(Sample3D &s)
+        {
+            float dx = x - s.x;
+            float dy = y - s.y;
+            float dz = z - s.z;
+
+            return (dx*dx) + (dy*dy) + (dz*dz);
+        }
+
     };
 
 
