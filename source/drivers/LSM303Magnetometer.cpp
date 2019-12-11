@@ -96,7 +96,7 @@ int LSM303Magnetometer::configure()
   * @param address the default I2C address of the magnetometer. Defaults to: FXS8700_DEFAULT_ADDR.
   *
  */
-LSM303Magnetometer::LSM303Magnetometer(I2C &_i2c, Pin &_int1, bool activeHi, CoordinateSpace &coordinateSpace, uint16_t address, uint16_t id) : Compass(coordinateSpace, id), i2c(_i2c), int1(_int1), irqLevel(activeHi)
+LSM303Magnetometer::LSM303Magnetometer(I2C &_i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address, uint16_t id) : Compass(coordinateSpace, id), i2c(_i2c), int1(_int1)
 {
     // Store our identifiers.
     this->address = address;
@@ -122,8 +122,8 @@ int LSM303Magnetometer::requestUpdate()
     // Ensure we're scheduled to update the data periodically
     status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 
-    // Poll interrupt line from device (ACTIVE LO)
-    if(int1.getDigitalValue() == irqLevel)
+    // Poll interrupt line from device 
+    if(int1.isActive())
     {
         uint8_t data[6];
         int result;

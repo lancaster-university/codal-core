@@ -76,7 +76,7 @@ CREATE_KEY_VALUE_TABLE(accelerometerPeriod, accelerometerPeriodData);
  * @param id The unique EventModel id of this component. Defaults to: MICROBIT_ID_ACCELEROMETER
  *
  */
-LSM303Accelerometer::LSM303Accelerometer(I2C& _i2c, Pin &_int1, bool activeHi, CoordinateSpace &coordinateSpace, uint16_t address, uint16_t id) : Accelerometer(coordinateSpace, id), i2c(_i2c), int1(_int1), irqLevel(activeHi)
+LSM303Accelerometer::LSM303Accelerometer(I2C& _i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address, uint16_t id) : Accelerometer(coordinateSpace, id), i2c(_i2c), int1(_int1)
 {
     // Store our identifiers.
     this->status = 0;
@@ -150,8 +150,8 @@ int LSM303Accelerometer::requestUpdate()
     // Ensure we're scheduled to update the data periodically
     status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 
-    // Poll interrupt line from device (ACTIVE LO)
-    if(int1.getDigitalValue() == irqLevel)
+    // Poll interrupt line from device
+    if(int1.isActive())
     {
         uint8_t data[6];
         int result;
