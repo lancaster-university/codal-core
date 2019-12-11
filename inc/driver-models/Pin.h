@@ -28,15 +28,16 @@ DEALINGS IN THE SOFTWARE.
 #include <Pin.h>
 #include "CodalConfig.h"
 #include "CodalComponent.h"
-                                                        // Status Field flags...
-#define IO_STATUS_DIGITAL_IN                0x01        // Pin is configured as a digital input, with no pull up.
-#define IO_STATUS_DIGITAL_OUT               0x02        // Pin is configured as a digital output
-#define IO_STATUS_ANALOG_IN                 0x04        // Pin is Analog in
-#define IO_STATUS_ANALOG_OUT                0x08        // Pin is Analog out
-#define IO_STATUS_TOUCH_IN                  0x10        // Pin is a makey-makey style touch sensor
-#define IO_STATUS_EVENT_ON_EDGE             0x20        // Pin will generate events on pin change
-#define IO_STATUS_EVENT_PULSE_ON_EDGE       0x40        // Pin will generate events on pin change
-#define IO_STATUS_INTERRUPT_ON_EDGE         0x80        // Pin will generate events on pin change
+                                                          // Status Field flags...
+#define IO_STATUS_DIGITAL_IN                0x0001        // Pin is configured as a digital input, with no pull up.
+#define IO_STATUS_DIGITAL_OUT               0x0002        // Pin is configured as a digital output
+#define IO_STATUS_ANALOG_IN                 0x0004        // Pin is Analog in
+#define IO_STATUS_ANALOG_OUT                0x0008        // Pin is Analog out
+#define IO_STATUS_TOUCH_IN                  0x0010        // Pin is a makey-makey style touch sensor
+#define IO_STATUS_EVENT_ON_EDGE             0x0020        // Pin will generate events on pin change
+#define IO_STATUS_EVENT_PULSE_ON_EDGE       0x0040        // Pin will generate events on pin change
+#define IO_STATUS_INTERRUPT_ON_EDGE         0x0080        // Pin will generate events on pin change
+#define IO_STATUS_ACTIVE_HI                 0x0100        // Pin is ACTIVE_HI if set, or ACTIVE_LO if clear
 
 #define DEVICE_PIN_MAX_OUTPUT             1023
 
@@ -118,7 +119,7 @@ namespace codal
           */
         Pin(int id, PinNumber name, PinCapability capability)
         {
-            this->status = 0;
+            this->status = IO_STATUS_ACTIVE_HI;
             this->id = id;
             this->name = name;
             this->capability = capability;
@@ -442,6 +443,47 @@ namespace codal
                   return DEVICE_OK;
               }
               return DEVICE_BUSY;
+        }
+        
+        /**
+          * Determines if pin is active, taking into account polarity information
+          * defined by setActive(). 
+          * 
+          * By default, pins are ACTIVE_HI (a high voltage implies a TRUE logic state).
+          *
+          * @return 1 if the digital value read from this pin matches its active polarity state, and 0 otherwise.
+          */
+        int isActive()
+        {
+            return !(status & IO_STATUS_ACTIVE_HI) == !getDigitalValue();
+        }
+
+        /**
+          * Sets the polarity of the pin to be ACTIVE_HI or ATIVE_LO, depending on the given parameter.
+          *
+          * @param polarity The polarity of the pin - either 1 for ACTIVE_HI or 0 for ACTIVE_LO
+          */
+        void setPolarity(int polarity)
+        {
+            if (polarity)
+                status |= IO_STATUS_ACTIVE_HI;
+            else
+                status &= ~IO_STATUS_ACTIVE_HI;
+        }
+
+        /**
+          * Sets the polarity of the pin to be ACTIVE_HI.
+          */
+        void setActiveHi()
+        {
+            setPolarity(1);
+        }
+        /**
+          * Sets the polarity of the pin to be ACTIVE_LO.
+          */
+        void setActiveLo()
+        {
+            setPolarity(0);
         }
     };
 
