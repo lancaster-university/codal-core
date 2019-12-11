@@ -176,7 +176,7 @@ namespace codal
           *
           * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the compass could not be configured.
           */
-        int configure();
+        virtual int configure();
 
         /**
           * Attempts to set the sample rate of the compass to the specified period value (in ms).
