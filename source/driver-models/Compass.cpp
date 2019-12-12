@@ -28,6 +28,8 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalCompat.h"
 #include "CodalFiber.h"
 
+#define CALIBRATED_SAMPLE(sample, axis) (((sample.axis - calibration.centre.axis) * calibration.scale.axis) >> 10)
+
 using namespace codal;
 
 /**
@@ -182,9 +184,9 @@ int Compass::calibrate()
  *
  * @param calibration A Sample3D containing the offsets for the x, y and z axis.
  */
-void Compass::setCalibration(Sample3D calibration)
+void Compass::setCalibration(CompassCalibration calibration)
 {
-    average = calibration;
+    this->calibration = calibration;
     status |= COMPASS_STATUS_CALIBRATED;
 }
 
@@ -195,9 +197,9 @@ void Compass::setCalibration(Sample3D calibration)
  *
  * @return A Sample3D containing the offsets for the x, y and z axis.
  */
-Sample3D Compass::getCalibration()
+CompassCalibration Compass::getCalibration()
 {
-    return average;
+    return calibration;
 }
 
 /**
@@ -311,9 +313,13 @@ int Compass::requestUpdate()
  */
 int Compass::update(Sample3D s)
 {
-    // Store the new data, after performing any necessary coordinate transformations.
-    sampleENU = s;
-    sample = coordinateSpace.transform(s);
+    // Store the raw data, and apply any calibration data we have.
+    sampleENU.x = CALIBRATED_SAMPLE(s, x);
+    sampleENU.y = CALIBRATED_SAMPLE(s, y);
+    sampleENU.z = CALIBRATED_SAMPLE(s, z);
+
+    // Store the user accessible data, in the requested coordinate space, and taking into account component placement of the sensor.
+    sample = coordinateSpace.transform(sampleENU);
 
     // Indicate that a new sample is available
     Event e(id, COMPASS_EVT_DATA_UPDATE);
@@ -400,12 +406,17 @@ int Compass::tiltCompensatedBearing()
     float sinTheta = sin(theta);
     float cosTheta = cos(theta);
 
-    float bearing = (360*atan2(z*sinPhi - y*cosPhi, x*cosTheta + y*sinTheta*sinPhi + z*sinTheta*cosPhi)) / (2*PI);
+     // Calculate the tilt compensated bearing, and convert to degrees.
+    float bearing = (360*atan2(x*cosTheta + y*sinTheta*sinPhi + z*sinTheta*cosPhi, z*sinPhi - y*cosPhi)) / (2*PI);
 
+    // Handle the 90 degree offset caused by the NORTH_EAST_DOWN based calculation.
+    bearing = 90 - bearing;
+
+    // Ensure the calculated bearing is in the 0..359 degree range.
     if (bearing < 0)
-        bearing += 360.0;
+        bearing += 360.0f;
 
-    return (int) bearing;
+    return (int) (bearing);
 }
 
 /**
@@ -413,12 +424,17 @@ int Compass::tiltCompensatedBearing()
  */
 int Compass::basicBearing()
 {
-    float bearing = (atan2((double)(sample.y - average.y),(double)(sample.x - average.x)))*180/PI;
+    // Convert to floating point to reduce rounding errors
+    Sample3D cs = this->getSample(SIMPLE_CARTESIAN);
+    float x = (float) cs.x;
+    float y = (float) cs.y;
+
+    float bearing = (atan2(x,y))*180/PI;
 
     if (bearing < 0)
         bearing += 360.0;
 
-    return (int)(360.0 - bearing);
+    return (int)bearing;
 }
 
 /**
