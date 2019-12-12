@@ -339,6 +339,13 @@ namespace codal
         void setMagnetometerAPI(FXOS8700Magnetometer *m);
 
         /**
+         * Attempts to read the 8 bit WHO_AM_I value from the accelerometer
+         *
+         * @return true if the WHO_AM_I value is succesfully read. false otherwise.
+         */
+        static int isDetected(I2C &i2c, uint16_t address = FXOS8700_DEFAULT_ADDR);
+
+        /**
           * Destructor.
           */
         ~FXOS8700();
