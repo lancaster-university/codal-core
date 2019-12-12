@@ -32,6 +32,7 @@ DEALINGS IN THE SOFTWARE.
 #include "AnimatedDisplay.h"
 #include "CodalFiber.h"
 #include "NotifyEvents.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -46,13 +47,23 @@ using namespace codal;
   * @param id The id the display should use when sending events on the MessageBus. Defaults to DEVICE_ID_DISPLAY.
   *
   */
-AnimatedDisplay::AnimatedDisplay(Display& _display, uint16_t id) : display(_display)
+AnimatedDisplay::AnimatedDisplay(Display& _display, uint16_t id) : display(_display), font(), printingText(), scrollingImage()
 {
     this->id = id;
     this->status = 0;
 
     status |= DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
     status |= DEVICE_COMPONENT_RUNNING;
+
+    animationMode = AnimationMode::ANIMATION_MODE_NONE;
+    animationDelay = 0;
+    animationTick = 0;
+    scrollingChar = 0;
+    scrollingPosition = 0;
+    printingChar = 0;
+    scrollingImagePosition = 0;
+    scrollingImageStride = 0;
+    scrollingImageRendered = false;
 }
 
 /**
