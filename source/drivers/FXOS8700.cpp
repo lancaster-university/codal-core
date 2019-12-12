@@ -402,6 +402,15 @@ void FXOS8700::setMagnetometerAPI(FXOS8700Magnetometer *m)
 }
 
 /**
+ * Attempts to read the 8 bit WHO_AM_I value from the accelerometer
+ *
+ * @return true if the WHO_AM_I value is succesfully read. false otherwise.
+ */
+int FXOS8700::isDetected(I2C &i2c, uint16_t address)
+{
+    return i2c.readRegister(address, FXOS8700_WHO_AM_I) == FXOS8700_WHOAMI_VAL;
+}
+/**
   * Destructor for FXS8700, where we deregister from the array of fiber components.
   */
 FXOS8700::~FXOS8700()
