@@ -3,7 +3,7 @@
 #ifndef JD_CRC_H
 #define JD_CRC_H
 
-#define JD_CRC_POLYNOMIAL           0xF13
+#define JD_CRC_POLYNOMIAL           0xC8F
 
 namespace codal
 {
