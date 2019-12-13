@@ -4,12 +4,10 @@
 
 using namespace codal;
 
-int JDDeviceManager::initialiseDevice(JDDevice* remoteDevice, JDControlPacket* controlPacket, uint8_t communicationRate)
+int JDDeviceManager::initialiseDevice(JDDevice* remoteDevice, uint64_t device_identifier, JDControlPacket* controlPacket)
 {
-    remoteDevice->device_address = controlPacket->device_address;
-    remoteDevice->unique_device_identifier = controlPacket->unique_device_identifier;
+    remoteDevice->device_identifier = device_identifier;
     remoteDevice->device_flags = controlPacket->device_flags;
-    remoteDevice->communication_rate = communicationRate;
     remoteDevice->rolling_counter = 0;
 
     if (controlPacket->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
@@ -43,13 +41,13 @@ JDDevice* JDDeviceManager::getDeviceList()
     return this->devices;
 }
 
-JDDevice* JDDeviceManager::getDevice(uint8_t device_address)
+JDDevice* JDDeviceManager::getDevice(uint64_t device_identifier)
 {
     JDDevice* head = this->devices;
 
     while(head)
     {
-        if (head->device_address == device_address)
+        if (head->device_identifier == device_identifier)
             return head;
 
         head = head->next;
@@ -58,30 +56,14 @@ JDDevice* JDDeviceManager::getDevice(uint8_t device_address)
     return NULL;
 }
 
-JDDevice* JDDeviceManager::getDevice(uint8_t device_address, uint64_t unique_device_identifier)
-{
-    JDDevice* head = this->devices;
-
-    while(head)
-    {
-        if (head->device_address == device_address && head->unique_device_identifier == unique_device_identifier)
-            return head;
-
-        head = head->next;
-    }
-
-    return NULL;
-}
-
-JDDevice* JDDeviceManager::addDevice(JDControlPacket* controlPacket, uint8_t communicationRate)
+JDDevice* JDDeviceManager::addDevice(uint64_t device_identifier, JDControlPacket* controlPacket)
 {
     JDDevice* newRemote = (JDDevice *) malloc(sizeof(JDDevice));
 
     newRemote->next = NULL;
     newRemote->name = NULL;
-    newRemote->servicemap_bitmsk = 0;
 
-    initialiseDevice(newRemote, controlPacket, communicationRate);
+    initialiseDevice(newRemote, device_identifier, controlPacket);
 
     if (this->devices == NULL)
         this->devices = newRemote;
@@ -93,7 +75,7 @@ JDDevice* JDDeviceManager::addDevice(JDControlPacket* controlPacket, uint8_t com
         while(head)
         {
             // guard against duplicates.
-            if (head->device_address == newRemote->device_address && head->unique_device_identifier == newRemote->unique_device_identifier)
+            if (head->device_identifier == newRemote->device_identifier)
             {
                 if (newRemote->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
                     free (newRemote->name);
@@ -112,9 +94,9 @@ JDDevice* JDDeviceManager::addDevice(JDControlPacket* controlPacket, uint8_t com
     return newRemote;
 }
 
-int JDDeviceManager::updateDevice(JDDevice* remoteDevice, JDControlPacket* controlPacket, uint8_t communicationRate)
+int JDDeviceManager::updateDevice(JDDevice* remoteDevice, uint64_t device_identifier, JDControlPacket* controlPacket)
 {
-    return initialiseDevice(remoteDevice, controlPacket, communicationRate);
+    return initialiseDevice(remoteDevice, device_identifier, controlPacket);
 }
 
 int JDDeviceManager::removeDevice(JDDevice* device)
@@ -135,7 +117,7 @@ int JDDeviceManager::removeDevice(JDDevice* device)
         while (curr)
         {
             // found!!
-            if (curr->device_address == device->device_address && curr->unique_device_identifier == device->unique_device_identifier)
+            if (curr->device_identifier == device->device_identifier)
             {
                 prev->next = curr->next;
                 return DEVICE_OK;

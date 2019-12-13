@@ -24,7 +24,7 @@ void JDPacketSniffer::timerCallback(Event)
     }
 }
 
-JDPacketSniffer::JDPacketSniffer() : JDService(JD_SERVICE_CLASS_BRIDGE, ClientService)
+JDPacketSniffer::JDPacketSniffer() : JDService(JD_SERVICE_IDENTIFIER_BRIDGE, ClientService)
 {
     if (EventModel::defaultEventBus)
     {
@@ -41,17 +41,14 @@ JDDevice* JDPacketSniffer::getDeviceList()
 
 int JDPacketSniffer::handlePacket(JDPacket* p)
 {
-    if (p->device_address == 0)
+    if (p->service_number == 0)
     {
-        if (p->service_number == 0)
-        {
-            JDControlPacket* cp = (JDControlPacket *)p->data;
-            if (cp->device_flags & (JD_DEVICE_FLAGS_REJECT | JD_DEVICE_FLAGS_PROPOSING))
-                return DEVICE_OK;
+        JDControlPacket* cp = (JDControlPacket *)p->data;
+        if (cp->device_flags & (JD_DEVICE_FLAGS_REJECT | JD_DEVICE_FLAGS_PROPOSING))
+            return DEVICE_OK;
 
-            JDDevice* remote = this->deviceManager.addDevice((JDControlPacket*)p->data, p->communication_rate);
-            remote->rolling_counter = 0;
-        }
+        JDDevice* remote = this->deviceManager.addDevice(p->device_identifier, (JDControlPacket*)p->data);
+        remote->rolling_counter = 0;
     }
 
     return DEVICE_OK;
@@ -63,7 +60,7 @@ void JDPacketSniffer::logDevices()
 
     while (head)
     {
-        DMESG("A: %d, unique_device_identifierL: %d N: %s CR: %d", head->device_address, (uint32_t)head->unique_device_identifier, head->name ? head->name : 0, head->communication_rate);
+        DMESG("A: %d, device_identifierL: %d N: %s CR: %d", head->device_identifier, (uint32_t)head->device_identifier, head->name ? head->name : 0);
         head = head->next;
     }
 }

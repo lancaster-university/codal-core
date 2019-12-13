@@ -54,7 +54,6 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_MAX_SERVICE_NUMBER    15
 
 #define JD_SERIAL_RECEIVING             0x0001
-#define JD_SERIAL_RECEIVING_HEADER      0x0002
 #define JD_SERIAL_TRANSMITTING          0x0004
 #define JD_SERIAL_RX_LO_PULSE           0x0008
 #define JD_SERIAL_TX_LO_PULSE           0x0010
@@ -78,15 +77,13 @@ DEALINGS IN THE SOFTWARE.
 #define JD_SERIAL_EVT_BUS_CONNECTED    5
 #define JD_SERIAL_EVT_BUS_DISCONNECTED 6
 
-#define JD_SERIAL_HEADER_SIZE          4
+#define JD_SERIAL_HEADER_SIZE          16
 #define JD_SERIAL_CRC_HEADER_SIZE      2  // when computing CRC, we skip the CRC and version fields, so the header size decreases by three.
-#define JD_SERIAL_MAX_PAYLOAD_SIZE     255
+#define JD_SERIAL_MAX_PAYLOAD_SIZE     128
+#define JD_SERIAL_PAYLOAD_SIZE         128
 
 #define JD_SERIAL_MAXIMUM_BUFFERS      10
 
-#define JD_SERIAL_DMA_TIMEOUT          2   // 2 callback ~8 ms
-
-#define JD_SERIAL_MAX_BAUD             1000000
 #define JD_SERIAL_TX_MAX_BACKOFF       1000
 
 #ifndef JD_RX_ARRAY_SIZE
@@ -96,11 +93,6 @@ DEALINGS IN THE SOFTWARE.
 #ifndef JD_TX_ARRAY_SIZE
 #define JD_TX_ARRAY_SIZE               10
 #endif
-
-#define JD_SERIAL_BAUD_1M              1
-#define JD_SERIAL_BAUD_500K            2
-#define JD_SERIAL_BAUD_250K            4
-#define JD_SERIAL_BAUD_125K            8
 
 #if CONFIG_ENABLED(JD_DEBUG)
 #define JD_DMESG      codal_dmesg
@@ -126,10 +118,11 @@ namespace codal
     struct JDPacket
     {
         uint16_t crc:12, service_number:4; // crc is stored in the first 12 bits, service number in the final 4 bits
-        uint8_t device_address; // control is 0, devices are allocated address in the range 1 - 255
+        uint64_t device_identifier; // control is 0, devices are allocated address in the range 1 - 255
+        uint32_t service_identifier;
+        uint8_t reserved;
         uint8_t size; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.
-        uint8_t data[JD_SERIAL_MAX_PAYLOAD_SIZE];
-        uint8_t communication_rate;
+        uint8_t data[JD_SERIAL_PAYLOAD_SIZE];
     } __attribute((__packed__));
 
     enum class JDBusState : uint8_t
@@ -147,18 +140,6 @@ namespace codal
         Off
     };
 
-    /**
-     * This enumeration defines the low time of the tx pulse, and the transmission speed of
-     * this JACDAC device on the bus.
-     **/
-    enum class JDBaudRate : uint8_t
-    {
-        Baud1M = JD_SERIAL_BAUD_1M,
-        Baud500K = JD_SERIAL_BAUD_500K,
-        Baud250K = JD_SERIAL_BAUD_250K,
-        Baud125K = JD_SERIAL_BAUD_125K
-    };
-
     enum JDBusErrorState : uint16_t
     {
         Continuation = 0,
@@ -174,10 +155,7 @@ namespace codal
     {
         friend class USBJACDAC;
 
-        JDBaudRate maxBaud;
-        JDBaudRate currentBaud;
         uint8_t bufferOffset;
-
         JDService* sniffer;
 
     protected:
@@ -241,7 +219,7 @@ namespace codal
           *
           * @param baud Defaults to 1mbaud
           */
-        JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busStateLED = NULL, Pin* commStateLED = NULL, bool busLEDActiveLo = false, bool commLEDActiveLo = false, JDBaudRate baud = JDBaudRate::Baud1M, uint16_t id = DEVICE_ID_JACDAC_PHYS);
+        JDPhysicalLayer(DMASingleWireSerial&  sws, LowLevelTimer& timer, Pin* busStateLED = NULL, Pin* commStateLED = NULL, bool busLEDActiveLo = false, bool commLEDActiveLo = false, uint16_t id = DEVICE_ID_JACDAC_PHYS);
 
         /**
           * Retrieves the first packet on the rxQueue regardless of the device_class
@@ -260,7 +238,7 @@ namespace codal
           */
         virtual void stop();
 
-        int send(JDPacket* tx, JDDevice* device, bool computeCRC = true);
+        int send(JDPacket* tx, bool computeCRC = true);
 
         /**
           * Sends a packet using the SingleWireSerial instance. This function begins the asynchronous transmission of a packet.
@@ -273,7 +251,7 @@ namespace codal
           *
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
           */
-        int send(uint8_t* buf, int len, uint8_t service_number, JDDevice* device);
+        int send(uint8_t* buf, int len, uint8_t service_number, uint32_t service_identifier, JDDevice* device);
 
         /**
          * Returns a bool indicating whether the JACDAC driver has been started.
@@ -304,23 +282,6 @@ namespace codal
 
         uint8_t getErrorState();
         JDDiagnostics getDiagnostics();
-
-        /**
-         * Sets the maximum baud rate which is used as a default (if no communication rate is given in any packet), and as
-         * a maximum reception rate.
-         *
-         * @param baudRate the desired baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
-         *
-         * @returns DEVICE_OK on success
-         **/
-        int setMaximumBaud(JDBaudRate baudRate);
-
-        /**
-         * Returns the current maximum baud rate.
-         *
-         * @returns the enumerated baud rate for this jacdac instance, one of: Baud1M, Baud500K, Baud250K, Baud125K
-         **/
-        JDBaudRate getMaximumBaud();
 
         void _timerCallback(uint16_t channels);
         void _dmaCallback(uint16_t errCode);

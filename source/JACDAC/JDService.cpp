@@ -42,12 +42,12 @@ int JDService::addAdvertisementData(uint8_t* data)
 int JDService::send(uint8_t* buf, int len)
 {
     if (JACDAC::instance && this->device)
-        return JACDAC::instance->bus.send(buf, len, this->service_number, this->device);
+        return JACDAC::instance->bus.send(buf, len, this->service_number, this->service_identifier, this->device);
 
     return DEVICE_NO_RESOURCES;
 }
 
-JDService::JDService(uint32_t service_class, JDServiceMode m)
+JDService::JDService(uint32_t service_identifier, JDServiceMode m)
 {
     // we use a dynamic id for the message bus for simplicity.
     // with the dynamic nature of JACDAC, it would be hard to maintain a consistent id.
@@ -55,7 +55,7 @@ JDService::JDService(uint32_t service_class, JDServiceMode m)
     this->mode = m;
     this->device = NULL;
     this->requiredDevice = NULL;
-    this->service_class = service_class;
+    this->service_identifier = service_identifier;
     this->service_number = JD_SERVICE_NUMBER_UNINITIALISED_VAL;
 
     if (JACDAC::instance)
@@ -69,7 +69,7 @@ bool JDService::isConnected()
 
 int JDService::hostConnected()
 {
-    // DMESG("CONNB a:%d sn:%d cl:%d",device.address,device.serial_number, device.service_class);
+    // DMESG("CONNB a:%d sn:%d cl:%d",device.address,device.serial_number, device.service_identifier);
     this->status |= JD_SERVICE_STATUS_FLAGS_INITIALISED;
     Event(this->id, JD_SERVICE_EVT_CONNECTED);
     return DEVICE_OK;
@@ -77,7 +77,7 @@ int JDService::hostConnected()
 
 int JDService::hostDisconnected()
 {
-    // DMESG("DISCB a:%d sn:%d cl: %d",device.address,device.serial_number, device.service_class);
+    // DMESG("DISCB a:%d sn:%d cl: %d",device.address,device.serial_number, device.service_identifier);
     this->status &= ~(JD_SERVICE_STATUS_FLAGS_INITIALISED);
     Event(this->id, JD_SERVICE_EVT_DISCONNECTED);
     return DEVICE_OK;
@@ -90,7 +90,7 @@ JDDevice* JDService::getHostDevice()
 
 uint32_t JDService::getServiceClass()
 {
-    return this->service_class;
+    return this->service_identifier;
 }
 
 int JDService::handleServiceInformation(JDDevice* device, JDServiceInformation* info)

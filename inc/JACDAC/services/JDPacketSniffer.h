@@ -9,7 +9,7 @@ namespace codal
 
     struct JDSnifferServiceMap
     {
-        uint8_t device_address;
+        uint8_t device_identifier;
         uint32_t services[JD_DEVICE_MAX_HOST_SERVICES];
     };
 

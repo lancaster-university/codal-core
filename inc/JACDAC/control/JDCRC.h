@@ -18,7 +18,7 @@ namespace codal
      *
      * @return the computed crc.
      **/
-    uint16_t jd_crc(uint8_t *data, uint32_t len, JDDevice* device);
+    uint16_t jd_crc(uint8_t *data, uint32_t len);
 }
 
 #endif

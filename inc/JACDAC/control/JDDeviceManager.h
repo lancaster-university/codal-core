@@ -17,13 +17,9 @@
 
 struct JDDevice
 {
-    uint64_t unique_device_identifier;
-    uint8_t device_address;
-    uint8_t device_flags;
-    uint8_t communication_rate;
-    uint8_t rolling_counter;
-    uint16_t servicemap_bitmsk;
-    uint8_t broadcast_servicemap[JD_DEVICE_MAX_HOST_SERVICES / 2]; // use to map remote broadcast services to local broadcast services.
+    uint64_t device_identifier;
+    uint16_t device_flags;
+    uint16_t rolling_counter;
     JDDevice* next;
     uint8_t* name;
 };
@@ -41,19 +37,17 @@ namespace codal
     {
         JDDevice* devices;
 
-        int initialiseDevice(JDDevice* remoteDevice, JDControlPacket* controlPacket, uint8_t communicationRate);
+        int initialiseDevice(JDDevice* remoteDevice, uint64_t device_identifier, JDControlPacket* controlPacket);
 
         public:
 
         JDDevice* getDeviceList();
 
-        JDDevice* getDevice(uint8_t device_address);
+        JDDevice* getDevice(uint64_t device_identifier);
 
-        JDDevice* getDevice(uint8_t device_address, uint64_t unique_device_identifier);
+        JDDevice* addDevice(uint64_t device_identifier, JDControlPacket* controlPacket);
 
-        JDDevice* addDevice(JDControlPacket* controlPacket, uint8_t communicationRate);
-
-        int updateDevice(JDDevice* remoteDevice, JDControlPacket* controlPacket, uint8_t communicationRate);
+        int updateDevice(JDDevice* remoteDevice, uint64_t device_identifier, JDControlPacket* controlPacket);
 
         int removeDevice(JDDevice* device);
 

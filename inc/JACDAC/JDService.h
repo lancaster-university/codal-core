@@ -3,7 +3,7 @@
 
 #include "CodalComponent.h"
 #include "JDPhysicalLayer.h"
-#include "JDServiceClasses.h"
+#include "JDServiceIdentifiers.h"
 #include "JDDeviceManager.h"
 
 #define JD_MAX_HOST_SERVICES                            JD_DEVICE_MAX_HOST_SERVICES
@@ -29,13 +29,13 @@ namespace codal
     {
         ClientService = JD_SERVICE_MODE_CLIENT, // the service is seeking the use of another device's resource
         HostService = JD_SERVICE_MODE_HOST, // the service is hosting a resource for others to use.
-        BroadcastHostService = JD_SERVICE_MODE_BROADCAST_HOST, // the service is enumerated with its own address, and receives all packets of the same class (including control packets)
+        BroadcastService = JD_SERVICE_MODE_BROADCAST_HOST, // the service is enumerated with its own address, and receives all packets of the same class (including control packets)
         ControlLayerService = JD_SERVICE_MODE_CONTROL_LAYER // this service is not consider an enumerable service.
     };
 
     struct JDServiceInformation
     {
-        uint32_t service_class;  // the class of the service
+        uint32_t service_identifier;  // the class of the service
         uint8_t service_flags;
         uint8_t advertisement_size;
         uint8_t data[]; // optional additional data, maximum of 16 bytes
@@ -58,7 +58,7 @@ namespace codal
         static uint32_t dynamicId;
 
         JDServiceMode mode;
-        uint32_t service_class;
+        uint32_t service_identifier;
         uint16_t service_number;
         uint8_t service_flags;
 

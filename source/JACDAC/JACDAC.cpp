@@ -42,7 +42,7 @@ void JACDAC::onPacketReceived(Event)
 
     while((pkt = bus.getPacket()) != NULL)
     {
-        DMESG("PKT: a %d sn: %d",pkt->device_address, pkt->service_number);
+        DMESG("PKT: a %d sn: %d service id %d",(uint32_t)pkt->device_identifier, pkt->service_number, pkt->service_identifier);
         controlService.routePacket(pkt);
 
         // if we have a bridge service, route all packets to it.
@@ -121,7 +121,7 @@ int JACDAC::setBridge(JDService* bridge)
 int JACDAC::send(JDPacket* pkt)
 {
     if (instance)
-        return instance->bus.send(pkt, NULL, true);
+        return instance->bus.send(pkt);
 
     return DEVICE_NO_RESOURCES;
 }
@@ -142,28 +142,28 @@ ManagedString JACDAC::getDeviceName()
     return JACDAC::instance->controlService.getDeviceName();
 }
 
-int JACDAC::triggerRemoteIdentification(uint8_t device_address)
+int JACDAC::triggerRemoteIdentification(uint8_t device_identifier)
 {
     if (JACDAC::instance == NULL)
         return DEVICE_INVALID_STATE;
 
-    return JACDAC::instance->controlService.triggerRemoteIdentification(device_address);
+    return JACDAC::instance->controlService.triggerRemoteIdentification(device_identifier);
 }
 
-int JACDAC::setRemoteDeviceName(uint8_t device_address, ManagedString name)
+int JACDAC::setRemoteDeviceName(uint8_t device_identifier, ManagedString name)
 {
     if (JACDAC::instance == NULL)
         return DEVICE_INVALID_STATE;
 
-    return JACDAC::instance->controlService.setRemoteDeviceName(device_address, name);
+    return JACDAC::instance->controlService.setRemoteDeviceName(device_identifier, name);
 }
 
-JDDevice* JACDAC::getRemoteDevice(uint8_t device_address)
+JDDevice* JACDAC::getRemoteDevice(uint8_t device_identifier)
 {
     if (JACDAC::instance == NULL)
         return NULL;
 
-    return JACDAC::instance->controlService.getRemoteDevice(device_address);
+    return JACDAC::instance->controlService.getRemoteDevice(device_identifier);
 }
 
 void JACDAC::logState()
@@ -204,7 +204,7 @@ void JACDAC::logState()
         JDService* current = JACDAC::instance->services[i];
 
         if (current)
-            DMESG("Service %d initialised[%d] device_address[%d] serial[%d] class[%d], mode[%s%s%s]", i, current->isConnected(), (current->device) ? current->device->device_address : -1, (current->device) ? current->device->unique_device_identifier : -1, current->service_class, current->mode == BroadcastHostService ? "B" : "", current->mode == HostService ? "H" : "", current->mode == ClientService ? "C" : "");
+            DMESG("Service %d initialised[%d] device_identifier[%d] serial[%d] class[%d], mode[%s%s%s]", i, current->isConnected(), (current->device) ? current->device->device_identifier : -1, (current->device) ? current->device->device_identifier : -1, current->service_identifier, current->mode == BroadcastService ? "B" : "", current->mode == HostService ? "H" : "", current->mode == ClientService ? "C" : "");
     }
 }
 

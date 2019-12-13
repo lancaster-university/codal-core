@@ -14,14 +14,14 @@
 #define JD_CONTROL_SERVICE_EVT_CHANGED                      2
 #define JD_CONTROL_SERVICE_EVT_TIMER_CALLBACK               3
 
-#define JD_CONTROL_PACKET_HEADER_SIZE                       10
+#define JD_CONTROL_PACKET_HEADER_SIZE                       2
 
 #define JD_CONTROL_ROLLING_TIMEOUT_VAL                      3
 
 namespace codal
 {
     /**
-     * This struct represents a JDControlPacket used by the control service residing on device_address 0
+     * This struct represents a JDControlPacket used by the control service residing on device_identifier 0
      * with service_number 0.
      *
      * A control packet provides full information about services on a device, it's most important use is to translates the address used in
@@ -29,9 +29,7 @@ namespace codal
      **/
     struct JDControlPacket
     {
-        uint64_t unique_device_identifier; // the "unique" serial number of the device.
-        uint8_t device_address;
-        uint8_t device_flags;
+        uint16_t device_flags;
         uint8_t data[];
     } __attribute((__packed__));
 
@@ -83,7 +81,7 @@ namespace codal
 
         /**
          * This function overrides the default implementation of JDService->send, instead using
-         * a device_address of 0, a service number of 0, and a device_unique_identifier of NULL.
+         * a device_identifier of 0, a service number of 0, and a device_unique_identifier of NULL.
          **/
         int send(uint8_t* buf, int len) override;
 
@@ -120,13 +118,13 @@ namespace codal
         virtual int handlePacket(JDPacket* p) override;
 
         /**
-         * Get a device based upon its device_address
+         * Get a device based upon its device_identifier
          *
-         * @param device_address the device_address of the device to retrieve
+         * @param device_identifier the device_identifier of the device to retrieve
          *
          * @returns NULL if not found, or a ptr to a JDDevice struct.
          **/
-        JDDevice* getRemoteDevice(uint8_t device_address);
+        JDDevice* getRemoteDevice(uint8_t device_identifier);
 
         /**
          * Starts the enumeration process of the device only if a service has host services to
@@ -173,7 +171,7 @@ namespace codal
          **/
         int setDeviceName(ManagedString name);
 
-        int setRemoteDeviceName(uint8_t device_address, ManagedString name);
+        int setRemoteDeviceName(uint8_t device_identifier, ManagedString name);
 
         /**
          *

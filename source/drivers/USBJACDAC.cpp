@@ -37,7 +37,7 @@ struct USBJACDACDiagnostics {
     uint32_t packets_dropped;
 };
 
-USBJACDAC::USBJACDAC() : JDService(JD_SERVICE_CLASS_BRIDGE, ClientService)
+USBJACDAC::USBJACDAC() : JDService(JD_SERVICE_IDENTIFIER_BRIDGE, ClientService)
 {
     inBuffPtr = 0;
     outBuffPtr = 0;

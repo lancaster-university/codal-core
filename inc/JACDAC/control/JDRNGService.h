@@ -18,8 +18,6 @@ namespace codal
 {
     class JDRNGService : public JDService
     {
-        int send(uint8_t* buf, int len) override;
-
         public:
         JDRNGService();
 

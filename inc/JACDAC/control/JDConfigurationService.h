@@ -20,7 +20,7 @@
 
 struct JDConfigurationPacket
 {
-    uint8_t device_address;
+    uint8_t device_identifier;
     uint8_t request_type;
     uint8_t data[];
 } __attribute((__packed__));
@@ -29,16 +29,14 @@ namespace codal
 {
     class JDConfigurationService : public JDService
     {
-        int send(uint8_t* buf, int len) override;
-
         public:
         JDConfigurationService(uint16_t id = DEVICE_ID_JACDAC_CONFIGURATION_SERVICE);
 
         virtual int handlePacket(JDPacket* p) override;
 
-        int setRemoteDeviceName(uint8_t device_address, ManagedString newName);
+        int setRemoteDeviceName(uint8_t device_identifier, ManagedString newName);
 
-        int triggerRemoteIdentification(uint8_t device_address);
+        int triggerRemoteIdentification(uint8_t device_identifier);
     };
 }
 

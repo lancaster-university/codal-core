@@ -4,14 +4,14 @@
 using namespace codal;
 
 JDConsoleService::JDConsoleService(bool receiver) :
-    JDService(JD_SERVICE_CLASS_CONSOLE, (receiver) ? BroadcastHostService : HostService)
+    JDService(JD_SERVICE_IDENTIFIER_CONSOLE, (receiver) ? BroadcastService : HostService)
 {
     status = 0;
 }
 
 int JDConsoleService::handlePacket(JDPacket* pkt)
 {
-    if (mode == BroadcastHostService)
+    if (mode == BroadcastService)
     {
         // this is a bit rubbish, but for now we just log to DMESG.
         // in the future there should be a function ptr.
@@ -41,7 +41,7 @@ int JDConsoleService::handlePacket(JDPacket* pkt)
                 break;
         }
 
-        JDDevice* device = JACDAC::instance->getRemoteDevice(pkt->device_address);
+        JDDevice* device = JACDAC::instance->getRemoteDevice(pkt->device_identifier);
 
         char* deviceName = (char*)"UNKNOWN";
 
@@ -53,7 +53,7 @@ int JDConsoleService::handlePacket(JDPacket* pkt)
                 deviceName = (char*)"UNNAMED";
         }
 
-        DMESG("[%d,%s] %s: %s", pkt->device_address, deviceName, priorityMsg, consolePkt->message);
+        DMESG("[%d,%s] %s: %s", pkt->device_identifier, deviceName, priorityMsg, consolePkt->message);
     }
 
     return DEVICE_OK;
