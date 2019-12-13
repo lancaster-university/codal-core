@@ -86,6 +86,8 @@ void codal_vdmesg(const char *format, bool crlf, va_list ap);
 #else
 
 #define DMESG(...) ((void)0)
+#define DMESGN(...) ((void)0)
+#define DMESGF(...) ((void)0)
 
 #endif
 
