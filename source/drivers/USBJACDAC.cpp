@@ -70,7 +70,7 @@ void USBJACDAC::idleCallback()
         // we expect any stack will already calculate the crc etc. so just place the packet on the bus.
         if (this->phys)
         {
-            this->phys->send(tx, NULL, false);
+            this->phys->send(tx, false);
 
             JDPacket* pkt = (JDPacket *)malloc(sizeof(JDPacket));
             memcpy(pkt, tx, sizeof(JDPacket));
@@ -122,7 +122,6 @@ int USBJACDAC::classRequest(UsbEndpointIn &ctrl, USBSetup& setup)
         case USB_JACDAC_REQ_DIAGNOSTICS:
             if (this->phys)
             {
-                diags.bus_state = this->phys->getErrorState();
                 jdDiags = this->phys->getDiagnostics();
                 memcpy(&diags, &jdDiags, sizeof(JDDiagnostics));
                 ctrl.write(&diags, sizeof(USBJACDACDiagnostics));

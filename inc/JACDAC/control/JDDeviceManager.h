@@ -2,6 +2,7 @@
 #define CODAL_JD_DEVICE_MANAGER_H
 
 #include "CodalConfig.h"
+#include "ManagedString.h"
 #include "ErrorNo.h"
 
 #define JD_DEVICE_FLAGS_NACK                            0x08
@@ -44,6 +45,8 @@ namespace codal
         JDDevice* getDeviceList();
 
         JDDevice* getDevice(uint64_t device_identifier);
+
+        JDDevice* getDevice(ManagedString name);
 
         JDDevice* addDevice(uint64_t device_identifier, JDControlPacket* controlPacket);
 

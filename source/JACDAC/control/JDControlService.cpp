@@ -266,7 +266,6 @@ JDControlService::JDControlService(ManagedString name) : JDService(JD_SERVICE_ID
 {
     this->name = name;
     this->device = NULL;
-    this->remoteDevices = NULL;
     this->enumerationData = NULL;
 
     status = 0;
@@ -338,14 +337,14 @@ int JDControlService::handlePacket(JDPacket* pkt)
     if (!(this->status & JD_CONTROL_SERVICE_STATUS_ENUMERATE))
         return DEVICE_OK;
 
-    if (pkt->service_identifier == this->rngService.service_identifier)
+    if (pkt->service_identifier == this->rngService.service_number)
     {
         DMESG("RNG SERV");
         this->rngService.handlePacket(pkt);
         return DEVICE_OK;
     }
 
-    if (pkt->service_identifier == this->configurationService.service_identifier)
+    if (pkt->service_identifier == this->configurationService.service_number)
     {
         DMESG("CONF SERV");
         this->configurationService.handlePacket(pkt);
@@ -397,14 +396,13 @@ int JDControlService::handlePacket(JDPacket* pkt)
             if (current->status & JD_SERVICE_STATUS_FLAGS_INITIALISED)
             {
                 bool address_check = current->device->device_identifier == pkt->device_identifier && current->service_number == service_number;
-                bool serial_check = pkt->device_identifier == current->device->device_identifier;
 
                 // this boolean is used to override stringent address checks (not needed for broadcast services as they receive all packets) to prevent code duplication
                 bool broadcast_override = current->mode == BroadcastService;
                 DMESG("INITDSer: a %d, c %d, i %d, t %c%c%c", (uint32_t)current->device->device_identifier, current->service_identifier, current->status & JD_SERVICE_STATUS_FLAGS_INITIALISED ? 1 : 0, current->mode == BroadcastService ? 'B' : ' ', current->mode == HostService ? 'H' : ' ', current->mode == ClientService ? 'C' : ' ');
 
                 // check if applicable
-                if ((address_check && serial_check && class_check) || (class_check && broadcast_override))
+                if ((address_check && class_check) || (class_check && broadcast_override))
                 {
                     // we are receiving a packet from a remote device for a service in broadcast mode.
                     if (broadcast_override && pkt->device_identifier != this->device->device_identifier && !remoteDevice)
@@ -475,17 +473,22 @@ ManagedString JDControlService::getDeviceName()
     return this->name;
 }
 
-int JDControlService::setRemoteDeviceName(uint8_t device_identifier, ManagedString name)
+int JDControlService::setRemoteDeviceName(uint64_t device_identifier, ManagedString name)
 {
     return this->configurationService.setRemoteDeviceName(device_identifier, name);
 }
 
-int JDControlService::triggerRemoteIdentification(uint8_t deviceAddress)
+int JDControlService::triggerRemoteIdentification(uint64_t device_identifier)
 {
-    return this->configurationService.triggerRemoteIdentification(deviceAddress);
+    return this->configurationService.triggerRemoteIdentification(device_identifier);
 }
 
-JDDevice* JDControlService::getRemoteDevice(uint8_t device_identifier)
+JDDevice* JDControlService::getRemoteDevice(uint64_t device_identifier)
 {
     return this->deviceManager.getDevice(device_identifier);
+}
+
+JDDevice* JDControlService::getRemoteDevice(ManagedString name)
+{
+    return this->deviceManager.getDevice(name);
 }

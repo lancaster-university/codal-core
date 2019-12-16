@@ -4,6 +4,14 @@
 
 using namespace codal;
 
+int JDConfigurationService::send(uint8_t* buf, int len)
+{
+    if (JACDAC::instance)
+        return JACDAC::instance->bus.send(buf, len, this->service_number, 0, this->device);
+
+    return DEVICE_NO_RESOURCES;
+}
+
 JDConfigurationService::JDConfigurationService(uint16_t id) : JDService(JD_SERVICE_IDENTIFIER_CONTROL_CONFIGURATION, ControlLayerService)
 {
     this->service_number = JD_CONTROL_CONFIGURATION_SERVICE_NUMBER;
@@ -35,7 +43,7 @@ int JDConfigurationService::handlePacket(JDPacket* p)
     return DEVICE_OK;
 }
 
-int JDConfigurationService::setRemoteDeviceName(uint8_t device_identifier, ManagedString newName)
+int JDConfigurationService::setRemoteDeviceName(uint64_t device_identifier, ManagedString newName)
 {
     int len = newName.length();
 
@@ -44,7 +52,7 @@ int JDConfigurationService::setRemoteDeviceName(uint8_t device_identifier, Manag
 
     int size = JD_CONTROL_CONFIGURATION_SERVICE_PACKET_HEADER_SIZE + len + 1;
 
-    JDConfigurationPacket* cfg = (JDConfigurationPacket *)malloc(JD_CONTROL_CONFIGURATION_SERVICE_PACKET_HEADER_SIZE + len + 1); // add one for the size byte
+    JDConfigurationPacket* cfg = (JDConfigurationPacket *)malloc(size);
 
     cfg->request_type = JD_CONTROL_CONFIGURATION_SERVICE_REQUEST_TYPE_NAME;
     cfg->device_identifier = device_identifier;
@@ -60,7 +68,7 @@ int JDConfigurationService::setRemoteDeviceName(uint8_t device_identifier, Manag
     return DEVICE_OK;
 }
 
-int JDConfigurationService::triggerRemoteIdentification(uint8_t device_identifier)
+int JDConfigurationService::triggerRemoteIdentification(uint64_t device_identifier)
 {
     if (device_identifier == 0)
         return DEVICE_INVALID_PARAMETER;

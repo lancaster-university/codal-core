@@ -40,10 +40,7 @@ namespace codal
      **/
     class JDControlService : public JDService
     {
-        JDDevice* remoteDevices;
-        JDDevice* controller;
         JDControlPacket* enumerationData;
-
         JDDeviceManager deviceManager;
         JDRNGService rngService;
         JDConfigurationService configurationService;
@@ -124,7 +121,9 @@ namespace codal
          *
          * @returns NULL if not found, or a ptr to a JDDevice struct.
          **/
-        JDDevice* getRemoteDevice(uint8_t device_identifier);
+        JDDevice* getRemoteDevice(uint64_t device_identifier);
+
+        JDDevice* getRemoteDevice(ManagedString name);
 
         /**
          * Starts the enumeration process of the device only if a service has host services to
@@ -171,12 +170,12 @@ namespace codal
          **/
         int setDeviceName(ManagedString name);
 
-        int setRemoteDeviceName(uint8_t device_identifier, ManagedString name);
+        int setRemoteDeviceName(uint64_t device_identifier, ManagedString name);
 
         /**
          *
          **/
-        int triggerRemoteIdentification(uint8_t deviceAddress);
+        int triggerRemoteIdentification(uint64_t deviceAddress);
     };
 }
 

@@ -118,7 +118,7 @@ namespace codal
     struct JDPacket
     {
         uint16_t crc:12, service_number:4; // crc is stored in the first 12 bits, service number in the final 4 bits
-        uint64_t device_identifier; // control is 0, devices are allocated address in the range 1 - 255
+        uint64_t device_identifier;
         uint32_t service_identifier;
         uint8_t reserved;
         uint8_t size; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.

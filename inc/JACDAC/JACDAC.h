@@ -148,11 +148,12 @@ namespace codal
          **/
         static int send(JDPacket* pkt);
 
-        static int triggerRemoteIdentification(uint8_t device_identifier);
+        static int triggerRemoteIdentification(uint64_t device_identifier);
 
-        static int setRemoteDeviceName(uint8_t device_identifier, ManagedString name);
+        static int setRemoteDeviceName(uint64_t device_identifier, ManagedString name);
 
-        static JDDevice* getRemoteDevice(uint8_t device_identifier);
+        static JDDevice* getRemoteDevice(uint64_t device_identifier);
+        static JDDevice* getRemoteDevice(ManagedString name);
 
         /**
          * Logs the current state of JACDAC services.

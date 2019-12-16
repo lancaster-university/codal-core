@@ -56,6 +56,21 @@ JDDevice* JDDeviceManager::getDevice(uint64_t device_identifier)
     return NULL;
 }
 
+JDDevice* JDDeviceManager::getDevice(ManagedString name)
+{
+    JDDevice* head = this->devices;
+
+    while(head)
+    {
+        if ((head->device_flags & JD_DEVICE_FLAGS_HAS_NAME) && ManagedString((const char *)head->name) == name)
+            return head;
+
+        head = head->next;
+    }
+
+    return NULL;
+}
+
 JDDevice* JDDeviceManager::addDevice(uint64_t device_identifier, JDControlPacket* controlPacket)
 {
     JDDevice* newRemote = (JDDevice *) malloc(sizeof(JDDevice));

@@ -395,7 +395,7 @@ void JDPhysicalLayer::loPulseDetected(uint32_t pulseTime)
     JD_SET_FLAGS(JD_SERIAL_RECEIVING);
 
     lastBufferedCount = 0;
-    sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_PAYLOAD_SIZE);
+    sws.receiveDMA((uint8_t*)rxBuf, JD_SERIAL_PAYLOAD_SIZE + JD_SERIAL_HEADER_SIZE);
 
     // 14 more us
     timer.setCompare(TIMEOUT_CC, startTime + JD_BYTE_AT_125KBAUD);
@@ -564,7 +564,7 @@ void JDPhysicalLayer::sendPacket()
         startTime = timer.captureCounter();
         lastBufferedCount = 0;
 
-        sws.sendDMA((uint8_t *)txBuf, JD_SERIAL_PAYLOAD_SIZE);
+        sws.sendDMA((uint8_t *)txBuf, JD_SERIAL_PAYLOAD_SIZE + JD_SERIAL_HEADER_SIZE);
         timer.setCompare(TIMEOUT_CC, startTime + JD_BYTE_AT_125KBAUD);
 
         if (commLED)

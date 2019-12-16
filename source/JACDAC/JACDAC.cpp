@@ -142,7 +142,7 @@ ManagedString JACDAC::getDeviceName()
     return JACDAC::instance->controlService.getDeviceName();
 }
 
-int JACDAC::triggerRemoteIdentification(uint8_t device_identifier)
+int JACDAC::triggerRemoteIdentification(uint64_t device_identifier)
 {
     if (JACDAC::instance == NULL)
         return DEVICE_INVALID_STATE;
@@ -150,7 +150,7 @@ int JACDAC::triggerRemoteIdentification(uint8_t device_identifier)
     return JACDAC::instance->controlService.triggerRemoteIdentification(device_identifier);
 }
 
-int JACDAC::setRemoteDeviceName(uint8_t device_identifier, ManagedString name)
+int JACDAC::setRemoteDeviceName(uint64_t device_identifier, ManagedString name)
 {
     if (JACDAC::instance == NULL)
         return DEVICE_INVALID_STATE;
@@ -158,12 +158,20 @@ int JACDAC::setRemoteDeviceName(uint8_t device_identifier, ManagedString name)
     return JACDAC::instance->controlService.setRemoteDeviceName(device_identifier, name);
 }
 
-JDDevice* JACDAC::getRemoteDevice(uint8_t device_identifier)
+JDDevice* JACDAC::getRemoteDevice(uint64_t device_identifier)
 {
     if (JACDAC::instance == NULL)
         return NULL;
 
     return JACDAC::instance->controlService.getRemoteDevice(device_identifier);
+}
+
+JDDevice* JACDAC::getRemoteDevice(ManagedString name)
+{
+    if (JACDAC::instance == NULL)
+        return NULL;
+
+    return JACDAC::instance->controlService.getRemoteDevice(name);
 }
 
 void JACDAC::logState()
