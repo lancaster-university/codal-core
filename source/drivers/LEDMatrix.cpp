@@ -29,6 +29,7 @@ DEALINGS IN THE SOFTWARE.
   */
 #include "LEDMatrix.h"
 #include "CodalFiber.h"
+#include "CodalDmesg.h"
 #include "ErrorNo.h"
 
 using namespace codal;
@@ -150,7 +151,7 @@ void LEDMatrix::render()
     matrixMap.rowPins[strobeRow]->setDigitalValue(1);
 
     //timer does not have enough resolution for brightness of 1. 23.53 us
-    if(brightness != LED_MATRIX_MAXIMUM_BRIGHTNESS && brightness > LED_MATRIX_MINIMUM_BRIGHTNESS)
+    if(brightness <= LED_MATRIX_MAXIMUM_BRIGHTNESS && brightness > LED_MATRIX_MINIMUM_BRIGHTNESS)
         system_timer_event_after_us(frameTimeout, id, LED_MATRIX_EVT_FRAME_TIMEOUT);
 
     //this will take around 23us to execute
@@ -352,7 +353,7 @@ int LEDMatrix::setBrightness(int b)
         return result;
 
     // Precalculate the per frame "on" time for this brightness level.
-    frameTimeout = ((brightness * 950) / (LED_MATRIX_MAXIMUM_BRIGHTNESS)) * SCHEDULER_TICK_PERIOD_US;
+    frameTimeout = (((int)brightness) * 1024 * SCHEDULER_TICK_PERIOD_US) / (255 * 1024);
 
     return DEVICE_OK;
 }
