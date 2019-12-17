@@ -319,10 +319,7 @@ void Timer::recomputeNextTimerEvent()
     if (nextTimerEvent) {
         // this may possibly happen if a new timer event was added to the queue while
         // we were running - it might be already in the past
-        if (nextTimerEvent->timestamp < currentTimeUs + CODAL_TIMER_MINIMUM_PERIOD)
-            triggerIn(CODAL_TIMER_MINIMUM_PERIOD);
-        else
-            triggerIn(nextTimerEvent->timestamp - currentTimeUs);
+        triggerIn(max(nextTimerEvent->timestamp - currentTimeUs, CODAL_TIMER_MINIMUM_PERIOD));
     }
 }
 
@@ -376,7 +373,6 @@ void Timer::trigger(bool isFallback)
 
     // always recompute nextTimerEvent - event firing could have added new timer events
     recomputeNextTimerEvent();
-
 }
 
 /**
