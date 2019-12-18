@@ -129,7 +129,7 @@ static const uint8_t initCmds[] = {
 
 // Nordic cannot send more than 255 bytes at a time;
 // 224 aligns with a word
-#if defined(NRF52840) || defined(NRF52832)
+#ifdef NRF52_SERIES
 #define DATABUFSIZE 224
 #else
 #define DATABUFSIZE 500
