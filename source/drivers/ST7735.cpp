@@ -68,6 +68,7 @@ namespace codal
 ST7735::ST7735(ScreenIO &io, Pin &cs, Pin &dc) : io(io), cs(&cs), dc(&dc), work(NULL)
 {
     double16 = false;
+    inSleepMode = false;
 }
 
 #define DELAY 0x80
