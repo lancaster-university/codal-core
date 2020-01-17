@@ -435,7 +435,6 @@ void Serial::printf(const char* format, ...)
     const char *end = format;
 
     // We might want to call disable / enable interrupts on the serial line if print is called from ISR context
-    target_disable_irq();
     char buff[20];
     while (*end)
     {
@@ -503,7 +502,6 @@ void Serial::printf(const char* format, ...)
         else
             putc(current);
     }
-    target_enable_irq();
 
     va_end(arg);
 }
