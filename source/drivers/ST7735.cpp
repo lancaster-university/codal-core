@@ -440,8 +440,10 @@ void ST7735::configure(uint8_t madctl, uint32_t frmctr1)
     uint8_t cmd0[] = {ST7735_MADCTL, madctl};
     uint8_t cmd1[] = {ST7735_FRMCTR1, (uint8_t)(frmctr1 >> 16), (uint8_t)(frmctr1 >> 8),
                       (uint8_t)frmctr1};
-    sendCmd(cmd0, sizeof(cmd0));
-    sendCmd(cmd1, cmd1[3] == 0xff ? 3 : 4);
+    if (madctl != 0xff)
+        sendCmd(cmd0, sizeof(cmd0));
+    if (frmctr1 != 0xffffff)
+        sendCmd(cmd1, cmd1[3] == 0xff ? 3 : 4);
 }
 
 } // namespace codal
