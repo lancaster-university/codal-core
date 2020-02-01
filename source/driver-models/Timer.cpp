@@ -349,10 +349,7 @@ void Timer::trigger(bool isFallback)
     if (nextTimerEvent) {
         // this may possibly happen if a new timer event was added to the queue while
         // we were running - it might be already in the past
-        if (currentTimeUs < nextTimerEvent->timestamp)
-            triggerIn(nextTimerEvent->timestamp - currentTimeUs);
-        else
-            triggerIn(1);
+        triggerIn(max(nextTimerEvent->timestamp - currentTimeUs, CODAL_TIMER_MINIMUM_PERIOD));
     }
 }
 
