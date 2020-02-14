@@ -77,6 +77,15 @@ DEALINGS IN THE SOFTWARE.
 #endif
 
 //
+// Defines the default minimum period (in uS) a hardware timer can measure without
+// risk of a race condition. Can be overridden in a target config.json.
+//
+#ifndef CODAL_TIMER_MINIMUM_PERIOD
+#define CODAL_TIMER_MINIMUM_PERIOD            10
+#endif
+
+
+//
 // Fiber scheduler configuration
 //
 
