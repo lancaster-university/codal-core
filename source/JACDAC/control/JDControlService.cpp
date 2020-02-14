@@ -322,7 +322,7 @@ void JDControlService::routePacket(JDPacket* pkt)
     }
     else
     {
-        DMESG("CRC ERR: %d %d", pkt->device_identifier, pkt->service_number);
+        DMESG("CRC ERR: %d %d", (uint32_t)pkt->device_identifier, pkt->service_number);
     }
 
 }
@@ -332,7 +332,7 @@ void JDControlService::routePacket(JDPacket* pkt)
   **/
 int JDControlService::handlePacket(JDPacket* pkt)
 {
-    DMESG("HP %d %d", pkt->device_identifier, pkt->service_number);
+    DMESG("HP %d %d", (uint32_t)pkt->device_identifier, pkt->service_number);
     // if the driver has not started yet, drain packets.
     if (!(this->status & JD_CONTROL_SERVICE_STATUS_ENUMERATE))
         return DEVICE_OK;

@@ -53,7 +53,7 @@ int JDConsoleService::handlePacket(JDPacket* pkt)
                 deviceName = (char*)"UNNAMED";
         }
 
-        DMESG("[%d,%s] %s: %s", pkt->device_identifier, deviceName, priorityMsg, consolePkt->message);
+        DMESG("[%d,%s] %s: %s", (uint32_t)pkt->device_identifier, deviceName, priorityMsg, consolePkt->message);
     }
 
     return DEVICE_OK;
