@@ -4,7 +4,7 @@
 using namespace codal;
 
 JDConsoleService::JDConsoleService(bool receiver) :
-    JDService(JD_SERVICE_IDENTIFIER_CONSOLE, (receiver) ? BroadcastService : HostService)
+    JDService(JD_SERVICE_CLASS_CONSOLE, (receiver) ? BroadcastService : HostService)
 {
     status = 0;
 }

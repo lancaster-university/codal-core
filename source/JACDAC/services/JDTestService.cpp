@@ -3,7 +3,7 @@
 
 using namespace codal;
 
-JDTestService::JDTestService(ManagedString serviceName, JDServiceMode m) : JDService(JD_SERVICE_IDENTIFIER_CONTROL_TEST, m), name(serviceName)
+JDTestService::JDTestService(ManagedString serviceName, JDServiceMode m) : JDService(JD_SERVICE_CLASS_CONTROL_TEST, m), name(serviceName)
 {
 }
 

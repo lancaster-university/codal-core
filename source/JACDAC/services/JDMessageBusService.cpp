@@ -3,7 +3,7 @@
 
 using namespace codal;
 
-JDMessageBusService::JDMessageBusService() : JDService(JD_SERVICE_IDENTIFIER_MESSAGE_BUS, BroadcastService)
+JDMessageBusService::JDMessageBusService() : JDService(JD_SERVICE_CLASS_MESSAGE_BUS, BroadcastService)
 {
     suppressForwarding = false;
 }

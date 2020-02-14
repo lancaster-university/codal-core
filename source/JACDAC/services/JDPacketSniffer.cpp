@@ -24,7 +24,7 @@ void JDPacketSniffer::timerCallback(Event)
     }
 }
 
-JDPacketSniffer::JDPacketSniffer() : JDService(JD_SERVICE_IDENTIFIER_BRIDGE, ClientService)
+JDPacketSniffer::JDPacketSniffer() : JDService(JD_SERVICE_CLASS_BRIDGE, ClientService)
 {
     if (EventModel::defaultEventBus)
     {

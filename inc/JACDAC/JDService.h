@@ -35,7 +35,7 @@ namespace codal
 
     struct JDServiceInformation
     {
-        uint32_t service_identifier;  // the class of the service
+        uint32_t service_class;  // the class of the service
         uint8_t service_flags;
         uint8_t advertisement_size;
         uint8_t data[]; // optional additional data, maximum of 16 bytes
@@ -58,7 +58,7 @@ namespace codal
         static uint32_t dynamicId;
 
         JDServiceMode mode;
-        uint32_t service_identifier;
+        uint32_t service_class;
         uint16_t service_number;
         uint8_t service_flags;
 

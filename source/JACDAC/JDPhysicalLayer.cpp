@@ -635,7 +635,7 @@ int JDPhysicalLayer::send(JDPacket* tx, bool computeCRC)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int JDPhysicalLayer::send(uint8_t* buf, int len, uint8_t service_number, uint32_t service_identifier, JDDevice* device)
+int JDPhysicalLayer::send(uint8_t* buf, int len, uint8_t service_number, uint32_t service_class, JDDevice* device)
 {
     if (buf == NULL || len <= 0 || len > JD_SERIAL_MAX_PAYLOAD_SIZE || service_number > JD_SERIAL_MAX_SERVICE_NUMBER)
     {
@@ -653,7 +653,7 @@ int JDPhysicalLayer::send(uint8_t* buf, int len, uint8_t service_number, uint32_
 
     pkt.crc = 0;
     pkt.service_number = service_number;
-    pkt.service_identifier = service_identifier;
+    pkt.service_class = service_class;
     pkt.size = len;
 
     memcpy(pkt.data, buf, len);

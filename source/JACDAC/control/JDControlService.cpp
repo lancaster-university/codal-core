@@ -93,7 +93,7 @@ int JDControlService::formControlPacket()
         // DMESG("IPTR: %p %d",info, (unsigned long)info % 4);
 
         info->service_flags = current->service_flags;
-        info->service_identifier = current->service_identifier;
+        info->service_class = current->service_class;
         info->advertisement_size = current->addAdvertisementData(info->data);
 
         size += info->advertisement_size + JD_SERVICE_INFO_HEADER_SIZE;
@@ -262,7 +262,7 @@ int JDControlService::disconnect()
     return DEVICE_OK;
 }
 
-JDControlService::JDControlService(ManagedString name) : JDService(JD_SERVICE_IDENTIFIER_CONTROL, ControlLayerService), configurationService()
+JDControlService::JDControlService(ManagedString name) : JDService(JD_SERVICE_CLASS_CONTROL, ControlLayerService), configurationService()
 {
     this->name = name;
     this->device = NULL;
@@ -303,7 +303,7 @@ void JDControlService::routePacket(JDPacket* pkt)
 
     if (crcCheck)
     {
-        if (pkt->service_identifier == JD_SERVICE_IDENTIFIER_CONTROL)
+        if (pkt->service_class == JD_SERVICE_CLASS_CONTROL)
             this->handlePacket(pkt);
         else
         {
@@ -314,7 +314,7 @@ void JDControlService::routePacket(JDPacket* pkt)
                 if (!service || !service->device || service->mode == ControlLayerService)
                     continue;
 
-                if ((service->device->device_identifier == device->device_identifier && service->service_number == pkt->service_number) || (pkt->service_identifier == service->service_identifier && service->mode == BroadcastService))
+                if ((service->device->device_identifier == device->device_identifier && service->service_number == pkt->service_number) || (pkt->service_class == service->service_class && service->mode == BroadcastService))
                     if (service->handlePacket(pkt) == DEVICE_OK)
                         break;
             }
@@ -337,14 +337,14 @@ int JDControlService::handlePacket(JDPacket* pkt)
     if (!(this->status & JD_CONTROL_SERVICE_STATUS_ENUMERATE))
         return DEVICE_OK;
 
-    if (pkt->service_identifier == this->rngService.service_number)
+    if (pkt->service_class == this->rngService.service_number)
     {
         DMESG("RNG SERV");
         this->rngService.handlePacket(pkt);
         return DEVICE_OK;
     }
 
-    if (pkt->service_identifier == this->configurationService.service_number)
+    if (pkt->service_class == this->configurationService.service_number)
     {
         DMESG("CONF SERV");
         this->configurationService.handlePacket(pkt);
@@ -378,11 +378,11 @@ int JDControlService::handlePacket(JDPacket* pkt)
     dataPointer += nameSize;
     uint8_t* dpStart = dataPointer;
 
-    JD_DMESG("USDEV: a %d, s %d, c %d, i %d, t %c%c%c", (uint32_t)this->device->device_identifier, this->service_identifier, this->status & JD_SERVICE_STATUS_FLAGS_INITIALISED ? 1 : 0, this->mode == BroadcastService ? 'B' : ' ', this->mode == HostService ? 'H' : ' ', this->mode == ClientService ? 'C' : ' ');
+    JD_DMESG("USDEV: a %d, s %d, c %d, i %d, t %c%c%c", (uint32_t)this->device->device_identifier, this->service_class, this->status & JD_SERVICE_STATUS_FLAGS_INITIALISED ? 1 : 0, this->mode == BroadcastService ? 'B' : ' ', this->mode == HostService ? 'H' : ' ', this->mode == ClientService ? 'C' : ' ');
     while (dataPointer < dpStart + (pkt->size - JD_CONTROL_PACKET_HEADER_SIZE - nameSize))
     {
         JDServiceInformation* serviceInfo = (JDServiceInformation *)dataPointer;
-        DMESG("SI: addr %d, sn %d, class %d", (uint32_t)pkt->device_identifier, service_number, serviceInfo->service_identifier);
+        DMESG("SI: addr %d, sn %d, class %d", (uint32_t)pkt->device_identifier, service_number, serviceInfo->service_class);
         for (int i = 0; i < JD_SERVICE_ARRAY_SIZE; i++)
         {
             JDService* current = JACDAC::instance->services[i];
@@ -390,7 +390,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
             if (current == NULL || current->mode == ControlLayerService)
                 continue;
 
-            bool class_check = current->service_identifier == serviceInfo->service_identifier;
+            bool class_check = current->service_class == serviceInfo->service_class;
 
             // if the service is running, route the packet.
             if (current->status & JD_SERVICE_STATUS_FLAGS_INITIALISED)
@@ -399,7 +399,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
 
                 // this boolean is used to override stringent address checks (not needed for broadcast services as they receive all packets) to prevent code duplication
                 bool broadcast_override = current->mode == BroadcastService;
-                DMESG("INITDSer: a %d, c %d, i %d, t %c%c%c", (uint32_t)current->device->device_identifier, current->service_identifier, current->status & JD_SERVICE_STATUS_FLAGS_INITIALISED ? 1 : 0, current->mode == BroadcastService ? 'B' : ' ', current->mode == HostService ? 'H' : ' ', current->mode == ClientService ? 'C' : ' ');
+                DMESG("INITDSer: a %d, c %d, i %d, t %c%c%c", (uint32_t)current->device->device_identifier, current->service_class, current->status & JD_SERVICE_STATUS_FLAGS_INITIALISED ? 1 : 0, current->mode == BroadcastService ? 'B' : ' ', current->mode == HostService ? 'H' : ' ', current->mode == ClientService ? 'C' : ' ');
 
                 // check if applicable
                 if ((address_check && class_check) || (class_check && broadcast_override))
@@ -413,14 +413,14 @@ int JDControlService::handlePacket(JDPacket* pkt)
                     // any non zero return value will cause packet routing to continue
                     if (current->handleServiceInformation(remoteDevice, serviceInfo) == DEVICE_OK)
                     {
-                        JD_DMESG("uS ABSORBED %d %d", current->device->device_identifier, current->service_identifier);
+                        JD_DMESG("uS ABSORBED %d %d", current->device->device_identifier, current->service_class);
                         break;
                     }
                 }
             }
             else if (class_check && current->mode == ClientService)
             {
-                DMESG("UNINITDSer a %d, c %d, t %c%c%c", (uint32_t)current->device->device_identifier, current->service_identifier, current->mode == BroadcastService ? 'B' : ' ', current->mode == HostService? 'H' : ' ', current->mode == ClientService ? 'C' : ' ');
+                DMESG("UNINITDSer a %d, c %d, t %c%c%c", (uint32_t)current->device->device_identifier, current->service_class, current->mode == BroadcastService ? 'B' : ' ', current->mode == HostService? 'H' : ' ', current->mode == ClientService ? 'C' : ' ');
 
                 // this service instance is looking for a specific device (either a device_identifier or name)
                 if (current->requiredDevice)
@@ -442,7 +442,7 @@ int JDControlService::handlePacket(JDPacket* pkt)
                     }
                 }
 
-                DMESG("FOUND NEW: %d %d", (uint32_t)current->device->device_identifier, current->service_identifier);
+                DMESG("FOUND NEW: %d %d", (uint32_t)current->device->device_identifier, current->service_class);
                 remoteDevice = this->deviceManager.addDevice(pkt->device_identifier, cp);
 
                 if (current->handleServiceInformation(remoteDevice, (JDServiceInformation*)dataPointer) == DEVICE_OK)

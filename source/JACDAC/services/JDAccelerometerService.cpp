@@ -32,7 +32,7 @@ void JDAccelerometerService::forwardEvent(Event evt)
     send((uint8_t*)&p, sizeof(AccelerometerGesturePacket));
 }
 
-JDAccelerometerService::JDAccelerometerService(Accelerometer& accel) : JDService(JD_SERVICE_IDENTIFIER_ACCELEROMETER, HostService), accelerometer(&accel)
+JDAccelerometerService::JDAccelerometerService(Accelerometer& accel) : JDService(JD_SERVICE_CLASS_ACCELEROMETER, HostService), accelerometer(&accel)
 {
     system_timer_event_every(50, this->id, JD_ACCEL_EVT_SEND_DATA);
 
@@ -43,7 +43,7 @@ JDAccelerometerService::JDAccelerometerService(Accelerometer& accel) : JDService
     }
 }
 
-JDAccelerometerService::JDAccelerometerService() : JDService(JD_SERVICE_IDENTIFIER_ACCELEROMETER, ClientService), accelerometer(NULL)
+JDAccelerometerService::JDAccelerometerService() : JDService(JD_SERVICE_CLASS_ACCELEROMETER, ClientService), accelerometer(NULL)
 {
 }
 
