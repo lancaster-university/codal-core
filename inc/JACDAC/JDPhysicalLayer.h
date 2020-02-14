@@ -33,7 +33,7 @@ DEALINGS IN THE SOFTWARE.
 #include "LowLevelTimer.h"
 #include "JDDeviceManager.h"
 
-#define JD_VERSION                     0
+#define JD_SERIAL_VERSION               1
 
 // various timings in microseconds
 // 8 data bits, 1 start bit, 1 stop bit.
@@ -79,8 +79,9 @@ DEALINGS IN THE SOFTWARE.
 
 #define JD_SERIAL_HEADER_SIZE          16
 #define JD_SERIAL_CRC_HEADER_SIZE      2  // when computing CRC, we skip the CRC and version fields, so the header size decreases by three.
-#define JD_SERIAL_MAX_PAYLOAD_SIZE     128
-#define JD_SERIAL_PAYLOAD_SIZE         128
+// 255 minus size of the serial header, rounded down to 4
+#define JD_SERIAL_MAX_PAYLOAD_SIZE     236
+#define JD_SERIAL_PAYLOAD_SIZE         236
 
 #define JD_SERIAL_MAXIMUM_BUFFERS      10
 
@@ -100,6 +101,11 @@ DEALINGS IN THE SOFTWARE.
 #define JD_DMESG(...) ((void)0)
 #endif
 
+#define JD_SERIAL_FLAG_DEVICE_ID_IS_RECIPIENT 0x01 // device_identifier is the intended recipient (and not source) of the message
+
+#define JD_PACKED __attribute__((__packed__)) __attribute__((aligned(4)))
+
+
 namespace codal
 {
     class JDService;
@@ -117,13 +123,20 @@ namespace codal
 
     struct JDPacket
     {
-        uint16_t crc:12, service_number:4; // crc is stored in the first 12 bits, service number in the final 4 bits
+        // transport header
+        uint16_t crc; // CRC16-CCIT
+        uint8_t version; // JD_SERIAL_VERSION (1)
+        uint8_t serial_flags;
         uint64_t device_identifier;
-        uint32_t service_identifier;
-        uint8_t reserved;
-        uint8_t size; // the size, address, and crc are not included by the size variable. The size of a packet dictates the size of the data field.
+
+        // logical header
+        uint8_t size; // of the payload (data[])
+        uint8_t service_number; // index in control packet
+        uint8_t service_command; // service-specific
+        uint8_t service_flags; // service-specific
+
         uint8_t data[JD_SERIAL_PAYLOAD_SIZE];
-    } __attribute((__packed__));
+    } JD_PACKED;
 
     enum class JDBusState : uint8_t
     {
