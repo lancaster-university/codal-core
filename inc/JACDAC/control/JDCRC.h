@@ -3,7 +3,7 @@
 #ifndef JD_CRC_H
 #define JD_CRC_H
 
-#define JD_CRC_POLYNOMIAL           0xC8F
+#define JD_CRC_POLYNOMIAL           0x1021
 
 namespace codal
 {
@@ -12,9 +12,6 @@ namespace codal
      *
      * @param data the pointer to the data buffer
      * @param len the size of data
-     * @param device the JDDevice to computer the crc with. The unique device identifier is used
-     *        when calculating the crc destined for specific services. Device can be NULL, this indicates
-     *        that the crc should not include a udid.
      *
      * @return the computed crc.
      **/
