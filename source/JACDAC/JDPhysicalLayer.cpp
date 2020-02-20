@@ -635,9 +635,9 @@ int JDPhysicalLayer::send(JDPacket* tx, bool computeCRC)
  *
  * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
  */
-int JDPhysicalLayer::send(uint8_t* buf, int len, uint8_t service_number, uint32_t service_class, JDDevice* device)
+int JDPhysicalLayer::send(uint8_t* buf, int len, uint8_t service_number, uint8_t service_command, uint8_t service_arg, JDDevice* device)
 {
-    if (buf == NULL || len <= 0 || len > JD_SERIAL_MAX_PAYLOAD_SIZE || service_number > JD_SERIAL_MAX_SERVICE_NUMBER)
+    if ((buf == NULL && len > 0) || len < 0 || len > JD_SERIAL_MAX_PAYLOAD_SIZE || service_number > JD_SERIAL_MAX_SERVICE_NUMBER)
     {
         JD_DMESG("pkt TOO BIG: %d ",len);
         return DEVICE_INVALID_PARAMETER;
@@ -653,10 +653,13 @@ int JDPhysicalLayer::send(uint8_t* buf, int len, uint8_t service_number, uint32_
 
     pkt.crc = 0;
     pkt.service_number = service_number;
-    pkt.service_class = service_class;
+    pkt.service_command = service_command;
+    pkt.service_arg = servie_arg;
     pkt.size = len;
 
-    memcpy(pkt.data, buf, len);
+    // allow for Zero-length-packets
+    if (len)
+        memcpy(pkt.data, buf, len);
 
     return send(&pkt);
 }

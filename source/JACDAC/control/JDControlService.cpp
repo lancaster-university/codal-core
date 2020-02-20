@@ -303,7 +303,7 @@ void JDControlService::routePacket(JDPacket* pkt)
 
     if (crcCheck)
     {
-        if (pkt->service_class == JD_SERVICE_CLASS_CONTROL)
+        if (pkt->service_number == JD_SERVICE_NUMBER_CONTROL)
             this->handlePacket(pkt);
         else
         {
@@ -314,7 +314,8 @@ void JDControlService::routePacket(JDPacket* pkt)
                 if (!service || !service->device || service->mode == ControlLayerService)
                     continue;
 
-                if ((service->device->device_identifier == device->device_identifier && service->service_number == pkt->service_number) || (pkt->service_class == service->service_class && service->mode == BroadcastService))
+                // JD-TODO: || (pkt->service_class == service->service_class && service->mode == BroadcastService)
+                if (service->device->device_identifier == device->device_identifier && service->service_number == pkt->service_number)
                     if (service->handlePacket(pkt) == DEVICE_OK)
                         break;
             }

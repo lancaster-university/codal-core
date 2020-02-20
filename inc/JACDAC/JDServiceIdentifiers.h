@@ -11,6 +11,8 @@
 #define JD_SERVICE_CLASS_MAKECODE_START                 2000
 #define JD_SERVICE_CLASS_MAKECODE_END                   4000
 
+#define JD_SERVICE_NUMBER_CONTROL                       0
+
 #define JD_SERVICE_CLASS_CONTROL                        0
 #define JD_SERVICE_CLASS_CONTROL_RNG                    1
 #define JD_SERVICE_CLASS_CONTROL_CONFIGURATION          2

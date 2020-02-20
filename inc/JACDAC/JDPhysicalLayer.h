@@ -133,7 +133,7 @@ namespace codal
         uint8_t size; // of the payload (data[])
         uint8_t service_number; // index in control packet
         uint8_t service_command; // service-specific
-        uint8_t service_flags; // service-specific
+        uint8_t service_arg; // service-specific
 
         uint8_t data[JD_SERIAL_PAYLOAD_SIZE];
     } JD_PACKED;
@@ -264,7 +264,7 @@ namespace codal
           *
           * @returns DEVICE_OK on success, DEVICE_INVALID_PARAMETER if buf is NULL or len is invalid, or DEVICE_NO_RESOURCES if the queue is full.
           */
-        int send(uint8_t* buf, int len, uint8_t service_number, uint32_t service_class, JDDevice* device);
+        int send(uint8_t* buf, int len, uint8_t service_number, uint8_t service_command, uint8_t service_args, JDDevice* device);
 
         /**
          * Returns a bool indicating whether the JACDAC driver has been started.

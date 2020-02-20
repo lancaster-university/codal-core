@@ -48,7 +48,7 @@ namespace codal
 
         JDDevice* getDevice(ManagedString name);
 
-        JDDevice* addDevice(uint64_t device_identifier, JDControlPacket* controlPacket);
+        JDDevice* addDevice(uint64_t device_identifier, JDControlPacket* controlPacket, int controlSize);
 
         int updateDevice(JDDevice* remoteDevice, uint64_t device_identifier, JDControlPacket* controlPacket);
 

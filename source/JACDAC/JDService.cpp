@@ -39,10 +39,10 @@ int JDService::addAdvertisementData(uint8_t* data)
     return 0;
 }
 
-int JDService::send(uint8_t* buf, int len)
+int JDService::send(uint8_t* buf, int len, uint8_t cmd, uint8_t arg)
 {
     if (JACDAC::instance && this->device)
-        return JACDAC::instance->bus.send(buf, len, this->service_number, this->service_class, this->device);
+        return JACDAC::instance->bus.send(buf, len, this->service_number, cmd, arg, this->device);
 
     return DEVICE_NO_RESOURCES;
 }

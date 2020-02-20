@@ -4,19 +4,21 @@
 
 using namespace codal;
 
-int JDDeviceManager::initialiseDevice(JDDevice* remoteDevice, uint64_t device_identifier, JDControlPacket* controlPacket)
+int JDDeviceManager::initialiseDevice(JDDevice* remoteDevice, uint64_t device_identifier, JDControlPacket* controlPacket, int controlSize)
 {
     remoteDevice->device_identifier = device_identifier;
     remoteDevice->device_flags = controlPacket->device_flags;
     remoteDevice->rolling_counter = 0;
 
+    uint8_t *adData = controlPacket->data;
+
     if (controlPacket->device_flags & JD_DEVICE_FLAGS_HAS_NAME)
     {
-        uint8_t len = *controlPacket->data;
+        uint8_t len = *adData++;
 
         if (remoteDevice->name)
         {
-            if (len == strlen((char *)remoteDevice->name) && memcmp(controlPacket->data + 1, remoteDevice->name, len))
+            if (len == strlen((char *)remoteDevice->name) && memcmp(adData + 1, remoteDevice->name, len))
                 return DEVICE_OK;
 
             free(remoteDevice->name);
@@ -24,9 +26,26 @@ int JDDeviceManager::initialiseDevice(JDDevice* remoteDevice, uint64_t device_id
         }
 
         remoteDevice->name = (uint8_t *)malloc(len + 1);
-        memcpy(remoteDevice->name, controlPacket->data + 1, len);
+        memcpy(remoteDevice->name, adData, len);
         remoteDevice->name[len] = 0;
+        adData += len;
     }
+
+    uint8_t *adDataEnd = controlPacket->data + controlSize - sizeof(JDControlPacket);
+
+    for (int i = 0; i < 2; ++i) {
+        JDServiceInformation *service = (JDServiceInformation *)adData;
+        int ptr = 0;
+
+        while ((uint8_t*)service < adDataEnd - 5) {
+            
+        }
+        
+         uint32_t service_class;  // the class of the service
+        uint8_t service_flags;
+        uint8_t advertisement_size;
+    }
+
 
     return DEVICE_OK;
 }
@@ -71,14 +90,14 @@ JDDevice* JDDeviceManager::getDevice(ManagedString name)
     return NULL;
 }
 
-JDDevice* JDDeviceManager::addDevice(uint64_t device_identifier, JDControlPacket* controlPacket)
+JDDevice* JDDeviceManager::addDevice(uint64_t device_identifier, JDControlPacket* controlPacket, int controlSize)
 {
     JDDevice* newRemote = (JDDevice *) malloc(sizeof(JDDevice));
 
     newRemote->next = NULL;
     newRemote->name = NULL;
 
-    initialiseDevice(newRemote, device_identifier, controlPacket);
+    initialiseDevice(newRemote, device_identifier, controlPacket, controlSize);
 
     if (this->devices == NULL)
         this->devices = newRemote;
