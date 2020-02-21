@@ -62,6 +62,7 @@ void timer_callback(uint16_t chan)
 
 void Timer::triggerIn(CODAL_TIMESTAMP t)
 {
+    if (t < CODAL_TIMER_MINIMUM_PERIOD) t = CODAL_TIMER_MINIMUM_PERIOD;
     // Just in case, disable all IRQs
     target_disable_irq();
     timer.setCompare(this->ccEventChannel, timer.captureCounter() + t);
