@@ -425,6 +425,22 @@ namespace codal
         {
             return DEVICE_NOT_IMPLEMENTED;
         }
+
+        /**
+         * Set pin value if condition is set.
+         * 
+         * If *condition is 0xffffffff, sets pin to given value.
+         * If *condition is 0, do nothing.
+         * Otherwise, undefined.
+         * Note, that this is overwritten in hardware-specific classes to check the condition immedietly before changing the pin value.
+         * 
+         * @return DEVICE_OK on sucess, DEVICE_BUSY when condition was false.
+         */
+        virtual int conditionalSetDigitalValue(int value, volatile uint32_t *condition)
+        {
+            if (*condition == 0) return DEVICE_BUSY;
+            return setDigitalValue(value);
+        }
     };
 
 }
