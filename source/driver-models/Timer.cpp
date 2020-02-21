@@ -313,17 +313,22 @@ void Timer::trigger(bool isFallback)
         {
             if (e->id != 0 && currentTimeUs >= e->timestamp)
             {
-                // We need to trigger this event.
-#if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
-                Event evt(e->id, e->value, currentTime);
-#else
-                Event evt(e->id, e->value, currentTimeUs);
-#endif
+                uint16_t id = e->id;
 
+                // Release before triggering event. Otherwise, an immediate event handler
+                // can cancel this event, another event might be put in its place
+                // and we end up releasing (or repeating) a completely different event.
                 if (e->period == 0)
                     releaseTimerEvent(e);
                 else
                     e->timestamp += e->period;
+
+                // We need to trigger this event.
+#if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
+                Event evt(id, e->value, currentTime);
+#else
+                Event evt(id, e->value, currentTimeUs);
+#endif
 
                 // TODO: Handle rollover case above...
                 eventsFired++;
