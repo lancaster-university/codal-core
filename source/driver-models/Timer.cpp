@@ -187,18 +187,28 @@ int Timer::setEvent(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, bool re
  */
 int Timer::cancel(uint16_t id, uint16_t value)
 {
-    // Find the first unused slot, and assign it.
-    for (int i=0; i<eventListSize; i++)
+    int res = DEVICE_INVALID_PARAMETER;
+
+    target_disable_irq();
+    if (nextTimerEvent && nextTimerEvent->id == id && nextTimerEvent->value == value)
     {
-        if (timerEventList[i].id == id && timerEventList[i].value == value)
-        {
-            timerEventList[i].id = 0;
-            return DEVICE_OK;
-        }
+        nextTimerEvent->id = 0;
+        recomputeNextTimerEvent();
+        res = DEVICE_OK;
     }
+    else
+        for (int i=0; i<eventListSize; i++)
+        {
+            if (timerEventList[i].id == id && timerEventList[i].value == value)
+            {
+                timerEventList[i].id = 0;
+                res = DEVICE_OK;
+                break;
+            }
+        }
+    target_enable_irq();
 
-    return DEVICE_INVALID_PARAMETER;
-
+    return res;
 }
 
 /**
@@ -292,6 +302,30 @@ void Timer::sync()
     target_enable_irq();
 }
 
+void Timer::recomputeNextTimerEvent()
+{
+    nextTimerEvent = NULL;
+
+    TimerEvent *e = timerEventList;
+
+    // Find the next most recent and schedule it.
+    for (int i = 0; i < eventListSize; i++)
+    {
+        if (e->id != 0 && (nextTimerEvent == NULL || (e->timestamp < nextTimerEvent->timestamp)))
+            nextTimerEvent = e;
+        e++;
+    }
+
+    if (nextTimerEvent) {
+        // this may possibly happen if a new timer event was added to the queue while
+        // we were running - it might be already in the past
+        if (nextTimerEvent->timestamp < currentTimeUs + CODAL_TIMER_MINIMUM_PERIOD)
+            triggerIn(CODAL_TIMER_MINIMUM_PERIOD);
+        else
+            triggerIn(nextTimerEvent->timestamp - currentTimeUs);
+    }
+}
+
 /**
  * Callback from physical timer implementation code.
  */
@@ -340,23 +374,8 @@ void Timer::trigger(bool isFallback)
     } while (eventsFired);
 
     // always recompute nextTimerEvent - event firing could have added new timer events
-    nextTimerEvent = NULL;
+    recomputeNextTimerEvent();
 
-    TimerEvent *e = timerEventList;
-
-    // Find the next most recent and schedule it.
-    for (int i = 0; i < eventListSize; i++)
-    {
-        if (e->id != 0 && (nextTimerEvent == NULL || (e->timestamp < nextTimerEvent->timestamp)))
-            nextTimerEvent = e;
-        e++;
-    }
-
-    if (nextTimerEvent) {
-        // this may possibly happen if a new timer event was added to the queue while
-        // we were running - it might be already in the past
-        triggerIn(max(nextTimerEvent->timestamp - currentTimeUs, CODAL_TIMER_MINIMUM_PERIOD));
-    }
 }
 
 /**
