@@ -69,6 +69,11 @@ namespace codal
          */
         void triggerIn(CODAL_TIMESTAMP t);
 
+        /**
+         * Make sure nextTimerEvent is pointing the the right event.
+         */
+        void recomputeNextTimerEvent();
+
     public:
 
         uint8_t ccPeriodChannel;
