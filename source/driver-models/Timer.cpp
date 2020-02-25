@@ -349,6 +349,7 @@ void Timer::trigger(bool isFallback)
             if (e->id != 0 && currentTimeUs >= e->timestamp)
             {
                 uint16_t id = e->id;
+                uint16_t value = e->value;
 
                 // Release before triggering event. Otherwise, an immediate event handler
                 // can cancel this event, another event might be put in its place
@@ -360,9 +361,9 @@ void Timer::trigger(bool isFallback)
 
                 // We need to trigger this event.
 #if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
-                Event evt(id, e->value, currentTime);
+                Event evt(id, value, currentTime);
 #else
-                Event evt(id, e->value, currentTimeUs);
+                Event evt(id, value, currentTimeUs);
 #endif
 
                 // TODO: Handle rollover case above...
