@@ -27,7 +27,7 @@ namespace codal
         /**
          * Default Constructor.
          */
-        MemorySource(int maximumValue = 256);
+        MemorySource();
 
         /**
          * Provide the next available ManagedBuffer to our downstream caller, if available.
