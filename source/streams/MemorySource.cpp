@@ -9,10 +9,10 @@ using namespace codal;
  * @param data pointer to memory location to playout
  * @param length number of bytes to stream
  */
-MemorySource::MemorySource() : output(*this)
+MemorySource::MemorySource(int maximumValue) : output(*this)
 {
     this->bytesSent = 0;
-    this->maximumValue = 256;
+    this->maximumValue = maximumValue;
     this->scalar = 1;
 } 
 
