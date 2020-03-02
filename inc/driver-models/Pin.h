@@ -439,7 +439,7 @@ namespace codal
               if (isInput() && getDigitalValue() == !value)
               {
                   setDigitalValue(value);
-                  return 0;
+                  return DEVICE_OK;
               }
               return DEVICE_BUSY;
         }
