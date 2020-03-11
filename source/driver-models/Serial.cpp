@@ -470,13 +470,14 @@ void Serial::printf(const char* format, ...)
 
             case 'x':
                 lowerCase = true;
+                // fall through
             case 'X':
                 for (uint8_t i = 8; i > 0; i--)
                 {
                     uint8_t digit = ((uint8_t) (val >> ((i - 1) * 4)) & 0x0f) + (uint8_t) '0';
                     if (digit > '9')
                     {
-                        if (lowerCase == true)
+                        if (lowerCase)
                             digit += 39;
                         else
                             digit += 7;
@@ -484,10 +485,9 @@ void Serial::printf(const char* format, ...)
                     if (digit != '0')
                     {
                         putc((char)digit);
-                        if (firstDigitFound == false)
-                            firstDigitFound = true;
+                        firstDigitFound = true;
                     }
-                    else if (firstDigitFound == true || i == 1)
+                    else if (firstDigitFound || i == 1)
                         putc((char)digit);
                 }
                 break;
