@@ -445,6 +445,8 @@ void Serial::printf(const char* format, ...)
             char* str = (char *)((void *)val);
             char* buffPtr = buff;
             char c = 0;
+            bool firstDigitFound = false;
+            bool lowerCase = false;
             switch (*end++)
             {
 
@@ -467,8 +469,29 @@ void Serial::printf(const char* format, ...)
                 break;
 
             case 'x':
-            case 'p':
+                lowerCase = true;
+                // fall through
             case 'X':
+                for (uint8_t i = 8; i > 0; i--)
+                {
+                    uint8_t digit = ((uint8_t) (val >> ((i - 1) * 4)) & 0x0f) + (uint8_t) '0';
+                    if (digit > '9')
+                    {
+                        if (lowerCase)
+                            digit += 39;
+                        else
+                            digit += 7;
+                    }
+                    if (digit != '0')
+                    {
+                        putc((char)digit);
+                        firstDigitFound = true;
+                    }
+                    else if (firstDigitFound || i == 1)
+                        putc((char)digit);
+                }
+                break;
+            case 'p':
             default:
                 putc('?');
                 putc('?');
