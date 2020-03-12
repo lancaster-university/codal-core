@@ -251,7 +251,7 @@ void ST7735::sendColorsStep(ST7735 *st)
 
     if (st->double16 && work->srcLeft == 0 && work->x++ < (work->width))
     {
-        work->srcLeft = (work->height + 1) >> 1;
+        work->srcLeft = (work->height + 1) >> 2;
         if ((work->x & 1) == 0)
         {
             work->srcPtr -= work->srcLeft;
