@@ -367,7 +367,10 @@ int ST7735::sendIndexedImage(const uint8_t *src, unsigned width, unsigned height
     work->srcPtr = src;
     work->width = width;
     work->height = height;
-    work->srcLeft = (height + 1) >> 1;
+    if (!double16)
+        work->srcLeft = (height + 1) >> 1;
+    else
+        work->srcLeft = (height + 1) >> 2;
     // when not scaling up, we don't care about where lines end
     if (!double16)
         work->srcLeft *= width;
