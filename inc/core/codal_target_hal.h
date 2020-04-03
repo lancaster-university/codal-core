@@ -44,6 +44,12 @@ extern "C"
     int target_random(int max);
 
     uint64_t target_get_serial();
+  
+    /**
+     * Compute 64-bit hash of manufacturer provided serial number.
+     * Can be used by target_get_serial().
+     */
+    uint64_t target_hash_serial_number(uint32_t *serialdata, unsigned numwords);
 
     void target_wait_for_event();
   
