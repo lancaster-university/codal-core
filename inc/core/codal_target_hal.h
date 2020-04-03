@@ -45,11 +45,9 @@ extern "C"
 
     uint64_t target_get_serial();
   
-    /**
-     * Compute 64-bit hash of manufacturer provided serial number.
-     * Can be used by target_get_serial().
-     */
-    uint64_t target_hash_serial_number(uint32_t *serialdata, unsigned numwords);
+    PROCESSOR_WORD_TYPE target_heap_start();
+
+    unsigned target_get_serial_buffer(void *serial, unsigned maxbytes);
 
     void target_wait_for_event();
   

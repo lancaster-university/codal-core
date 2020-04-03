@@ -61,7 +61,6 @@ struct HeapDefinition
     PROCESSOR_WORD_TYPE *heap_start;		// Physical address of the start of this heap.
     PROCESSOR_WORD_TYPE *heap_end;		    // Physical address of the end of this heap.
 };
-extern PROCESSOR_WORD_TYPE codal_heap_start;
 
 /**
   * Create and initialise a given memory region as for heap storage.
