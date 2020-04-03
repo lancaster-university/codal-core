@@ -19,8 +19,16 @@ WEAK void target_enable_irq()
 
 WEAK void target_disable_irq()
 {
+    // always disable just in case - it's just one instruction
     asm volatile("cpsid i" : : : "memory");
     irq_disabled++;
+}
+
+WEAK int target_get_irq_disabled()
+{
+    uint32_t result;
+    asm volatile("MRS %0, primask" : "=r"(result));
+    return result != 0;
 }
 
 WEAK void target_wait_for_event()
@@ -29,7 +37,7 @@ WEAK void target_wait_for_event()
 }
 
 /**
- *  Thread Context for an ARM Cortex M0 core.
+ *  Thread Context for an ARM Cortex-M cores.
  *
  * This is probably overkill, but the ARMCC compiler uses a lot register optimisation
  * in its calling conventions, so better safe than sorry!
