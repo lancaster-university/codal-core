@@ -294,10 +294,10 @@ void* device_malloc (size_t size)
         heap_count = 0;
 
 #if CONFIG_ENABLED(CODAL_LOW_LEVEL_VALIDATION)
-        if(device_create_heap((PROCESSOR_WORD_TYPE)(codal_heap_start), (PROCESSOR_WORD_TYPE)(DEVICE_STACK_BASE) - (PROCESSOR_WORD_TYPE)(DEVICE_STACK_SIZE)) == DEVICE_INVALID_PARAMETER)
+        if(device_create_heap(target_heap_start(), (PROCESSOR_WORD_TYPE)(DEVICE_STACK_BASE) - (PROCESSOR_WORD_TYPE)(DEVICE_STACK_SIZE)) == DEVICE_INVALID_PARAMETER)
             target_panic(DEVICE_HEAP_ERROR);
 #else
-        device_create_heap((PROCESSOR_WORD_TYPE)(codal_heap_start), (PROCESSOR_WORD_TYPE)(DEVICE_STACK_BASE) - (PROCESSOR_WORD_TYPE)(DEVICE_STACK_SIZE));
+        device_create_heap(target_heap_start(), (PROCESSOR_WORD_TYPE)(DEVICE_STACK_BASE) - (PROCESSOR_WORD_TYPE)(DEVICE_STACK_SIZE));
 #endif
         initialised = 1;
     }
