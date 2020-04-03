@@ -41,7 +41,7 @@ WEAK void target_deepsleep()
     target_wait_for_event();
 }
 
-static uint32_t murmur_hash2_core(uint32_t *d, int words)
+static uint32_t murmur_hash2_core(const uint32_t *d, int words)
 {
     const uint32_t m = 0x5bd1e995;
     uint32_t h = 0;
@@ -72,10 +72,19 @@ static uint32_t hash_fnv1a(const void *data, unsigned len)
 /**
  * Compute 64-bit hash of manufacturer provided serial number.
  */
-__attribute__((weak)) uint64_t target_hash_serial_number(uint32_t *serialdata, unsigned numwords)
+WEAK uint64_t target_get_serial()
 {
-    uint32_t w1 = hash_fnv1a(serialdata, numwords << 2);
-    uint32_t w0 = murmur_hash2_core((uint32_t *)serialdata, numwords);
-    w0 &= ~0x02000000; // clear "universal" bit
-    return ((uint64_t)w0 << 32 | w1);
+    static uint64_t cache;
+    if (!cache)
+    {
+        uint32_t serialdata[8];
+        unsigned numbytes = target_get_serial_buffer(serialdata, sizeof(serialdata));
+        if (numbytes > sizeof(serialdata))
+            target_panic(DEVICE_HARDWARE_CONFIGURATION_ERROR);
+        uint32_t w1 = hash_fnv1a(serialdata, numbytes);
+        uint32_t w0 = murmur_hash2_core(serialdata, numbytes >> 2);
+        w0 &= ~0x02000000; // clear "universal" bit
+        cache = ((uint64_t)w0 << 32 | w1);
+    }
+    return cache;
 }
