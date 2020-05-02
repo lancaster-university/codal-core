@@ -536,7 +536,7 @@ int USBHIDKeyboard::press(uint16_t c)
 
     // status doesn't really matter here - if one fails the other likely will.
     status = keyDown(c);
-    status = keyDown(c);
+    status = keyUp(c);
 
     return status;
 }
