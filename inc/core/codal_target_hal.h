@@ -33,6 +33,8 @@ extern "C"
 
     void target_disable_irq();
 
+    int target_get_irq_disabled();
+
     void target_reset();
 
     void target_wait(uint32_t milliseconds);
@@ -44,6 +46,10 @@ extern "C"
     int target_random(int max);
 
     uint64_t target_get_serial();
+  
+    PROCESSOR_WORD_TYPE target_heap_start();
+
+    unsigned target_get_serial_buffer(void *serial, unsigned maxbytes);
 
     void target_wait_for_event();
   
