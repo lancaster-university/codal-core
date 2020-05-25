@@ -464,6 +464,7 @@ void Serial::printf(const char* format, ...)
                 while((c = *str++) != 0)
                     putc(c);
                 break;
+
             case '%':
                 putc('%');
                 break;
