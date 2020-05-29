@@ -1,6 +1,5 @@
-include("${CODAL_UTILS_LOCATION}")
+project(codal-core C CXX)
 
-include("${CODAL_UTILS_LOCATION}")
 RECURSIVE_FIND_DIR(INCLUDE_DIRS "./inc" "*.h")
 RECURSIVE_FIND_FILE(SOURCE_FILES "./source" "*.c??")
 
