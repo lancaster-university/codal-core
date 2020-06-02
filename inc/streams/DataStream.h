@@ -42,6 +42,8 @@ DEALINGS IN THE SOFTWARE.
 #define DATASTREAM_FORMAT_32BIT_UNSIGNED    7
 #define DATASTREAM_FORMAT_32BIT_SIGNED      8
 
+#define DATASTREAM_FORMAT_BITS_PER_PIXEL(x) ((x+1)/2)
+
 namespace codal
 {
     /**
@@ -129,7 +131,7 @@ namespace codal
          * Determines if any of the data currently flowing through this stream is held in non-volatile (FLASH) memory.
          * @return true if one or more of the ManagedBuffers in this stream reside in FLASH memory, false otherwise.
          */
-    	bool isReadOnly();
+    	  bool isReadOnly();
 
         /**
          * Define a downstream component for data stream.
