@@ -37,20 +37,23 @@ namespace codal{
     class StreamNormalizer : public DataSink, public DataSource
     {
     public:
-        int             gain;                   // Gain to apply, in 1024ths of a unit. i.e. a value of 2048 would yield a gain of x2.
-        int             zeroOffset;             // unsigned value that is the best effort guess of the zero point of the data source
-        DataSource      &upstream;
-        DataStream      output;
-        ManagedBuffer   buffer;
+        int             outputFormat;           // The format to output in. By default, this is the sme as the input.
+        float           gain;                   // Gain to apply.
+        int             zeroOffset;             // unsigned value that is the best effort guess of the zero point of the data source.
+        bool            normalize;              // If set, will recalculate a zero offset.
+        DataSource      &upstream;              // The upstream component of this StreamNormalizer.
+        DataStream      output;                 // The downstream output stream of this StreamNormalizer.
+        ManagedBuffer   buffer;                 // The buffer being processed.
 
         /**
           * Creates a component capable of translating one data representation format into another
           *
-          * @param source a DataSource to receive data from.
-          * @param inputFormat The format describing how the data being received should be interpreted.
-          * @param outputFormat The format to convter the input stream into.
+          * @param source a DataSource to receive data from
+          * @param gain The gain to apply to each sample (default: 1.0)
+          * @param normalize Derive a zero offset for the input stream, and subtract from each sample (default: false)
+          * @param format The format to convert the input stream into
           */
-        StreamNormalizer(DataSource &source, int gain);
+        StreamNormalizer(DataSource &source, float gain = 1.0f, bool normalize = false, int format = DATASTREAM_FORMAT_UNKNOWN);
 
         /**
          * Callback provided when data is ready.
@@ -62,9 +65,45 @@ namespace codal{
          */
         virtual ManagedBuffer pull();
 
-        int setGain(int gain);
+        /**
+         * Defines whether this input stream will be normalized based on its mean average value.
+         *
+         * @param normalize The state to apply - set to true to apply normlization, false otherwise.
+         * @return DEVICE_OK on success.
+         */
+        int setNormalize(bool normalize);
 
-        int getGain();
+        /**
+         * Determines whether normalization is being applied .
+         * @return true if normlization is being performed, false otherwise.
+         */
+        bool getNormalize();
+
+        /**
+         *  Determine the data format of the buffers streamed out of this component.
+         */
+        virtual int getFormat();
+
+        /**
+         * Defines the data format of the buffers streamed out of this component.
+         * @param format valid values include DATASTREAM_FORMAT_16BIT_SIGNED, DATASTREAM_FORMAT_16BIT_UNSIGNED
+         */
+        virtual int setFormat(int format);
+
+        /**
+         * Defines an optional gain to apply to the input, as afloating point multiple.
+         *
+         * @param gain The gain to apply to this input stream.
+         * @return DEVICE_OK on success.
+         */
+        int setGain(float gain);
+
+        /**
+         * Determines the  gain being applied to the input, as a floating point multiple.
+         * @return the gain applied.
+         */
+        float getGain();
+
 
         /**
          * Destructor.

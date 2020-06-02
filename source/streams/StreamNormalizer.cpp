@@ -28,9 +28,109 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
-StreamNormalizer::StreamNormalizer(DataSource &source, int gain) : upstream(source), output(*this)
+static int read_sample_1(uint8_t *ptr)
 {
-    this->gain = gain;
+    return (int) *ptr;
+}
+
+static int read_sample_2(uint8_t *ptr)
+{
+    int8_t *p = (int8_t *) ptr;
+    return (int) *p;
+}
+
+static int read_sample_3(uint8_t *ptr)
+{
+    uint16_t *p = (uint16_t *) ptr;
+    return (int) *p;
+}
+
+static int read_sample_4(uint8_t *ptr)
+{
+    int16_t *p = (int16_t *) ptr;
+    return (int) *p;
+}
+
+static int read_sample_5(uint8_t *ptr)
+{
+    uint32_t *p = (uint32_t *) ptr;
+    return (int) (*p >> 8);
+}
+
+static int read_sample_6(uint8_t *ptr)
+{
+    int32_t *p = (int32_t *) ptr;
+    return (int) (*p >> 8);
+}
+
+static int read_sample_7(uint8_t *ptr)
+{
+    uint32_t *p = (uint32_t *) ptr;
+    return (int) *p;
+}
+
+static int read_sample_8(uint8_t *ptr)
+{
+    int32_t *p = (int32_t *) ptr;
+    return (int) *p;
+}
+
+static void write_sample_1(uint8_t *ptr, int value)
+{
+    *ptr = (uint8_t) value;
+}
+
+static void write_sample_2(uint8_t *ptr, int value)
+{
+    *ptr = (int8_t) value;
+}
+
+static void write_sample_3(uint8_t *ptr, int value)
+{
+    *(uint16_t *)ptr = (uint16_t) value;
+}
+
+static void write_sample_4(uint8_t *ptr, int value)
+{
+    *(int16_t *)ptr = (int16_t) value;
+}
+
+static void write_sample_5_6(uint8_t *ptr, int value)
+{
+    *ptr = value & 0xFF;
+    *(ptr+1) = (value>>8) & 0xFF;
+    *(ptr+2) = (value>>16) & 0xFF;
+}
+
+static void write_sample_7(uint8_t *ptr, int value)
+{
+    *(uint32_t *)ptr = (uint32_t) value;
+}
+
+static void write_sample_8(uint8_t *ptr, int value)
+{
+    *(int32_t *)ptr = (int32_t) value;
+}
+
+// Lookup table to optimse parsin gof input stream.
+typedef int (*SampleReadFn)(uint8_t *);
+typedef void (*SampleWriteFn)(uint8_t *, int);
+SampleReadFn readSample[] = {read_sample_1, read_sample_1, read_sample_2, read_sample_3, read_sample_4, read_sample_5, read_sample_6, read_sample_7, read_sample_8};
+SampleWriteFn writeSample[] = {write_sample_1, write_sample_1, write_sample_2, write_sample_3, write_sample_4, write_sample_5_6, write_sample_5_6, write_sample_7, write_sample_8};
+
+/**
+ * Creates a component capable of translating one data representation format into another
+ *
+ * @param source a DataSource to receive data from
+ * @param gain The gain to apply to each sample (default: 1.0)
+ * @param normalize Derive a zero offset for the input stream, and subtract from each sample (default: false)
+ * @param format The format to convert the input stream into
+ */
+StreamNormalizer::StreamNormalizer(DataSource &source, float gain, bool normalize, int format) : upstream(source), output(*this)
+{
+    setFormat(format);
+    setGain(gain);
+    setNormalize(normalize);
     this->zeroOffset = 0;
 
     // Register with our upstream component
@@ -50,54 +150,137 @@ ManagedBuffer StreamNormalizer::pull()
  */
 int StreamNormalizer::pullRequest()
 {
-    int z = 0;
-    int minimum = 0;
-    int maximum = 0;
-    int s;
-    int16_t result;
+    int samples;            // Number of samples in the input buffer.
+    int s;                  // The sample being processed, encpasulated inside a 32 bit number.
+    uint8_t *data;          // Input buffer read pointer.
+    uint8_t *result;        // Output buffer write pointer.
+    int inputFormat;        // The format of the input buffer.
+    int bytesPerSampleIn;   // number of bit per sample of the input buffer.
+    int bytesPerSampleOut;  // number of bit per sample of the input buffer.
+    int z = 0;              // normalized zero point calculated from this buffer.
+    
+    // Determine the input format.
+    inputFormat = upstream.getFormat();
 
-    buffer = upstream.pull();
+    // If no output format has been selected, infer it from our upstream component.
+    if (outputFormat == DATASTREAM_FORMAT_UNKNOWN)
+        outputFormat = inputFormat;
 
-    int16_t *data = (int16_t *) &buffer[0];
-    int samples = buffer.length() / 2;
+    // Deterine the sample size of out input and output formats.
+    bytesPerSampleIn = DATASTREAM_FORMAT_BITS_PER_SAMPLE(inputFormat);
+    bytesPerSampleOut = DATASTREAM_FORMAT_BITS_PER_SAMPLE(outputFormat);
 
+    // Acquire the buffer to be processed.
+    ManagedBuffer inputBuffer = upstream.pull();
+    samples = inputBuffer.length() / bytesPerSampleIn;
+
+    // Use in place processing where possible, but allocate a new buffer when needed.
+    if (DATASTREAM_FORMAT_BITS_PER_SAMPLE(inputFormat) == DATASTREAM_FORMAT_BITS_PER_SAMPLE(outputFormat))
+        buffer = inputBuffer;
+    else
+        buffer = ManagedBuffer(samples * bytesPerSampleOut);
+    
+    // Initialise input an doutput buffer pointers.
+    data = &inputBuffer[0];
+    result = &buffer[0];
+
+    // Iterate over the input samples and apply gain, normalization and output formatting.
     for (int i=0; i < samples; i++)
     {
-        z += *data;
+        // read an input sample, account for the appropriate encoding.
+        s = readSample[inputFormat](data);
+        data += bytesPerSampleIn;
 
-        s = (int) *data;
-        s = s - zeroOffset;
-        s = s * gain;
-        s = s / 1024;
+        // Apply configured gain, if any.
+        s = (int) ((float)s * gain);
 
-        result = (int16_t)s;
+        // Calculate and apply normalization, if configured.
+        if (normalize)
+        {
+            z += s;
+            s = s - zeroOffset;
+        }
 
-        if (s < minimum)
-            minimum = s;
-
-        if (s > maximum)
-            maximum = s;
-
-        *data = result;
-        data++;
+        // Write out the sample.
+        writeSample[outputFormat](result, s);
+        result += bytesPerSampleOut;
     }
 
-    z = z / samples;
-    zeroOffset = z;
-    //DMESG("[Z: %d] [R: %d]", zeroOffset, maximum - minimum);
+    // Store the average sample value as an inferred zero point for the next buffer.
+    if (normalize)
+    {
+        z = z / samples;
+        zeroOffset = z;
+    }
 
+    // Ensure output buffer is the correct size;
+    buffer.truncate(samples * bytesPerSampleOut);
+
+    // Signal downstream component that a buffer is ready.
     output.pullRequest();
     return DEVICE_OK;
 }
 
+/**
+ * Defines whether this input stream will be normalized based on its mean average value.
+ *
+ * @param normalize The state to apply - set to true to apply normlization, false otherwise.
+ * @return DEVICE_OK on success.
+ */
+int StreamNormalizer::setNormalize(bool normalize)
+{
+    this->normalize = normalize;
+    return DEVICE_OK;
+}
+
+/**
+ * Determines whether normalization is being applied .
+ * @return true if normlization is being performed, false otherwise.
+ */
+bool StreamNormalizer::getNormalize()
+{
+    return normalize;
+}
+
+/**
+ *  Determine the data format of the buffers streamed out of this component.
+ */
+int StreamNormalizer::getFormat()
+{
+    if (outputFormat == DATASTREAM_FORMAT_UNKNOWN)
+        outputFormat = upstream.getFormat();
+
+    return outputFormat;
+}
+
+/**
+ * Defines the data format of the buffers streamed out of this component.
+ * @param format the format to use, one of
+ */
+int StreamNormalizer::setFormat(int format)
+{
+    outputFormat = format;
+    return DEVICE_OK;
+}
+
+/**
+ * Defines an optional gain to apply to the input, as afloating point multiple.
+ *
+ * @param gain The gain to apply to this input stream.
+ * @return DEVICE_OK on success.
+ */
 int
-StreamNormalizer::setGain(int gain)
+StreamNormalizer::setGain(float gain)
 {
     this->gain = gain;
     return DEVICE_OK;
 }
 
-int
+/**
+ * Determines the  gain being applied to the input, as a floating point multiple.
+ * @return the gain applied.
+ */
+float
 StreamNormalizer::getGain()
 {
     return gain;
