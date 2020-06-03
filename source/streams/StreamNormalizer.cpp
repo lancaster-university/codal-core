@@ -131,6 +131,7 @@ StreamNormalizer::StreamNormalizer(DataSource &source, float gain, bool normaliz
     setFormat(format);
     setGain(gain);
     setNormalize(normalize);
+    this->zeroOffsetValid = false;
     this->zeroOffset = 0;
 
     // Register with our upstream component
@@ -150,14 +151,15 @@ ManagedBuffer StreamNormalizer::pull()
  */
 int StreamNormalizer::pullRequest()
 {
-    int samples;            // Number of samples in the input buffer.
-    int s;                  // The sample being processed, encpasulated inside a 32 bit number.
-    uint8_t *data;          // Input buffer read pointer.
-    uint8_t *result;        // Output buffer write pointer.
-    int inputFormat;        // The format of the input buffer.
-    int bytesPerSampleIn;   // number of bit per sample of the input buffer.
-    int bytesPerSampleOut;  // number of bit per sample of the input buffer.
-    int z = 0;              // normalized zero point calculated from this buffer.
+    int samples;                // Number of samples in the input buffer.
+    int s;                      // The sample being processed, encpasulated inside a 32 bit number.
+    uint8_t *data;              // Input buffer read pointer.
+    uint8_t *result;            // Output buffer write pointer.
+    int inputFormat;            // The format of the input buffer.
+    int bytesPerSampleIn;       // number of bit per sample of the input buffer.
+    int bytesPerSampleOut;      // number of bit per sample of the input buffer.
+    int z = 0;                  // normalized zero point calculated from this buffer.
+    int zo = (int) zeroOffset;  // Snapshot of our previously calculate zero point
     
     // Determine the input format.
     inputFormat = upstream.getFormat();
@@ -191,15 +193,15 @@ int StreamNormalizer::pullRequest()
         s = readSample[inputFormat](data);
         data += bytesPerSampleIn;
 
-        // Apply configured gain, if any.
-        s = (int) ((float)s * gain);
-
         // Calculate and apply normalization, if configured.
         if (normalize)
         {
             z += s;
-            s = s - zeroOffset;
+            s = s - zo;
         }
+
+        // Apply configured gain, if any.
+        s = (int) ((float)s * gain);
 
         // Write out the sample.
         writeSample[outputFormat](result, s);
@@ -209,8 +211,10 @@ int StreamNormalizer::pullRequest()
     // Store the average sample value as an inferred zero point for the next buffer.
     if (normalize)
     {
-        z = z / samples;
-        zeroOffset = z;
+        float calculatedZeroOffset = (float)z / (float)samples;
+
+        zeroOffset = zeroOffsetValid ? zeroOffset*0.5 + calculatedZeroOffset*0.5 : calculatedZeroOffset;
+        zeroOffsetValid = true;
     }
 
     // Ensure output buffer is the correct size;

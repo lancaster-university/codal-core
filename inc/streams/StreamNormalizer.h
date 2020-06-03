@@ -39,8 +39,9 @@ namespace codal{
     public:
         int             outputFormat;           // The format to output in. By default, this is the sme as the input.
         float           gain;                   // Gain to apply.
-        int             zeroOffset;             // unsigned value that is the best effort guess of the zero point of the data source.
+        float           zeroOffset;             // Best estimate of the zero point of the data source.
         bool            normalize;              // If set, will recalculate a zero offset.
+        bool            zeroOffsetValid;        // Set to true after the first buffer has been processed.
         DataSource      &upstream;              // The upstream component of this StreamNormalizer.
         DataStream      output;                 // The downstream output stream of this StreamNormalizer.
         ManagedBuffer   buffer;                 // The buffer being processed.
@@ -103,7 +104,6 @@ namespace codal{
          * @return the gain applied.
          */
         float getGain();
-
 
         /**
          * Destructor.
