@@ -30,6 +30,21 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
+
+/**
+ * Default Constructor.
+ *
+ * Enables software controlled capacitative touch sensing on a set of pins.
+ * Use this default constructor when using TouchSensor as a base class.
+ *
+ * @id The ID of this component, defaults to DEVICE_ID_TOUCH_SENSOR
+ */
+TouchSensor::TouchSensor(uint16_t id) : drivePin(*(Pin*)NULL)
+{
+    this->id = id;
+    this->numberOfButtons = 0;
+}
+
 /**
  * Constructor.
  *
