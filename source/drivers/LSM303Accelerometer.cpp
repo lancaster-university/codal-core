@@ -182,14 +182,12 @@ int LSM303Accelerometer::requestUpdate()
         *z = *z / 32;
 
         // Scale into millig (approx) and align to ENU coordinate system
-        Sample3D s;
-
-        s.x = -((int)(*y)) * sampleRange;
-        s.y = -((int)(*x)) * sampleRange;
-        s.z =  ((int)(*z)) * sampleRange;
+        sampleENU.x = -((int)(*y)) * sampleRange;
+        sampleENU.y = -((int)(*x)) * sampleRange;
+        sampleENU.z =  ((int)(*z)) * sampleRange;
 
         // indicate that new data is available.
-        update(s);
+        update();
     }
 
     return DEVICE_OK;

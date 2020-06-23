@@ -108,11 +108,11 @@ namespace codal
           *
           * @return MICROBIT_OK or MICROBIT_I2C_ERROR if the magnetometer could not be configured.
           */
-        virtual int configure();
+        virtual int configure() override;
 
-        virtual int requestUpdate();
+        virtual int requestUpdate() override;
 
-        virtual void idleCallback();
+        virtual void idleCallback() override;
     };
 }
 

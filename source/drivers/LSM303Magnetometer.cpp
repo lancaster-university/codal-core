@@ -58,7 +58,7 @@ CREATE_KEY_VALUE_TABLE(magnetometerPeriod, magnetometerPeriodData);
  * that are supported by the hardware. The instance variables are then
  * updated to reflect reality.
  *
- * @return MICROBIT_OK on success, MICROBIT_I2C_ERROR if the compass could not be configured.
+ * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the compass could not be configured.
  */
 int LSM303Magnetometer::configure()
 {
@@ -112,7 +112,7 @@ LSM303Magnetometer::LSM303Magnetometer(I2C &_i2c, Pin &_int1, CoordinateSpace &c
  * (it normally happens in the background when the scheduler is idle), but a check is performed
  * if the user explicitly requests up to date data.
  *
- * @return MICROBIT_OK on success, MICROBIT_I2C_ERROR if the update fails.
+ * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the update fails.
  *
  * @note This method should be overidden by the hardware driver to implement the requested
  * changes in hardware.
@@ -150,13 +150,12 @@ int LSM303Magnetometer::requestUpdate()
         z = ((int16_t *) &data[4]);
 
         // Align to ENU coordinate system
-        Sample3D s;
-        s.x = LSM303_M_NORMALIZE_SAMPLE(-((int)(*y)));
-        s.y = LSM303_M_NORMALIZE_SAMPLE(-((int)(*x)));
-        s.z = LSM303_M_NORMALIZE_SAMPLE(((int)(*z)));
+        sampleENU.x = LSM303_M_NORMALIZE_SAMPLE(-((int)(*y)));
+        sampleENU.y = LSM303_M_NORMALIZE_SAMPLE(-((int)(*x)));
+        sampleENU.z = LSM303_M_NORMALIZE_SAMPLE(((int)(*z)));
 
         // indicate that new data is available.
-        update(s);
+        update();
     }
 
     return DEVICE_OK;

@@ -311,12 +311,12 @@ int Compass::requestUpdate()
  *
  * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
  */
-int Compass::update(Sample3D s)
+int Compass::update()
 {
     // Store the raw data, and apply any calibration data we have.
-    sampleENU.x = CALIBRATED_SAMPLE(s, x);
-    sampleENU.y = CALIBRATED_SAMPLE(s, y);
-    sampleENU.z = CALIBRATED_SAMPLE(s, z);
+    sampleENU.x = CALIBRATED_SAMPLE(sampleENU, x);
+    sampleENU.y = CALIBRATED_SAMPLE(sampleENU, y);
+    sampleENU.z = CALIBRATED_SAMPLE(sampleENU, z);
 
     // Store the user accessible data, in the requested coordinate space, and taking into account component placement of the sensor.
     sample = coordinateSpace.transform(sampleENU);

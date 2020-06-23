@@ -78,11 +78,10 @@ Accelerometer::Accelerometer(CoordinateSpace &cspace, uint16_t id) : sample(), s
   *
   * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
   */
-int Accelerometer::update(Sample3D s)
+int Accelerometer::update()
 {
     // Store the new data, after performing any necessary coordinate transformations.
-    sampleENU = s;
-    sample = coordinateSpace.transform(s);
+    sample = coordinateSpace.transform(sampleENU);
 
     // Indicate that pitch and roll data is now stale, and needs to be recalculated if needed.
     status &= ~ACCELEROMETER_IMU_DATA_VALID;
@@ -523,8 +522,16 @@ void Accelerometer::recalculatePitchRoll()
     double y = (double) sample.y;
     double z = (double) sample.z;
 
-    roll = atan2(y, z);
-    pitch = atan(-x / (y*sin(roll) + z*cos(roll)));
+    roll = atan2(x, -z);
+    pitch = atan2(y, (x*sin(roll) - z*cos(roll)));
+
+    // Handle to the two "negative quadrants", such that we get an output in the +/- 18- degree range.
+    // This ensures that the pitch values are consistent with the roll values.
+    if (z > 0.0)
+    {
+        double reference = pitch > 0.0 ? (PI / 2.0) : (-PI / 2.0);
+        pitch = reference + (reference - pitch);
+    }
 
     status |= ACCELEROMETER_IMU_DATA_VALID;
 }

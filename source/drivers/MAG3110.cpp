@@ -105,13 +105,34 @@ int MAG3110::requestUpdate()
     // Interrupt is cleared on data read of MAG_OUT_X_MSB.
     if(int1.getDigitalValue())
     {
-        Sample3D s;
+        uint8_t data[6];
+        int16_t s;
+        uint8_t *lsb = (uint8_t *) &s;
+        uint8_t *msb = lsb + 1;
+        int result;
 
-        i2c.readRegister(this->address, MAG_OUT_X_MSB, (uint8_t*)&sample.x, 2);
-        i2c.readRegister(this->address, MAG_OUT_Y_MSB, (uint8_t*)&sample.y, 2);
-        i2c.readRegister(this->address, MAG_OUT_Z_MSB, (uint8_t*)&sample.z, 2);
+        // Read the combined magnetometer and magnetometer data.
+        result = i2c.readRegister(address, MAG_OUT_X_MSB, data, 6);
 
-        update(s);
+        if (result !=0)
+            return DEVICE_I2C_ERROR;
+            
+        // Scale the 14 bit data (packed into 16 bits) into SI units (milli-g) and translate into signed little endian, and align to ENU coordinate system
+        *msb = data[0];
+        *lsb = data[1];
+        sampleENU.y = MAG3110_NORMALIZE_SAMPLE(s); 
+
+        *msb = data[2];
+        *lsb = data[3];
+        sampleENU.x = -MAG3110_NORMALIZE_SAMPLE(s); 
+
+        *msb = data[4];
+        *lsb = data[5];
+        sampleENU.z = -MAG3110_NORMALIZE_SAMPLE(s); 
+
+        // Inform the higher level driver that raw data has been updated.
+        update();
+ 
     }
 
     return DEVICE_OK;

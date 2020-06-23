@@ -131,7 +131,7 @@ namespace codal
           *
           * @return MICROBIT_OK on success, MICROBIT_I2C_ERROR if the accelerometer could not be configured.
           */
-        int configure();
+        virtual int configure() override;
 
         /**
           * Reads the acceleration data from the accelerometer, and stores it in our buffer.
@@ -146,11 +146,11 @@ namespace codal
           *
           * @return MICROBIT_OK on success, MICROBIT_I2C_ERROR if the read request fails.
           */
-        virtual int requestUpdate();
+        virtual int requestUpdate() override;
 
         int whoAmI();
 
-        virtual void idleCallback();
+        virtual void idleCallback() override;
 
         virtual int setSleep(bool sleepMode);
     };
