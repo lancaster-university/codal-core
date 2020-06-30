@@ -26,6 +26,14 @@ DEALINGS IN THE SOFTWARE.
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
+// If DEVICE_USB_ENDPOINT_SHARING in and out endpoints will always get the same index.
+// This works on STM32F4. Can define on SAMD and elsewhere when tested.
+#if defined(DEVICE_USB_ENDPOINT_SHARING)
+#define NUM_ENDPOINTS(x) ((x) > 1 ? 1 : (x))
+#else
+#define NUM_ENDPOINTS(x) (x)
+#endif
+
 #include "ErrorNo.h"
 #include "CodalDmesg.h"
 #include "codal_target_hal.h"
@@ -365,7 +373,7 @@ int CodalUSB::add(CodalUSBInterface &interface)
 {
     usb_assert(!usb_configured);
 
-    uint8_t epsConsumed = interface.getInterfaceInfo()->allocateEndpoints;
+    uint8_t epsConsumed = NUM_ENDPOINTS(interface.getInterfaceInfo()->allocateEndpoints);
 
     if (endpointsUsed + epsConsumed > DEVICE_USB_ENDPOINTS)
         return DEVICE_NO_RESOURCES;
@@ -625,17 +633,18 @@ void CodalUSB::initEndpoints()
             iface->out = NULL;
         }
 
+        uint8_t numep = NUM_ENDPOINTS(info->allocateEndpoints);
+
         if (info->iface.numEndpoints > 0)
         {
             iface->in = new UsbEndpointIn(endpointCount, info->epIn.attr);
             if (info->iface.numEndpoints > 1)
             {
-                iface->out = new UsbEndpointOut(endpointCount + (info->allocateEndpoints - 1),
-                                                info->epIn.attr);
+                iface->out = new UsbEndpointOut(endpointCount + (numep - 1), info->epIn.attr);
             }
         }
 
-        endpointCount += info->allocateEndpoints;
+        endpointCount += numep;
     }
 
     usb_assert(endpointsUsed == endpointCount);
