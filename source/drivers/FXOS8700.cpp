@@ -239,7 +239,7 @@ int FXOS8700::requestUpdate()
             return DEVICE_I2C_ERROR;
         
         // read sensor data (and translate into signed little endian)
-        for (int i=0; i<6; i++)
+        for (int i=0; i<12; i+=2)
         {
             *msb = data[i]; 
             *lsb = data[i+1];
