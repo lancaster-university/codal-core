@@ -117,9 +117,13 @@ int FXOS8700::configure()
         return DEVICE_I2C_ERROR;
     }
 
-    // Configure open drain Active LOW interrupt mode.
-    // n.b. This may need to be reconfigured if the interrupt line is shared.
+    // Configure Active LOW interrupt mode.
+    // Use OpenDrain configuation if we're on a shared IRQ line, PUSHPULL configuration otherwise. 
+#if CONFIG_ENABLED(DEVICE_I2C_IRQ_SHARED)
     value = 0x01;
+#else
+    value = 0x00;
+#endif
     result = i2c.writeRegister(address, FXOS8700_CTRL_REG3, value);
     if (result != 0)
     {
@@ -128,8 +132,6 @@ int FXOS8700::configure()
     }
 
     // Enable a data ready interrupt.
-    // TODO: This is currently PUSHPULL mode. This may nede to be reconfigured
-    // to OPEN_DRAIN if the interrupt line is shared.
     value = 0x01;
     result = i2c.writeRegister(address, FXOS8700_CTRL_REG4, value);
     if (result != 0)
