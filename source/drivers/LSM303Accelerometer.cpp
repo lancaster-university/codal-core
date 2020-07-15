@@ -73,7 +73,7 @@ CREATE_KEY_VALUE_TABLE(accelerometerPeriod, accelerometerPeriodData);
  * Create a software abstraction of an accelerometer.
  *
  * @param coordinateSpace The orientation of the sensor. Defaults to: SIMPLE_CARTESIAN
- * @param id The unique EventModel id of this component. Defaults to: MICROBIT_ID_ACCELEROMETER
+ * @param id The unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
  *
  */
 LSM303Accelerometer::LSM303Accelerometer(I2C& _i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address, uint16_t id) : Accelerometer(coordinateSpace, id), i2c(_i2c), int1(_int1)
@@ -92,7 +92,7 @@ LSM303Accelerometer::LSM303Accelerometer(I2C& _i2c, Pin &_int1, CoordinateSpace 
  * that are supported by the hardware. The instance variables are then
  * updated to reflect reality.
  *
- * @return MICROBIT_OK on success, MICROBIT_I2C_ERROR if the accelerometer could not be configured.
+ * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the accelerometer could not be configured.
  *
  * @note This method should be overidden by the hardware driver to implement the requested
  * changes in hardware.
@@ -140,7 +140,7 @@ int LSM303Accelerometer::configure()
  * (it normally happens in the background when the scheduler is idle), but a check is performed
  * if the user explicitly requests up to date data.
  *
- * @return MICROBIT_OK on success, MICROBIT_I2C_ERROR if the update fails.
+ * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the update fails.
  *
  * @note This method should be overidden by the hardware driver to implement the requested
  * changes in hardware.

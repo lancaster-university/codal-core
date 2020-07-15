@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
- * Class definition for MicroBit Accelerometer.
+ * Class definition for an MMA8653 Accelerometer.
  *
  * Represents an implementation of the Freescale MMA8653 3 axis accelerometer
  * Also includes basic data caching and on demand activation.
@@ -111,15 +111,13 @@ int MMA8653::configure()
   * Constructor.
   * Create a software abstraction of an accelerometer.
   *
-  * @param _i2c an instance of MicroBitI2C used to communicate with the onboard accelerometer.
+  * @param _i2c an instance of codal::I2C used to communicate with the accelerometer.
   *
   * @param address the default I2C address of the accelerometer. Defaults to: MMA8653_DEFAULT_ADDR.
   *
   * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
   *
   * @code
-  * MicroBitI2C i2c = MicroBitI2C(I2C_SDA0, I2C_SCL0);
-  *
   * MMA8653 accelerometer = MMA8653(i2c);
   * @endcode
  */

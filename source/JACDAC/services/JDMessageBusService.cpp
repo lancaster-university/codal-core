@@ -11,7 +11,7 @@ JDMessageBusService::JDMessageBusService() : JDService(JD_SERVICE_CLASS_MESSAGE_
 /**
   * Associates the given event with the serial channel.
   *
-  * Once registered, all events matching the given registration sent to this micro:bit's
+  * Once registered, all events matching the given registration sent to this device's
   * default EventModel will be automatically retransmitted on the serial bus.
   *
   * @param id The id of the event to register.
@@ -110,7 +110,7 @@ int JDMessageBusService::handlePacket(JDPacket* p)
 /**
   * Event handler callback. This is called whenever an event is received matching one of those registered through
   * the registerEvent() method described above. Upon receiving such an event, it is wrapped into
-  * a serial bus packet and transmitted to any other micro:bits in the same group.
+  * a serial bus packet and transmitted to any other devices in the same group.
   */
 void JDMessageBusService::eventReceived(Event e)
 {
