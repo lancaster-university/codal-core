@@ -87,7 +87,16 @@ namespace codal{
 
         /**
          * Defines the data format of the buffers streamed out of this component.
-         * @param format valid values include DATASTREAM_FORMAT_16BIT_SIGNED, DATASTREAM_FORMAT_16BIT_UNSIGNED
+         * @param format valid values include:
+         * 
+         * DATASTREAM_FORMAT_8BIT_UNSIGNED
+         * DATASTREAM_FORMAT_8BIT_SIGNED
+         * DATASTREAM_FORMAT_16BIT_UNSIGNED
+         * DATASTREAM_FORMAT_16BIT_SIGNED
+         * DATASTREAM_FORMAT_24BIT_UNSIGNED
+         * DATASTREAM_FORMAT_24BIT_SIGNED
+         * DATASTREAM_FORMAT_32BIT_UNSIGNED
+         * DATASTREAM_FORMAT_32BIT_SIGNED
          */
         virtual int setFormat(int format);
 

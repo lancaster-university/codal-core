@@ -169,15 +169,15 @@ int StreamNormalizer::pullRequest()
         outputFormat = inputFormat;
 
     // Deterine the sample size of out input and output formats.
-    bytesPerSampleIn = DATASTREAM_FORMAT_BITS_PER_SAMPLE(inputFormat);
-    bytesPerSampleOut = DATASTREAM_FORMAT_BITS_PER_SAMPLE(outputFormat);
+    bytesPerSampleIn = DATASTREAM_FORMAT_BYTES_PER_SAMPLE(inputFormat);
+    bytesPerSampleOut = DATASTREAM_FORMAT_BYTES_PER_SAMPLE(outputFormat);
 
     // Acquire the buffer to be processed.
     ManagedBuffer inputBuffer = upstream.pull();
     samples = inputBuffer.length() / bytesPerSampleIn;
 
     // Use in place processing where possible, but allocate a new buffer when needed.
-    if (DATASTREAM_FORMAT_BITS_PER_SAMPLE(inputFormat) == DATASTREAM_FORMAT_BITS_PER_SAMPLE(outputFormat))
+    if (DATASTREAM_FORMAT_BYTES_PER_SAMPLE(inputFormat) == DATASTREAM_FORMAT_BYTES_PER_SAMPLE(outputFormat))
         buffer = inputBuffer;
     else
         buffer = ManagedBuffer(samples * bytesPerSampleOut);
