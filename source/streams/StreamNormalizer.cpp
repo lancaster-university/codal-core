@@ -131,6 +131,7 @@ StreamNormalizer::StreamNormalizer(DataSource &source, float gain, bool normaliz
     setFormat(format);
     setGain(gain);
     setNormalize(normalize);
+    setOrMask(0);
     this->zeroOffsetValid = false;
     this->zeroOffset = 0;
 
@@ -200,8 +201,8 @@ int StreamNormalizer::pullRequest()
             s = s - zo;
         }
 
-        // Apply configured gain, if any.
-        s = (int) ((float)s * gain);
+        // Apply configured gain, and mask if any.
+        s = (int) ((uint32_t)((float)s * gain) | orMask);
 
         // Write out the sample.
         writeSample[outputFormat](result, s);
@@ -290,6 +291,18 @@ StreamNormalizer::getGain()
     return gain;
 }
 
+/**
+ * Defines an optional bit mask to logical OR with each sample.
+ * Useful if the downstream component encodes control data within its samples.
+ *
+ * @param mask The bitmask to to apply to each sample.
+ * @return DEVICE_OK on success.
+ */
+int StreamNormalizer::setOrMask(uint32_t mask)
+{
+    orMask = mask;
+    return DEVICE_OK;
+}
 /**
  * Destructor.
  */

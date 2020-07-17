@@ -40,6 +40,7 @@ namespace codal{
         int             outputFormat;           // The format to output in. By default, this is the sme as the input.
         float           gain;                   // Gain to apply.
         float           zeroOffset;             // Best estimate of the zero point of the data source.
+        uint32_t        orMask;                 // post processing step - or'd with each sample.
         bool            normalize;              // If set, will recalculate a zero offset.
         bool            zeroOffsetValid;        // Set to true after the first buffer has been processed.
         DataSource      &upstream;              // The upstream component of this StreamNormalizer.
@@ -113,6 +114,15 @@ namespace codal{
          * @return the gain applied.
          */
         float getGain();
+
+        /**
+         * Defines an optional bit mask to logical OR with each sample.
+         * Useful if the downstream component encodes control data within its samples.
+         *
+         * @param mask The bitmask to to apply to each sample.
+         * @return DEVICE_OK on success.
+         */
+        int setOrMask(uint32_t mask);
 
         /**
          * Destructor.
