@@ -44,7 +44,7 @@ namespace codal{
           *
           * Internally calls updateSample().
           */
-        virtual void idleCallback();
+        virtual void idleCallback() override;
 
         /**
           * Configures the accelerometer for G range and sample rate defined
@@ -54,22 +54,7 @@ namespace codal{
           *
           * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the accelerometer could not be configured.
           */
-        int configure();
-
-        /**
-          * Reads the acceleration data from the accelerometer, and stores it in our buffer.
-          * This only happens if the accelerometer indicates that it has new data via int1.
-          *
-          * On first use, this member function will attempt to add this component to the
-          * list of fiber components in order to constantly update the values stored
-          * by this object.
-          *
-          * This technique is called lazy instantiation, and it means that we do not
-          * obtain the overhead from non-chalantly adding this component to fiber components.
-          *
-          * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
-          */
-        int updateSample();
+        virtual int configure() override;
 
         /**
          * Poll to see if new data is available from the hardware. If so, update it.
@@ -82,7 +67,7 @@ namespace codal{
          * @note This method should be overidden by the hardware driver to implement the requested
          * changes in hardware.
          */
-        virtual int requestUpdate();
+        virtual int requestUpdate() override;
 
         virtual int setSleep(bool sleepMode);
     };

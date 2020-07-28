@@ -85,7 +85,7 @@ extern const MAG3110SampleRateConfig MAG3110SampleRate[];
 namespace codal
 {
       /**
-      * Class definition for MicroBit Compass.
+      * Class definition for a MAG3110 Compass.
       *
       * Represents an implementation of the Freescale MAG3110 I2C Magnetmometer.
       */
@@ -106,13 +106,13 @@ namespace codal
           * The nearest values are chosen to those defined that are supported by the hardware.
           * The instance variables are then updated to reflect reality.
           *
-          * @return MICROBIT_OK or MICROBIT_I2C_ERROR if the magnetometer could not be configured.
+          * @return DEVICE_OK or DEVICE_I2C_ERROR if the magnetometer could not be configured.
           */
-        virtual int configure();
+        virtual int configure() override;
 
-        virtual int requestUpdate();
+        virtual int requestUpdate() override;
 
-        virtual void idleCallback();
+        virtual void idleCallback() override;
     };
 }
 

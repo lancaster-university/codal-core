@@ -211,7 +211,7 @@ namespace codal
          *
          * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
          */
-        virtual int update(Sample3D s);
+        virtual int update();
 
         /**
           * Reads the last accelerometer value stored, and provides it in the coordinate system requested.

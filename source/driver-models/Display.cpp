@@ -43,6 +43,7 @@ Display::Display(int width, int height, uint16_t id) : image(width, height)
 {
     this->width = width;
     this->height = height;
+    this->brightness = 255;
     this->id = id;
 }
 

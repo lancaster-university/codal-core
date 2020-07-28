@@ -41,10 +41,21 @@ void DataSource::connect(DataSink& )
 {
 }
 
+int DataSource::getFormat()
+{
+    return DATASTREAM_FORMAT_UNKNOWN;
+}
+
+int DataSource::setFormat(int format)
+{
+    return DEVICE_NOT_SUPPORTED;
+}
+
 int DataSink::pullRequest()
 {
 	return DEVICE_NOT_SUPPORTED;
 }
+
 
 /**
   * Class definition for DataStream.
@@ -148,6 +159,15 @@ bool DataStream::isReadOnly()
 void DataStream::connect(DataSink &sink)
 {
 	this->downStream = &sink;
+    this->upStream->connect(*this);
+}
+
+/**
+ *  Determine the data format of the buffers streamed out of this component.
+ */
+int DataStream::getFormat()
+{
+    return upStream->getFormat();
 }
 
 /**
@@ -298,6 +318,7 @@ int DataStream::pullRequest()
             downStream->pullRequest();
         else
             Event(DEVICE_ID_NOTIFY, pullRequestEventCode);
+        
     }
 
 	return DEVICE_OK;

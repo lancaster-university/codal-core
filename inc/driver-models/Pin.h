@@ -427,6 +427,24 @@ namespace codal
         }
 
         /**
+         * Set pin value iff its current value as input is the opposite.
+         * 
+         * If pin is configured as input and reads as !value, set it to value
+         * and return DEVICE_OK.
+         * Otherwise, do nothing and return DEVICE_BUSY.
+         * Note, that this is overwritten in hardware-specific classes to check the condition immedietly before changing the pin value.
+         */
+        virtual int getAndSetDigitalValue(int value)
+        {
+              if (isInput() && getDigitalValue() == !value)
+              {
+                  setDigitalValue(value);
+                  return DEVICE_OK;
+              }
+              return DEVICE_BUSY;
+        }
+        
+        /**
           * Determines if pin is active, taking into account polarity information
           * defined by setActive(). 
           * 

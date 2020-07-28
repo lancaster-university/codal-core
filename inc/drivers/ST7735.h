@@ -47,8 +47,8 @@ class ST7735 : public CodalComponent
 {
 protected:
     ScreenIO &io;
-    Pin &cs;
-    Pin &dc;
+    Pin *cs;
+    Pin *dc;
     uint8_t cmdBuf[20];
     ST7735WorkBuffer *work;
     bool inSleepMode;
@@ -57,6 +57,11 @@ protected:
     // will be used; this is for ILI9341 which usually has 320x240 screens
     // and doesn't support 12 bit color
     bool double16;
+
+    void beginCS() { if (cs) cs->setDigitalValue(0); }
+    void endCS() { if (cs) cs->setDigitalValue(1); }
+    void setCommand() { dc->setDigitalValue(0); }
+    void setData() { dc->setDigitalValue(1); }
 
     void sendCmd(uint8_t *buf, int len);
     void sendCmdSeq(const uint8_t *buf);

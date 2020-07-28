@@ -54,12 +54,6 @@ int MPU6050::whoAmI()
 
 int MPU6050::requestUpdate()
 {
-    updateSample();
-    return DEVICE_OK;
-}
-
-int MPU6050::updateSample()
-{
     int result;
     uint8_t i2cData[16];
 
@@ -86,7 +80,8 @@ int MPU6050::updateSample()
         sample.y /= 16;
         sample.z /= 16;
 
-        update(sample);
+        sampleENU = sample;
+        update();
     }
     return DEVICE_OK;
 };

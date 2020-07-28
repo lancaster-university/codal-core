@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
-  * Class definition for MicroBit Compass.
+  * Class definition for a MAG3110 Compass.
   *
   * Represents an implementation of the Freescale MAG3110 I2C Magnetmometer.
   * Also includes basic caching, calibration and on demand activation.
@@ -41,24 +41,15 @@ using namespace codal;
   * Constructor.
   * Create a software representation of an e-compass.
   *
-  * @param _i2c an instance of i2c, which the compass is accessible from.
-  *
-  * @param _accelerometer an instance of the accelerometer, used for tilt compensation.
-  *
-  * @param _storage an instance of MicroBitStorage, used to persist calibration data across resets.
-  *
-  * @param address the default address for the compass register on the i2c bus. Defaults to MAG3110_DEFAULT_ADDR.
-  *
+  * @param _i2c an instance of codal::I2C, which the compass is accessible from.
+  * @param int1 The codal::Pin connected to the MAG3110 interrupt line.
+  * @param _accelerometer an instance of codal::Accelerometer, used for tilt compensation.
+  * @param coordinateSpace The 3D coordinate space transform to use with this sensor.
+  * @param address the address of the MAG3110 device on the i2c bus. Defaults to MAG3110_DEFAULT_ADDR.
   * @param id the ID of the new MAG3110 object. Defaults to MAG3110_DEFAULT_ADDR.
   *
   * @code
-  * MicroBitI2C i2c(I2C_SDA0, I2C_SCL0);
-  *
-  * MicroBitAccelerometer accelerometer(i2c);
-  *
-  * MicroBitStorage storage;
-  *
-  * MAG3110 compass(i2c, accelerometer, storage);
+  * MAG3110 compass(i2c, accelerometer, coordinateSpace);
   * @endcode
   */
 
@@ -105,20 +96,41 @@ int MAG3110::requestUpdate()
     // Interrupt is cleared on data read of MAG_OUT_X_MSB.
     if(int1.getDigitalValue())
     {
-        Sample3D s;
+        uint8_t data[6];
+        int16_t s;
+        uint8_t *lsb = (uint8_t *) &s;
+        uint8_t *msb = lsb + 1;
+        int result;
 
-        i2c.readRegister(this->address, MAG_OUT_X_MSB, (uint8_t*)&sample.x, 2);
-        i2c.readRegister(this->address, MAG_OUT_Y_MSB, (uint8_t*)&sample.y, 2);
-        i2c.readRegister(this->address, MAG_OUT_Z_MSB, (uint8_t*)&sample.z, 2);
+        // Read the combined magnetometer and magnetometer data.
+        result = i2c.readRegister(address, MAG_OUT_X_MSB, data, 6);
 
-        update(s);
+        if (result !=0)
+            return DEVICE_I2C_ERROR;
+            
+        // Scale the 14 bit data (packed into 16 bits) into SI units (milli-g) and translate into signed little endian, and align to ENU coordinate system
+        *msb = data[0];
+        *lsb = data[1];
+        sampleENU.y = MAG3110_NORMALIZE_SAMPLE(s); 
+
+        *msb = data[2];
+        *lsb = data[3];
+        sampleENU.x = -MAG3110_NORMALIZE_SAMPLE(s); 
+
+        *msb = data[4];
+        *lsb = data[5];
+        sampleENU.z = -MAG3110_NORMALIZE_SAMPLE(s); 
+
+        // Inform the higher level driver that raw data has been updated.
+        update();
+ 
     }
 
     return DEVICE_OK;
 }
 
 /**
-  * Periodic callback from MicroBit idle thread.
+  * Periodic callback from the idle thread.
   *
   * Calls updateSample().
   */

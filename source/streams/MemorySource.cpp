@@ -9,20 +9,52 @@ using namespace codal;
  * @param data pointer to memory location to playout
  * @param length number of bytes to stream
  */
-MemorySource::MemorySource(int maximumValue) : output(*this)
+MemorySource::MemorySource() : output(*this)
 {
     this->bytesSent = 0;
-    this->maximumValue = maximumValue;
-    this->scalar = 1;
+    this->setFormat(DATASTREAM_FORMAT_8BIT_UNSIGNED);
+    this->setBufferSize(MEMORY_SOURCE_DEFAULT_MAX_BUFFER);
 } 
 
 /**
- * Define the upper bound for samples in the 16 bit stream
+ *  Determine the data format of the buffers streamed out of this component.
  */
-void MemorySource::setMaximumSampleValue(int maximum)
+int
+MemorySource::getFormat()
 {
-    maximumValue = maximum;
-    scalar = (maximumValue << 8) / 256;
+    return outputFormat;
+}
+
+/**
+ * Defines the data format of the buffers streamed out of this component.
+ * @param format the format to use, one of
+ */
+int
+MemorySource::setFormat(int format)
+{
+    outputFormat = format;
+    return DEVICE_OK;
+}
+
+/**
+ *  Determine the maximum size of the buffers streamed out of this component.
+ *  @return The maximum size of this component's output buffers, in bytes.
+ */
+int
+MemorySource::getBufferSize()
+{
+    return outputBufferSize;
+}
+
+/**
+ *  Defines the maximum size of the buffers streamed out of this component.
+ *  @param size the size of this component's output buffers, in bytes.
+ */
+int
+MemorySource::setBufferSize(int size)
+{
+    outputBufferSize = size;
+    return DEVICE_OK;
 }
 
 /**
@@ -34,42 +66,30 @@ ManagedBuffer MemorySource::pull()
 } 
 
 /**
- * Perform a 16 bit blocking playout of the 8 bit data buffer. 
- * Samples are upscaled to 16 bit. Returns when all the data has been queued.
- * @param data pointer to memory location to playout.
- * @param length number of bytes to stream.
- * @param loop  repeat playback of buffer when completed the given number of times. Set to zero to repeat forever.
- * @param expand repeat each input sample the given number of times in the output stream.
+ * Perform a blocking playout of the data buffer. Returns when all the data has been queued.
+ * @param data pointer to memory location to playout
+ * @param length number of samples in the buffer. Assumes a sample size as defined by setFormat().
+ * @param loop if repeat playback of buffer when completed the given number of times. Set to a negative number to loop forever.
  */
-void MemorySource::play(const uint8_t *data, int length, int loop, int expand)
+void MemorySource::play(const void *data, int length, int loop)
 {
-    int sample;
-    uint16_t *out;
+    uint8_t *out;
+    uint8_t *in;
 
+    in = (uint8_t *)data;
+    length = length * DATASTREAM_FORMAT_BYTES_PER_SAMPLE(outputFormat);
+   
     do
     {
         while (bytesSent < length)
         {
-            int size = min(length - bytesSent, MEMORY_SOURCE_MAX_BUFFER);
-            buffer = ManagedBuffer(size*expand*2);
-            out = (uint16_t *) &buffer[0];
+            int size = min(length - bytesSent, outputBufferSize);
+            buffer = ManagedBuffer(size);
+            out = &buffer[0];
 
-            for (int i=0; i<size; i++)
-            {
-                sample = data[bytesSent];
-                bytesSent++;
-
-                if (sample == 255)
-                    sample = maximumValue;
-                else
-                    sample = (sample * scalar) >> 8;
-
-                for (int s=0; s < expand; s++)
-                {
-                    *out = sample; 
-                    out++;
-                }
-            }
+            memcpy(out, in, size);
+            in += size;
+            bytesSent += size;
 
             output.pullRequest();
         }
@@ -79,52 +99,22 @@ void MemorySource::play(const uint8_t *data, int length, int loop, int expand)
             loop--;
 
     } while (loop);
-
 } 
 
 /**
- * Perform a 16 bit blocking playout of a 16 bit data buffer. 
- * Returns when all the data has been queued.
- * @param data pointer to memory location to playout.
- * @param length number of 16 bit words to stream.
- * @param loop  repeat playback of buffer when completed the given number of times. Set to zero to repeat forever.
- * @param expand repeat each input sample the given number of times in the output stream.
+ * Perform a blocking playout of the data buffer. Returns when all the data has been queued.
+ * @param b the buffer to playout
+ * @param loop if repeat playback of buffer when completed the given number of times. Set to a negative number to loop forever.
  */
-void MemorySource::play(const uint16_t *data, int length, int loop, int expand)
+void MemorySource::play(ManagedBuffer b, int loop)
 {
-    int sample;
-    uint16_t *out;
-
     do
     {
-        while (bytesSent < length)
-        {
-            int size = min(length - bytesSent, MEMORY_SOURCE_MAX_BUFFER);
-
-            buffer = ManagedBuffer(size*expand*2);
-            out = (uint16_t *) &buffer[0];
-
-            for (int i=0; i<size; i++)
-            {
-                sample = data[bytesSent];
-                bytesSent++;
-
-                sample = min(sample, maximumValue);
-
-                for (int s=0; s < expand; s++)
-                {
-                    *out = sample; 
-                    out++;
-                }
-            }
-
-            output.pullRequest();
-        }
-        
-        bytesSent = 0;
+        buffer = b;
+        output.pullRequest();
+ 
         if (loop > 0)
             loop--;
 
     } while (loop);
-
 } 

@@ -116,7 +116,7 @@ void TouchButton::setValue(int reading)
         // We've completed calibration, returnt to normal mode of operation.
         if (this->reading == 0)
         {
-            this->threshold += ((this->threshold * 5) / 100) + TOUCH_BUTTON_CALIBRATION_LINEAR_OFFSET;
+            this->threshold += ((this->threshold * 10) / 100) + TOUCH_BUTTON_CALIBRATION_LINEAR_OFFSET;
             status &= ~TOUCH_BUTTON_CALIBRATING;
         }
 

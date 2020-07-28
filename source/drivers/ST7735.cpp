@@ -65,9 +65,10 @@
 namespace codal
 {
 
-ST7735::ST7735(ScreenIO &io, Pin &cs, Pin &dc) : io(io), cs(cs), dc(dc), work(NULL)
+ST7735::ST7735(ScreenIO &io, Pin &cs, Pin &dc) : io(io), cs(&cs), dc(&dc), work(NULL)
 {
     double16 = false;
+    inSleepMode = false;
 }
 
 #define DELAY 0x80
@@ -129,7 +130,7 @@ static const uint8_t initCmds[] = {
 
 // Nordic cannot send more than 255 bytes at a time;
 // 224 aligns with a word
-#if defined(NRF52840) || defined(NRF52832)
+#ifdef NRF52_SERIES
 #define DATABUFSIZE 224
 #else
 #define DATABUFSIZE 500
@@ -239,7 +240,7 @@ void ST7735::sendColorsStep(ST7735 *st)
         }
         st->startRAMWR(0x2D);
         st->io.send(work->dataBuf, 128);
-        st->cs.setDigitalValue(1);
+        st->endCS();
     }
 
     if (work->x == 0)
@@ -267,7 +268,7 @@ void ST7735::sendColorsStep(ST7735 *st)
     {
         if (work->srcLeft == 0)
         {
-            st->cs.setDigitalValue(1);
+            st->endCS();
             Event(DEVICE_ID_DISPLAY, 100);
         }
         else
@@ -296,8 +297,8 @@ void ST7735::startRAMWR(int cmd)
     cmdBuf[0] = cmd;
     sendCmd(cmdBuf, 1);
 
-    dc.setDigitalValue(1);
-    cs.setDigitalValue(0);
+    setData();
+    beginCS();
 }
 
 void ST7735::sendDone(Event)
@@ -384,15 +385,15 @@ void ST7735::sendCmd(uint8_t *buf, int len)
     if (buf != cmdBuf)
         memcpy(cmdBuf, buf, len);
     buf = cmdBuf;
-    dc.setDigitalValue(0);
-    cs.setDigitalValue(0);
+    setCommand();
+    beginCS();
     io.send(buf, 1);
-    dc.setDigitalValue(1);
+    setData();
     len--;
     buf++;
     if (len > 0)
         io.send(buf, len);
-    cs.setDigitalValue(1);
+    endCS();
 }
 
 void ST7735::sendCmdSeq(const uint8_t *buf)
@@ -425,8 +426,8 @@ void ST7735::setAddrWindow(int x, int y, int w, int h)
 
 int ST7735::init()
 {
-    cs.setDigitalValue(1);
-    dc.setDigitalValue(1);
+    endCS();
+    setData();
 
     fiber_sleep(10); // TODO check if delay needed
     sendCmdSeq(initCmds);
@@ -439,8 +440,10 @@ void ST7735::configure(uint8_t madctl, uint32_t frmctr1)
     uint8_t cmd0[] = {ST7735_MADCTL, madctl};
     uint8_t cmd1[] = {ST7735_FRMCTR1, (uint8_t)(frmctr1 >> 16), (uint8_t)(frmctr1 >> 8),
                       (uint8_t)frmctr1};
-    sendCmd(cmd0, sizeof(cmd0));
-    sendCmd(cmd1, cmd1[3] == 0xff ? 3 : 4);
+    if (madctl != 0xff)
+        sendCmd(cmd0, sizeof(cmd0));
+    if (frmctr1 != 0xffffff)
+        sendCmd(cmd1, cmd1[3] == 0xff ? 3 : 4);
 }
 
 } // namespace codal

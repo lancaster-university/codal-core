@@ -20,7 +20,7 @@ namespace codal
         /**
          * Associates the given event with the serial channel.
          *
-         * Once registered, all events matching the given registration sent to this micro:bit's
+         * Once registered, all events matching the given registration sent to this device's
          * default EventModel will be automatically retransmitted on the serial bus.
          *
          * @param id The id of the event to register.

@@ -69,6 +69,11 @@ namespace codal
          */
         void triggerIn(CODAL_TIMESTAMP t);
 
+        /**
+         * Make sure nextTimerEvent is pointing the the right event.
+         */
+        void recomputeNextTimerEvent();
+
     public:
 
         uint8_t ccPeriodChannel;
@@ -285,6 +290,7 @@ namespace codal
      *
      * @note the amount of cycles per iteration will vary between CPUs.
      */
+    __attribute__((noinline, long_call, section(".data")))
     void system_timer_wait_cycles(uint32_t cycles);
 
     /**

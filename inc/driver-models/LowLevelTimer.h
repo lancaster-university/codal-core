@@ -81,6 +81,7 @@ class LowLevelTimer : public CodalComponent
     LowLevelTimer(uint8_t channel_count)
     {
         this->channel_count = channel_count;
+        this->timer_pointer = NULL;
     }
 
     /**

@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 /**
   * Class definition for LEDMatrix.
   *
-  * A LEDMatrix represents the LED matrix array on the micro:bit.
+  * Represents an LED matrix array.
   */
 #include "LEDMatrix.h"
 #include "CodalFiber.h"
@@ -39,7 +39,7 @@ const int greyScaleTimings[LED_MATRIX_GREYSCALE_BIT_DEPTH] = {1, 23, 70, 163, 35
 /**
   * Constructor.
   *
-  * Create a software representation the micro:bit's 5x5 LED matrix.
+  * Create a software representation an LED matrix.
   * The display is initially blank.
   *
   * @param map The mapping information that relates pin inputs/outputs to physical screen coordinates.

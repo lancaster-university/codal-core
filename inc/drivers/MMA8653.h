@@ -32,11 +32,6 @@ DEALINGS IN THE SOFTWARE.
 #include "I2C.h"
 #include "Accelerometer.h"
 
-/**
-  * Status flags
-  */
-#define MICROBIT_ACCEL_PITCH_ROLL_VALID           0x02
-#define MICROBIT_ACCEL_ADDED_TO_IDLE              0x04
 
 /**
   * I2C constants
@@ -109,15 +104,13 @@ namespace codal
           * Constructor.
           * Create a software abstraction of an accelerometer.
           *
-          * @param _i2c an instance of MicroBitI2C used to communicate with the onboard accelerometer.
+          * @param _i2c an instance of a codal::I2C device used to communicate with the onboard accelerometer.
           *
           * @param address the default I2C address of the accelerometer. Defaults to: MMA8653_DEFAULT_ADDR.
           *
-          * @param id the unique EventModel id of this component. Defaults to: MICROBIT_ID_ACCELEROMETER
+          * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
           *
           * @code
-          * MicroBitI2C i2c = MicroBitI2C(I2C_SDA0, I2C_SCL0);
-          *
           * MMA8653 accelerometer = MMA8653(i2c);
           * @endcode
         */
@@ -129,9 +122,9 @@ namespace codal
           * that are supported by the hardware. The instance variables are then
           * updated to reflect reality.
           *
-          * @return MICROBIT_OK on success, MICROBIT_I2C_ERROR if the accelerometer could not be configured.
+          * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the accelerometer could not be configured.
           */
-        int configure();
+        virtual int configure() override;
 
         /**
           * Reads the acceleration data from the accelerometer, and stores it in our buffer.
@@ -144,13 +137,13 @@ namespace codal
           * This technique is called lazy instantiation, and it means that we do not
           * obtain the overhead from non-chalantly adding this component to fiber components.
           *
-          * @return MICROBIT_OK on success, MICROBIT_I2C_ERROR if the read request fails.
+          * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
           */
-        virtual int requestUpdate();
+        virtual int requestUpdate() override;
 
         int whoAmI();
 
-        virtual void idleCallback();
+        virtual void idleCallback() override;
 
         virtual int setSleep(bool sleepMode);
     };

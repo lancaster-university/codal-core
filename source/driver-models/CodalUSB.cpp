@@ -26,6 +26,14 @@ DEALINGS IN THE SOFTWARE.
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
+// If DEVICE_USB_ENDPOINT_SHARING in and out endpoints will always get the same index.
+// This works on STM32F4. Can define on SAMD and elsewhere when tested.
+#if defined(DEVICE_USB_ENDPOINT_SHARING)
+#define NUM_ENDPOINTS(x) ((x) > 1 ? 1 : (x))
+#else
+#define NUM_ENDPOINTS(x) (x)
+#endif
+
 #include "ErrorNo.h"
 #include "CodalDmesg.h"
 #include "codal_target_hal.h"
@@ -43,7 +51,7 @@ static uint8_t usb_status = 0;
 // static uint8_t usb_suspended = 0; // copy of UDINT to check SUSPI and WAKEUPI bits
 static uint8_t usb_configured = 0;
 
-static const ConfigDescriptor static_config = {9, 2, 0, 0, 1, 0, USB_CONFIG_BUS_POWERED, 250};
+static const ConfigDescriptor static_config = {9, 2, 0, 0, 1, 0, USB_CONFIG_BUS_POWERED, 0};
 
 static const DeviceDescriptor default_device_desc = {
     0x12, // bLength
@@ -186,6 +194,7 @@ CodalUSB::CodalUSB()
     startDelayCount = 1;
     interfaces = NULL;
     numWebUSBInterfaces = 0;
+    maxPower = 50; // 100mA; if set to 500mA can't connect to iOS devices
 }
 
 void CodalUSBInterface::fillInterfaceInfo(InterfaceDescriptor *descp)
@@ -225,6 +234,7 @@ int CodalUSB::sendConfig()
     memcpy(buf, &static_config, sizeof(ConfigDescriptor));
     ((ConfigDescriptor *)buf)->clen = clen;
     ((ConfigDescriptor *)buf)->numInterfaces = numInterfaces;
+    ((ConfigDescriptor *)buf)->maxPower = maxPower;
     clen = sizeof(ConfigDescriptor);
 
 #define ADD_DESC(desc)                                                                             \
@@ -363,7 +373,7 @@ int CodalUSB::add(CodalUSBInterface &interface)
 {
     usb_assert(!usb_configured);
 
-    uint8_t epsConsumed = interface.getInterfaceInfo()->allocateEndpoints;
+    uint8_t epsConsumed = NUM_ENDPOINTS(interface.getInterfaceInfo()->allocateEndpoints);
 
     if (endpointsUsed + epsConsumed > DEVICE_USB_ENDPOINTS)
         return DEVICE_NO_RESOURCES;
@@ -623,17 +633,18 @@ void CodalUSB::initEndpoints()
             iface->out = NULL;
         }
 
+        uint8_t numep = NUM_ENDPOINTS(info->allocateEndpoints);
+
         if (info->iface.numEndpoints > 0)
         {
             iface->in = new UsbEndpointIn(endpointCount, info->epIn.attr);
             if (info->iface.numEndpoints > 1)
             {
-                iface->out = new UsbEndpointOut(endpointCount + (info->allocateEndpoints - 1),
-                                                info->epIn.attr);
+                iface->out = new UsbEndpointOut(endpointCount + (numep - 1), info->epIn.attr);
             }
         }
 
-        endpointCount += info->allocateEndpoints;
+        endpointCount += numep;
     }
 
     usb_assert(endpointsUsed == endpointCount);

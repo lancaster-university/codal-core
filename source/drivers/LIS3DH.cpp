@@ -79,16 +79,12 @@ CREATE_KEY_VALUE_TABLE(accelerometerPeriod, accelerometerPeriodData);
   * LIS3DH accelerometer = LIS3DH(i2c);
   * @endcode
  */
-LIS3DH::LIS3DH(I2C& _i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address,  uint16_t id) : Accelerometer(coordinateSpace, id), i2c(_i2c), int1(_int1), sample()
+LIS3DH::LIS3DH(I2C& _i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address,  uint16_t id) : Accelerometer(coordinateSpace, id), i2c(_i2c), int1(_int1)
 {
     // Store our identifiers.
     this->id = id;
     this->status = 0;
     this->address = address;
-
-    // Update our internal state for 50Hz at +/- 2g (50Hz has a period af 20ms).
-    this->samplePeriod = 20;
-    this->sampleRange = 2;
 
     // Configure and enable the accelerometer.
     configure();
@@ -163,23 +159,6 @@ int LIS3DH::whoAmI()
 }
 
 /**
- * Poll to see if new data is available from the hardware. If so, update it.
- * n.b. it is not necessary to explicitly call this function to update data
- * (it normally happens in the background when the scheduler is idle), but a check is performed
- * if the user explicitly requests up to date data.
- *
- * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the update fails.
- *
- * @note This method should be overidden by the hardware driver to implement the requested
- * changes in hardware.
- */
-int LIS3DH::requestUpdate()
-{
-    updateSample();
-    return DEVICE_OK;
-}
-
-/**
   * Reads the acceleration data from the accelerometer, and stores it in our buffer.
   * This only happens if the accelerometer indicates that it has new data via int1.
   *
@@ -192,7 +171,7 @@ int LIS3DH::requestUpdate()
   *
   * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
   */
-int LIS3DH::updateSample()
+int LIS3DH::requestUpdate()
 {
     // Ensure we're scheduled to update the data periodically
     status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
@@ -217,111 +196,33 @@ int LIS3DH::updateSample()
         i2c.readRegister(address, LIS3DH_INT1_SRC, &src, 1);
 
         // read MSB values...
-        sample.x = data[1];
-        sample.y = data[3];
-        sample.z = data[5];
+        sampleENU.x = data[1];
+        sampleENU.y = data[3];
+        sampleENU.z = data[5];
 
         // Normalize the data in the 0..1024 range.
-        sample.x *= 8;
-        sample.y *= 8;
-        sample.z *= 8;
+        sampleENU.x *= 8;
+        sampleENU.y *= 8;
+        sampleENU.z *= 8;
 
 #if CONFIG_ENABLED(USE_ACCEL_LSB)
         // Add in LSB values.
-        sample.x += (data[0] / 64);
-        sample.y += (data[2] / 64);
-        sample.z += (data[4] / 64);
+        sampleENU.x += (data[0] / 64);
+        sampleENU.y += (data[2] / 64);
+        sampleENU.z += (data[4] / 64);
 #endif
 
-        // Scale into millig (approx!)
-        sample.x *= this->sampleRange;
-        sample.y *= this->sampleRange;
-        sample.z *= this->sampleRange;
-
-        // no need to align to ENU coordinate system  (LIS3DH is ENU aligned)
-
+        // Scale into millig (approx!). (LIS3DH is ENU aligned)
+        sampleENU.x *= this->sampleRange;
+        sampleENU.y *= this->sampleRange;
+        sampleENU.z *= this->sampleRange;
+ 
         // Indicate that a new sample is available
-        update(sample);
+        update();
     }
 
     return DEVICE_OK;
 };
-
-
-/**
-  * Attempts to set the sample rate of the accelerometer to the specified value (in ms).
-  *
-  * @param period the requested time between samples, in milliseconds.
-  *
-  * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
-  *
-  * @code
-  * // sample rate is now 20 ms.
-  * accelerometer.setPeriod(20);
-  * @endcode
-  *
-  * @note The requested rate may not be possible on the hardware. In this case, the
-  * nearest lower rate is chosen.
-  */
-int LIS3DH::setPeriod(int period)
-{
-    samplePeriod = period;
-    return configure();
-}
-
-/**
-  * Reads the currently configured sample rate of the accelerometer.
-  *
-  * @return The time between samples, in milliseconds.
-  */
-int LIS3DH::getPeriod()
-{
-    return (int)samplePeriod;
-}
-
-/**
-  * Attempts to set the sample range of the accelerometer to the specified value (in g).
-  *
-  * @param range The requested sample range of samples, in g.
-  *
-  * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
-  *
-  * @code
-  * // the sample range of the accelerometer is now 8G.
-  * accelerometer.setRange(8);
-  * @endcode
-  *
-  * @note The requested range may not be possible on the hardware. In this case, the
-  * nearest lower range is chosen.
-  */
-int LIS3DH::setRange(int range)
-{
-    sampleRange = range;
-    return configure();
-}
-
-/**
-  * Reads the currently configured sample range of the accelerometer.
-  *
-  * @return The sample range, in g.
-  */
-int LIS3DH::getRange()
-{
-    return (int)sampleRange;
-}
-
-/**
- * Reads the accelerometer data from the latest update retrieved from the accelerometer.
- * Data is provided in ENU format, relative to the device package (and makes no attempt
- * to align axes to the device).
- *
- * @return The force measured in each axis, in milli-g.
- *
- */
-Sample3D LIS3DH::getSample()
-{
-    return sample;
-}
 
 
 /**
@@ -331,7 +232,7 @@ Sample3D LIS3DH::getSample()
   */
 void LIS3DH::idleCallback()
 {
-    updateSample();
+    requestUpdate();
 }
 
 /**

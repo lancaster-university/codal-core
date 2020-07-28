@@ -62,6 +62,7 @@ void timer_callback(uint16_t chan)
 
 void Timer::triggerIn(CODAL_TIMESTAMP t)
 {
+    if (t < CODAL_TIMER_MINIMUM_PERIOD) t = CODAL_TIMER_MINIMUM_PERIOD;
     // Just in case, disable all IRQs
     target_disable_irq();
     timer.setCompare(this->ccEventChannel, timer.captureCounter() + t);
@@ -186,18 +187,28 @@ int Timer::setEvent(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, bool re
  */
 int Timer::cancel(uint16_t id, uint16_t value)
 {
-    // Find the first unused slot, and assign it.
-    for (int i=0; i<eventListSize; i++)
+    int res = DEVICE_INVALID_PARAMETER;
+
+    target_disable_irq();
+    if (nextTimerEvent && nextTimerEvent->id == id && nextTimerEvent->value == value)
     {
-        if (timerEventList[i].id == id && timerEventList[i].value == value)
-        {
-            timerEventList[i].id = 0;
-            return DEVICE_OK;
-        }
+        nextTimerEvent->id = 0;
+        recomputeNextTimerEvent();
+        res = DEVICE_OK;
     }
+    else
+        for (int i=0; i<eventListSize; i++)
+        {
+            if (timerEventList[i].id == id && timerEventList[i].value == value)
+            {
+                timerEventList[i].id = 0;
+                res = DEVICE_OK;
+                break;
+            }
+        }
+    target_enable_irq();
 
-    return DEVICE_INVALID_PARAMETER;
-
+    return res;
 }
 
 /**
@@ -291,6 +302,27 @@ void Timer::sync()
     target_enable_irq();
 }
 
+void Timer::recomputeNextTimerEvent()
+{
+    nextTimerEvent = NULL;
+
+    TimerEvent *e = timerEventList;
+
+    // Find the next most recent and schedule it.
+    for (int i = 0; i < eventListSize; i++)
+    {
+        if (e->id != 0 && (nextTimerEvent == NULL || (e->timestamp < nextTimerEvent->timestamp)))
+            nextTimerEvent = e;
+        e++;
+    }
+
+    if (nextTimerEvent) {
+        // this may possibly happen if a new timer event was added to the queue while
+        // we were running - it might be already in the past
+        triggerIn(max(nextTimerEvent->timestamp - currentTimeUs, CODAL_TIMER_MINIMUM_PERIOD));
+    }
+}
+
 /**
  * Callback from physical timer implementation code.
  */
@@ -313,17 +345,23 @@ void Timer::trigger(bool isFallback)
         {
             if (e->id != 0 && currentTimeUs >= e->timestamp)
             {
-                // We need to trigger this event.
-#if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
-                Event evt(e->id, e->value, currentTime);
-#else
-                Event evt(e->id, e->value, currentTimeUs);
-#endif
+                uint16_t id = e->id;
+                uint16_t value = e->value;
 
+                // Release before triggering event. Otherwise, an immediate event handler
+                // can cancel this event, another event might be put in its place
+                // and we end up releasing (or repeating) a completely different event.
                 if (e->period == 0)
                     releaseTimerEvent(e);
                 else
                     e->timestamp += e->period;
+
+                // We need to trigger this event.
+#if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
+                Event evt(id, value, currentTime);
+#else
+                Event evt(id, value, currentTimeUs);
+#endif
 
                 // TODO: Handle rollover case above...
                 eventsFired++;
@@ -334,23 +372,7 @@ void Timer::trigger(bool isFallback)
     } while (eventsFired);
 
     // always recompute nextTimerEvent - event firing could have added new timer events
-    nextTimerEvent = NULL;
-
-    TimerEvent *e = timerEventList;
-
-    // Find the next most recent and schedule it.
-    for (int i = 0; i < eventListSize; i++)
-    {
-        if (e->id != 0 && (nextTimerEvent == NULL || (e->timestamp < nextTimerEvent->timestamp)))
-            nextTimerEvent = e;
-        e++;
-    }
-
-    if (nextTimerEvent) {
-        // this may possibly happen if a new timer event was added to the queue while
-        // we were running - it might be already in the past
-        triggerIn(max(nextTimerEvent->timestamp - currentTimeUs, CODAL_TIMER_MINIMUM_PERIOD));
-    }
+    recomputeNextTimerEvent();
 }
 
 /**

@@ -31,6 +31,8 @@ DEALINGS IN THE SOFTWARE.
 #include "I2C.h"
 #include "CoordinateSystem.h"
 #include "CodalUtil.h"
+#include "Accelerometer.h"
+#include "Compass.h"
 
 /**
   * I2C constants
@@ -158,14 +160,13 @@ DEALINGS IN THE SOFTWARE.
 
 // Constants 
 #define FXOS8700_STATUS_DATA_READY  0x07
-
-
-
+#define FXOS8700_WHOAMI_VAL         0xC7
 
 /**
-  * MMA8653 constants
+  * Term to convert sample data into SI units. 
   */
-#define FXOS8700_WHOAMI_VAL      0xC7
+#define FXOS8700_NORMALIZE_SAMPLE(x) (100 * (int)(x))
+
 
 namespace codal
 {
@@ -179,38 +180,28 @@ namespace codal
         int16_t         cz;
     };
 
-    // Forward declare our sibling classes that may register themselves for a callback when data is ready.
-    class FXOS8700Accelerometer;
-    class FXOS8700Magnetometer;
 
-    /**
-     * Class definition for an FXSO8700 hybrid Accelerometer/Magnetometer
-     */
-    class FXOS8700 : CodalComponent
-    {
+/**
+ * Class definition for an FXSO8700 hybrid Accelerometer/Magnetometer
+ */
+class FXOS8700 : public Accelerometer, public Compass
+{
         I2C&            i2c;                    // The I2C interface to use.
         Pin             &int1;                  // Data ready interrupt.
         uint16_t        address;                // I2C address of this accelerometer.
-        uint16_t        samplePeriod;           // The time between samples, in milliseconds.
-        uint8_t         sampleRange;            // The sample range of the accelerometer in g.
-        Sample3D        accelerometerSample;    // Scaled but non-transformed data from the sensor.
-        Sample3D        magnetometerSample;     // Scaled but non-transformed data from the sensor.
-
-        FXOS8700Accelerometer  *accelerometerAPI;      // Handle on an instance of higher level interface (if there is one)
-        FXOS8700Magnetometer   *magnetometerAPI;       // Handle on an instance of higher level interface (if there is one)
 
         public:
-
         /**
-          * Constructor.
-          * Create a software abstraction of an accelerometer.
-          *
-          * @param _i2c an instance of I2C used to communicate with the onboard accelerometer.
-          * @param _int1 a pin connected to the INT1 interrupt source of the sensor.
-          * @param address the default I2C address of the accelerometer. Defaults to: FXOS8700_DEFAULT_ADDR.
-          *
+         * Constructor.
+         * Create a software abstraction of an FXOS8700 sensor.
+         *
+         * @param _i2c an instance of I2C used to communicate with the onboard accelerometer.
+         * @param _int1 a pin connected to the INT1 interrupt source of the sensor.
+         * @param coordinateSpace The orientation of the sensor. Defaults to: SIMPLE_CARTESIAN.
+         * @param address the default I2C address of the accelerometer. Defaults to: FXOS8700_DEFAULT_ADDR.
+         *
          */
-        FXOS8700(I2C &_i2c, Pin &_int1, uint16_t address = FXOS8700_DEFAULT_ADDR);
+        FXOS8700(I2C &_i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address = FXOS8700_DEFAULT_ADDR, uint16_t aid = DEVICE_ID_ACCELEROMETER, uint16_t cid = DEVICE_ID_COMPASS);
 
         /**
           * Configures the accelerometer for G range and sample rate defined
@@ -220,123 +211,29 @@ namespace codal
           *
           * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the accelerometer could not be configured.
           */
-        int configure();
+        virtual int configure() override;
 
         /**
-          * Reads the acceleration data from the accelerometer, and stores it in our buffer.
-          * This only happens if the accelerometer indicates that it has new data via int1.
-          *
-          * On first use, this member function will attempt to add this component to the
-          * list of fiber components in order to constantly update the values stored
-          * by this object.
-          *
-          * This technique is called lazy instantiation, and it means that we do not
-          * obtain the overhead from non-chalantly adding this component to fiber components.
-          *
-          * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
-          */
-        int updateSample();
-
-        /**
-          * Attempts to set the sample rate of the accelerometer to the specified value (in ms).
-          *
-          * @param period the requested time between samples, in milliseconds.
-          *
-          * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
-          *
-          * @code
-          * // sample rate is now 20 ms.
-          * accelerometer.setPeriod(20);
-          * @endcode
-          *
-          * @note The requested rate may not be possible on the hardware. In this case, the
-          * nearest lower rate is chosen.
-          */
-        int setPeriod(int period);
-
-        /**
-          * Reads the currently configured sample rate of the accelerometer.
-          *
-          * @return The time between samples, in milliseconds.
-          */
-        int getPeriod();
-
-        /**
-          * Attempts to set the sample range of the accelerometer to the specified value (in g).
-          *
-          * @param range The requested sample range of samples, in g.
-          *
-          * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
-          *
-          * @code
-          * // the sample range of the accelerometer is now 8G.
-          * accelerometer.setRange(8);
-          * @endcode
-          *
-          * @note The requested range may not be possible on the hardware. In this case, the
-          * nearest lower range is chosen.
-          */
-        int setRange(int range);
-
-        /**
-          * Reads the currently configured sample range of the accelerometer.
-          *
-          * @return The sample range, in g.
-          */
-        int getRange();
-
-        /**
-          * Attempts to read the 8 bit ID from the accelerometer, this can be used for
-          * validation purposes.
-          *
-          * @return the 8 bit ID returned by the accelerometer, or DEVICE_I2C_ERROR if the request fails.
-          *
-          * @code
-          * accelerometer.whoAmI();
-          * @endcode
-          */
-        int whoAmI();
-
-        /**
-          * Reads the accelerometer data from the latest update retrieved from the accelerometer.
-          * Data is provided in ENU format, relative to the device package (and makes no attempt
-          * to align axes to the device).
-          *
-          * @return The force measured in each axis, in milli-g.
-          *
-          */
-        Sample3D getAccelerometerSample();
-
-        /**
-          * Reads the magnetometer data from the latest update retrieved from the magnetometer.
-          * Data is provided in ENU format, relative to the device package (and makes no attempt
-          * to align axes to the device).
-          *
-          * @return The magnetic force measured in each axis, in micro-teslas.
-          *
-          */
-        Sample3D getMagnetometerSample();
+         * Reads the acceleration data from the accelerometer, and stores it in our buffer.
+         * This only happens if the accelerometer indicates that it has new data via int1.
+         *
+         * On first use, this member function will attempt to add this component to the
+         * list of fiber components in order to constantly update the values stored
+         * by this object.
+         *
+         * This technique is called lazy instantiation, and it means that we do not
+         * obtain the overhead from non-chalantly adding this component to fiber components.
+         *
+         * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
+         */
+        virtual int requestUpdate() override;
 
         /**
           * A periodic callback invoked by the fiber scheduler idle thread.
           *
           * Internally calls updateSample().
           */
-        virtual void idleCallback();
-
-        /**
-         * Register a higher level driver for our accelerometer functions
-         *
-         * @param a A pointer to an instance of the FXOS8700Accelerometer class to inform when new data is available.
-         */
-        void setAccelerometerAPI(FXOS8700Accelerometer *a);
-
-        /**
-         * Register a higher level driver for our magnetometer functions
-         *
-         * @param a A pointer to an instance of the FXOS8700Magnetometer class to inform when new data is available.
-         */
-        void setMagnetometerAPI(FXOS8700Magnetometer *m);
+        virtual void idleCallback() override;
 
         /**
          * Attempts to read the 8 bit WHO_AM_I value from the accelerometer

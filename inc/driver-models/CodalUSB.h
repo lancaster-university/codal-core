@@ -277,6 +277,7 @@ public:
 
     // initialized by constructor, can be overriden before start()
     uint8_t numStringDescriptors;
+    uint8_t maxPower;
     const char **stringDescriptors;
     const DeviceDescriptor *deviceDescriptor;
 

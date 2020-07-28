@@ -529,6 +529,9 @@ namespace codal
         void unlockTx();
 
         ~Serial();
+        
+      private:
+        void writeNum(uint32_t n, bool full);
     };
 }
 

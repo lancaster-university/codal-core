@@ -107,7 +107,7 @@ namespace codal
      * Create a software abstraction of an accelerometer.
      *
      * @param coordinateSpace The orientation of the sensor. Defaults to: SIMPLE_CARTESIAN
-     * @param id The unique EventModel id of this component. Defaults to: MICROBIT_ID_ACCELEROMETER
+     * @param id The unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
      *
      */
     LSM303Accelerometer(I2C& _i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address = LSM303_A_DEFAULT_ADDR, uint16_t id = DEVICE_ID_ACCELEROMETER);

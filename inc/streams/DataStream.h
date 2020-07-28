@@ -30,6 +30,20 @@ DEALINGS IN THE SOFTWARE.
 
 #define DATASTREAM_MAXIMUM_BUFFERS      1
 
+// Define valid data representation formats supplied by a DataSource.
+// n.b. MUST remain in strict monotically increasing order of sample size.
+#define DATASTREAM_FORMAT_UNKNOWN           0 
+#define DATASTREAM_FORMAT_8BIT_UNSIGNED     1
+#define DATASTREAM_FORMAT_8BIT_SIGNED       2
+#define DATASTREAM_FORMAT_16BIT_UNSIGNED    3
+#define DATASTREAM_FORMAT_16BIT_SIGNED      4
+#define DATASTREAM_FORMAT_24BIT_UNSIGNED    5
+#define DATASTREAM_FORMAT_24BIT_SIGNED      6
+#define DATASTREAM_FORMAT_32BIT_UNSIGNED    7
+#define DATASTREAM_FORMAT_32BIT_SIGNED      8
+
+#define DATASTREAM_FORMAT_BYTES_PER_SAMPLE(x) ((x+1)/2)
+
 namespace codal
 {
     /**
@@ -51,6 +65,8 @@ namespace codal
 
     	virtual ManagedBuffer pull();
     	virtual void connect(DataSink &sink);
+      virtual int getFormat();
+      virtual int setFormat(int format);
     };
 
     /**
@@ -68,7 +84,6 @@ namespace codal
         uint16_t spaceAvailableEventCode;
         uint16_t pullRequestEventCode;
         bool isBlocking;
-        bool deferred;
 
         DataSink *downStream;
         DataSource *upStream;
@@ -116,7 +131,7 @@ namespace codal
          * Determines if any of the data currently flowing through this stream is held in non-volatile (FLASH) memory.
          * @return true if one or more of the ManagedBuffers in this stream reside in FLASH memory, false otherwise.
          */
-    	bool isReadOnly();
+    	  bool isReadOnly();
 
         /**
          * Define a downstream component for data stream.
@@ -131,6 +146,11 @@ namespace codal
          * @sink The component that data will be delivered to, when it is availiable
          */
         void disconnect();
+
+        /**
+         *  Determine the data format of the buffers streamed out of this component.
+         */
+        int getFormat();
 
         /**
          * Determine the number of bytes that are currnetly buffered before blocking subsequent push() operations.

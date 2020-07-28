@@ -49,15 +49,13 @@ namespace codal
           * Constructor.
           * Create a software abstraction of an accelerometer.
           *
-          * @param _i2c an instance of MicroBitI2C used to communicate with the onboard accelerometer.
+          * @param _i2c an instance of a codal::I2C device used to communicate with the onboard accelerometer.
           *
           * @param address the default I2C address of the accelerometer. Defaults to: MMA8453_DEFAULT_ADDR.
           *
-          * @param id the unique EventModel id of this component. Defaults to: MICROBIT_ID_ACCELEROMETER
+          * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
           *
           * @code
-          * MicroBitI2C i2c = MicroBitI2C(I2C_SDA0, I2C_SCL0);
-          *
           * MMA8453 accelerometer = MMA8453(i2c);
           * @endcode
         */

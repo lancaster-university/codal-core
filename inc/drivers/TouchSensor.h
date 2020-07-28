@@ -50,6 +50,8 @@ namespace codal
       */
     class TouchSensor : CodalComponent
     {
+        protected:
+
         TouchButton*    buttons[TOUCH_SENSOR_MAX_BUTTONS];
         Pin             &drivePin;
         int             numberOfButtons;
@@ -67,19 +69,29 @@ namespace codal
         TouchSensor(Pin &pin, uint16_t id = DEVICE_ID_TOUCH_SENSOR);
 
         /**
+         * Default Constructor.
+         *
+         * Enables software controlled capacitative touch sensing on a set of pins.
+         * Use this default constructor when using TouchSensor as a base class.
+         *
+         * @id The ID of this component, defaults to DEVICE_ID_TOUCH_SENSOR
+         */
+        TouchSensor(uint16_t id);
+
+        /**
           * Begin touch sensing on the given button
           */
-        int addTouchButton(TouchButton *button);
+        virtual int addTouchButton(TouchButton *button);
 
         /**
           * Stop touch sensing on the given button
           */
-        int removeTouchButton(TouchButton *button);
+        virtual int removeTouchButton(TouchButton *button);
 
         /**
          * Initiate a scan of the sensors.
          */
-        void onSampleEvent(Event);
+        virtual void onSampleEvent(Event);
 
         /**
           * Destructor.

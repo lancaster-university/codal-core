@@ -24,7 +24,7 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
- * Class definition for MicroBit Accelerometer.
+ * Class definition for an MMA8653 Accelerometer.
  *
  * Represents an implementation of the Freescale MMA8653 3 axis accelerometer
  * Also includes basic data caching and on demand activation.
@@ -111,15 +111,13 @@ int MMA8653::configure()
   * Constructor.
   * Create a software abstraction of an accelerometer.
   *
-  * @param _i2c an instance of MicroBitI2C used to communicate with the onboard accelerometer.
+  * @param _i2c an instance of codal::I2C used to communicate with the accelerometer.
   *
   * @param address the default I2C address of the accelerometer. Defaults to: MMA8653_DEFAULT_ADDR.
   *
   * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
   *
   * @code
-  * MicroBitI2C i2c = MicroBitI2C(I2C_SDA0, I2C_SCL0);
-  *
   * MMA8653 accelerometer = MMA8653(i2c);
   * @endcode
  */
@@ -186,28 +184,28 @@ int MMA8653::requestUpdate()
             return DEVICE_I2C_ERROR;
 
         // read MSB values...
-        s.x = data[0];
-        s.y = data[2];
-        s.z = data[4];
+        sampleENU.x = data[0];
+        sampleENU.y = data[2];
+        sampleENU.z = data[4];
 
         // Normalize the data in the 0..1024 range.
-        s.x *= 8;
-        s.y *= 8;
-        s.z *= 8;
+        sampleENU.x *= 8;
+        sampleENU.y *= 8;
+        sampleENU.z *= 8;
 
 #if CONFIG_ENABLED(USE_ACCEL_LSB)
         // Add in LSB values.
-        s.x += (data[1] / 64);
-        s.y += (data[3] / 64);
-        s.z += (data[5] / 64);
+        sampleENU.x += (data[1] / 64);
+        sampleENU.y += (data[3] / 64);
+        sampleENU.z += (data[5] / 64);
 #endif
 
         // Scale into millig (approx!)
-        s.x *= this->sampleRange;
-        s.y *= this->sampleRange;
-        s.z *= this->sampleRange;
+        sampleENU.x *= this->sampleRange;
+        sampleENU.y *= this->sampleRange;
+        sampleENU.z *= this->sampleRange;
 
-        update(s);
+        update();
     }
 
     return DEVICE_OK;
