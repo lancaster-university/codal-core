@@ -55,10 +55,15 @@ namespace codal
     {
         uint16_t eventHandle;
 
+        protected:
+
+        void (*listener_deletion_callback)(Listener *);         // An optional callback function that is invoked when a listener is removed.
+
         public:
 
         static EventModel *defaultEventBus;
 
+        EventModel() : listener_deletion_callback(NULL) {}
         /**
           * Queues the given event to be sent to all registered recipients.
           * The method of delivery will vary depending on the underlying implementation.
@@ -125,6 +130,17 @@ namespace codal
         static int setDefaultEventModel(EventModel &model)
         {
             EventModel::defaultEventBus = &model;
+            return DEVICE_OK;
+        }
+
+        /**
+         * Sets a pointer to a handler that is invoked when any listener is deleted.
+         *
+         * @returns DEVICE_OK on success.
+         **/
+        int setListenerDeletionCallback(void (*listener_deletion_callback)(Listener *))
+        {
+            this->listener_deletion_callback = listener_deletion_callback;
             return DEVICE_OK;
         }
 
