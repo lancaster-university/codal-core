@@ -69,7 +69,8 @@ namespace codal
         RAW,
         SIMPLE_CARTESIAN,
         NORTH_EAST_DOWN,
-        EAST_NORTH_UP
+        EAST_NORTH_UP,
+        NORTH_EAST_UP = EAST_NORTH_UP, // legacy name 
     };
 
     struct Sample3D
