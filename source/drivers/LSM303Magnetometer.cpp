@@ -63,13 +63,19 @@ CREATE_KEY_VALUE_TABLE(magnetometerPeriod, magnetometerPeriodData);
 int LSM303Magnetometer::configure()
 {
     int result;
+    uint8_t value;
 
     // First find the nearest sample rate to that specified.
     samplePeriod = magnetometerPeriod.getKey(samplePeriod * 1000) / 1000;
 
     // Now configure the magnetometer for the requested sample rate, low power continuous mode with temperature compensation disabled
-    // TODO: Review if temperature compensation improves performance.
-    result = i2c.writeRegister(address, LSM303_CFG_REG_A_M, magnetometerPeriod.get(samplePeriod * 1000));
+    value = magnetometerPeriod.get(samplePeriod * 1000);
+
+    // Configure the component as enabled or disabled as appropriate.
+    if (!(status & LSM303_M_STATUS_ENABLED))
+        value |= 0x03;
+
+    result = i2c.writeRegister(address, LSM303_CFG_REG_A_M, value);
     if (result != DEVICE_OK)
     {
         DMESG("LSM303 INIT: ERROR WRITING LSM303_CFG_REG_A_M");
@@ -77,7 +83,8 @@ int LSM303Magnetometer::configure()
     }
 
     // Enable Data Ready interrupt, with buffering of data to avoid race conditions.
-    result = i2c.writeRegister(address, LSM303_CFG_REG_C_M, 0x01);
+    value = status & LSM303_M_STATUS_ENABLED ? 0x01 : 0x00;
+    result = i2c.writeRegister(address, LSM303_CFG_REG_C_M, value);
     if (result != DEVICE_OK)
     {
         DMESG("LSM303 INIT: ERROR WRITING LSM303_CFG_REG_C_M");
@@ -119,44 +126,63 @@ LSM303Magnetometer::LSM303Magnetometer(I2C &_i2c, Pin &_int1, CoordinateSpace &c
  */
 int LSM303Magnetometer::requestUpdate()
 {
-    // Ensure we're scheduled to update the data periodically
-    status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
+    bool awaitSample = false;
+
+    if (!(status & LSM303_M_STATUS_ENABLED))
+    {
+        // If we get here without being enabled, applicaiton code has requested
+        // functionlity from this component. Perform on demand activation.
+        status |= LSM303_M_STATUS_ENABLED;
+        status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
+        configure();
+
+        // Ensure the first sample is accurate.
+        awaitSample = true;
+    }   
 
     // Poll interrupt line from device 
-    if(int1.isActive())
-    {
-        uint8_t data[6];
-        int result;
-        int16_t *x;
-        int16_t *y;
-        int16_t *z;
+    do{
+        if(int1.isActive())
+        {
+            uint8_t data[6];
+            int result;
+            int16_t *x;
+            int16_t *y;
+            int16_t *z;
 
-#if CONFIG_ENABLED(DEVICE_I2C_IRQ_SHARED)
-        // Determine if this device has all its data ready (we may be on a shared IRQ line)
-        uint8_t status_reg = i2c.readRegister(address, LSM303_STATUS_REG_M);
-        if((status_reg & LSM303_M_STATUS_DATA_READY) != LSM303_M_STATUS_DATA_READY)
-            return DEVICE_OK;
-#endif
+    #if CONFIG_ENABLED(DEVICE_I2C_IRQ_SHARED)
+            // Determine if this device has all its data ready (we may be on a shared IRQ line)
+            uint8_t status_reg = i2c.readRegister(address, LSM303_STATUS_REG_M);
+            if((status_reg & LSM303_M_STATUS_DATA_READY) != LSM303_M_STATUS_DATA_READY)
+            {
+                if (awaitSample)
+                    continue;
+                else
+                    return DEVICE_OK;
+            }
+    #endif
 
-        // Read the combined accelerometer and magnetometer data.
-        result = i2c.readRegister(address, LSM303_OUTX_L_REG_M | 0x80, data, 6);
+            // Read the combined accelerometer and magnetometer data.
+            result = i2c.readRegister(address, LSM303_OUTX_L_REG_M | 0x80, data, 6);
+            awaitSample = false;
 
-        if (result !=0)
-            return DEVICE_I2C_ERROR;
+            if (result !=0)
+                return DEVICE_I2C_ERROR;
 
-        // Read in each reading as a 16 bit little endian value, and scale to 10 bits.
-        x = ((int16_t *) &data[0]);
-        y = ((int16_t *) &data[2]);
-        z = ((int16_t *) &data[4]);
+            // Read in each reading as a 16 bit little endian value, and scale to 10 bits.
+            x = ((int16_t *) &data[0]);
+            y = ((int16_t *) &data[2]);
+            z = ((int16_t *) &data[4]);
 
-        // Align to ENU coordinate system
-        sampleENU.x = LSM303_M_NORMALIZE_SAMPLE(-((int)(*y)));
-        sampleENU.y = LSM303_M_NORMALIZE_SAMPLE(-((int)(*x)));
-        sampleENU.z = LSM303_M_NORMALIZE_SAMPLE(((int)(*z)));
+            // Align to ENU coordinate system
+            sampleENU.x = LSM303_M_NORMALIZE_SAMPLE(-((int)(*y)));
+            sampleENU.y = LSM303_M_NORMALIZE_SAMPLE(-((int)(*x)));
+            sampleENU.z = LSM303_M_NORMALIZE_SAMPLE(((int)(*z)));
 
-        // indicate that new data is available.
-        update();
-    }
+            // indicate that new data is available.
+            update();
+        }
+    } while (awaitSample);
 
     return DEVICE_OK;
 }

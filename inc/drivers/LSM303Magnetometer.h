@@ -81,6 +81,11 @@ DEALINGS IN THE SOFTWARE.
 #define LSM303_M_STATUS_DATA_READY    0x08
 
 /**
+ * LSM303 Status flags
+ */
+#define LSM303_M_STATUS_ENABLED       0x01
+
+/**
  * Class definition for LSM303_M.
  *
  * This class provides the low level driver implementation for the LSM303_M Magnetometer

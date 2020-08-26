@@ -88,6 +88,11 @@ DEALINGS IN THE SOFTWARE.
 #define LSM303_A_WHOAMI_VAL           0x33
 #define LSM303_A_STATUS_DATA_READY    0x08
 
+/**
+ * LSM303 Status flags
+ */
+#define LSM303_A_STATUS_ENABLED       0x01
+
 namespace codal
 {
   /**
