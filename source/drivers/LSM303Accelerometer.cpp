@@ -149,7 +149,7 @@ int LSM303Accelerometer::requestUpdate()
 {
     bool awaitSample = false;
 
-    if (!(status & LSM303_A_STATUS_ENABLED))
+    if ((status & (LSM303_A_STATUS_ENABLED | LSM303_A_STATUS_SLEEPING)) == 0x00)
     {
         // If we get here without being enabled, applicaiton code has requested
         // functionlity from this component. Perform on demand activation.
@@ -222,6 +222,30 @@ void LSM303Accelerometer::idleCallback()
 {
     requestUpdate();
 }
+
+/**
+ * Puts the component in (or out of) sleep (low power) mode.
+ */
+int LSM303Accelerometer::setSleep(bool doSleep)
+{
+    DMESG("LSM303A: doSleep()");
+    if (doSleep && (status & LSM303_A_STATUS_ENABLED))
+    {
+        status |= LSM303_A_STATUS_SLEEPING;
+        status &= ~LSM303_A_STATUS_ENABLED;
+        configure();
+    }
+    
+    if (!doSleep && (status & LSM303_A_STATUS_SLEEPING))
+    {
+        status |= LSM303_A_STATUS_ENABLED;
+        status &= ~LSM303_A_STATUS_SLEEPING;
+        configure();
+    }
+   
+    return DEVICE_OK;
+}
+
 
 /**
  * Attempts to read the 8 bit WHO_AM_I value from the accelerometer

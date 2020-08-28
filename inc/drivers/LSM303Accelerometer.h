@@ -92,6 +92,7 @@ DEALINGS IN THE SOFTWARE.
  * LSM303 Status flags
  */
 #define LSM303_A_STATUS_ENABLED       0x01
+#define LSM303_A_STATUS_SLEEPING      0x02
 
 namespace codal
 {
@@ -149,6 +150,12 @@ namespace codal
      * Internally calls updateSample().
      */
     virtual void idleCallback() override;
+
+    /**
+     * Puts the component in (or out of) sleep (low power) mode.
+     */
+    virtual int setSleep(bool doSleep) override;
+    
 
     /**
      * Attempts to read the 8 bit WHO_AM_I value from the accelerometer
