@@ -145,6 +145,7 @@ void codal_vdmesg(const char *format, bool crlf, va_list ap)
             case 'c':
                 logwriten((const char *)&val, 1);
                 break;
+            case 'u': // should be printed as unsigned, but will do for now
             case 'd':
                 logwritenum(val, false, false);
                 break;
