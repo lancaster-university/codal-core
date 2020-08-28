@@ -108,7 +108,7 @@ int LSM303Accelerometer::configure()
     // Now configure the accelerometer accordingly.
 
     // Place the device into normal (10 bit) mode, with all axes enabled at the nearest supported data rate to that  requested.
-    result = i2c.writeRegister(address, LSM303_CTRL_REG1_A, accelerometerPeriod.get(samplePeriod * 1000) | 0x07);
+    result = i2c.writeRegister(address, LSM303_CTRL_REG1_A, status & LSM303_A_STATUS_ENABLED ? accelerometerPeriod.get(samplePeriod * 1000) | 0x07 : 0x00);
     if (result != 0)
     {
         DMESG("LSM303 INIT: ERROR WRITING LSM303_CTRL_REG1_A");
@@ -147,48 +147,68 @@ int LSM303Accelerometer::configure()
  */
 int LSM303Accelerometer::requestUpdate()
 {
-    // Ensure we're scheduled to update the data periodically
-    status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
+    bool awaitSample = false;
+
+    if ((status & (LSM303_A_STATUS_ENABLED | LSM303_A_STATUS_SLEEPING)) == 0x00)
+    {
+        // If we get here without being enabled, applicaiton code has requested
+        // functionlity from this component. Perform on demand activation.
+        status |= LSM303_A_STATUS_ENABLED;
+        status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
+        configure();
+
+        // Ensure the first sample is accurate.
+        awaitSample = true;
+    }    
 
     // Poll interrupt line from device
-    if(int1.isActive())
+    do
     {
-        uint8_t data[6];
-        int result;
-        int16_t *x;
-        int16_t *y;
-        int16_t *z;
+        if(int1.isActive())
+        {
+            uint8_t data[6];
+            int result;
+            int16_t *x;
+            int16_t *y;
+            int16_t *z;
 
-#if CONFIG_ENABLED(DEVICE_I2C_IRQ_SHARED)
-        // Determine if this device has all its data ready (we may be on a shared IRQ line)
-        uint8_t status_reg = i2c.readRegister(address, LSM303_STATUS_REG_A);
-        if((status_reg & LSM303_A_STATUS_DATA_READY) != LSM303_A_STATUS_DATA_READY)
-            return DEVICE_OK;
-#endif
+    #if CONFIG_ENABLED(DEVICE_I2C_IRQ_SHARED)
+            // Determine if this device has all its data ready (we may be on a shared IRQ line)
+            uint8_t status_reg = i2c.readRegister(address, LSM303_STATUS_REG_A);
+            if((status_reg & LSM303_A_STATUS_DATA_READY) != LSM303_A_STATUS_DATA_READY)
+            {
+                if (awaitSample)
+                    continue;
+                else
+                    return DEVICE_OK;
+            }
+    #endif
 
-        // Read the combined accelerometer and magnetometer data.
-        result = i2c.readRegister(address, LSM303_OUT_X_L_A | 0x80, data, 6);
+            // Read the combined accelerometer and magnetometer data.
+            result = i2c.readRegister(address, LSM303_OUT_X_L_A | 0x80, data, 6);
+            awaitSample = false;
 
-        if (result !=0)
-            return DEVICE_I2C_ERROR;
+            if (result !=0)
+                return DEVICE_I2C_ERROR;
 
-        // Read in each reading as a 16 bit little endian value, and scale to 10 bits.
-        x = ((int16_t *) &data[0]);
-        y = ((int16_t *) &data[2]);
-        z = ((int16_t *) &data[4]);
+            // Read in each reading as a 16 bit little endian value, and scale to 10 bits.
+            x = ((int16_t *) &data[0]);
+            y = ((int16_t *) &data[2]);
+            z = ((int16_t *) &data[4]);
 
-        *x = *x / 32;
-        *y = *y / 32;
-        *z = *z / 32;
+            *x = *x / 32;
+            *y = *y / 32;
+            *z = *z / 32;
 
-        // Scale into millig (approx) and align to ENU coordinate system
-        sampleENU.x = -((int)(*y)) * sampleRange;
-        sampleENU.y = -((int)(*x)) * sampleRange;
-        sampleENU.z =  ((int)(*z)) * sampleRange;
+            // Scale into millig (approx) and align to ENU coordinate system
+            sampleENU.x = -((int)(*y)) * sampleRange;
+            sampleENU.y = -((int)(*x)) * sampleRange;
+            sampleENU.z =  ((int)(*z)) * sampleRange;
 
-        // indicate that new data is available.
-        update();
-    }
+            // indicate that new data is available.
+            update();
+        }
+    } while (awaitSample);
 
     return DEVICE_OK;
 }
@@ -202,6 +222,30 @@ void LSM303Accelerometer::idleCallback()
 {
     requestUpdate();
 }
+
+/**
+ * Puts the component in (or out of) sleep (low power) mode.
+ */
+int LSM303Accelerometer::setSleep(bool doSleep)
+{
+    DMESG("LSM303A: doSleep()");
+    if (doSleep && (status & LSM303_A_STATUS_ENABLED))
+    {
+        status |= LSM303_A_STATUS_SLEEPING;
+        status &= ~LSM303_A_STATUS_ENABLED;
+        configure();
+    }
+    
+    if (!doSleep && (status & LSM303_A_STATUS_SLEEPING))
+    {
+        status |= LSM303_A_STATUS_ENABLED;
+        status &= ~LSM303_A_STATUS_SLEEPING;
+        configure();
+    }
+   
+    return DEVICE_OK;
+}
+
 
 /**
  * Attempts to read the 8 bit WHO_AM_I value from the accelerometer

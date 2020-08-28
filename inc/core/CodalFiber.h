@@ -67,7 +67,8 @@ namespace codal
         uint32_t context;                   // Context specific information.
         uint32_t flags;                     // Information about this fiber.
         Fiber **queue;                      // The queue this fiber is stored on.
-        Fiber *next, *prev;                 // Position of this Fiber on the run queue.
+        Fiber *qnext, *qprev;               // Position of this Fiber on the run queue.
+        Fiber *next;                        // Position of this Fiber on the global list of fibers.
         #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
         void *user_data;
         #endif
@@ -91,6 +92,13 @@ namespace codal
       * @return 1 if the fber scheduler is running, 0 otherwise.
       */
     int fiber_scheduler_running();
+
+    /**
+     * Provides a list of all active fibers.
+     * 
+     * @return A pointer to the head of the list of all active fibers.
+     */
+    Fiber* get_fiber_list();
 
     /**
       * Exit point for all fibers.
@@ -330,6 +338,35 @@ namespace codal
       * @return the number of fibers (potentially) stored
       */
     int list_fibers(Fiber **dest);
+
+    class FiberLock
+    {
+        private:
+        bool    locked;
+        Fiber   *queue;
+
+        public:
+
+        /**
+         * Create a new lock that can be used for mutual exclusion and condition synchronisation.
+         */
+        FiberLock();
+
+        /**
+         * Block the calling fiber until the lock is available
+         **/
+        void wait();
+
+        /**
+         * Release the lock, and signal to one waiting fiber to continue
+         */
+        void notify();
+
+        /**
+         * Release the lock, and signal to all waiting fibers to continue
+         */
+        void notifyAll();
+    };
 }
 
 

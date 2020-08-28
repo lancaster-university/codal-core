@@ -26,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_DMESG_H
 
 #include "CodalConfig.h"
+#include <stdbool.h>
 
 #if DEVICE_DMESG_BUFFER_SIZE > 0
 
