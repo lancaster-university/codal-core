@@ -54,6 +54,8 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_SCHEDULER_EVT_TICK           1
 #define DEVICE_SCHEDULER_EVT_IDLE           2
 
+#define DEVICE_GET_FIBER_LIST_AVAILABLE     1
+
 namespace codal
 {
     /**
@@ -329,15 +331,6 @@ namespace codal
       * This function typically calls idle().
       */
     void idle_task();
-
-    /**
-      * Return all current fibers.
-      *
-      * @param dest If non-null, it points to an array of pointers to fibers to store results in.
-      *
-      * @return the number of fibers (potentially) stored
-      */
-    int list_fibers(Fiber **dest);
 
     class FiberLock
     {

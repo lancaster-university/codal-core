@@ -148,7 +148,7 @@ void codal::dequeue_fiber(Fiber *f)
   * 
   * @return A pointer to the head of the list of all active fibers.
   */
-Fiber * get_fiber_list()
+Fiber * codal::get_fiber_list()
 {
     return fiberList;
 }
