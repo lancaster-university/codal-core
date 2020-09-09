@@ -471,6 +471,16 @@ namespace codal
         }
 
         /**
+          * Determines the polarity of the pin - either ACTIVE_HI or ATIVE_LO.
+          *
+          * @return 1 for ACTIVE_HI or 0 for ACTIVE_LO
+          */
+        int getPolarity()
+        {
+            return (status & IO_STATUS_ACTIVE_HI) ? 1 : 0;
+        }
+
+        /**
           * Sets the polarity of the pin to be ACTIVE_HI.
           */
         void setActiveHi()

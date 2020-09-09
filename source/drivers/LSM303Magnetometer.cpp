@@ -203,7 +203,6 @@ void LSM303Magnetometer::idleCallback()
  */
 int LSM303Magnetometer::setSleep(bool doSleep)
 {
-    DMESG("LSM303M: doSleep()");
     if (doSleep && (status & LSM303_M_STATUS_ENABLED))
     {
         status |= LSM303_M_STATUS_SLEEPING;

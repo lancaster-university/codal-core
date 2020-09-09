@@ -228,7 +228,6 @@ void LSM303Accelerometer::idleCallback()
  */
 int LSM303Accelerometer::setSleep(bool doSleep)
 {
-    DMESG("LSM303A: doSleep()");
     if (doSleep && (status & LSM303_A_STATUS_ENABLED))
     {
         status |= LSM303_A_STATUS_SLEEPING;
