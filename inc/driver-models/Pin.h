@@ -90,10 +90,8 @@ namespace codal
         PinCapability capability;
         PullMode pullMode;
 
-        uint16_t status;
-
         public:
-
+        uint16_t status;
         uint16_t id;
 
         void (*gpio_irq)(int state);
@@ -493,6 +491,13 @@ namespace codal
         void setActiveLo()
         {
             setPolarity(0);
+        }
+
+        /**
+          * Disconnect any attached peripherals from this pin.
+          */
+        virtual void disconnect()
+        {
         }
     };
 
