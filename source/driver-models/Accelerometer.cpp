@@ -259,6 +259,7 @@ void Accelerometer::updateGesture()
 
     if (g == ACCELEROMETER_EVT_SHAKE)
     {
+        lastGesture = ACCELEROMETER_EVT_SHAKE;
         Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_SHAKE);
         return;
     }

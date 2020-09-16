@@ -38,14 +38,17 @@ namespace codal{
     {
     public:
         int             outputFormat;           // The format to output in. By default, this is the sme as the input.
+        int             stabilisation;          // The % stability of the zero-offset calculation required to begin operation.
         float           gain;                   // Gain to apply.
         float           zeroOffset;             // Best estimate of the zero point of the data source.
         uint32_t        orMask;                 // post processing step - or'd with each sample.
         bool            normalize;              // If set, will recalculate a zero offset.
         bool            zeroOffsetValid;        // Set to true after the first buffer has been processed.
+        bool            outputEnabled;          // When set any buffer processed will be forwarded downstream.
         DataSource      &upstream;              // The upstream component of this StreamNormalizer.
         DataStream      output;                 // The downstream output stream of this StreamNormalizer.
         ManagedBuffer   buffer;                 // The buffer being processed.
+
 
         /**
           * Creates a component capable of translating one data representation format into another
@@ -54,8 +57,9 @@ namespace codal{
           * @param gain The gain to apply to each sample (default: 1.0)
           * @param normalize Derive a zero offset for the input stream, and subtract from each sample (default: false)
           * @param format The format to convert the input stream into
+          * @param stabilisation the maximum change of zero-offset permitted between subsequent buffers before output is initiated. Set to zero to disable (default)
           */
-        StreamNormalizer(DataSource &source, float gain = 1.0f, bool normalize = false, int format = DATASTREAM_FORMAT_UNKNOWN);
+        StreamNormalizer(DataSource &source, float gain = 1.0f, bool normalize = false, int format = DATASTREAM_FORMAT_UNKNOWN, int stabilisation = 0);
 
         /**
          * Callback provided when data is ready.
