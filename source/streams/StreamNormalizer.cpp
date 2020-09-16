@@ -125,8 +125,9 @@ SampleWriteFn writeSample[] = {write_sample_1, write_sample_1, write_sample_2, w
  * @param gain The gain to apply to each sample (default: 1.0)
  * @param normalize Derive a zero offset for the input stream, and subtract from each sample (default: false)
  * @param format The format to convert the input stream into
+ * @param stabilisation the maximum change of zero-offset permitted between subsequent buffers before output is initiated. Set to zero to disable (default)
  */
-StreamNormalizer::StreamNormalizer(DataSource &source, float gain, bool normalize, int format) : upstream(source), output(*this)
+StreamNormalizer::StreamNormalizer(DataSource &source, float gain, bool normalize, int format, int stabilisation) : upstream(source), output(*this)
 {
     setFormat(format);
     setGain(gain);
@@ -134,6 +135,8 @@ StreamNormalizer::StreamNormalizer(DataSource &source, float gain, bool normaliz
     setOrMask(0);
     this->zeroOffsetValid = false;
     this->zeroOffset = 0;
+    this->stabilisation = stabilisation;
+    this->outputEnabled = normalize && stabilisation ? false : true;
 
     // Register with our upstream component
     source.connect(*this);
@@ -216,13 +219,18 @@ int StreamNormalizer::pullRequest()
 
         zeroOffset = zeroOffsetValid ? zeroOffset*0.5 + calculatedZeroOffset*0.5 : calculatedZeroOffset;
         zeroOffsetValid = true;
+
+        if (stabilisation == 0 || abs((int)zeroOffset - zo) < stabilisation)
+            outputEnabled = true;
     }
 
     // Ensure output buffer is the correct size;
     buffer.truncate(samples * bytesPerSampleOut);
 
     // Signal downstream component that a buffer is ready.
-    output.pullRequest();
+    if (outputEnabled)
+        output.pullRequest();
+
     return DEVICE_OK;
 }
 
@@ -264,6 +272,9 @@ int StreamNormalizer::getFormat()
  */
 int StreamNormalizer::setFormat(int format)
 {
+    if (format < DATASTREAM_FORMAT_UNKNOWN || format > DATASTREAM_FORMAT_32BIT_SIGNED)
+        return DEVICE_INVALID_PARAMETER;
+
     outputFormat = format;
     return DEVICE_OK;
 }
