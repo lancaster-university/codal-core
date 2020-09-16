@@ -33,9 +33,20 @@ DEALINGS IN THE SOFTWARE.
 #include "TouchSensor.h"
 
 // Constants associated with TouchButton
-#define TOUCH_BUTTON_CALIBRATION_PERIOD                     10          // Number of samples taken during calibraiton phase.
 #define TOUCH_BUTTON_CALIBRATION_LINEAR_OFFSET              2           // Constant value added to sensed baseline to determine threshold.
 #define TOUCH_BUTTON_CALIBRATION_PERCENTAGE_OFFSET          5           // Proportion (percentage) of baseline reading added to sensed baseline to determine threshold.
+
+// Configure default TouchButton sensitivity. Defined as a percentage above the current threshold.
+// Samples above this value are classified as ACTIVE.
+#ifndef TOUCH_BUTTON_SENSITIVITY
+#define TOUCH_BUTTON_SENSITIVITY                            10
+#endif
+
+// Configure default TouchButton calibration period. 
+//Defined as number of samples to aggregate.
+#ifndef TOUCH_BUTTON_CALIBRATION_PERIOD
+#define TOUCH_BUTTON_CALIBRATION_PERIOD                     10
+#endif
 
 // Status flags associated with a touch sensor
 #define TOUCH_BUTTON_CALIBRATING            0x10
