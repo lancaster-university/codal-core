@@ -29,6 +29,7 @@ DEALINGS IN THE SOFTWARE.
  */
 
 #include "CodalConfig.h"
+#include "CodalDmesg.h"
 #include "TouchButton.h"
 #include "Timer.h"
 #include "EventModel.h"
@@ -90,6 +91,16 @@ void TouchButton::calibrate()
 void TouchButton::setThreshold(int threshold)
 {
     this->threshold = threshold;
+}
+
+/**
+ * Determine the threshold currently in use by the TouchButton
+ * 
+ * @return the current threshold value
+ */
+int TouchButton::getThreshold()
+{
+    return this->threshold;
 }
 
 /**
