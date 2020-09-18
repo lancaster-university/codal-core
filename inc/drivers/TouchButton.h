@@ -95,6 +95,13 @@ namespace codal
         void setThreshold(int threshold);
 
         /**
+         * Determine the threshold currently in use by the TouchButton
+         * 
+         * @return the current threshold value
+         */
+        int getThreshold();
+
+        /**
           * Determine the last reading taken from this button.
           *
           * @return the last reading taken.
