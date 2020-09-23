@@ -205,7 +205,8 @@ int StreamNormalizer::pullRequest()
         }
 
         // Apply configured gain, and mask if any.
-        s = (int) ((uint32_t)((float)s * gain) | orMask);
+        s = (int) ((float)s * gain);
+        s |= orMask;
 
         // Write out the sample.
         writeSample[outputFormat](result, s);
