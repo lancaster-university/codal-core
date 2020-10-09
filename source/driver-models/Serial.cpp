@@ -210,7 +210,7 @@ void Serial::send(SerialMode mode)
         while(txBufferedSize() > 0);
 
     if(mode == SYNC_SLEEP)
-        fiber_sleep(0);
+        schedule();
 }
 
 /**
