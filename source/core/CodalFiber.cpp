@@ -357,7 +357,10 @@ static Fiber* handle_fob()
     {
         // Allocate a TCB from the new fiber. This will come from the tread pool if availiable,
         // else a new one will be allocated on the heap.
-        forkedFiber = getFiberContext();
+
+        if (!forkedFiber)
+            forkedFiber = getFiberContext();
+
          // If we're out of memory, there's nothing we can do.
         // keep running in the context of the current thread as a best effort.
         if (forkedFiber != NULL) {
@@ -880,6 +883,9 @@ void codal::schedule()
         // Store the full context of this fiber.
         save_context(forkedFiber->tcb, forkedFiber->stack_top);
 
+        // Indicate that we have completed spawning a new fiber
+        forkedFiber = NULL;
+
         // We may now be either the newly created thread, or the one that created it.
         // if the DEVICE_FIBER_FLAG_PARENT flag is still set, we're the old thread, so
         // restore the current fiber to its stored context and we're done.
@@ -1008,8 +1014,6 @@ FiberLock::FiberLock()
  **/
 void FiberLock::wait()
 {
-    Fiber *f = currentFiber;
-
     // If the scheduler is not running, then simply exit, as we're running monothreaded.
     if (!fiber_scheduler_running())
         return;
@@ -1018,17 +1022,7 @@ void FiberLock::wait()
     {
         // wait() is a blocking call, so if we're in a fork on block context,
         // it's time to spawn a new fiber...
-        if (currentFiber->flags & DEVICE_FIBER_FLAG_FOB)
-        {
-            // Allocate a new fiber. This will come from the fiber pool if availiable,
-            // else a new one will be allocated on the heap.
-            forkedFiber = getFiberContext();
-
-            // If we're out of memory, there's nothing we can do.
-            // keep running in the context of the current thread as a best effort.
-            if (forkedFiber != NULL)
-                f = forkedFiber;
-        }
+        Fiber *f = handle_fob();
 
         // Remove fiber from the run queue
         dequeue_fiber(f);
