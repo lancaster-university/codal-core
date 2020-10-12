@@ -112,11 +112,9 @@ static void write_sample_8(uint8_t *ptr, int value)
     *(int32_t *)ptr = (int32_t) value;
 }
 
-// Lookup table to optimse parsin gof input stream.
-typedef int (*SampleReadFn)(uint8_t *);
-typedef void (*SampleWriteFn)(uint8_t *, int);
-SampleReadFn readSample[] = {read_sample_1, read_sample_1, read_sample_2, read_sample_3, read_sample_4, read_sample_5, read_sample_6, read_sample_7, read_sample_8};
-SampleWriteFn writeSample[] = {write_sample_1, write_sample_1, write_sample_2, write_sample_3, write_sample_4, write_sample_5_6, write_sample_5_6, write_sample_7, write_sample_8};
+// Lookup table to optimse parsing of input stream.
+SampleReadFn StreamNormalizer::readSample[] = {read_sample_1, read_sample_1, read_sample_2, read_sample_3, read_sample_4, read_sample_5, read_sample_6, read_sample_7, read_sample_8};
+SampleWriteFn StreamNormalizer::writeSample[] = {write_sample_1, write_sample_1, write_sample_2, write_sample_3, write_sample_4, write_sample_5_6, write_sample_5_6, write_sample_7, write_sample_8};
 
 /**
  * Creates a component capable of translating one data representation format into another
