@@ -1068,3 +1068,21 @@ void FiberLock::notifyAll()
 
     locked = false;
 }
+
+
+/**
+ * Determine the number of fibers currently blocked on this lock
+ */
+int FiberLock::getWaitCount()
+{
+    Fiber *f = queue;
+    int count = 0;
+
+    while (f)
+    {
+        count++;
+        f = f->qnext;
+    }
+
+    return count;
+}
