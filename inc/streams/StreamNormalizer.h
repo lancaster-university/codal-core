@@ -29,6 +29,13 @@ DEALINGS IN THE SOFTWARE.
 #define STREAM_NORMALIZER_H
 
 /**
+ * Sample read/write functions for 8, 16, 24, 32 bit signed/unsigned data.
+ */
+typedef int (*SampleReadFn)(uint8_t *);
+typedef void (*SampleWriteFn)(uint8_t *, int);
+
+
+/**
  * Default configuration values
  */
 
@@ -49,6 +56,8 @@ namespace codal{
         DataStream      output;                 // The downstream output stream of this StreamNormalizer.
         ManagedBuffer   buffer;                 // The buffer being processed.
 
+        static SampleReadFn readSample[9];
+        static SampleWriteFn writeSample[9];
 
         /**
           * Creates a component capable of translating one data representation format into another

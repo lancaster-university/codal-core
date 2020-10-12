@@ -359,6 +359,11 @@ namespace codal
          * Release the lock, and signal to all waiting fibers to continue
          */
         void notifyAll();
+
+        /**
+         * Determine the number of fibers currently blocked on this lock
+         */
+        int getWaitCount();
     };
 }
 

@@ -65,8 +65,9 @@ namespace codal
 
     	virtual ManagedBuffer pull();
     	virtual void connect(DataSink &sink);
-      virtual int getFormat();
-      virtual int setFormat(int format);
+        virtual void disconnect();
+        virtual int getFormat();
+        virtual int setFormat(int format);
     };
 
     /**
@@ -138,19 +139,19 @@ namespace codal
          *
          * @sink The component that data will be delivered to, when it is availiable
          */
-        virtual void connect(DataSink &sink);
+        virtual void connect(DataSink &sink) override;
 
         /**
          * Define a downstream component for data stream.
          *
          * @sink The component that data will be delivered to, when it is availiable
          */
-        void disconnect();
+        virtual void disconnect() override;
 
         /**
          *  Determine the data format of the buffers streamed out of this component.
          */
-        int getFormat();
+        virtual int getFormat() override;
 
         /**
          * Determine the number of bytes that are currnetly buffered before blocking subsequent push() operations.

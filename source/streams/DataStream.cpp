@@ -41,6 +41,10 @@ void DataSource::connect(DataSink& )
 {
 }
 
+void DataSource::disconnect()
+{
+}
+
 int DataSource::getFormat()
 {
     return DATASTREAM_FORMAT_UNKNOWN;
