@@ -16,11 +16,20 @@ namespace codal
         private:
         int             outputFormat;           // The format to output in. By default, this is the same as the input.
         int             outputBufferSize;       // The maximum size of an output buffer.
-        int             bytesSent;              // The number of bytes sent in the current buffer
         ManagedBuffer   buffer;                 // The output buffer being filled
 
+        uint8_t         *data;                  // The input data being played (immutable)
+        uint8_t         *in;                    // The input data being played (mutable)
+        int             length;                 // The lenght of the input buffer (immutable)
+        int             bytesToSend;            // The lenght of the input buffer (mutable)
+        int             count;                   // The number of times left to repeat
+
+        DataSink        *downstream;            // Pointer to our downstream component
+        bool            blockingPlayout;        // Set to true if a blocking playout has been requested
+        FiberLock       lock;                   // used to synchronise blocking play calls.
+
         public:
-        DataStream output;
+        DataSource      &output;                // DEPRECATED: backward compatilbity only
 
         /**
          * Default Constructor.
@@ -52,6 +61,12 @@ namespace codal
          */
         virtual int setFormat(int format);
 
+        /*
+         * Allow out downstream component to register itself with us
+         */
+        virtual void connect(DataSink &sink);
+
+
         /**
          *  Determine the maximum size of the buffers streamed out of this component.
          *  @return The maximum size of this component's output buffers, in bytes.
@@ -68,16 +83,35 @@ namespace codal
          * Perform a blocking playout of the data buffer. Returns when all the data has been queued.
          * @param data pointer to memory location to playout
          * @param length number of samples in the buffer. Assumes a sample size as defined by setFormat().
-         * @param loop if repeat playback of buffer when completed the given number of times.  Defaults to one. Set to a negative number to loop forever.
+         * @param count if set, playback the buffer the given number of times. Defaults to 1. Set to a negative number to loop forever.
          */
-        void play(const void *data, int length, int loop = 1);
+        void play(const void *data, int length, int count = 1);
 
         /**
          * Perform a blocking playout of the data buffer. Returns when all the data has been queued.
          * @param b the buffer to playout
-         * @param loop if repeat playback of buffer when completed the given number of times. Defaults to one. Set to a negative number to loop forever.
+         * @param count if set, playback the buffer the given number of times. Defaults to 1. Set to a negative number to loop forever.
          */
-        void play(ManagedBuffer b, int loop = 1);
+        void play(ManagedBuffer b, int count = 1);
+
+        /**
+         * Perform a blocking playout of the data buffer. Returns when all the data has been queued.
+         * @param data pointer to memory location to playout
+         * @param length number of samples in the buffer. Assumes a sample size as defined by setFormat().
+         * @param count if set, playback the buffer the given number of times. Defaults to 1. Set to a negative number to loop forever.
+         */
+        void playAsync(const void *data, int length, int count = 1);
+
+        /**
+         * Perform a blocking playout of the data buffer. Returns when all the data has been queued.
+         * @param b the buffer to playout
+         * @param count if set, playback the buffer the given number of times. Defaults to 1. Set to a negative number to loop forever.
+         */
+        void playAsync(ManagedBuffer b, int count = 1);
+
+
+        private:
+        void _play(const void *data, int length, int count, bool mode);
     };
 }
 #endif
