@@ -82,6 +82,9 @@ int Serial::setTxInterrupt(uint8_t *string, int len, SerialMode mode)
 {
     int copiedBytes = 0;
 
+    if(mode != SYNC_SPINWAIT)
+        fiber_wake_on_event(DEVICE_ID_NOTIFY, CODAL_SERIAL_EVT_TX_EMPTY);
+
     for(copiedBytes = 0; copiedBytes < len; copiedBytes++)
     {
         uint16_t nextHead = (txBuffHead + 1) % txBuffSize;
@@ -93,9 +96,6 @@ int Serial::setTxInterrupt(uint8_t *string, int len, SerialMode mode)
         else
             break;
     }
-
-    if(mode != SYNC_SPINWAIT)
-        fiber_wake_on_event(DEVICE_ID_NOTIFY, CODAL_SERIAL_EVT_TX_EMPTY);
 
     //set the TX interrupt
     enableInterrupt(TxInterrupt);
