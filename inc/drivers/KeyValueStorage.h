@@ -94,7 +94,7 @@ namespace codal
   {
       uint32_t          flashPagePtr;
       NVMController&    controller;
-      uint32_t          scratch[KEY_VALUE_STORAGE_SCRATCH_WORD_SIZE];
+      uint32_t          *scratch;
 
       public:
 
@@ -199,6 +199,11 @@ namespace codal
       int wipe();
 
       private:
+
+      /**
+       * Function to lazily instatiate a scratch buffer
+       */
+      void scratchReset();
 
       /**
         * Function for populating the scratch page with a KeyValueStore.

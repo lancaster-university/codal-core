@@ -47,14 +47,13 @@ using namespace codal;
   */
 KeyValueStorage::KeyValueStorage(NVMController& controller, int pageNumber) : controller(controller)
 {
+    scratch = NULL;
+
     // Determine the logival address of the start of the key/value storage page
     if (pageNumber < 0)
         flashPagePtr = controller.getFlashEnd() - (controller.getPageSize() * pageNumber);
     else
         flashPagePtr = controller.getFlashStart() + (controller.getPageSize() * pageNumber);   
-
-    // Erase our scratch buffer
-    memset(scratch, 0, KEY_VALUE_STORAGE_SCRATCH_WORD_SIZE * 4);
 
     size();
 }
@@ -104,11 +103,9 @@ int KeyValueStorage::put(const char *key, uint8_t *data, int dataSize)
     int scratchPtr = sizeof(KeyValueStore) / 4;
 
     KeyValuePair storedPair = KeyValuePair();
-
     int found = 0;
 
-    //erase our scratch page
-    memset(scratch, 0, sizeof(scratch));
+    scratchReset();
 
     //iterate through key value pairs in flash, writing them to the scratch page.
     for(int i = 0; i < storeSize; i++)
@@ -261,7 +258,7 @@ int KeyValueStorage::remove(const char* key)
 
     int found = 0;
 
-    memset(scratch, 0, KEY_VALUE_STORAGE_SCRATCH_WORD_SIZE * 4);
+    scratchReset();
 
     // scratch the old size (it will be updated later if required).
     scratchKeyValueStore(KeyValueStore(KEY_VALUE_STORAGE_MAGIC, storeSize));
@@ -334,6 +331,7 @@ int KeyValueStorage::size()
         store.size = 0;
 
         //erase the scratch page and write our new KeyValueStore
+        scratchReset();
         scratchKeyValueStore(store);
 
         //erase flash, and copy the scratch page over
@@ -353,6 +351,18 @@ int KeyValueStorage::wipe()
     size();
     return DEVICE_OK;
 }
+
+/**
+ * Function to lazily instatiate a scratch buffer
+ */
+void KeyValueStorage::scratchReset()
+{
+    if (scratch == NULL)
+        scratch = (uint32_t *)malloc(KEY_VALUE_STORAGE_SCRATCH_WORD_SIZE * 4);
+
+    memset(scratch, 0, KEY_VALUE_STORAGE_SCRATCH_WORD_SIZE * 4);
+}
+
 
 /**
   * Function for populating the scratch page with a KeyValueStore.
