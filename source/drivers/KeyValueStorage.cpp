@@ -33,85 +33,33 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalCompat.h"
 #include "CodalDmesg.h"
 
-#ifndef DEVICE_KEY_VALUE_STORE_OFFSET
-#define DEVICE_KEY_VALUE_STORE_OFFSET       4
-#endif
-
 using namespace codal;
 
 
 /**
-  * Default constructor.
+  * Constructor.
   *
   * Creates an instance of KeyValueStorage which acts like a KeyValueStore
   * that allows the retrieval, addition and deletion of KeyValuePairs.
+  * 
+  * @param controller The non-volatile storage controller to use
+  * @param pageNumber The logical page number for this KeyValueStorage
+  *                   Optionally use negative number to count from end of address space.
   */
-KeyValueStorage::KeyValueStorage(NVMController& controller) : controller(controller)
+KeyValueStorage::KeyValueStorage(NVMController& controller, int pageNumber) : controller(controller)
 {
+    // Determine the logival address of the start of the key/value storage page
+    if (pageNumber < 0)
+        flashPagePtr = controller.getFlashEnd() - (controller.getPageSize() * pageNumber);
+    else
+        flashPagePtr = controller.getFlashStart() + (controller.getPageSize() * pageNumber);   
+
+    // Erase our scratch buffer
     memset(scratch, 0, KEY_VALUE_STORAGE_SCRATCH_WORD_SIZE * 4);
-    this->flashPagePtr = controller.getFlashEnd() - (controller.getPageSize() * DEVICE_KEY_VALUE_STORE_OFFSET);
+
     size();
 }
 
-/**
-  * Method for erasing a page in flash.
-  *
-  * @param page_address Address of the first word in the page to be erased.
-  */
-void KeyValueStorage::flashPageErase(uint32_t * page_address)
-{
-    controller.erase(page_address);
-}
-
-/**
-  * Function for copying words from one location to another.
-  *
-  * @param from the address to copy data from.
-  *
-  * @param to the address to copy the data to.
-  *
-  * @param sizeInWords the number of words to copy
-  */
-void KeyValueStorage::flashCopy(uint32_t* from, uint32_t* to, int sizeInWords)
-{
-    controller.write(to, from, sizeInWords);
-}
-
-/**
-  * Method for writing a word of data in flash with a value.
-  *
-  * @param address Address of the word to change.
-  *
-  * @param value Value to be written to flash.
-  */
-void KeyValueStorage::flashWordWrite(uint32_t * address, uint32_t value)
-{
-    controller.write(&value, address, 1);
-}
-
-/**
-  * Function for populating the scratch page with a KeyValueStore.
-  *
-  * @param store the KeyValueStore struct to write to the scratch page.
-  */
-void KeyValueStorage::scratchKeyValueStore(KeyValueStore store)
-{
-    memcpy(this->scratch, &store, sizeof(KeyValueStore));
-}
-
-/**
-  * Function for populating the scratch page with a KeyValuePair.
-  *
-  * @param pair the KeyValuePair struct to write to the scratch page.
-  *
-  * @param flashPointer the pointer in flash where this KeyValuePair resides. This pointer
-  * is used to determine the offset into the scratch page, where the KeyValuePair should
-  * be written.
-  */
-void KeyValueStorage::scratchKeyValuePair(KeyValuePair pair, int scratchOffset)
-{
-    memcpy(this->scratch + scratchOffset, &pair, sizeof(KeyValuePair));
-}
 
 /**
   * Places a given key, and it's corresponding value into flash at the earliest
@@ -148,17 +96,13 @@ int KeyValueStorage::put(const char *key, uint8_t *data, int dataSize)
     memcpy(pair.key, key, keySize);
     memcpy(pair.value, data, dataSize);
 
-    //calculate our various offsets.
-    uint32_t kvStoreSize = sizeof(KeyValueStore) / 4;
-    uint32_t kvPairSize = sizeof(KeyValuePair) / 4;
-
-    uint32_t* flashPointer = this->flashPagePtr;
+    uint32_t flashPointer = flashPagePtr;
 
     int storeSize = size();
 
     //our KeyValueStore struct is always at 0
-    flashPointer += kvStoreSize;
-    int scratchPtr = kvStoreSize;
+    flashPointer += sizeof(KeyValueStore);
+    int scratchPtr = sizeof(KeyValueStore) / 4;
 
     KeyValuePair storedPair = KeyValuePair();
 
@@ -170,7 +114,7 @@ int KeyValueStorage::put(const char *key, uint8_t *data, int dataSize)
     //iterate through key value pairs in flash, writing them to the scratch page.
     for(int i = 0; i < storeSize; i++)
     {
-        memcpy(&storedPair, flashPointer, sizeof(KeyValuePair));
+        controller.read((uint32_t *)&storedPair, flashPointer, sizeof(KeyValuePair)/4);
 
         //check if the keys match...
         if(strcmp((char *)storedPair.key, (char *)pair.key) == 0)
@@ -185,8 +129,8 @@ int KeyValueStorage::put(const char *key, uint8_t *data, int dataSize)
             scratchKeyValuePair(storedPair, scratchPtr);
         }
 
-        flashPointer += kvPairSize;
-        scratchPtr += kvPairSize;
+        flashPointer += sizeof(KeyValuePair);
+        scratchPtr += sizeof(KeyValuePair) / 4;
     }
 
     if(!found)
@@ -203,10 +147,10 @@ int KeyValueStorage::put(const char *key, uint8_t *data, int dataSize)
     }
 
     //erase our storage page
-    flashPageErase(this->flashPagePtr);
+    controller.erase(flashPagePtr);
 
     //copy from scratch to storage.
-    flashCopy(this->scratch, flashPagePtr, KEY_VALUE_STORAGE_SCRATCH_WORD_SIZE);
+    controller.write(flashPagePtr, scratch, KEY_VALUE_STORAGE_SCRATCH_WORD_SIZE);
 
     return DEVICE_OK;
 }
@@ -248,10 +192,10 @@ KeyValuePair* KeyValueStorage::get(const char* key)
     if(storeSize == 0)
         return NULL;
 
-    uint32_t* flashPtr = this->flashPagePtr;
+    uint32_t flashPtr = this->flashPagePtr;
 
     //our KeyValueStore struct is always at 0
-    flashPtr += sizeof(KeyValueStore) / 4;
+    flashPtr += sizeof(KeyValueStore);
 
     KeyValuePair *pair = new KeyValuePair();
 
@@ -260,12 +204,12 @@ KeyValuePair* KeyValueStorage::get(const char* key)
     //iterate through flash until we have a match, or drop out.
     for(i = 0; i < storeSize; i++)
     {
-        memcpy(pair, flashPtr, sizeof(KeyValuePair));
+        controller.read((uint32_t *)pair, flashPtr, sizeof(KeyValuePair)/4);
         // DMESG("k %s value: %d %d %d %d",pair->key, pair->value[0], pair->value[1], pair->value[2], pair->value[3]);
         if(strcmp(key,(char *)pair->key) == 0)
             break;
 
-        flashPtr += sizeof(KeyValuePair) / 4;
+        flashPtr += sizeof(KeyValuePair);
     }
 
     //clean up
@@ -303,20 +247,17 @@ KeyValuePair* KeyValueStorage::get(ManagedString key)
   */
 int KeyValueStorage::remove(const char* key)
 {
-    uint32_t kvStoreSize = sizeof(KeyValueStore) / 4;
-    uint32_t kvPairSize = sizeof(KeyValuePair) / 4;
-
     int storeSize = size();
 
     //if we have no data, we have nothing to do.
     if(storeSize == 0)
         return DEVICE_NO_DATA;
 
-    uint32_t* flashPointer = this->flashPagePtr;
+    uint32_t flashPointer = this->flashPagePtr;
 
     //our KeyValueStore struct is always at 0
-    flashPointer += kvStoreSize;
-    int scratchPointer = kvStoreSize;
+    flashPointer += sizeof(KeyValueStore);
+    int scratchPointer = sizeof(KeyValueStore) / 4;
 
     KeyValuePair storedPair = KeyValuePair();
 
@@ -330,7 +271,7 @@ int KeyValueStorage::remove(const char* key)
     //iterate through our flash copy pairs to scratch, unless there is a key patch
     for(int i = 0; i < storeSize; i++)
     {
-        memcpy(&storedPair, flashPointer, sizeof(KeyValuePair));
+        controller.read((uint32_t *)&storedPair, flashPointer, sizeof(KeyValuePair)/4);
 
         //if we have a match, don't increment our scratchPointer
         if(strcmp((char *)storedPair.key, (char *)key) == 0)
@@ -346,7 +287,7 @@ int KeyValueStorage::remove(const char* key)
             scratchPointer += sizeof(KeyValuePair) / 4;
         }
 
-        flashPointer += sizeof(KeyValuePair) / 4;
+        flashPointer += sizeof(KeyValuePair);
     }
 
     //if we haven't got a match, write our old KeyValueStore struct
@@ -357,9 +298,9 @@ int KeyValueStorage::remove(const char* key)
     }
 
     //copy scratch to our storage page
-    flashPageErase((uint32_t *)flashPagePtr);
-    flashCopy(scratch, flashPagePtr, kvStoreSize + (storeSize * kvPairSize));
-
+    controller.erase(flashPagePtr);
+    controller.write(flashPagePtr, scratch, (sizeof(KeyValueStore) / 4) + (storeSize * (sizeof(KeyValuePair) / 4)));
+    
     return DEVICE_OK;
 }
 
@@ -386,8 +327,7 @@ int KeyValueStorage::size()
     KeyValueStore store = KeyValueStore();
 
     //read our data!
-    memcpy(&store, flashPagePtr, sizeof(KeyValueStore));
-
+    controller.read((uint32_t *)&store, flashPagePtr, sizeof(KeyValueStore)/4);
 
     //if we haven't used flash before, we need to configure it
     if(store.magic != KEY_VALUE_STORAGE_MAGIC)
@@ -399,16 +339,43 @@ int KeyValueStorage::size()
         scratchKeyValueStore(store);
 
         //erase flash, and copy the scratch page over
-        flashPageErase((uint32_t *)flashPagePtr);
-        flashCopy(scratch, flashPagePtr, KEY_VALUE_STORAGE_SCRATCH_WORD_SIZE);
+        controller.erase(flashPagePtr);
+        controller.write(flashPagePtr, scratch, KEY_VALUE_STORAGE_SCRATCH_WORD_SIZE);
     }
 
     return store.size;
 }
 
+/**
+ * Erase all contents of this KeyValue store
+ */
 int KeyValueStorage::wipe()
 {
-    flashPageErase(this->flashPagePtr);
+    controller.erase(flashPagePtr);
     size();
     return DEVICE_OK;
+}
+
+/**
+  * Function for populating the scratch page with a KeyValueStore.
+  *
+  * @param store the KeyValueStore struct to write to the scratch page.
+  */
+void KeyValueStorage::scratchKeyValueStore(KeyValueStore store)
+{
+    memcpy(this->scratch, &store, sizeof(KeyValueStore));
+}
+
+/**
+  * Function for populating the scratch page with a KeyValuePair.
+  *
+  * @param pair the KeyValuePair struct to write to the scratch page.
+  *
+  * @param flashPointer the pointer in flash where this KeyValuePair resides. This pointer
+  * is used to determine the offset into the scratch page, where the KeyValuePair should
+  * be written.
+  */
+void KeyValueStorage::scratchKeyValuePair(KeyValuePair pair, int scratchOffset)
+{
+    memcpy(this->scratch + scratchOffset, &pair, sizeof(KeyValuePair));
 }

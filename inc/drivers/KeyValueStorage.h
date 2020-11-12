@@ -32,7 +32,7 @@ DEALINGS IN THE SOFTWARE.
 #include "NVMController.h"
 
 #ifndef DEVICE_KEY_VALUE_STORE_OFFSET
-#define DEVICE_KEY_VALUE_STORE_OFFSET             4
+#define DEVICE_KEY_VALUE_STORE_OFFSET             -4
 #endif
 
 #define KEY_VALUE_STORAGE_MAGIC                   0xC0DA
@@ -92,63 +92,23 @@ namespace codal
     */
   class KeyValueStorage
   {
-      uint32_t* flashPagePtr;
-      NVMController& controller;
-      uint32_t scratch[KEY_VALUE_STORAGE_SCRATCH_WORD_SIZE];
-      /**
-        * Function for copying words from one location to another.
-        *
-        * @param from the address to copy data from.
-        *
-        * @param to the address to copy the data to.
-        *
-        * @param sizeInWords the number of words to copy
-        */
-      void flashCopy(uint32_t* from, uint32_t* to, int sizeInWords);
-
-      /**
-        * Function for populating the scratch page with a KeyValueStore.
-        *
-        * @param store the KeyValueStore struct to write to the scratch page.
-        */
-      void scratchKeyValueStore(KeyValueStore store);
-
-      /**
-        * Function for populating the scratch page with a KeyValuePair.
-        *
-        * @param pair the KeyValuePair struct to write to the scratch page.
-        *
-        * @param flashPointer the pointer in flash where this KeyValuePair resides. This pointer
-        * is used to determine the offset into the scratch page, where the KeyValuePair should
-        * be written.
-        */
-      void scratchKeyValuePair(KeyValuePair pair, int scratchOffset);
+      uint32_t          flashPagePtr;
+      NVMController&    controller;
+      uint32_t          scratch[KEY_VALUE_STORAGE_SCRATCH_WORD_SIZE];
 
       public:
 
       /**
-        * Default constructor.
+        * Constructor.
         *
         * Creates an instance of KeyValueStorage which acts like a KeyValueStore
         * that allows the retrieval, addition and deletion of KeyValuePairs.
+        * 
+        * @param controller The non-volatile storage controller to use
+        * @param pageNumber The logical page number for this KeyValueStorage. 
+        *                   Optionally use negative number to count from end of address space.
         */
-      KeyValueStorage(NVMController& controller);
-
-      /**
-        * Method for erasing a page in flash.
-        *
-        * @param page_address Address of the first word in the page to be erased.
-        */
-      void flashPageErase(uint32_t * page_address);
-
-      /**
-        * Method for writing a word of data in flash with a value.
-        *
-        * @param address Address of the word to change.
-        *
-        * @param value Value to be written to flash.
-        */
-      void flashWordWrite(uint32_t * address, uint32_t value);
+      KeyValueStorage(NVMController& controller, int pageNumber = DEVICE_KEY_VALUE_STORE_OFFSET);
 
       /**
         * Places a given key, and it's corresponding value into flash at the earliest
@@ -233,7 +193,32 @@ namespace codal
         */
       int size();
 
+      /**
+       * Erase all contents of this KeyValue store
+       */
       int wipe();
+
+      private:
+
+      /**
+        * Function for populating the scratch page with a KeyValueStore.
+        *
+        * @param store the KeyValueStore struct to write to the scratch page.
+        */
+      void scratchKeyValueStore(KeyValueStore store);
+
+      /**
+        * Function for populating the scratch page with a KeyValuePair.
+        *
+        * @param pair the KeyValuePair struct to write to the scratch page.
+        *
+        * @param flashPointer the pointer in flash where this KeyValuePair resides. This pointer
+        * is used to determine the offset into the scratch page, where the KeyValuePair should
+        * be written.
+        */
+      void scratchKeyValuePair(KeyValuePair pair, int scratchOffset);
+
+
   };
 }
 
