@@ -35,7 +35,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_KEY_VALUE_STORE_OFFSET             -4
 #endif
 
-#define KEY_VALUE_STORAGE_MAGIC                   0xC0DA
+#define KEY_VALUE_STORAGE_MAGIC                   0xC0DA1
 
 #define KEY_VALUE_STORAGE_BLOCK_SIZE              48
 #define KEY_VALUE_STORAGE_KEY_SIZE                16

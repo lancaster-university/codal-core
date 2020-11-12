@@ -31,7 +31,6 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "KeyValueStorage.h"
 #include "CodalCompat.h"
-#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -205,7 +204,6 @@ KeyValuePair* KeyValueStorage::get(const char* key)
     for(i = 0; i < storeSize; i++)
     {
         controller.read((uint32_t *)pair, flashPtr, sizeof(KeyValuePair)/4);
-        // DMESG("k %s value: %d %d %d %d",pair->key, pair->value[0], pair->value[1], pair->value[2], pair->value[3]);
         if(strcmp(key,(char *)pair->key) == 0)
             break;
 
