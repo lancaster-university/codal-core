@@ -513,6 +513,10 @@ namespace codal
         virtual void disconnect()
         {
         }
+
+        virtual ~Pin()
+        {
+        }
     };
 
 }
