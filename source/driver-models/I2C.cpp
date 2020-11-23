@@ -269,5 +269,15 @@ namespace codal
 
         return (result == DEVICE_OK) ? (int)data : result;
     }
+
+    int I2C::write(int address, char *data, int len, bool repeated)
+    {
+        return write((uint16_t)address, (uint8_t *)data, len, repeated);
+    }
+
+    int I2C::read(int address, char *data, int len, bool repeated)
+    {
+        return read((uint16_t)address, (uint8_t *)data, len, repeated);
+    }
 }
 
