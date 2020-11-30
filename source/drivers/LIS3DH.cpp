@@ -238,9 +238,11 @@ int LIS3DH::requestUpdate()
   */
 void LIS3DH::idleCallback()
 {
-    if (!&int1) {
+    if (!&int1)
+    {
         uint32_t now = codal::system_timer_current_time();
-        if (!lastUpdate || now - lastUpdate > this->samplePeriod) {
+        if (!lastUpdate || now - lastUpdate > this->samplePeriod)
+        {
             status &= ~UPDATE_DONE;
             lastUpdate = now;
         }
