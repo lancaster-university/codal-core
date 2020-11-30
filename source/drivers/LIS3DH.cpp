@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 /**
  * Class definition for an LIS3DH 3 axis accelerometer.
  *
- * Represents an implementation of the Freescale LIS3DH 3 axis accelerometer
+ * Represents an implementation of the ST LIS3DH 3 axis accelerometer
  * Also includes basic data caching and on demand activation.
  */
 #include "CodalConfig.h"
