@@ -35,6 +35,8 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalFiber.h"
 #include "Timer.h"
 
+#define UPDATE_DONE 0x0040
+
 using namespace codal;
 
 //
@@ -159,8 +161,6 @@ int LIS3DH::whoAmI()
     return (int)data;
 }
 
-#define HAD_IDLE 0x0040
-
 /**
   * Reads the acceleration data from the accelerometer, and stores it in our buffer.
   * This only happens if the accelerometer indicates that it has new data via int1.
@@ -181,13 +181,13 @@ int LIS3DH::requestUpdate()
 
     // Poll interrupt line from accelerometer.
     if((&int1 && int1.getDigitalValue() == 1) ||
-        (status & HAD_IDLE) == 0)
+        !(status & UPDATE_DONE))
     {
         int8_t data[6];
         uint8_t src;
         int result;
 
-        status |= HAD_IDLE;
+        status |= UPDATE_DONE;
 
         // read the XYZ data (16 bit)
         // n.b. we need to set the MSB bit to enable multibyte transfers from this device (WHY? Who Knows!)
@@ -238,12 +238,11 @@ int LIS3DH::requestUpdate()
   */
 void LIS3DH::idleCallback()
 {
-    static uint32_t lastTime;
     if (!&int1) {
         uint32_t now = codal::system_timer_current_time();
-        if (!lastTime || now-lastTime>20) {
-            status &= ~HAD_IDLE;
-            lastTime = now;
+        if (!lastUpdate || now - lastUpdate > this->samplePeriod) {
+            status &= ~UPDATE_DONE;
+            lastUpdate = now;
         }
     }
     requestUpdate();
