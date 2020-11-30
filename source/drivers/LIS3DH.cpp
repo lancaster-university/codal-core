@@ -33,6 +33,7 @@ DEALINGS IN THE SOFTWARE.
 #include "ErrorNo.h"
 #include "CodalCompat.h"
 #include "CodalFiber.h"
+#include "Timer.h"
 
 using namespace codal;
 
@@ -237,7 +238,14 @@ int LIS3DH::requestUpdate()
   */
 void LIS3DH::idleCallback()
 {
-    status &= ~HAD_IDLE;
+    static uint32_t lastTime;
+    if (!&int1) {
+        uint32_t now = codal::system_timer_current_time();
+        if (!lastTime || now-lastTime>20) {
+            status &= ~HAD_IDLE;
+            lastTime = now;
+        }
+    }
     requestUpdate();
 }
 
