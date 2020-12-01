@@ -41,6 +41,7 @@ class PulseIn
     FiberLock       lock;
     CODAL_TIMESTAMP timeout;   
     static bool     timeoutGeneratorStarted;
+    bool            enabled;
 
     public:
     uint32_t        lastEdge;

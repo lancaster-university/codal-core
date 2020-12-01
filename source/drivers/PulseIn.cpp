@@ -40,17 +40,7 @@ PulseIn::PulseIn(Pin &p) : pin(p)
 {
     lastPeriod = 0;
     lastEdge = 0;
-
-    // Configure the requested pin to supply pulse events.
-    pin.eventOn(DEVICE_PIN_EVENT_ON_PULSE);
-    EventModel::defaultEventBus->listen(pin.id, pin.getPolarity() ? DEVICE_PIN_EVT_PULSE_HI : DEVICE_PIN_EVT_PULSE_LO, this, &PulseIn::onPulse);
-    EventModel::defaultEventBus->listen(DEVICE_ID_PULSE_IN, DEVICE_EVT_PULSE_IN_TIMEOUT, this, &PulseIn::onTimeout);
-    
-    if (!timeoutGeneratorStarted)
-    {
-        system_timer_event_every_us(10000, DEVICE_ID_PULSE_IN, DEVICE_EVT_PULSE_IN_TIMEOUT);
-        timeoutGeneratorStarted = true;
-    }
+    enabled = false;
 
     lock.wait();
 }
@@ -64,6 +54,23 @@ PulseIn::PulseIn(Pin &p) : pin(p)
 int 
 PulseIn::awaitPulse(int timeout)
 {
+    // perform lazy initialisation of our dependencies
+    if (!enabled)
+    {
+        // Configure the requested pin to supply pulse events.
+        pin.eventOn(DEVICE_PIN_EVENT_ON_PULSE);
+        EventModel::defaultEventBus->listen(pin.id, pin.getPolarity() ? DEVICE_PIN_EVT_PULSE_HI : DEVICE_PIN_EVT_PULSE_LO, this, &PulseIn::onPulse, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        EventModel::defaultEventBus->listen(DEVICE_ID_PULSE_IN, DEVICE_EVT_PULSE_IN_TIMEOUT, this, &PulseIn::onTimeout, MESSAGE_BUS_LISTENER_IMMEDIATE);
+
+        if (!timeoutGeneratorStarted)
+        {
+            system_timer_event_every_us(10000, DEVICE_ID_PULSE_IN, DEVICE_EVT_PULSE_IN_TIMEOUT);
+            timeoutGeneratorStarted = true;
+        }
+
+        enabled = true;
+    }
+
     if (timeout)
         this->timeout = system_timer_current_time_us() + timeout;
     else
@@ -120,10 +127,14 @@ PulseIn::onTimeout(Event e)
  */
 PulseIn::~PulseIn()
 {
-    EventModel::defaultEventBus->ignore(pin.id, pin.getPolarity() ? DEVICE_PIN_EVT_PULSE_HI : DEVICE_PIN_EVT_PULSE_LO, this, &PulseIn::onPulse);
-    EventModel::defaultEventBus->ignore(DEVICE_ID_PULSE_IN, DEVICE_EVT_PULSE_IN_TIMEOUT, this, &PulseIn::onTimeout);
-    pin.eventOn(DEVICE_PIN_EVENT_NONE);
-    timeout = 0;
-    lastPeriod = 0;
-    lock.notifyAll();
+    if (enabled)
+    {
+        enabled = false;
+        EventModel::defaultEventBus->ignore(pin.id, pin.getPolarity() ? DEVICE_PIN_EVT_PULSE_HI : DEVICE_PIN_EVT_PULSE_LO, this, &PulseIn::onPulse);
+        EventModel::defaultEventBus->ignore(DEVICE_ID_PULSE_IN, DEVICE_EVT_PULSE_IN_TIMEOUT, this, &PulseIn::onTimeout);
+        //pin.eventOn(DEVICE_PIN_EVENT_NONE);
+        timeout = 0;
+        lastPeriod = 0;
+        lock.notifyAll();
+    }
 }
