@@ -1018,7 +1018,9 @@ void FiberLock::wait()
     if (!fiber_scheduler_running())
         return;
 
+    target_disable_irq();
     int l = ++locked;
+    target_enable_irq();
 
     if (l > 1)
     {
