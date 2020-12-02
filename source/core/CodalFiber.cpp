@@ -1018,7 +1018,9 @@ void FiberLock::wait()
     if (!fiber_scheduler_running())
         return;
 
-    if (locked)
+    int l = ++locked;
+
+    if (l > 1)
     {
         // wait() is a blocking call, so if we're in a fork on block context,
         // it's time to spawn a new fiber...
@@ -1030,11 +1032,22 @@ void FiberLock::wait()
         // Add fiber to the sleep queue. We maintain strict ordering here to reduce lookup times.
         queue_fiber(f, &queue);
 
+        // Check if we've been raced by something running in interrupt context.
+        // Note this is safe, as no IRQ can wait() and as we are non-preemptive, neither could any other fiber.
+        // It is possible that and IRQ has performed a notify() operation however.
+        // If so, put ourself back on the run queue and spin the scheduler (in case we performed a fork-on-block)
+        if (locked < l)
+        {
+            // Remove fiber from the run queue
+            dequeue_fiber(f);
+
+            // Add fiber to the sleep queue. We maintain strict ordering here to reduce lookup times.
+            queue_fiber(f, &runQueue);
+        }
+
         // Finally, enter the scheduler.
         schedule();
     }
-
-    locked = true;
 }
 
 /**
@@ -1049,7 +1062,9 @@ void FiberLock::notify()
         dequeue_fiber(f);
         queue_fiber(f, &runQueue);
     }
-    locked = false;
+
+    if (locked > 0)
+        locked--;
 }
 
 /**
@@ -1066,7 +1081,7 @@ void FiberLock::notifyAll()
         f = queue;
     }
 
-    locked = false;
+    locked = 0;
 }
 
 

@@ -335,7 +335,7 @@ namespace codal
     class FiberLock
     {
         private:
-        bool    locked;
+        int     locked;
         Fiber   *queue;
 
         public:
