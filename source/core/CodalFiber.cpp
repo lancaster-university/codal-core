@@ -1036,6 +1036,7 @@ void FiberLock::wait()
         // Note this is safe, as no IRQ can wait() and as we are non-preemptive, neither could any other fiber.
         // It is possible that and IRQ has performed a notify() operation however.
         // If so, put ourself back on the run queue and spin the scheduler (in case we performed a fork-on-block)
+        target_disable_irq();
         if (locked < l)
         {
             // Remove fiber from the run queue
@@ -1044,6 +1045,7 @@ void FiberLock::wait()
             // Add fiber to the sleep queue. We maintain strict ordering here to reduce lookup times.
             queue_fiber(f, &runQueue);
         }
+        target_enable_irq();
 
         // Finally, enter the scheduler.
         schedule();
