@@ -96,11 +96,8 @@ PulseIn::onPulse(Event e)
     lastPeriod = (uint32_t) e.timestamp;
     
     // Wake any blocked fibers and reset the lock.
-    if (lock.getWaitCount())
-    {
-        lock.notify();
-        lock.wait();
-    }
+    lock.notifyAll();
+    lock.wait();
 }
 
 /**
@@ -114,11 +111,9 @@ PulseIn::onTimeout(Event e)
         timeout = 0;
         lastPeriod = 0;
 
-        if (lock.getWaitCount())
-        {
-            lock.notify();
-            lock.wait();
-        }
+        // Wake any blocked fibers and reset the lock.
+        lock.notifyAll();
+        lock.wait();
     }
 }
 
