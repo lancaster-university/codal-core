@@ -75,7 +75,7 @@ public:
     /**
      * Define a downstream component for data stream.
      *
-     * @sink The component that data will be delivered to, when it is availiable
+     * @sink The component that data will be delivered to, when it is available
      */
     virtual void connect(DataSink &sink);
 };

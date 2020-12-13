@@ -154,7 +154,7 @@ Fiber * codal::get_fiber_list()
 }
 
 /**
-  * Allocates a fiber from the fiber pool if availiable. Otherwise, allocates a new one from the heap.
+  * Allocates a fiber from the fiber pool if available. Otherwise, allocates a new one from the heap.
   */
 Fiber *getFiberContext()
 {
@@ -355,7 +355,7 @@ static Fiber* handle_fob()
     // it's time to spawn a new fiber...
     if (f->flags & DEVICE_FIBER_FLAG_FOB)
     {
-        // Allocate a TCB from the new fiber. This will come from the tread pool if availiable,
+        // Allocate a TCB from the new fiber. This will come from the tread pool if available,
         // else a new one will be allocated on the heap.
 
         if (!forkedFiber)
@@ -662,7 +662,7 @@ Fiber *__create_fiber(uint32_t ep, uint32_t cp, uint32_t pm, int parameterised)
     if (ep == 0 || cp == 0)
         return NULL;
 
-    // Allocate a TCB from the new fiber. This will come from the fiber pool if availiable,
+    // Allocate a TCB from the new fiber. This will come from the fiber pool if available,
     // else a new one will be allocated on the heap.
     Fiber *newFiber = getFiberContext();
 
