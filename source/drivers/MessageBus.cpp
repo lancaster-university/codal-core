@@ -418,7 +418,7 @@ int MessageBus::add(Listener *newListener)
     {
         methodCallback = (newListener->flags & MESSAGE_BUS_LISTENER_METHOD) && (l->flags & MESSAGE_BUS_LISTENER_METHOD);
 
-        if (l->id == newListener->id && l->value == newListener->value && (methodCallback ? *l->cb_method == *newListener->cb_method : l->cb == newListener->cb))
+        if (l->id == newListener->id && l->value == newListener->value && (methodCallback ? *l->cb_method == *newListener->cb_method : l->cb == newListener->cb) && newListener->cb_arg == l->cb_arg)
         {
             // We have a perfect match for this event listener already registered.
             // If it's marked for deletion, we simply resurrect the listener, and we're done.
