@@ -111,8 +111,6 @@ namespace codal
 
         void circularCopy(uint8_t *circularBuff, uint8_t circularBuffSize, uint8_t *linearBuff, uint16_t tailPosition, uint16_t headPosition);
 
-        void send(SerialMode mode = DEVICE_DEFAULT_SERIAL_MODE);
-
         int setTxInterrupt(uint8_t *string, int len, SerialMode mode);
 
         public:
