@@ -32,7 +32,7 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
-LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id) : upstream(source)
+LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id, bool preProcess) : upstream(source)
 {
     this->id = id;
     this->level = 0;
@@ -41,9 +41,8 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     this->highThreshold = highThreshold;
     this->gain = gain;
     this->status |= LEVEL_DETECTOR_SPL_INITIALISED;
-
-    // Register with our upstream component
-    source.connect(*this);
+    this->activated = false;
+    this->preProcess = preProcess;
 }
 
 /**
@@ -70,13 +69,15 @@ int LevelDetectorSPL::pullRequest()
         /*******************************
         *   REMOVE DC OFFSET
         ******************************/
-        int32_t avg = 0;
-        ptr = data;
-        while(ptr < end) avg += *ptr++;
-        avg = avg/windowSize;
+        if(preProcess){
+            int32_t avg = 0;
+            ptr = data;
+            while(ptr < end) avg += *ptr++;
+            avg = avg/windowSize;
 
-        ptr = data;
-        while(ptr < end) *ptr++ -= avg;
+            ptr = data;
+            while(ptr < end) *ptr++ -= avg;
+        }
 
         /*******************************
         *   GET MAX VALUE
@@ -125,6 +126,11 @@ int LevelDetectorSPL::pullRequest()
  */
 float LevelDetectorSPL::getValue()
 {
+    if(!activated){
+        // Register with our upstream component: on demand activated
+        upstream.connect(*this);
+        activated = true;
+    }
     return level;
 }
 

@@ -54,7 +54,8 @@ namespace codal{
         int             sigma;              // Running total of the samples in the current window.
         float           gain;
         float           minValue;
-
+        bool            activated;          // Has this component been connected yet.
+        bool            preProcess;         // If true, preprocess incoming data on pull request
 
         /**
           * Creates a component capable of measuring and thresholding stream data
@@ -66,7 +67,7 @@ namespace codal{
           */
         LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain,
             float minValue = 52,
-            uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL);
+            uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL,bool preProcess = true);
 
         /**
          * Callback provided when data is ready.

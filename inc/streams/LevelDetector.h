@@ -60,6 +60,7 @@ namespace codal{
         int             windowPosition;     // The number of samples used so far in the calculation of a window.
         int             level;              // The current, instantaneous level.
         int             sigma;              // Running total of the samples in the current window.
+        bool            activated;          // Has this component been connected yet.
 
 
         /**
