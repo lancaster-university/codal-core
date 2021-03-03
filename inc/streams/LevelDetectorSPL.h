@@ -64,10 +64,13 @@ namespace codal{
           * @param highThreshold the HIGH threshold at which a SPL_LEVEL_THRESHOLD_HIGH event will be generated
           * @param lowThreshold the HIGH threshold at which a SPL_LEVEL_THRESHOLD_LOW event will be generated
           * @param id The id to use for the message bus when transmitting events.
+          * @param connectImmediately Should this component connect to upstream splitter when started
           */
         LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain,
             float minValue = 52,
-            uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL,bool preProcess = true);
+            uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL,
+            bool preProcess = true,
+            bool connectImmediately  = true);
 
         /**
          * Callback provided when data is ready.

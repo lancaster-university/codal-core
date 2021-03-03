@@ -32,7 +32,7 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
-LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id, bool preProcess) : upstream(source)
+LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id, bool preProcess, bool connectImmediately) : upstream(source)
 {
     this->id = id;
     this->level = 0;
@@ -43,6 +43,10 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     this->status |= LEVEL_DETECTOR_SPL_INITIALISED;
     this->activated = false;
     this->preProcess = preProcess;
+    if(connectImmediately){
+        upstream.connect(*this);
+        activated = true;
+    }
 }
 
 /**

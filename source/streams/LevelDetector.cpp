@@ -31,7 +31,7 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
-LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id) : upstream(source)
+LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id, bool connectImmediately) : upstream(source)
 {
     this->id = id;
     this->level = 0;
@@ -42,6 +42,10 @@ LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThres
     this->highThreshold = highThreshold;
     this->status |= LEVEL_DETECTOR_INITIALISED;
     this->activated = false;
+    if(connectImmediately){
+        upstream.connect(*this);
+        activated = true;
+    }
 }
 
 /**
