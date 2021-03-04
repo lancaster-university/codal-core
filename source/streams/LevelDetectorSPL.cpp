@@ -29,6 +29,7 @@ DEALINGS IN THE SOFTWARE.
 #include "LevelDetector.h"
 #include "LevelDetectorSPL.h"
 #include "ErrorNo.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -41,12 +42,13 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     this->highThreshold = highThreshold;
     this->gain = gain;
     this->status |= LEVEL_DETECTOR_SPL_INITIALISED;
-    this->activated = false;
     this->preProcess = preProcess;
     if(connectImmediately){
         upstream.connect(*this);
-        activated = true;
+        this->activated = true;
     }
+    else
+    	this->activated = false;
 }
 
 /**
