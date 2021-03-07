@@ -769,6 +769,8 @@ ManagedString Serial::readUntil(ManagedString delimeters, SerialMode mode)
         eventOn(delimeters, mode);
 
         foundIndex = rxBuffHead - 1;
+        if (foundIndex < 0)
+            foundIndex += rxBuffSize;
 
         this->delimeters = ManagedString();
     }
