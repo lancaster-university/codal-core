@@ -883,12 +883,16 @@ int Serial::eventAfter(int len, SerialMode mode)
     if(mode == SYNC_SPINWAIT)
         return DEVICE_INVALID_PARAMETER;
 
+    // Schedule this fiber to wake on an event from the serial port, if necessary
+    if(mode == SYNC_SLEEP)
+        fiber_wake_on_event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
+
     //configure our head match...
     this->rxBuffHeadMatch = (rxBuffHead + len) % rxBuffSize;
 
-    //block!
+    // Deschedule this fiber, if necessary
     if(mode == SYNC_SLEEP)
-        fiber_wait_for_event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
+        schedule();
 
     return DEVICE_OK;
 }
