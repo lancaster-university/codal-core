@@ -986,7 +986,10 @@ int Serial::setRxBufferSize(uint8_t size)
     lockRx();
 
     // + 1 so there is a usable buffer size, of the size the user requested.
-    this->rxBuffSize = size + 1;
+    if (size != 255)
+        size++;
+
+    this->rxBuffSize = size;
 
     int result = initialiseRx();
 
@@ -1011,7 +1014,10 @@ int Serial::setTxBufferSize(uint8_t size)
     lockTx();
 
     // + 1 so there is a usable buffer size, of the size the user requested.
-    this->txBuffSize = size + 1;
+    if (size != 255)
+        size++;
+
+    this->txBuffSize = size;
 
     int result = initialiseTx();
 
