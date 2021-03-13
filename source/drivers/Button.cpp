@@ -26,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Button.h"
 #include "Timer.h"
 #include "EventModel.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -55,6 +56,9 @@ Button::Button(Pin &pin, uint16_t id, ButtonEventConfiguration eventConfiguratio
     pin.setPull(mode);
 
     this->status |= DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
+
+    // Take one sample to ensure consistency.
+    periodicCallback();
 }
 
 /**
@@ -94,9 +98,24 @@ int Button::buttonActive()
   */
 void Button::periodicCallback()
 {
+    static uint8_t settlingTime = DEVICE_BUTTON_SIGMA_MAX;
+
     // If this button is disabled, do nothing.
     if (!(status & DEVICE_COMPONENT_RUNNING))
+    {
+        status |= DEVICE_BUTTON_STATE_WAS_DISABLED;
+        settlingTime = DEVICE_BUTTON_SIGMA_MAX;
         return;
+    }
+
+    // If we've recently become enabled, assume the first sample we read is accurate.
+    if (status & DEVICE_BUTTON_STATE_WAS_DISABLED && settlingTime)
+    {
+        settlingTime--;
+
+        if (settlingTime == 0)
+            status &= ~DEVICE_BUTTON_STATE_WAS_DISABLED;
+    }
 
     //
     // If the pin is pulled low (touched), increment our culumative counter.
@@ -166,6 +185,14 @@ void Button::periodicCallback()
   */
 int Button::isPressed()
 {
+    // Call super class, to handle on demand activation.
+    AbstractButton::isPressed();
+
+    // If we've just been activated, give a best guess based on instantaneous button state.
+    if (status & DEVICE_BUTTON_STATE_WAS_DISABLED)
+        return buttonActive();
+
+    // Otherwise = return debounced state.
     return status & DEVICE_BUTTON_STATE ? 1 : 0;
 }
 

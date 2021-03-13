@@ -37,7 +37,10 @@ using namespace codal;
 AbstractButton::AbstractButton()
 {
     clickCount = 0;
-    enable();
+
+    #if !CONFIG_ENABLED(BUTTON_LAZY_INITIALIZATION)
+        enable();
+    #endif
 }
 
 /**
@@ -52,6 +55,10 @@ AbstractButton::AbstractButton()
  */
 int AbstractButton::isPressed()
 {
+    #if CONFIG_ENABLED(BUTTON_LAZY_INITIALIZATION)
+        enable();
+    #endif
+
     return 0;
 }
 
@@ -69,6 +76,10 @@ int AbstractButton::wasPressed()
 {
     uint16_t c = clickCount;
     clickCount = 0;
+
+    #if CONFIG_ENABLED(BUTTON_LAZY_INITIALIZATION)
+        enable();
+    #endif
 
     return c;
 }
