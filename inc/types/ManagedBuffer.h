@@ -36,6 +36,12 @@ namespace codal
         uint8_t         payload[0];         // ManagedBuffer data
     };
 
+    enum class BufferInitialize : uint8_t
+    {
+        None = 0,
+        Zero
+    };
+
     /**
       * Class definition for a ManagedBuffer.
       * A ManagedBuffer holds a series of bytes for general purpose use.
@@ -69,7 +75,7 @@ namespace codal
           * ManagedBuffer p(16);         // Creates a ManagedBuffer 16 bytes long.
           * @endcode
           */
-        ManagedBuffer(int length);
+        ManagedBuffer(int length, BufferInitialize initialize = BufferInitialize::Zero);
 
         /**
           * Constructor.
@@ -120,9 +126,10 @@ namespace codal
          *
          * @param data The data with which to fill the buffer.
          * @param length The length of the buffer to create.
+         * @param initialize The initialization mode to use for the allocted memory in the buffer
          *
          */
-        void init(uint8_t *data, int length);
+        void init(uint8_t *data, int length, BufferInitialize initialize);
 
         /**
           * Destructor.
