@@ -71,7 +71,7 @@ bool RefCounted::isReadOnly()
 void RefCounted::incr()
 {
     if (!isReadOnlyInline(this))
-        refCount += 2;
+      __sync_fetch_and_add(&refCount, 2);
 }
 
 /**
@@ -82,11 +82,7 @@ void RefCounted::decr()
     if (isReadOnlyInline(this))
         return;
 
-    refCount -= 2;
-    if (refCount == 1) {
-        // if we just call plain free(), the write to refCount will
-        // be optimized away, and it will stay '3'; this way we make
-        // sure to get a panic on next incr()/decr()
+    if (__sync_fetch_and_add(&refCount, -2) == 3 ) {
         destroy();
     }
 }
