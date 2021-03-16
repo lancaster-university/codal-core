@@ -53,8 +53,8 @@ __attribute__((weak)) short unsigned int __sync_fetch_and_add_2 (volatile void *
     target_disable_irq();
 #endif
 
-    uint16_t *p = (uint16_t *)ptr;
-    uint16_t old = *p;
+    volatile uint16_t *p = (uint16_t *)ptr;
+    volatile uint16_t old = *p;
     *p += value;
     return old;
 
