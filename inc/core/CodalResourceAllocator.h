@@ -16,7 +16,7 @@ namespace codal
         public:
 
         /**
-          * The default constructor of a DeviceComponent
+          * The default constructor of a CodalResourceAllocator
           */
         CodalResourceAllocator()
         {
