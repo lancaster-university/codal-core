@@ -95,17 +95,6 @@ namespace codal
          * 
          * @param peripheral a pointer to the required peripheral
          * 
-         * @param cb a function pointer matching
-         * 
-         * @return IRQn on success or DEVICE_NO_RESOURCES if peripheral is not found.
-         **/
-        int setPeripheralIRQHandler(void* peripheral, CodalResourceAllocatorCB cb);
-
-        /**
-         * Returns the IRQ number for the given peripheral.
-         * 
-         * @param peripheral a pointer to the required peripheral
-         * 
          * @return IRQn on success or DEVICE_NO_RESOURCES if peripheral is not found.
          **/
         int getIRQn(void* peripheral);
