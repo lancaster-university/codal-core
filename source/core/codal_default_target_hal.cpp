@@ -49,16 +49,18 @@ __attribute__((weak)) void target_deepsleep()
  */
 __attribute__((weak)) short unsigned int __sync_fetch_and_add_2 (volatile void *ptr, short unsigned int value)
 {
+
 #if CONFIG_ENABLED(DISABLE_IRQ_FOR_SOFTWARE_ATOMICS)
     target_disable_irq();
 #endif
 
-    volatile uint16_t *p = (uint16_t *)ptr;
-    volatile uint16_t old = *p;
+    uint16_t *p = (uint16_t *)ptr;
+    uint16_t old = *p;
     *p += value;
-    return old;
 
 #if CONFIG_ENABLED(DISABLE_IRQ_FOR_SOFTWARE_ATOMICS)
     target_enable_irq();
 #endif
+
+    return old;
 }
