@@ -6,21 +6,17 @@
 // this peripheral is dma capable
 #define PERIPHERAL_ATTR_DMA_CAPABLE                 0x02
 // this peripheral is capable of commanding devices (e.g. I2C/SPI controller)
-#define PERIPHERAL_ATTR_CONTROLLER_CAPABLE                 0x04
+#define PERIPHERAL_ATTR_CONTROLLER_CAPABLE          0x04
 // this peripheral is capable of being commanded by other devices (e.g. I2C/SPI device)
 #define PERIPHERAL_ATTR_SUBORDINATE_CAPABLE         0x08
 
-// different pieces of software can access this peripheral (e.g I2C)
-#define PERIPHERAL_PERMISSION_MULTIPLE_ACCESS       0x200
-#define PERIPHERAL_PERMISSION_SINGULAR_ACCESS       0x400
-
 enum PeripheralType {
     PERIPHERAL_TYPE_I2C = 0x01,
-    PERIPHERAL_TYPE_SPI = 0x01,
-    PERIPHERAL_TYPE_PPI = 0x01,
-    PERIPHERAL_TYPE_PWM = 0x01,
-    PERIPHERAL_TYPE_UART = 0x01,
-    PERIPHERAL_TYPE_I2C = 0x01,
+    PERIPHERAL_TYPE_SPI = 0x02,
+    PERIPHERAL_TYPE_PPI = 0x04,
+    PERIPHERAL_TYPE_PWM = 0x08,
+    PERIPHERAL_TYPE_UART = 0x10,
+    PERIPHERAL_TYPE_I2C = 0x020,
 }
 
 /**
