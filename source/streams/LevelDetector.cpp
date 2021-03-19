@@ -31,7 +31,7 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
-LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id) : upstream(source)
+LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id, bool connectImmediately) : upstream(source)
 {
     this->id = id;
     this->level = 0;
@@ -41,9 +41,11 @@ LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThres
     this->lowThreshold = lowThreshold;
     this->highThreshold = highThreshold;
     this->status |= LEVEL_DETECTOR_INITIALISED;
-
-    // Register with our upstream component
-    source.connect(*this);
+    this->activated = false;
+    if(connectImmediately){
+        upstream.connect(*this);
+        activated = true;
+    }
 }
 
 /**
@@ -95,9 +97,13 @@ int LevelDetector::pullRequest()
  */
 int LevelDetector::getValue()
 {
+    if(!activated){
+        // Register with our upstream component: on demand activated
+        upstream.connect(*this);
+        activated = true;
+    }
     return level;
 }
-
 
 /**
  * Set threshold to the given value. Events will be generated when these thresholds are crossed.
