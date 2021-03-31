@@ -131,6 +131,7 @@ void Button::periodicCallback()
     if(sigma < DEVICE_BUTTON_SIGMA_THRESH_LO && (status & DEVICE_BUTTON_STATE))
     {
         status &= ~DEVICE_BUTTON_STATE;
+        status &= ~DEVICE_BUTTON_STATE_HOLD_TRIGGERED;
         Event evt(id,DEVICE_BUTTON_EVT_UP);
 
        if (eventConfiguration == DEVICE_BUTTON_ALL_EVENTS)
