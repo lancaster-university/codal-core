@@ -1,7 +1,7 @@
-#include "codal_target_hal.h"
-#include "CodalDmesg.h"
 #include "CodalCompat.h"
+#include "CodalDmesg.h"
 #include "Timer.h"
+#include "codal_target_hal.h"
 
 __attribute__((weak)) void target_wait(uint32_t milliseconds)
 {
@@ -29,9 +29,20 @@ __attribute__((weak)) void target_panic(int statusCode)
     target_disable_irq();
 
     DMESG("*** CODAL PANIC : [%d]", statusCode);
-    while (1)
-    {
+    while (1) {
     }
+}
+
+__attribute__((weak)) void target_scheduler_idle()
+{
+    // if not implemented, default to WFI
+    target_wait_for_event();
+}
+
+__attribute__((weak)) void target_scheduler_idle()
+{
+    // if not implemented, default to WFI
+    target_wait_for_event();
 }
 
 __attribute__((weak)) void target_scheduler_idle()
