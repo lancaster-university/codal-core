@@ -27,8 +27,11 @@ DEALINGS IN THE SOFTWARE.
 
 #include "platform_includes.h"
 
-extern "C"
-{
+#ifdef __cplusplus
+ extern "C" {
+#endif
+    void target_init();
+
     void target_enable_irq();
 
     void target_disable_irq();
@@ -95,7 +98,19 @@ extern "C"
 		short unsigned int __sync_fetch_and_add_2 (volatile void *ptr, short unsigned int value);
     
     #endif
+    /**
+     * Default implementation of atomic fetch and add opertaion.
+     * GCC provides this where possible, but this is not supported on some CPU architectures...
+     *
+     * @param ptr pointer to the memory to access.
+     * @param value the value to add to the memory location.
+     * @return the value of th ememory location BEFORE the add operation took place.
+     */
+    short unsigned int __sync_fetch_and_add_2 (volatile void *ptr, short unsigned int value);
+
+#ifdef __cplusplus
 }
+#endif
 
 // This is re-defined in targets with external flash, that require certain functions to be placed in RAM
 #ifndef REAL_TIME_FUNC
