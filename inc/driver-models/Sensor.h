@@ -156,7 +156,7 @@ namespace codal
         /**
           * Destructor.
           */
-        ~Sensor();
+        virtual ~Sensor();
 
         protected:
         
