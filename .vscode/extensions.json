@@ -1,8 +1,7 @@
 {
     "recommendations": [
-        "ms-vscode.cpptools-extension-pack",
-        "twxs.cmake",
         "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools-extension-pack",
         "marus25.cortex-debug",
         "xaver.clang-format"
     ]

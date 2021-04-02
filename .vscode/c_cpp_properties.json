@@ -1,0 +1,21 @@
+{
+    "configurations": [
+        {
+            "includePath": [
+                "/usr/lib/arm-none-eabi/include/*",
+                "${workspaceFolder}/inc/core/*",
+                "${workspaceFolder}/inc/driver-models/*",
+                "${workspaceFolder}/inc/drivers/*",
+                "${workspaceFolder}/inc/streams/*",
+                "${workspaceFolder}/inc/types/*",
+                "${workspaceFolder}/inc/*",
+                "${workspaceFolder}/**"
+            ],
+            "name": "codal-core",
+            "intelliSenseMode": "gcc-arm",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}
