@@ -17,10 +17,11 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
+#include "stdafx.h"
+#include "VSGlue.h"
 
 #include "FSCache.h"
 #include "CodalDmesg.h"
-
 
 using namespace codal;
 
@@ -155,9 +156,9 @@ int FSCache::write(uint32_t address, void *data, int len)
 		uint32_t l = min(len, blockSize - offset);
 		CacheEntry *c = cachePage(block);
 
-		uint32_t alignedStart = (a + bytesCopied) & 0xFFFFFFFC;
-		uint32_t alignedEnd = (a + bytesCopied + l) & 0xFFFFFFFC;
-		if ((a + bytesCopied + l) % 0x03)
+		uint32_t alignedStart = a & 0xFFFFFFFC;
+		uint32_t alignedEnd = (a + l) & 0xFFFFFFFC;
+		if ((a + l) & 0x03)
 			alignedEnd += 4;
 
 		// update cache.
@@ -280,16 +281,16 @@ void FSCache::debug(CacheEntry *c, bool verbose)
 
 		while (p < end)
 		{
-			DMESG("%X ", *p);
+			DMESGN("%X ", *p);
 			p++;
 			i++;
 			if (i == lineLength)
 			{
-				DMESG("\n");
+				DMESGN("\n");
 				i = 0;
 			}
 		}
 
-		DMESG("\n\n");
+		DMESGN("\n\n");
 	}
 }

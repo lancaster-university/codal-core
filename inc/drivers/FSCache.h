@@ -21,6 +21,9 @@ DEALINGS IN THE SOFTWARE.
 #ifndef FSCache_H
 #define FSCache_H
 
+#include "stdafx.h"
+#include "VSGlue.h"
+
 #include "NVMController.h"
 #include "CodalCompat.h"
 

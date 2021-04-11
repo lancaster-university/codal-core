@@ -17,11 +17,13 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
-
+#include "stdafx.h"
+#include "VSGlue.h"
 
 #include "CodalFS.h"
 #include "ErrorNo.h"
 #include "CodalDmesg.h"
+#include "CodalDevice.h"
 
 using namespace codal;
 
@@ -139,10 +141,10 @@ int CodalFS::init()
     openFiles = NULL;
 
     // First, try to load an existing file system at this location.
-    DMESG("CODALFS: Loading filesystem...");
+    DMESG("CODALFS: Loading filesystem...\n");
     if (load() != DEVICE_OK)
     {
-        DMESG("CODALFS: No filesystem found. formatting...");
+        DMESG("CODALFS: No filesystem found. formatting...\n");
         // No file system was found, so format a fresh one.
         // Bring up a freshly formatted file system here.
         fileSystemSize = flash.getFlashSize() / blockSize;
@@ -169,10 +171,9 @@ int CodalFS::load()
     for (int i = 0; i < rootOffset; i++)
     {
 		uint16_t b = fileTableRead(i);
-        DMESG("CODALFS: LOAD: FILETABLE[%d] = %d", i, b);
         if (b >= (flash.getFlashSize() / blockSize) || b != rootOffset)
         {
-            DMESG("CODALFS: LOAD ABORTED FILE TABLE CORRUPTED");
+            DMESG("CODALFS: LOAD ABORTED FILE TABLE CORRUPTED\n");
             return DEVICE_NO_DATA;
         }
     }
@@ -181,7 +182,7 @@ int CodalFS::load()
     DirectoryEntry *root = (DirectoryEntry *) getBlock(rootOffset);
     if (strcmp(root->file_name, CODALFS_MAGIC) != 0)
     {
-        DMESG("CODALFS: LOAD ABORTED INVALID MAGIC: %s", root->file_name);
+        DMESG("CODALFS: LOAD ABORTED INVALID MAGIC: %s\n", root->file_name);
         return DEVICE_NO_DATA;
     }
 
@@ -438,6 +439,29 @@ uint32_t CodalFS::getDirectoryOf(char const * filename)
     return directoryAddress;
 }
 
+void debug_print_dirent(DirectoryEntry *dirent)
+{
+    DMESG("   filename    : %s", dirent->file_name);
+    DMESG("   first block : %d", dirent->first_block);
+    DMESG("   flags       : %X", dirent->flags);
+    DMESG("   length      : %d", dirent->length);
+
+}
+
+void CodalFS::debug_print_root_dirent()
+{
+    uint32_t *tmp = (uint32_t *) malloc(blockSize);
+    memset(tmp, 0, blockSize);
+
+    flash.read(tmp, 0x800, blockSize / 4);
+    DirectoryEntry * tmpDirent = (DirectoryEntry *)tmp;
+
+    DMESG("ROOT DIRENT: ");
+    debug_print_dirent(tmpDirent);
+
+    free(tmp);
+}
+
 /**
   * Refresh the physical page associated with the given block.
   * Any logical blocks marked for deletion on that page are recycled.
@@ -454,28 +478,39 @@ int CodalFS::recycleBlock(uint16_t block, int type)
     uint8_t *write = (uint8_t *)scratch;
     uint16_t b = getBlockNumber(page);
 
+    DMESG("RECYCLE PAGE: [PAGE: %d]", page);
 	memset(scratch, 0xFF, flash.getPageSize());
 
     for (int i = 0; i < (int)( flash.getPageSize() / blockSize); i++)
     {
+        //DMESG("  RECYCLE BLOCK: [BLOCK: %d (%d/%d)]", b, i,  flash.getPageSize() / blockSize);
 		bool freeBlock = false;
 
         // If we have an unused or deleted block, there's nothing to do - allow the block to be recycled.
         if (fileTableRead(b) == CODALFS_DELETED || fileTableRead(b) == CODALFS_UNUSED)
         {
+            //DMESG("  FREE");
 			freeBlock = true;
 		}
 
         // If we have been asked to recycle a valid directory block, recycle individual entries where possible.
         else if (b == block && type == CODALFS_BLOCK_TYPE_DIRECTORY)
         {
+            //DMESG("  DIRECTORY");
             DirectoryEntry *direntIn = (DirectoryEntry *)getBlock(b);
             DirectoryEntry *direntOut = (DirectoryEntry *)write;
 
             for (uint16_t entry = 0; entry < blockSize / sizeof(DirectoryEntry); entry++)
             {
                 if (direntIn->flags & CODALFS_DIRECTORY_ENTRY_VALID)
+                {
+                    //DMESG("    DIRENT %d/%d [file: %s] VALID", entry+1, blockSize / sizeof(DirectoryEntry), direntIn->file_name);
                     memcpy(direntOut, direntIn, sizeof(DirectoryEntry));
+                }
+                else
+                {
+                    //DMESG("    DIRENT %d/%d [file: %s] INVALID", entry+1, blockSize / sizeof(DirectoryEntry), direntIn->file_name);
+                }
 
                 direntIn++;
                 direntOut++;
@@ -484,8 +519,9 @@ int CodalFS::recycleBlock(uint16_t block, int type)
 
         // All blocks before the root directory are the FileTable. 
         // Recycle any entries marked as DELETED to UNUSED.
-        else if (getBlock(b) < (uint32_t *)rootDirectory)
+        else if (b < fileSystemTableSize)
         {
+            //DMESG("FILE TABLE ENTRY");
             uint16_t *tableIn = (uint16_t *)getBlock(b);
             uint16_t *tableOut = (uint16_t *)write;
             
@@ -501,13 +537,22 @@ int CodalFS::recycleBlock(uint16_t block, int type)
 
         // Copy all other VALID blocks directly into the scratch page.
         else
-           memcpy(write, getBlock(b), blockSize);
+        {
+            //DMESG("DATA BLOCK - PRESERVING");
+            memcpy(write, getBlock(b), blockSize);
+        }
         
 		// Free / update any cached resourced related ot the processed block
 		if (freeBlock)
+        {
+            //DMESG("ERASING CACHE [BLOCK %d]", b);
 			cache.erase(addressOfBlock(b));
+        }
 		else
+        {
+            //DMESG("UPDATING CACHE [BLOCK %d]", b);
 			memcpy(getBlock(b), write, blockSize);
+        }
 
         // move on to next block.
         write += blockSize;
@@ -515,8 +560,12 @@ int CodalFS::recycleBlock(uint16_t block, int type)
     }
 
     // Now refresh the page originally holding the block.
+    //DMESG("ERASING PHYSICAL PAGE [PAGE: 0x%X]", page);
+    
 	flash.erase(page);
-    flash.write(page, scratch, flash.getPageSize());
+    flash.write(page, scratch, flash.getPageSize()/4);
+
+	free(scratch);
 
     return DEVICE_OK;
 }

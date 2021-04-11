@@ -21,6 +21,9 @@ DEALINGS IN THE SOFTWARE.
 #ifndef CODAL_FS_H
 #define CODAL_FS_H
 
+#include "stdafx.h"
+#include "VSGlue.h"
+
 #include "NVMController.h"
 #include "FSCache.h"
 #include "CodalCompat.h"
@@ -532,6 +535,8 @@ namespace codal
 		* @return DEVICE_OK on success, or an error code.
 		*/
 		int format();
+
+		void debug_print_root_dirent();
 	};
 
 }
