@@ -67,6 +67,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_ID_JACDAC_CONFIGURATION_SERVICE 33
 #define DEVICE_ID_SYSTEM_ADC          34
 #define DEVICE_ID_PULSE_IN            35
+#define DEVICE_ID_USB 36
 
 #define DEVICE_ID_IO_P0               100                       // IDs 100-227 are reserved for I/O Pin IDs.
 

@@ -182,8 +182,11 @@ const InterfaceInfo *CodalDummyUSBInterface::getInterfaceInfo()
     return &codalDummyIfaceInfo;
 }
 
-CodalUSB::CodalUSB()
+CodalUSB::CodalUSB(uint16_t id)
 {
+    // Store our identifiers.
+    this->id = id;
+    this->status = 0;
     usbInstance = this;
     endpointsUsed = 1; // CTRL endpoint
     ctrlIn = NULL;
@@ -448,7 +451,7 @@ void CodalUSB::setupRequest(USBSetup &setup)
     LOG("SETUP Req=%x type=%x val=%x:%x idx=%x len=%d", setup.bRequest, setup.bmRequestType,
         setup.wValueH, setup.wValueL, setup.wIndex, setup.wLength);
 
-    int status = DEVICE_OK;
+    int transactionStatus = DEVICE_OK;
 
     // Standard Requests
     uint16_t wValue = (setup.wValueH << 8) | setup.wValueL;
@@ -504,7 +507,7 @@ void CodalUSB::setupRequest(USBSetup &setup)
             break;
         case USB_REQ_GET_DESCRIPTOR:
             LOG("GET DESC");
-            status = sendDescriptors(setup);
+            transactionStatus = sendDescriptors(setup);
             break;
         case USB_REQ_SET_DESCRIPTOR:
             LOG("SET DESC");
@@ -524,7 +527,7 @@ void CodalUSB::setupRequest(USBSetup &setup)
                 sendzlp();
             }
             else
-                status = DEVICE_NOT_SUPPORTED;
+                transactionStatus = DEVICE_NOT_SUPPORTED;
             break;
         }
     }
@@ -536,7 +539,7 @@ void CodalUSB::setupRequest(USBSetup &setup)
         case VENDOR_MS20:
             if (numWebUSBInterfaces == 0)
             {
-                status = DEVICE_NOT_SUPPORTED;
+                transactionStatus = DEVICE_NOT_SUPPORTED;
             }
             else
             {
@@ -565,17 +568,17 @@ void CodalUSB::setupRequest(USBSetup &setup)
 
         case VENDOR_WEBUSB:
             // this is the place for the WebUSB landing page, if we ever want to do that
-            status = DEVICE_NOT_IMPLEMENTED;
+            transactionStatus = DEVICE_NOT_IMPLEMENTED;
             break;
         }
     }
 #endif
     else
     {
-        status = interfaceRequest(setup, true);
+        transactionStatus = interfaceRequest(setup, true);
     }
 
-    if (status < 0)
+    if (transactionStatus < 0)
         stall();
 
     // sending response clears this - make sure we did

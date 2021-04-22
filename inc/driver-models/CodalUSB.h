@@ -26,8 +26,14 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_USB_H
 
 #include "CodalConfig.h"
+#include "CodalComponent.h"
 
 #if CONFIG_ENABLED(DEVICE_USB)
+
+// define usb events for the CODAL message bus
+#define USB_EVT_CONNECTED       1   // powered usb cable has been plugged into the device
+#define USB_EVT_REMOVED         2   // powered usb cable has been removed from the device
+#define USB_EVT_READY           3   // powered usb cable with data connection has been plugged into the device, and the usb peripheral is ready!
 
 #include <stdint.h>
 #include "ErrorNo.h"
@@ -261,7 +267,7 @@ class CodalDummyUSBInterface : public CodalUSBInterface {
     virtual const InterfaceInfo *getInterfaceInfo();
 };
 
-class CodalUSB
+class CodalUSB : public codal::CodalComponent
 {
     uint8_t endpointsUsed;
     uint8_t startDelayCount;
@@ -284,7 +290,7 @@ public:
     UsbEndpointIn *ctrlIn;
     UsbEndpointOut *ctrlOut;
 
-    CodalUSB();
+    CodalUSB(uint16_t id = DEVICE_ID_USB);
 
     int add(CodalUSBInterface &interface);
 
