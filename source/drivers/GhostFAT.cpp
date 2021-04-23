@@ -296,9 +296,10 @@ void GhostFAT::readBlocks(int blockAddr, int numBlocks)
     finishReadWrite();
 }
 
-#ifdef BOOTLOADER_START_ADDR
+
 void GhostFAT::writeBlocks(int blockAddr, int numBlocks)
 {
+#ifdef BOOTLOADER_START_ADDR
     uint8_t buf[512];
 
     bool handoverSupported = false;
@@ -327,10 +328,10 @@ void GhostFAT::writeBlocks(int blockAddr, int numBlocks)
         }
         blockAddr++;
     }
+#endif
 
     finishReadWrite();
 }
-#endif
 
 GhostFAT::GhostFAT()
 {
