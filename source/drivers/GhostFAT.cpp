@@ -296,6 +296,7 @@ void GhostFAT::readBlocks(int blockAddr, int numBlocks)
     finishReadWrite();
 }
 
+#ifdef BOOTLOADER_START_ADDR
 void GhostFAT::writeBlocks(int blockAddr, int numBlocks)
 {
     uint8_t buf[512];
@@ -329,6 +330,7 @@ void GhostFAT::writeBlocks(int blockAddr, int numBlocks)
 
     finishReadWrite();
 }
+#endif
 
 GhostFAT::GhostFAT()
 {
@@ -467,7 +469,9 @@ static void readDMesg(GFATEntry *ent, unsigned blockAddr, char *dst)
 
 void GhostFAT::addFiles()
 {
+#ifdef BOOTLOADER_START_ADDR
     addStringFile(uf2_info(), "info_uf2.txt");
+#endif
     addFile(readCurrentUF2, this, "current.uf2", internalFlashSize() * 2);
 #if DEVICE_DMESG_BUFFER_SIZE > 0
     addFile(readDMesg, this, "dmesg.txt", DEVICE_DMESG_BUFFER_SIZE);
