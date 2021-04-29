@@ -484,8 +484,15 @@ void CodalUSB::setupRequest(USBSetup &setup)
             {
                 for (CodalUSBInterface *iface = interfaces; iface; iface = iface->next)
                 {
+                    // clear stall usually happens because one of the endpoints has locked up
+                    // a locked up endpoint indicates that the host is no longer issue end
+                    // tokens, so flag this in the in endpoint so that future writes are
+                    // ignored
                     if (iface->in && iface->in->ep == (setup.wIndex & 0x7f))
+                    {
+                        iface->in->flags |= USB_EP_FLAG_HOST_CLEAR_STALL;
                         iface->in->clearStall();
+                    }
                     else if (iface->out && iface->out->ep == (setup.wIndex & 0x7f))
                         iface->out->clearStall();
                 }
@@ -588,7 +595,11 @@ void CodalUSB::setupRequest(USBSetup &setup)
 void CodalUSB::interruptHandler()
 {
     for (CodalUSBInterface *iface = interfaces; iface; iface = iface->next)
+    {
+        if (iface->in)
+            iface->in->flags &= ~USB_EP_FLAG_HOST_CLEAR_STALL;
         iface->endpointRequest();
+    }
 }
 
 void CodalUSB::initEndpoints()

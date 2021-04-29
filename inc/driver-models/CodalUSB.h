@@ -30,6 +30,8 @@ DEALINGS IN THE SOFTWARE.
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
+#define USB_EP_FLAG_HOST_CLEAR_STALL    0x02
+
 // define usb events for the CODAL message bus
 #define USB_EVT_CONNECTED       1   // powered usb cable has been plugged into the device
 #define USB_EVT_REMOVED         2   // powered usb cable has been removed from the device
