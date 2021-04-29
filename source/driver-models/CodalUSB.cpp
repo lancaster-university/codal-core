@@ -42,7 +42,7 @@ DEALINGS IN THE SOFTWARE.
 
 CodalUSB *CodalUSB::usbInstance = NULL;
 
-// #define LOG DMESG
+// #define LOG LOG
 #define LOG(...)
 
 static uint8_t usb_initialised = 0;
@@ -668,11 +668,11 @@ int CodalUSB::start()
 {
     if (--startDelayCount > 0)
     {
-        DMESG("USB start delayed");
+        LOG("USB start delayed");
         return DEVICE_OK;
     }
 
-    DMESG("USB start");
+    LOG("USB start");
 
     if (DEVICE_USB_ENDPOINTS == 0)
         return DEVICE_NOT_SUPPORTED;
@@ -689,7 +689,7 @@ int CodalUSB::start()
 
 void usb_panic(int lineNumber)
 {
-    DMESG("USB assertion failed: line %d", lineNumber);
+    LOG("USB assertion failed: line %d", lineNumber);
     target_panic(DEVICE_USB_ERROR);
 }
 
