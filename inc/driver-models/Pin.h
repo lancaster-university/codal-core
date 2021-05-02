@@ -37,6 +37,7 @@ DEALINGS IN THE SOFTWARE.
 #define IO_STATUS_EVENT_PULSE_ON_EDGE       0x0040        // Pin will generate events on pin change
 #define IO_STATUS_INTERRUPT_ON_EDGE         0x0080        // Pin will generate events on pin change
 #define IO_STATUS_ACTIVE_HI                 0x0100        // Pin is ACTIVE_HI if set, or ACTIVE_LO if clear
+#define IO_STATUS_WAKE_ON_ACTIVE            0x0200        // Pin should trigger power manager wake-up
 
 #define DEVICE_PIN_MAX_OUTPUT             1023
 
@@ -505,6 +506,29 @@ namespace codal
         void setActiveLo()
         {
             setPolarity(0);
+        }
+
+        /**
+          * Sets whether the pin should trigger power manager wake-up.
+          *
+          * @param wake The action of the pin - either 1 to trigger wake-up or 0 for no wake-up
+          */
+        void wakeOnActive(int wake)
+        {
+            if (wake)
+                status |= IO_STATUS_WAKE_ON_ACTIVE;
+            else
+                status &= ~IO_STATUS_WAKE_ON_ACTIVE;
+        }
+
+        /**
+          * Deternine if the pin should trigger power manager wake-up.
+          *
+          * @param wake The action of the pin - either 1 to trigger wake up or 0 for no
+          */
+        int getWakeOnActive()
+        {
+            return (status & IO_STATUS_WAKE_ON_ACTIVE) ? 1 : 0;
         }
 
         /**
