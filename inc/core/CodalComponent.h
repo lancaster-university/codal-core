@@ -184,6 +184,33 @@ namespace codal
          */
         static void setAllSleep(bool doSleep);
 
+        typedef enum wakeUpReason
+        {
+            wakeUpEnable,    //Prepare wake-up sources when entering deep sleep.
+            wakeUpDisable,   //Disable wake-up sources before leaving deep sleep.
+            wakeUpCount,     //Count all deep sleep wake-up sources. Return the count.
+            wakeUpClear      //Clear all deep sleep wake up sources
+        } wakeUpReason;
+
+        typedef struct wakeUpResult
+        {
+            int count;
+
+            void init() { count = 0; }
+
+            wakeUpResult() { init(); }
+        } wakeUpResult;
+
+        /**
+          * Perform functions related to deep sleep wake-up.
+          */
+        virtual int manageWakeUp( wakeUpReason reason, wakeUpResult *result) { return DEVICE_NOT_SUPPORTED; }
+
+        /**
+          * Perform functions related to deep sleep wake-up.
+          */
+        static void manageAllWakeUp( wakeUpReason reason, wakeUpResult *result);
+
         /**
           * If you have added your component to the idle or system tick component arrays,
           * you must remember to remove your component from them if your component is destructed.

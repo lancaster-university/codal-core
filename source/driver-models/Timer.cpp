@@ -391,7 +391,6 @@ TimerEvent *Timer::deepSleepWakeUpEvent()
     TimerEvent *eNext = timerEventList + eventListSize;
     for ( TimerEvent *e = timerEventList; e < eNext; e++)
     {
-        DMESGF( "id %d value %d flags %d time %d", (int) e->id, (int) e->value, (int) e->flags, (int) e->timestamp);
         if ( e->id != 0 && e->flags & CODAL_TIMER_EVENT_FLAGS_WAKEUP)
         {
             if ( wakeUpEvent == NULL || (e->timestamp < wakeUpEvent->timestamp))

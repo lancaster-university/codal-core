@@ -140,3 +140,30 @@ void CodalComponent::setAllSleep(bool doSleep)
                 components[i]->setSleep(false);
     }
 }
+
+/**
+  * Perform functions related to deep sleep wake-up.
+  */
+void CodalComponent::manageAllWakeUp( wakeUpReason reason, wakeUpResult *result)
+{
+    switch ( reason)
+    {
+        case wakeUpCount:     //Count all deep sleep wake-up sources.
+        case wakeUpEnable:    //Prepare wake-up sources when entering deep sleep.
+            for (unsigned i = 0; i < DEVICE_COMPONENT_COUNT; i++)
+            {
+                if (components[i])
+                    components[i]->manageWakeUp( reason, result);
+            }
+            break;
+
+        case wakeUpDisable:   //Disable wake-up sources before leaving deep sleep.
+        case wakeUpClear:     //Clear all deep sleep wake up sources
+            for (int i = DEVICE_COMPONENT_COUNT - 1; i >= 0; i--)
+            {
+                if (components[i])
+                    components[i]->manageWakeUp( reason, result);
+            }
+            break;
+    }
+}
