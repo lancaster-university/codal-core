@@ -38,6 +38,8 @@ DEALINGS IN THE SOFTWARE.
 #include <stdint.h>
 #include "ErrorNo.h"
 
+#define USB_EP_TIMEOUT 0x02
+
 #define USB_CONFIG_POWERED_MASK 0x40
 #define USB_CONFIG_BUS_POWERED 0x80
 #define USB_CONFIG_SELF_POWERED 0xC0
