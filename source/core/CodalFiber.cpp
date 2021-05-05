@@ -982,7 +982,7 @@ void codal::idle()
         // because we enforce MESSAGE_BUS_LISTENER_IMMEDIATE for listeners placed
         // on the scheduler.
         fiber_flags &= ~DEVICE_SCHEDULER_IDLE;
-        target_wait_for_event();
+        target_idle();
     }
 }
 
