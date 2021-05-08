@@ -51,9 +51,14 @@ void FSCache::clear()
 	{
 		if (cache[i].page != NULL)
 			free(cache[i].page);
-
-		memset(&cache[i], 0, sizeof(CacheEntry));
 	}
+
+	// reset all state.
+	memset(cache, 0, sizeof(CacheEntry)*cacheSize);
+
+	// Reset operation counter (used for least-recently-used cache replacement policy)
+	operationCount = 0;
+
 }
 
 /**
@@ -89,9 +94,9 @@ int FSCache::read(uint32_t address, void *data, int len)
 	while (bytesCopied < len)
 	{
 		uint32_t a = address + bytesCopied;
-		uint32_t block = a / blockSize;
+		uint32_t block = (a / blockSize) *blockSize;
 		uint32_t offset = a % blockSize;
-		uint32_t l = min(len, blockSize - offset);
+		uint32_t l = min(len - bytesCopied, blockSize - offset);
 		CacheEntry *c = cachePage(block);
 
 		memcpy((uint8_t *)data + bytesCopied, c->page + offset, l);
@@ -124,7 +129,7 @@ int FSCache::write(uint32_t address, void *data, int len)
 		uint32_t a = address + bytesCopied;
 		uint32_t block = (a / blockSize) *blockSize;
 		uint32_t offset = a % blockSize;
-		uint32_t l = min(len, blockSize - offset);
+		uint32_t l = min(len - bytesCopied, blockSize - offset);
 		CacheEntry *c = cachePage(block);
 
 		// Validate that a write operation can be performed without needing an erase cycle.
@@ -153,7 +158,7 @@ int FSCache::write(uint32_t address, void *data, int len)
 		uint32_t a = address + bytesCopied;
 		uint32_t block = (a / blockSize) *blockSize;
 		uint32_t offset = a % blockSize;
-		uint32_t l = min(len, blockSize - offset);
+		uint32_t l = min(len - bytesCopied, blockSize - offset);
 		CacheEntry *c = cachePage(block);
 
 		uint32_t alignedStart = a & 0xFFFFFFFC;
@@ -253,11 +258,13 @@ CacheEntry* FSCache::cachePage(uint32_t address)
 CacheEntry *FSCache::getCacheEntry(uint32_t address)
 {
 	for (int i = 0; i < cacheSize; i++)
+	{
 		if (cache[i].address == address && cache[i].page)
 		{
 			cache[i].lastUsed = ++operationCount;
 			return &cache[i];
 		}
+	}
 
 	return NULL;
 }
@@ -270,7 +277,7 @@ void FSCache::debug(bool verbose)
 
 void FSCache::debug(CacheEntry *c, bool verbose)
 {
-	DMESG("CacheEntry: [address: %d] [lastUsed: %d] [flags: 0x%X]\n", c->address, c->lastUsed, c->flags);
+	DMESG("CacheEntry: [address: %p] [lastUsed: %d] [flags: %X]\n", c->address, c->lastUsed, c->flags);
 
 	if (verbose)
 	{
@@ -281,7 +288,7 @@ void FSCache::debug(CacheEntry *c, bool verbose)
 
 		while (p < end)
 		{
-			DMESGN("%X ", *p);
+			DMESGN("%x ", *p);
 			p++;
 			i++;
 			if (i == lineLength)
