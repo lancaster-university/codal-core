@@ -553,6 +553,21 @@ Listener* MessageBus::elementAt(int n)
     return l;
 }
 
+/**
+  * Check if any Listener is busy.
+  *
+  * @return non-zero if a listener is busy
+  */
+int MessageBus::hasBusyListener()
+{
+    for ( Listener *listener = listeners; listener != NULL; listener = listener->next)
+    {
+        if (listener->flags & MESSAGE_BUS_LISTENER_BUSY)
+            return 1;
+    }
+    return 0;
+}
+
 namespace codal {
 
 /**
