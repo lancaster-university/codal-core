@@ -41,7 +41,8 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_SERIAL_STATUS_TX_IN_USE            0x02
 #define CODAL_SERIAL_STATUS_RX_BUFF_INIT         0x04
 #define CODAL_SERIAL_STATUS_TX_BUFF_INIT         0x08
-#define CODAL_SERIAL_STATUS_RXD                 0x10
+#define CODAL_SERIAL_STATUS_RXD                  0x10
+#define CODAL_SERIAL_STATUS_DEEPSLEEP            0x20
 
 
 namespace codal
