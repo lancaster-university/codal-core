@@ -852,6 +852,16 @@ int codal::scheduler_runqueue_empty()
 }
 
 /**
+  * Determines if any fibers are waiting for events.
+  *
+  * @return 1 if there are no fibers currently waiting for events; otherwise 0
+  */
+int codal::scheduler_waitqueue_empty()
+{
+    return (waitQueue == NULL);
+}
+
+/**
   * Calls the Fiber scheduler.
   * The calling Fiber will likely be blocked, and control given to another waiting fiber.
   * Call this function to yield control of the processor when you have nothing more to do.

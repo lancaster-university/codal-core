@@ -299,6 +299,13 @@ namespace codal
     int scheduler_runqueue_empty();
 
     /**
+      * Determines if any fibers are waiting for events.
+      *
+      * @return 1 if there are no fibers currently waiting for events; otherwise 0
+      */
+    int scheduler_waitqueue_empty();
+
+    /**
       * Utility function to add the currenty running fiber to the given queue.
       *
       * Perform a simple add at the head, to avoid complexity,
