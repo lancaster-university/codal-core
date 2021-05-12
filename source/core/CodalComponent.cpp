@@ -140,3 +140,57 @@ void CodalComponent::setAllSleep(bool doSleep)
                 components[i]->setSleep(false);
     }
 }
+
+/**
+  * Perform functions related to deep sleep.
+  */
+int CodalComponent::manageSleep( manageSleepReason reason, manageSleepData *data)
+{ 
+    switch ( reason)
+    {
+        case manageSleepBegin:
+          setSleep(true);
+          break;
+
+        case manageSleepEnd:
+          setSleep(false);
+          break;
+
+        case manageSleepCountWakeUps:
+            if ( data == NULL)
+                return DEVICE_INVALID_PARAMETER;
+            break;
+
+        case manageSleepClearWakeUps:
+            break;
+    }
+
+    return DEVICE_OK;
+}
+
+/**
+  * Perform functions related to deep sleep.
+  */
+void CodalComponent::manageAllSleep( manageSleepReason reason, manageSleepData *data)
+{
+    switch ( reason)
+    {
+        case manageSleepBegin:
+        case manageSleepCountWakeUps:
+            for (unsigned i = 0; i < DEVICE_COMPONENT_COUNT; i++)
+            {
+                if (components[i])
+                    components[i]->manageSleep( reason, data);
+            }
+            break;
+
+        case manageSleepEnd:
+        case manageSleepClearWakeUps:
+            for (int i = DEVICE_COMPONENT_COUNT - 1; i >= 0; i--)
+            {
+                if (components[i])
+                    components[i]->manageSleep( reason, data);
+            }
+            break;
+    }
+}

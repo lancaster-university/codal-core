@@ -184,6 +184,33 @@ namespace codal
          */
         static void setAllSleep(bool doSleep);
 
+        typedef enum manageSleepReason
+        {
+            manageSleepBegin,             //Puts the component in sleep (low power) mode.
+            manageSleepEnd,               //Brings the component out of sleep (low power) mode.
+            manageSleepCountWakeUps,      //Count deep sleep wake-up sources.
+            manageSleepClearWakeUps       //Clear deep sleep wake up sources
+        } manageSleepReason;
+
+        typedef struct manageSleepData
+        {
+            int count;
+
+            void init() { count = 0; }
+
+            manageSleepData() { init(); }
+        } manageSleepData;
+
+        /**
+          * Perform functions related to deep sleep.
+          */
+        virtual int manageSleep( manageSleepReason reason, manageSleepData *data);
+
+        /**
+          * Perform functions related to deep sleep.
+          */
+        static void manageAllSleep( manageSleepReason reason, manageSleepData *data);
+
         /**
           * If you have added your component to the idle or system tick component arrays,
           * you must remember to remove your component from them if your component is destructed.
