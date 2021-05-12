@@ -404,6 +404,100 @@ TimerEvent *Timer::deepSleepWakeUpEvent()
 }
 
 /**
+ * Called from power manager before sleep.
+ * @param pointer to a variable to receive the current timer counter
+ *
+ * @return the current time since power on in microseconds
+ */
+CODAL_TIMESTAMP Timer::deepSleepBegin( CODAL_TIMESTAMP *counter)
+{
+    // Need to disable all IRQs - for example if SPI IRQ is triggered during
+    // sync(), it might call into getTimeUs(), which would call sync()
+    target_disable_irq();
+
+    uint32_t val = timer.captureCounter();
+    uint32_t elapsed = 0;
+
+    // assume at least 16 bit counter; note that this also works when the timer overflows
+    elapsed = (uint16_t)(val - sigma);
+    sigma = val;
+
+    // advance main timer
+    currentTimeUs += elapsed;
+
+    // the 64 bit division is ~150 cycles
+    // this is called at least every few ms, and quite possibly much more often
+    delta += elapsed;
+    while (delta >= 1000) {
+        currentTime++;
+        delta -= 1000;
+    }
+
+    timer.disableIRQ();
+    target_enable_irq();
+
+    *counter = val;
+    return currentTimeUs;
+}
+
+/**
+ * Called from power manager after sleep.
+ * @param counter the current timer counter
+ * @param micros time elapsed since deepSleepBegin
+ */
+void Timer::deepSleepEnd( CODAL_TIMESTAMP counter, CODAL_TIMESTAMP micros)
+{
+    currentTimeUs += micros;
+
+    CODAL_TIMESTAMP millis = micros / 1000;
+    micros -= millis * 1000;
+
+    currentTime += millis;
+
+    delta += micros;
+    while (delta >= 1000) {
+        currentTime++;
+        delta -= 1000;
+    }
+
+    sigma = (uint16_t) counter;
+
+    sync();
+
+    timer.setCompare(ccPeriodChannel, timer.captureCounter() + 10000000);
+
+    // Bring any past events to the present and find the next event
+    // All events that would have fired during deep sleep will fire once, but obviously late.
+    // For some periodic events that will mean some events are dropped,
+    // but subsequent events will be on the same schedule as before deep sleep.
+    CODAL_TIMESTAMP present = currentTimeUs + CODAL_TIMER_MINIMUM_PERIOD;
+    nextTimerEvent = NULL;
+    TimerEvent *eNext = timerEventList + eventListSize;
+    for ( TimerEvent *e = timerEventList; e < eNext; e++)
+    {
+        if ( e->id != 0)
+        {
+            if ( e->period == 0)
+            {
+                if ( e->timestamp < present)
+                  e->timestamp = present;
+            }
+            else
+            {
+                while ( e->timestamp + e->period < present)
+                  e->timestamp += e->period;
+            }
+
+            if ( nextTimerEvent == NULL || nextTimerEvent->timestamp > e->timestamp)
+                nextTimerEvent = e;
+        }
+    }
+
+    if (nextTimerEvent)
+        triggerIn( CODAL_TIMER_MINIMUM_PERIOD);
+}
+
+/**
  * Determine the time of the next wake-up event.
  * @param timestamp Pointer to CODAL_TIMESTAMP to receive the time.
  * @return true if there is an event.
@@ -628,6 +722,38 @@ int codal::system_timer_wait_us(uint32_t period)
 int codal::system_timer_wait_ms(uint32_t period)
 {
     return system_timer_wait_us(period * 1000);
+}
+
+/**
+  * Called from power manager before deep sleep.
+  * @param counter pointer to a variable to receive the current timer counter
+  *
+  * @return the current time since power on in microseconds
+  */
+CODAL_TIMESTAMP codal::system_timer_deepsleep_begin( CODAL_TIMESTAMP *counter)
+{
+    if(system_timer == NULL)
+    {
+        *counter = 0;
+        return 0;
+    }
+    return system_timer->deepSleepBegin( counter);
+}
+
+/**
+ * Called from power manager after deep sleep.
+ * @param counter pointer to a variable to receive the current timer counter
+ * @param micros time elapsed since system_timer_deepsleep_begin
+ *
+ * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
+ */
+int codal::system_timer_deepsleep_end( CODAL_TIMESTAMP counter, CODAL_TIMESTAMP micros)
+{
+    if(system_timer == NULL)
+        return DEVICE_NOT_SUPPORTED;
+
+    system_timer->deepSleepEnd( counter, micros);
+    return DEVICE_OK;
 }
 
 /**

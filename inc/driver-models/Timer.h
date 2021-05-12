@@ -190,6 +190,21 @@ namespace codal
         void trigger(bool isFallback);
 
         /**
+         * Called from power manager before sleep.
+         * @param counter pointer to a variable to receive the current timer counter
+         *
+         * @return the current time since power on in microseconds
+         */
+        CODAL_TIMESTAMP deepSleepBegin( CODAL_TIMESTAMP *counter);
+
+        /**
+         * Called from power manager after sleep.
+         * @param counter the current timer counter
+         * @param micros time elapsed since deepSleepBegin
+         */
+        void deepSleepEnd( CODAL_TIMESTAMP counter, CODAL_TIMESTAMP micros);
+
+        /**
          * Determine the time of the next wake up event.
          * @param timestamp Pointer to CODAL_TIMESTAMP to receive the time.
          * @return true if there is an event.
@@ -343,6 +358,23 @@ namespace codal
      * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
      */
     int system_timer_wait_ms(uint32_t period);
+
+    /**
+     * Called from power manager before deep sleep.
+     * @param counter pointer to a variable to receive the current timer counter
+     *
+     * @return the current time since power on in microseconds
+     */
+    CODAL_TIMESTAMP system_timer_deepsleep_begin( CODAL_TIMESTAMP *counter);
+
+    /**
+     * Called from power manager after deep sleep.
+     * @param counter the current timer counter
+     * @param micros time elapsed since system_timer_deepsleep_begin
+     *
+     * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
+     */
+    int system_timer_deepsleep_end( CODAL_TIMESTAMP counter, CODAL_TIMESTAMP micros);
 
     /**
      * Determine the time of the next wake-up event.
