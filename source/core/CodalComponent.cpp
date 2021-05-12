@@ -124,21 +124,7 @@ void CodalComponent::removeComponent()
  */
 void CodalComponent::setAllSleep(bool doSleep)
 {
-    // usually, dependencies of component X are added before X itself,
-    // so iterate backwards (so from high-level components to low-level)
-    // when putting stuff to sleep, and forwards when waking up
-    if (doSleep)
-    {
-        for (int i = DEVICE_COMPONENT_COUNT - 1; i >= 0; i--)
-            if (components[i])
-                components[i]->setSleep(true);
-    }
-    else
-    {
-        for (unsigned i = 0; i < DEVICE_COMPONENT_COUNT; i++)
-            if (components[i])
-                components[i]->setSleep(false);
-    }
+    manageAllSleep( doSleep ? manageSleepBegin : manageSleepEnd, NULL);
 }
 
 /**
@@ -149,10 +135,12 @@ int CodalComponent::manageSleep( manageSleepReason reason, manageSleepData *data
     switch ( reason)
     {
         case manageSleepBegin:
+        case manageSleepBeginWithWakeUps:
           setSleep(true);
           break;
 
         case manageSleepEnd:
+        case manageSleepEndWithWakeUps:
           setSleep(false);
           break;
 
@@ -173,9 +161,14 @@ int CodalComponent::manageSleep( manageSleepReason reason, manageSleepData *data
   */
 void CodalComponent::manageAllSleep( manageSleepReason reason, manageSleepData *data)
 {
+    // usually, dependencies of component X are added before X itself,
+    // so iterate backwards (so from high-level components to low-level)
+    // when putting stuff to sleep, and forwards when waking up
+
     switch ( reason)
     {
         case manageSleepBegin:
+        case manageSleepBeginWithWakeUps:
         case manageSleepCountWakeUps:
             for (unsigned i = 0; i < DEVICE_COMPONENT_COUNT; i++)
             {
@@ -185,6 +178,7 @@ void CodalComponent::manageAllSleep( manageSleepReason reason, manageSleepData *
             break;
 
         case manageSleepEnd:
+        case manageSleepEndWithWakeUps:
         case manageSleepClearWakeUps:
             for (int i = DEVICE_COMPONENT_COUNT - 1; i >= 0; i--)
             {
