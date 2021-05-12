@@ -82,7 +82,7 @@ int FSCache::erase(uint32_t address)
 * Read the given area of memory into the buffer provided,
 * paging the data in from FLASH as needed.
 */
-int FSCache::read(uint32_t address, void *data, int len)
+int FSCache::read(uint32_t address, const void *data, int len)
 {
 	int bytesCopied = 0;
 
@@ -114,7 +114,7 @@ int FSCache::read(uint32_t address, void *data, int len)
 * @param len amount of data to write, in bytes.
 * @return DEVICE_OK on success, or DEVICE_NOT_SUPPORTED if the attempted operation is not possible without an ERASE operation.
 */
-int FSCache::write(uint32_t address, void *data, int len)
+int FSCache::write(uint32_t address, const void *data, int len)
 {
 	int bytesCopied = 0;
 
@@ -140,7 +140,7 @@ int FSCache::write(uint32_t address, void *data, int len)
 
 			if ((b1 ^ b2) & b2)
 			{
-				DMESG("FS_CACHE: ILLEGAL WRITE OPERAITON ATTEMPTED:\n");
+				DMESG("FS_CACHE: ILLEGAL WRITE OPERAITON ATTEMPTED [ADDRESS: %p] [LENGTH: %d]\n", address, len);
 				debug(c);
 				return DEVICE_NOT_SUPPORTED;
 			}

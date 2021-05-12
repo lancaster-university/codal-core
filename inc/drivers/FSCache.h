@@ -73,14 +73,14 @@ namespace codal
 			 * Read the given area of memory into the buffer provided,
 			 * paging the data in from FLASH as needed.
 			 */
-			int read(uint32_t address, void *data, int len);
+			int read(uint32_t address, const void *data, int len);
 
 			/**
 			* Write the given area of memory into the buffer provided,
 			* paging the data in from FLASH as needed.
 			* n.b. data doe NOT need to be word aligned.
 			*/
-			int write(uint32_t address, void *data, int len);
+			int write(uint32_t address, const void *data, int len);
 
 			/**
 			 * Pin the given page into cache space.
