@@ -52,6 +52,7 @@ Button::Button(Pin &pin, uint16_t id, ButtonEventConfiguration eventConfiguratio
     this->sigma = 0;
     this->polarity = polarity;
 
+    pin.setPolarity( polarity == ACTIVE_HIGH ? 1 : 0);
     pin.setPull(mode);
 
     this->status |= DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
