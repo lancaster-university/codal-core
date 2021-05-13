@@ -292,8 +292,13 @@ void Timer::sync()
     uint32_t val = timer.captureCounter();
     uint32_t elapsed = 0;
 
+#if CONFIG_ENABLED(CODAL_TIMER_32BIT)
+    // assume at least 32 bit counter; note that this also works when the timer overflows
+    elapsed = (uint32_t)(val - sigma);
+#else
     // assume at least 16 bit counter; note that this also works when the timer overflows
     elapsed = (uint16_t)(val - sigma);
+#endif
     sigma = val;
 
     // advance main timer
@@ -418,8 +423,13 @@ CODAL_TIMESTAMP Timer::deepSleepBegin( CODAL_TIMESTAMP *counter)
     uint32_t val = timer.captureCounter();
     uint32_t elapsed = 0;
 
+#if CONFIG_ENABLED(CODAL_TIMER_32BIT)
+    // assume at least 32 bit counter; note that this also works when the timer overflows
+    elapsed = (uint32_t)(val - sigma);
+#else
     // assume at least 16 bit counter; note that this also works when the timer overflows
     elapsed = (uint16_t)(val - sigma);
+#endif
     sigma = val;
 
     // advance main timer
@@ -447,20 +457,27 @@ CODAL_TIMESTAMP Timer::deepSleepBegin( CODAL_TIMESTAMP *counter)
  */
 void Timer::deepSleepEnd( CODAL_TIMESTAMP counter, CODAL_TIMESTAMP micros)
 {
-    currentTimeUs += micros;
+    if ( micros > 0)
+    {
+        currentTimeUs += micros;
 
-    CODAL_TIMESTAMP millis = micros / 1000;
-    micros -= millis * 1000;
+        CODAL_TIMESTAMP millis = micros / 1000;
+        micros -= millis * 1000;
 
-    currentTime += millis;
+        currentTime += millis;
 
-    delta += micros;
-    while (delta >= 1000) {
-        currentTime++;
-        delta -= 1000;
+        delta += micros;
+        while (delta >= 1000) {
+            currentTime++;
+            delta -= 1000;
+        }
+
+#if CONFIG_ENABLED(CODAL_TIMER_32BIT)
+        sigma = (uint32_t) counter;
+#else
+        sigma = (uint16_t) counter;
+#endif
     }
-
-    sigma = (uint16_t) counter;
 
     sync();
 

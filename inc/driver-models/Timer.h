@@ -61,8 +61,13 @@ namespace codal
 
     class Timer
     {
+#if CONFIG_ENABLED(CODAL_TIMER_32BIT)
+        uint32_t sigma;
+        uint32_t delta;
+#else
         uint16_t sigma;
         uint16_t delta;
+#endif
         LowLevelTimer& timer;
 
         /**
