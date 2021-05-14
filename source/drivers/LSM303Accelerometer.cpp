@@ -230,6 +230,7 @@ int LSM303Accelerometer::setSleep(bool doSleep)
 {
     if (doSleep && (status & LSM303_A_STATUS_ENABLED))
     {
+        status &= ~DEVICE_COMPONENT_STATUS_IDLE_TICK;
         status |= LSM303_A_STATUS_SLEEPING;
         status &= ~LSM303_A_STATUS_ENABLED;
         configure();
@@ -237,8 +238,9 @@ int LSM303Accelerometer::setSleep(bool doSleep)
     
     if (!doSleep && (status & LSM303_A_STATUS_SLEEPING))
     {
+
+        status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
         status &= ~LSM303_A_STATUS_SLEEPING;
-        requestUpdate();
     }
    
     return DEVICE_OK;
