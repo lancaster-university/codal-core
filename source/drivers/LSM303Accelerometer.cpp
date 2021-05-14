@@ -149,7 +149,7 @@ int LSM303Accelerometer::requestUpdate()
 {
     bool awaitSample = false;
 
-    if ((status & (LSM303_A_STATUS_ENABLED | LSM303_A_STATUS_SLEEPING)) == 0x00)
+    if ((status & LSM303_A_STATUS_ENABLED) == 0x00)
     {
         // If we get here without being enabled, applicaiton code has requested
         // functionlity from this component. Perform on demand activation.
@@ -237,9 +237,8 @@ int LSM303Accelerometer::setSleep(bool doSleep)
     
     if (!doSleep && (status & LSM303_A_STATUS_SLEEPING))
     {
-        status |= LSM303_A_STATUS_ENABLED;
         status &= ~LSM303_A_STATUS_SLEEPING;
-        configure();
+        requestUpdate();
     }
    
     return DEVICE_OK;
