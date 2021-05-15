@@ -128,7 +128,7 @@ int LSM303Magnetometer::requestUpdate()
 {
     bool awaitSample = false;
 
-    if ((status & (LSM303_M_STATUS_ENABLED | LSM303_M_STATUS_SLEEPING)) == 0x00)
+    if ((status & LSM303_M_STATUS_ENABLED) == 0x00)
     {
         // If we get here without being enabled, applicaiton code has requested
         // functionlity from this component. Perform on demand activation.
@@ -205,6 +205,7 @@ int LSM303Magnetometer::setSleep(bool doSleep)
 {
     if (doSleep && (status & LSM303_M_STATUS_ENABLED))
     {
+        status &= ~DEVICE_COMPONENT_STATUS_IDLE_TICK;
         status |= LSM303_M_STATUS_SLEEPING;
         status &= ~LSM303_M_STATUS_ENABLED;
         configure();
@@ -212,9 +213,8 @@ int LSM303Magnetometer::setSleep(bool doSleep)
     
     if (!doSleep && (status & LSM303_M_STATUS_SLEEPING))
     {
-        status |= LSM303_M_STATUS_ENABLED;
+        status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
         status &= ~LSM303_M_STATUS_SLEEPING;
-        configure();
     }
    
     return DEVICE_OK;

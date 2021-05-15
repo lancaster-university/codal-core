@@ -238,7 +238,6 @@ int LSM303Accelerometer::setSleep(bool doSleep)
     
     if (!doSleep && (status & LSM303_A_STATUS_SLEEPING))
     {
-
         status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
         status &= ~LSM303_A_STATUS_SLEEPING;
     }
