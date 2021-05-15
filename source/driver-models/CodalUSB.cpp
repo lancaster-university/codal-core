@@ -588,11 +588,7 @@ void CodalUSB::setupRequest(USBSetup &setup)
 void CodalUSB::interruptHandler()
 {
     for (CodalUSBInterface *iface = interfaces; iface; iface = iface->next)
-    {
-        if (iface->in)
-            iface->in->flags &= ~USB_EP_TIMEOUT;
         iface->endpointRequest();
-    }
 }
 
 void CodalUSB::initEndpoints()
