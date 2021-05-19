@@ -142,13 +142,6 @@ namespace codal
           */
         virtual int remove(Listener *newListener);
 
-        /**
-          * Check if any Listener is busy.
-          *
-          * @return non-zero if a listener is busy
-          */
-        int hasBusyListener();
-
         private:
 
         Listener            *listeners;           // Chain of active listeners.
