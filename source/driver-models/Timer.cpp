@@ -40,6 +40,8 @@ DEALINGS IN THE SOFTWARE.
 #include "ErrorNo.h"
 #include "codal_target_hal.h"
 #include "CodalDmesg.h"
+#include "CodalFiber.h"
+#include "NotifyEvents.h"
 
 using namespace codal;
 
@@ -356,28 +358,39 @@ void Timer::trigger(bool isFallback)
 
         for (int i = 0; i<eventListSize; i++)
         {
-            if (e->id != 0 && currentTimeUs >= e->timestamp)
+            if (e->id != 0)
             {
-                uint16_t id = e->id;
-                uint16_t value = e->value;
+                if (currentTimeUs >= e->timestamp)
+                {
+                    uint16_t id = e->id;
+                    uint16_t value = e->value;
 
-                // Release before triggering event. Otherwise, an immediate event handler
-                // can cancel this event, another event might be put in its place
-                // and we end up releasing (or repeating) a completely different event.
-                if (e->period == 0)
-                    releaseTimerEvent(e);
-                else
-                    e->timestamp += e->period;
+                    // Release before triggering event. Otherwise, an immediate event handler
+                    // can cancel this event, another event might be put in its place
+                    // and we end up releasing (or repeating) a completely different event.
+                    if (e->period == 0)
+                        releaseTimerEvent(e);
+                    else
+                        e->timestamp += e->period;
 
-                // We need to trigger this event.
-#if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
-                Event evt(id, value, currentTime);
-#else
-                Event evt(id, value, currentTimeUs);
-#endif
+                    // We need to trigger this event.
+    #if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
+                    Event evt(id, value, currentTime);
+    #else
+                    Event evt(id, value, currentTimeUs);
+    #endif
 
-                // TODO: Handle rollover case above...
-                eventsFired++;
+                    // TODO: Handle rollover case above...
+                    eventsFired++;
+                }
+                else if ( e->flags & CODAL_TIMER_EVENT_FLAGS_WAKEUP && fiber_scheduler_deepsleep() && e->timestamp < currentTimeUs + 100000)
+                {
+    #if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
+                    Event evt(DEVICE_ID_NOTIFY, POWER_EVT_CANCEL_DEEPSLEEP, currentTime);
+    #else
+                    Event evt(DEVICE_ID_NOTIFY, POWER_EVT_CANCEL_DEEPSLEEP, currentTimeUs);
+    #endif
+                }
             }
             e++;
         }
