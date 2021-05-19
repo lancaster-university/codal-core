@@ -44,6 +44,7 @@ DEALINGS IN THE SOFTWARE.
 // Fiber Scheduler Flags
 #define DEVICE_SCHEDULER_RUNNING            0x01
 #define DEVICE_SCHEDULER_IDLE               0x02
+#define DEVICE_SCHEDULER_DEEPSLEEP          0x04
 
 // Fiber Flags
 #define DEVICE_FIBER_FLAG_FOB               0x01
@@ -94,6 +95,20 @@ namespace codal
       * @return 1 if the fber scheduler is running, 0 otherwise.
       */
     int fiber_scheduler_running();
+
+    /**
+      * Determines if deep sleep is pending.
+      *
+      * @return 1 if deep sleep is pending, 0 otherwise.
+      */
+    int fiber_scheduler_deepsleep();
+
+    /**
+      * Flag if deep sleep is pending.
+      *
+      * @param penfing 1 if deep sleep is pending, 0 otherwise.
+      */
+    void fiber_scheduler_set_deepsleep( int pending);
 
     /**
      * Provides a list of all active fibers.

@@ -261,6 +261,29 @@ int codal::fiber_scheduler_running()
 }
 
 /**
+  * Determines if deep sleep is pending.
+  *
+  * @return 1 if deep sleep is pending, 0 otherwise.
+  */
+int codal::fiber_scheduler_deepsleep()
+{
+    return fiber_flags & DEVICE_SCHEDULER_DEEPSLEEP ? 1 : 0;
+}
+
+/**
+  * Flag if deep sleep is pending.
+  *
+  * @param penfing 1 if deep sleep is pending, 0 otherwise.
+  */
+void codal::fiber_scheduler_set_deepsleep( int pending)
+{
+    if ( pending)
+        fiber_flags |= DEVICE_SCHEDULER_DEEPSLEEP;
+    else
+        fiber_flags &= ~DEVICE_SCHEDULER_DEEPSLEEP;
+}
+
+/**
   * The timer callback, called from interrupt context once every SYSTEM_TICK_PERIOD_MS milliseconds.
   * This function checks to determine if any fibers blocked on the sleep queue need to be woken up
   * and made runnable.
