@@ -144,12 +144,7 @@ int CodalComponent::manageSleep( manageSleepReason reason, manageSleepData *data
           setSleep(false);
           break;
 
-        case manageSleepCountWakeUps:
-            if ( data == NULL)
-                return DEVICE_INVALID_PARAMETER;
-            break;
-
-        case manageSleepClearWakeUps:
+        default:
             break;
     }
 
@@ -167,6 +162,7 @@ void CodalComponent::manageAllSleep( manageSleepReason reason, manageSleepData *
 
     switch ( reason)
     {
+        case manageSleepPrepare:
         case manageSleepBegin:
         case manageSleepBeginWithWakeUps:
         case manageSleepCountWakeUps:

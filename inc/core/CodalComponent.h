@@ -186,6 +186,7 @@ namespace codal
 
         typedef enum manageSleepReason
         {
+            manageSleepPrepare,           //Prepare for sleep
             manageSleepBegin,             //Puts the component in sleep (low power) mode.
             manageSleepBeginWithWakeUps,  //and enable wake-up sources
             manageSleepEnd,               //Brings the component out of sleep (low power) mode.
