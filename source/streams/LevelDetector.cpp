@@ -28,11 +28,13 @@ DEALINGS IN THE SOFTWARE.
 #include "Timer.h"
 #include "LevelDetector.h"
 #include "ErrorNo.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
 LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id, bool connectImmediately) : upstream(source)
 {
+    DMESG("%s %d", "making level detector, connectImmediately?", connectImmediately);
     this->id = id;
     this->level = 0;
     this->sigma = 0;
@@ -54,7 +56,12 @@ LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThres
 int LevelDetector::pullRequest()
 {
     ManagedBuffer b = upstream.pull();
-    int16_t *data = (int16_t *) &b[0];
+
+    //if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
+    //    DMESG("8 bit format");
+        int8_t *data = (int8_t *) &b[0];
+    //}
+    //else (16 bit)
 
     int samples = b.length() / 2;
 
@@ -68,6 +75,8 @@ int LevelDetector::pullRequest()
             level = sigma / windowSize;
             sigma = 0;
             windowPosition = 0;
+
+            DMESG("%d", level);
 
             if ((!(status & LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
             {
@@ -97,8 +106,10 @@ int LevelDetector::pullRequest()
  */
 int LevelDetector::getValue()
 {
+    DMESG("%s, %d","LD get value", activated);
     if(!activated){
         // Register with our upstream component: on demand activated
+        DMESG("activating LD");
         upstream.connect(*this);
         activated = true;
     }

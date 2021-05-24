@@ -36,7 +36,7 @@ using namespace codal;
  *
  * @param source a DataSource to receive data from
  */
-StreamSplitter::StreamSplitter(DataSource &source, uint16_t id) : upstream(source)//, output(*this)
+StreamSplitter::StreamSplitter(DataSource &source, uint16_t id) : upstream(source)
 {
 
     this->id = id;
