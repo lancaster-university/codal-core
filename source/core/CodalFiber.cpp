@@ -1042,12 +1042,12 @@ int codal::fiber_scheduler_deepsleep_ready()
 {
     for ( Fiber *f = sleepQueue; f != NULL; f = f->qnext)
     {
-        if ( (f->flags & DEVICE_FIBER_FLAG_DEEPSLEEP_YIELD) == 0)
+        if ( (f->flags & DEVICE_FIBER_FLAG_DEEPSLEEP_SLEEP) == 0)
           return false;
     }
     for ( Fiber *f = waitQueue; f != NULL; f = f->qnext)
     {
-        if ( (f->flags & DEVICE_FIBER_FLAG_DEEPSLEEP_YIELD) == 0)
+        if ( (f->flags & DEVICE_FIBER_FLAG_DEEPSLEEP_WAIT) == 0)
           return false;
     }
     return true;
@@ -1059,9 +1059,10 @@ int codal::fiber_scheduler_deepsleep_ready()
   * If the current fiber is in a fork on block context
   * the forked fiber is flagged
   *
-  * @param yield 1 if ready, 0 otherwise.
+  * @param flags a combination of DEVICE_FIBER_FLAG_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_DEEPSLEEP_SLEEP
+  * or DEVICE_FIBER_FLAG_DEEPSLEEP_ANY or zero 
   */
-void codal::fiber_set_deepsleep_yield( int yield)
+void codal::fiber_set_deepsleep_yield( int flags)
 {
     // If the scheduler is not running, then simply perform a spin wait and exit.
     if (!fiber_scheduler_running())
@@ -1072,10 +1073,8 @@ void codal::fiber_set_deepsleep_yield( int yield)
     // If currentFiber is in fork on block context
     // f == forkedFiber, otherwise f == currentFiber 
 
-    if ( yield)
-        f->flags |= DEVICE_FIBER_FLAG_DEEPSLEEP_YIELD;
-    else
-        f->flags &= ~DEVICE_FIBER_FLAG_DEEPSLEEP_YIELD;
+    f->flags &= ~DEVICE_FIBER_FLAG_DEEPSLEEP_ANY;
+    f->flags |= flags & DEVICE_FIBER_FLAG_DEEPSLEEP_ANY;
 
     if ( f == forkedFiber)
     {
@@ -1090,11 +1089,12 @@ void codal::fiber_set_deepsleep_yield( int yield)
 /**
   * Determines if the current fiber is ready for deep sleep whenever idle
   *
-  * @return 1 if ready, 0 otherwise.
+  * @return a combination of DEVICE_FIBER_FLAG_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_DEEPSLEEP_SLEEP
+  * or DEVICE_FIBER_FLAG_DEEPSLEEP_ANY or zero
   */
 int codal::fiber_get_deepsleep_yield()
 {
-    return currentFiber->flags & DEVICE_FIBER_FLAG_DEEPSLEEP_YIELD ? 1 : 0;
+    return currentFiber->flags & DEVICE_FIBER_FLAG_DEEPSLEEP_ANY;
 }
 
 /**
