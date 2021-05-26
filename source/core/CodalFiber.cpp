@@ -261,29 +261,6 @@ int codal::fiber_scheduler_running()
 }
 
 /**
-  * Determines if deep sleep is pending.
-  *
-  * @return 1 if deep sleep is pending, 0 otherwise.
-  */
-int codal::fiber_scheduler_deepsleep()
-{
-    return fiber_flags & DEVICE_SCHEDULER_DEEPSLEEP ? 1 : 0;
-}
-
-/**
-  * Flag if deep sleep is pending.
-  *
-  * @param penfing 1 if deep sleep is pending, 0 otherwise.
-  */
-void codal::fiber_scheduler_set_deepsleep( int pending)
-{
-    if ( pending)
-        fiber_flags |= DEVICE_SCHEDULER_DEEPSLEEP;
-    else
-        fiber_flags &= ~DEVICE_SCHEDULER_DEEPSLEEP;
-}
-
-/**
   * The timer callback, called from interrupt context once every SYSTEM_TICK_PERIOD_MS milliseconds.
   * This function checks to determine if any fibers blocked on the sleep queue need to be woken up
   * and made runnable.
@@ -1031,6 +1008,93 @@ void codal::idle_task()
         idle();
         schedule();
     }
+}
+
+/**
+  * Determines if deep sleep is pending.
+  *
+  * @return 1 if deep sleep is pending, 0 otherwise.
+  */
+int codal::fiber_scheduler_get_deepsleep_pending()
+{
+    return fiber_flags & DEVICE_SCHEDULER_DEEPSLEEP ? 1 : 0;
+}
+
+/**
+  * Flag if deep sleep is pending.
+  *
+  * @param penfing 1 if deep sleep is pending, 0 otherwise.
+  */
+void codal::fiber_scheduler_set_deepsleep_pending( int pending)
+{
+    if ( pending)
+        fiber_flags |= DEVICE_SCHEDULER_DEEPSLEEP;
+    else
+        fiber_flags &= ~DEVICE_SCHEDULER_DEEPSLEEP;
+}
+
+/**
+  * Determines if all sleeping and waiting fibers are ready for deep sleep
+  *
+  * @return 1 if ready, 0 otherwise.
+  */
+int codal::fiber_scheduler_deepsleep_ready()
+{
+    for ( Fiber *f = sleepQueue; f != NULL; f = f->qnext)
+    {
+        if ( (f->flags & DEVICE_FIBER_FLAG_DEEPSLEEP_YIELD) == 0)
+          return false;
+    }
+    for ( Fiber *f = waitQueue; f != NULL; f = f->qnext)
+    {
+        if ( (f->flags & DEVICE_FIBER_FLAG_DEEPSLEEP_YIELD) == 0)
+          return false;
+    }
+    return true;
+}
+
+/**
+  * Flag the current fiber as ready for deep sleep whenever idle
+  *
+  * If the current fiber is in a fork on block context
+  * the forked fiber is flagged
+  *
+  * @param yield 1 if ready, 0 otherwise.
+  */
+void codal::fiber_set_deepsleep_yield( int yield)
+{
+    // If the scheduler is not running, then simply perform a spin wait and exit.
+    if (!fiber_scheduler_running())
+        return;
+
+    Fiber *f = handle_fob();
+    
+    // If currentFiber is in fork on block context
+    // f == forkedFiber, otherwise f == currentFiber 
+
+    if ( yield)
+        f->flags |= DEVICE_FIBER_FLAG_DEEPSLEEP_YIELD;
+    else
+        f->flags &= ~DEVICE_FIBER_FLAG_DEEPSLEEP_YIELD;
+
+    if ( f == forkedFiber)
+    {
+      // Add the forked fiber to runQueue,
+      // and enter the scheduler to return to the parent fiber
+      dequeue_fiber(f);
+      queue_fiber(f, &runQueue);
+      schedule();
+    }
+}
+
+/**
+  * Determines if the current fiber is ready for deep sleep whenever idle
+  *
+  * @return 1 if ready, 0 otherwise.
+  */
+int codal::fiber_get_deepsleep_yield()
+{
+    return currentFiber->flags & DEVICE_FIBER_FLAG_DEEPSLEEP_YIELD ? 1 : 0;
 }
 
 /**

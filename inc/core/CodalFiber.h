@@ -51,6 +51,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_FIBER_FLAG_PARENT            0x02
 #define DEVICE_FIBER_FLAG_CHILD             0x04
 #define DEVICE_FIBER_FLAG_DO_NOT_PAGE       0x08
+#define DEVICE_FIBER_FLAG_DEEPSLEEP_YIELD   0x10
 
 #define DEVICE_SCHEDULER_EVT_TICK           1
 #define DEVICE_SCHEDULER_EVT_IDLE           2
@@ -92,23 +93,9 @@ namespace codal
     /**
       * Determines if the fiber scheduler is operational.
       *
-      * @return 1 if the fber scheduler is running, 0 otherwise.
+      * @return 1 if the fiber scheduler is running, 0 otherwise.
       */
     int fiber_scheduler_running();
-
-    /**
-      * Determines if deep sleep is pending.
-      *
-      * @return 1 if deep sleep is pending, 0 otherwise.
-      */
-    int fiber_scheduler_deepsleep();
-
-    /**
-      * Flag if deep sleep is pending.
-      *
-      * @param penfing 1 if deep sleep is pending, 0 otherwise.
-      */
-    void fiber_scheduler_set_deepsleep( int pending);
 
     /**
      * Provides a list of all active fibers.
@@ -353,6 +340,44 @@ namespace codal
       * This function typically calls idle().
       */
     void idle_task();
+
+    /**
+      * Determines if deep sleep is pending.
+      *
+      * @return 1 if deep sleep is pending, 0 otherwise.
+      */
+    int fiber_scheduler_get_deepsleep_pending();
+
+    /**
+      * Flag if deep sleep is pending.
+      *
+      * @param pending 1 if deep sleep is pending, 0 otherwise.
+      */
+    void fiber_scheduler_set_deepsleep_pending( int pending);
+
+    /**
+      * Determines if all sleeping and waiting fibers are ready for deep sleep
+      *
+      * @return 1 if ready, 0 otherwise.
+      */
+    int fiber_scheduler_deepsleep_ready();
+
+    /**
+      * Determines if the current fiber is ready for deep sleep when next idle
+      *
+      * @return 1 if ready, 0 otherwise.
+      */
+    int fiber_get_deepsleep_yield();
+
+    /**
+      * Flag the current fiber as ready for deep sleep when next idle
+      *
+      * If the current fiber is in a fork on block context
+      * the forked fiber is flagged
+      *
+      * @param yield 1 if ready, 0 otherwise.
+      */
+    void fiber_set_deepsleep_yield( int yield);
 
     class FiberLock
     {

@@ -383,7 +383,7 @@ void Timer::trigger(bool isFallback)
                     // TODO: Handle rollover case above...
                     eventsFired++;
                 }
-                else if ( e->flags & CODAL_TIMER_EVENT_FLAGS_WAKEUP && fiber_scheduler_deepsleep() && e->timestamp < currentTimeUs + 100000)
+                else if ( e->flags & CODAL_TIMER_EVENT_FLAGS_WAKEUP && fiber_scheduler_get_deepsleep_pending() && e->timestamp < currentTimeUs + 100000)
                 {
     #if CONFIG_ENABLED(LIGHTWEIGHT_EVENTS)
                     Event evt(DEVICE_ID_NOTIFY, POWER_EVT_CANCEL_DEEPSLEEP, currentTime);
