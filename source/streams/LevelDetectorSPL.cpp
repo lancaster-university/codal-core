@@ -106,6 +106,8 @@ int LevelDetectorSPL::pullRequest()
         if(isfinite(conv)) level = conv;
         else level = minValue;
 
+        DMESG("%d", level);
+
         samples -= windowSize;
         if ((!(status & LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
         {

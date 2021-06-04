@@ -69,6 +69,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_ID_PULSE_IN            35
 #define DEVICE_ID_SPLITTER            36
 #define DEVICE_ID_AUDIO_PROCESSOR     37
+#define DEVICE_ID_TAP                 38
 
 #define DEVICE_ID_IO_P0               100                       // IDs 100-227 are reserved for I/O Pin IDs.
 

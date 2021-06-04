@@ -59,7 +59,7 @@ int LevelDetector::pullRequest()
 
     //if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
     //    DMESG("8 bit format");
-        int8_t *data = (int8_t *) &b[0];
+    int16_t *data = (int16_t *) &b[0];
     //}
     //else (16 bit)
 
@@ -76,7 +76,7 @@ int LevelDetector::pullRequest()
             sigma = 0;
             windowPosition = 0;
 
-            DMESG("%d", level);
+            //DMESG("%d", level);
 
             if ((!(status & LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
             {
@@ -106,7 +106,7 @@ int LevelDetector::pullRequest()
  */
 int LevelDetector::getValue()
 {
-    DMESG("%s, %d","LD get value", activated);
+    //DMESG("%s, %d","LD get value", activated);
     if(!activated){
         // Register with our upstream component: on demand activated
         DMESG("activating LD");
