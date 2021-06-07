@@ -274,7 +274,7 @@ void AnimatedDisplay::stopAnimation()
 void AnimatedDisplay::waitForFreeDisplay()
 {
     // If there's an ongoing animation, wait for our turn to display.
-    if (animationMode != ANIMATION_MODE_NONE && animationMode != ANIMATION_MODE_STOPPED)
+    while (animationMode != ANIMATION_MODE_NONE && animationMode != ANIMATION_MODE_STOPPED)
         fiber_wait_for_event(DEVICE_ID_NOTIFY, DISPLAY_EVT_FREE);
 }
 
