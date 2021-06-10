@@ -52,11 +52,6 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_FIBER_FLAG_CHILD             0x04
 #define DEVICE_FIBER_FLAG_DO_NOT_PAGE       0x08
 
-#define DEVICE_FIBER_FLAG_NO_DEEPSLEEP_WAIT     0x10
-#define DEVICE_FIBER_FLAG_NO_DEEPSLEEP_SLEEP    0x20
-
-#define DEVICE_FIBER_FLAG_NO_DEEPSLEEP_ALL  (DEVICE_FIBER_FLAG_NO_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_NO_DEEPSLEEP_SLEEP)
-
 #define DEVICE_SCHEDULER_EVT_TICK           1
 #define DEVICE_SCHEDULER_EVT_IDLE           2
 
@@ -359,32 +354,6 @@ namespace codal
       * @param pending 1 if deep sleep is pending, 0 otherwise.
       */
     void fiber_scheduler_set_deepsleep_pending( int pending);
-
-    /**
-      * Determines if all sleeping and waiting fibers are ready for deep sleep
-      *
-      * @return 1 if ready, 0 otherwise.
-      */
-    int fiber_scheduler_deepsleep_ready();
-
-    /**
-      * Determines if the current fiber is ready for deep sleep when next idle
-      *
-      * @return a combination of DEVICE_FIBER_FLAG_NO_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_NO_DEEPSLEEP_SLEEP
-      * or DEVICE_FIBER_FLAG_NO_DEEPSLEEP_ANY or zero 
-      */
-    int fiber_get_deepsleep_block();
-
-    /**
-      * Flag the current fiber as ready for deep sleep when next idle
-      *
-      * If the current fiber is in a fork on block context
-      * the forked fiber is flagged
-      *
-      * @param flags a combination of DEVICE_FIBER_FLAG_NO_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_NO_DEEPSLEEP_SLEEP
-      * or DEVICE_FIBER_FLAG_NO_DEEPSLEEP_ALL or zero 
-      */
-    void fiber_set_deepsleep_block( int flags);
 
     class FiberLock
     {
