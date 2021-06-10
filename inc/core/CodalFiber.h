@@ -51,21 +51,17 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_FIBER_FLAG_PARENT            0x02
 #define DEVICE_FIBER_FLAG_CHILD             0x04
 #define DEVICE_FIBER_FLAG_DO_NOT_PAGE       0x08
-#define DEVICE_FIBER_FLAG_DEEPSLEEP_WAIT    0x10
-#define DEVICE_FIBER_FLAG_DEEPSLEEP_SLEEP   0x20
 
-#define DEVICE_FIBER_FLAG_DEEPSLEEP_ANY  (DEVICE_FIBER_FLAG_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_DEEPSLEEP_SLEEP)
+#define DEVICE_FIBER_FLAG_NO_DEEPSLEEP_WAIT     0x10
+#define DEVICE_FIBER_FLAG_NO_DEEPSLEEP_SLEEP    0x20
+
+#define DEVICE_FIBER_FLAG_NO_DEEPSLEEP_ALL  (DEVICE_FIBER_FLAG_NO_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_NO_DEEPSLEEP_SLEEP)
 
 #define DEVICE_SCHEDULER_EVT_TICK           1
 #define DEVICE_SCHEDULER_EVT_IDLE           2
 
 #define DEVICE_GET_FIBER_LIST_AVAILABLE     1
 
-// When set to one, the default for every fiber
-// is to allow deep sleep when on sleep or wait queues
-#ifndef DEVICE_DEEPSLEEP_DEFAULT_ALLOW
-#define DEVICE_DEEPSLEEP_DEFAULT_ALLOW 1
-#endif
 
 namespace codal
 {
@@ -374,10 +370,10 @@ namespace codal
     /**
       * Determines if the current fiber is ready for deep sleep when next idle
       *
-      * @return a combination of DEVICE_FIBER_FLAG_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_DEEPSLEEP_SLEEP
-      * or DEVICE_FIBER_FLAG_DEEPSLEEP_ANY or zero 
+      * @return a combination of DEVICE_FIBER_FLAG_NO_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_NO_DEEPSLEEP_SLEEP
+      * or DEVICE_FIBER_FLAG_NO_DEEPSLEEP_ANY or zero 
       */
-    int fiber_get_deepsleep_yield();
+    int fiber_get_deepsleep_block();
 
     /**
       * Flag the current fiber as ready for deep sleep when next idle
@@ -385,10 +381,10 @@ namespace codal
       * If the current fiber is in a fork on block context
       * the forked fiber is flagged
       *
-      * @param flags a combination of DEVICE_FIBER_FLAG_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_DEEPSLEEP_SLEEP
-      * or DEVICE_FIBER_FLAG_DEEPSLEEP_ANY or zero 
+      * @param flags a combination of DEVICE_FIBER_FLAG_NO_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_NO_DEEPSLEEP_SLEEP
+      * or DEVICE_FIBER_FLAG_NO_DEEPSLEEP_ALL or zero 
       */
-    void fiber_set_deepsleep_yield( int flags);
+    void fiber_set_deepsleep_block( int flags);
 
     class FiberLock
     {

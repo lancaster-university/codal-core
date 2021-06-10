@@ -185,11 +185,7 @@ Fiber *getFiberContext()
     target_enable_irq();
 
     // Ensure this fiber is in suitable state for reuse.
-    #if CONFIG_ENABLED(DEVICE_DEEPSLEEP_DEFAULT_ALLOW)
-    f->flags = DEVICE_FIBER_FLAG_DEEPSLEEP_ANY;
-    #else
     f->flags = 0;
-    #endif
 
     #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
     f->user_data = 0;
@@ -1046,12 +1042,12 @@ int codal::fiber_scheduler_deepsleep_ready()
 {
     for ( Fiber *f = sleepQueue; f != NULL; f = f->qnext)
     {
-        if ( (f->flags & DEVICE_FIBER_FLAG_DEEPSLEEP_SLEEP) == 0)
+        if ( f->flags & DEVICE_FIBER_FLAG_NO_DEEPSLEEP_SLEEP)
           return false;
     }
     for ( Fiber *f = waitQueue; f != NULL; f = f->qnext)
     {
-        if ( (f->flags & DEVICE_FIBER_FLAG_DEEPSLEEP_WAIT) == 0)
+        if ( f->flags & DEVICE_FIBER_FLAG_NO_DEEPSLEEP_WAIT)
           return false;
     }
     return true;
@@ -1063,10 +1059,10 @@ int codal::fiber_scheduler_deepsleep_ready()
   * If the current fiber is in a fork on block context
   * the forked fiber is flagged
   *
-  * @param flags a combination of DEVICE_FIBER_FLAG_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_DEEPSLEEP_SLEEP
-  * or DEVICE_FIBER_FLAG_DEEPSLEEP_ANY or zero 
+  * @param flags a combination of DEVICE_FIBER_FLAG_NO_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_NO_DEEPSLEEP_SLEEP
+  * or DEVICE_FIBER_FLAG_NO_DEEPSLEEP_ALL or zero 
   */
-void codal::fiber_set_deepsleep_yield( int flags)
+void codal::fiber_set_deepsleep_block( int flags)
 {
     // If the scheduler is not running, then simply perform a spin wait and exit.
     if (!fiber_scheduler_running())
@@ -1077,8 +1073,8 @@ void codal::fiber_set_deepsleep_yield( int flags)
     // If currentFiber is in fork on block context
     // f == forkedFiber, otherwise f == currentFiber 
 
-    f->flags &= ~DEVICE_FIBER_FLAG_DEEPSLEEP_ANY;
-    f->flags |= flags & DEVICE_FIBER_FLAG_DEEPSLEEP_ANY;
+    f->flags &= ~DEVICE_FIBER_FLAG_NO_DEEPSLEEP_ALL;
+    f->flags |= flags & DEVICE_FIBER_FLAG_NO_DEEPSLEEP_ALL;
 
     if ( f == forkedFiber)
     {
@@ -1093,12 +1089,19 @@ void codal::fiber_set_deepsleep_yield( int flags)
 /**
   * Determines if the current fiber is ready for deep sleep whenever idle
   *
-  * @return a combination of DEVICE_FIBER_FLAG_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_DEEPSLEEP_SLEEP
-  * or DEVICE_FIBER_FLAG_DEEPSLEEP_ANY or zero
+  * @return a combination of DEVICE_FIBER_FLAG_NO_DEEPSLEEP_WAIT | DEVICE_FIBER_FLAG_NO_DEEPSLEEP_SLEEP
+  * or DEVICE_FIBER_FLAG_NO_DEEPSLEEP_ALL or zero
   */
-int codal::fiber_get_deepsleep_yield()
+int codal::fiber_get_deepsleep_block()
 {
-    return currentFiber->flags & DEVICE_FIBER_FLAG_DEEPSLEEP_ANY;
+    // If the scheduler is not running, then simply perform a spin wait and exit.
+    if (!fiber_scheduler_running())
+        return 0;
+
+    if ( currentFiber->flags & DEVICE_FIBER_FLAG_FOB)
+        return 0;
+
+    return currentFiber->flags & DEVICE_FIBER_FLAG_NO_DEEPSLEEP_ALL;
 }
 
 /**
