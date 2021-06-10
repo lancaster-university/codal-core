@@ -61,6 +61,12 @@ DEALINGS IN THE SOFTWARE.
 
 #define DEVICE_GET_FIBER_LIST_AVAILABLE     1
 
+// When set to one, the default for every fiber
+// is to allow deep sleep when on sleep or wait queues
+#ifndef DEVICE_DEEPSLEEP_DEFAULT_ALLOW
+#define DEVICE_DEEPSLEEP_DEFAULT_ALLOW 1
+#endif
+
 namespace codal
 {
     /**

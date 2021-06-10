@@ -185,7 +185,11 @@ Fiber *getFiberContext()
     target_enable_irq();
 
     // Ensure this fiber is in suitable state for reuse.
+    #if CONFIG_ENABLED(DEVICE_DEEPSLEEP_DEFAULT_ALLOW)
+    f->flags = DEVICE_FIBER_FLAG_DEEPSLEEP_ANY;
+    #else
     f->flags = 0;
+    #endif
 
     #if CONFIG_ENABLED(DEVICE_FIBER_USER_DATA)
     f->user_data = 0;
