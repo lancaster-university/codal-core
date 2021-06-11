@@ -59,9 +59,10 @@ int LevelDetector::pullRequest()
 
     //if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
     //    DMESG("8 bit format");
-    int16_t *data = (int16_t *) &b[0];
+    int8_t *data = (int8_t *) &b[0];
     //}
     //else (16 bit)
+    //int16_t *data = (int16_t *) &b[0];
 
     int samples = b.length() / 2;
 
@@ -73,10 +74,11 @@ int LevelDetector::pullRequest()
         if (windowPosition == windowSize)
         {
             level = sigma / windowSize;
+            //or
+            //if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED)
+            //level = level*256;
             sigma = 0;
             windowPosition = 0;
-
-            //DMESG("%d", level);
 
             if ((!(status & LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
             {
