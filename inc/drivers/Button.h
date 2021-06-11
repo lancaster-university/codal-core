@@ -137,6 +137,11 @@ namespace codal
          */
         virtual int buttonActive();
 
+        /**
+          * Puts the component in (or out of) sleep (low power) mode.
+          */
+        virtual int setSleep(bool doSleep) override;
+
     };
 }
 

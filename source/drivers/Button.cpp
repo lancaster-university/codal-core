@@ -26,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Button.h"
 #include "Timer.h"
 #include "EventModel.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -176,4 +177,31 @@ int Button::isPressed()
   */
 Button::~Button()
 {
+}
+
+/**
+ * Puts the component in (or out of) sleep (low power) mode.
+ */
+int Button::setSleep(bool doSleep)
+{
+    if (doSleep)
+    {
+        status &= ~DEVICE_BUTTON_STATE;
+        clickCount = 0;
+        sigma = 0;
+    }
+    else
+    {
+        if ( getWakeOnActive() && buttonActive())
+        {
+            DMESG("button wake");
+            sigma = DEVICE_BUTTON_SIGMA_THRESH_LO + 1;
+            status |= DEVICE_BUTTON_STATE;
+            Event evt(id,DEVICE_BUTTON_EVT_DOWN);
+            clickCount = 1;
+            downStartTime = system_timer_current_time();
+        }
+    }
+   
+    return DEVICE_OK;
 }
