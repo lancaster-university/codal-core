@@ -106,6 +106,11 @@ int LevelDetectorSPL::pullRequest()
         if(isfinite(conv)) level = conv;
         else level = minValue;
 
+        // Scale the values down if 8 bit is used - just done by eye at the moment
+        if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
+            level = level-30;
+        }
+
         samples -= windowSize;
         if ((!(status & LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
         {

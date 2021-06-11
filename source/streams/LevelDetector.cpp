@@ -34,7 +34,6 @@ using namespace codal;
 
 LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id, bool connectImmediately) : upstream(source)
 {
-    DMESG("%s %d", "making level detector, connectImmediately?", connectImmediately);
     this->id = id;
     this->level = 0;
     this->sigma = 0;
@@ -57,17 +56,18 @@ int LevelDetector::pullRequest()
 {
     ManagedBuffer b = upstream.pull();
 
-    //if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
-    //    DMESG("8 bit format");
-        int8_t *data = (int8_t *) &b[0];
-    //}
-    //else (16 bit)
+    int16_t *data = (int16_t *) &b[0];
 
     int samples = b.length() / 2;
 
     for (int i=0; i < samples; i++)
     {
-        sigma += abs(*data);
+        if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
+            sigma += abs((int8_t) *data);
+        }
+        else
+            sigma += abs(*data);
+
         windowPosition++;
 
         if (windowPosition == windowSize)
@@ -76,7 +76,10 @@ int LevelDetector::pullRequest()
             sigma = 0;
             windowPosition = 0;
 
-            DMESG("%d", level);
+            // If 8 bit - then multiply by 8 to upscale result. High 8 bit ~20, High 16 bit ~150 so roughly 8 times higher
+            if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
+                level = level*8;
+            }
 
             if ((!(status & LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
             {
