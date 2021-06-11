@@ -57,6 +57,11 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
 int LevelDetectorSPL::pullRequest()
 {
     ManagedBuffer b = upstream.pull();
+    //if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
+    //    DMESG("8 bit format");
+    //int8_t *data = (int8_t *) &b[0];
+    //}
+    //else (16 bit)
     int16_t *data = (int16_t *) &b[0];
 
     int samples = b.length() / 2;
@@ -105,8 +110,6 @@ int LevelDetectorSPL::pullRequest()
 
         if(isfinite(conv)) level = conv;
         else level = minValue;
-
-        DMESG("%d", level);
 
         samples -= windowSize;
         if ((!(status & LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
