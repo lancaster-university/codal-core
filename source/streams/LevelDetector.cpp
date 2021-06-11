@@ -34,7 +34,6 @@ using namespace codal;
 
 LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id, bool connectImmediately) : upstream(source)
 {
-    DMESG("%s %d", "making level detector, connectImmediately?", connectImmediately);
     this->id = id;
     this->level = 0;
     this->sigma = 0;
@@ -111,7 +110,6 @@ int LevelDetector::pullRequest()
  */
 int LevelDetector::getValue()
 {
-    DMESG("%s, %d","LD get value", activated);
     if(!activated){
         // Register with our upstream component: on demand activated
         DMESG("activating LD");
