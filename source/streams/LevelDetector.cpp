@@ -73,6 +73,9 @@ int LevelDetector::pullRequest()
         if (windowPosition == windowSize)
         {
             level = sigma / windowSize;
+            //or
+            //if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED)
+            //level = level*256;
             sigma = 0;
             windowPosition = 0;
 
@@ -109,7 +112,7 @@ int LevelDetector::pullRequest()
  */
 int LevelDetector::getValue()
 {
-    DMESG("%s, %d","LD get value", activated);
+    //DMESG("%s, %d","LD get value", activated);
     if(!activated){
         // Register with our upstream component: on demand activated
         DMESG("activating LD");
