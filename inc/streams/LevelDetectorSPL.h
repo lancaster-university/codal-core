@@ -55,6 +55,7 @@ namespace codal{
         float           gain;
         float           minValue;
         bool            activated;          // Has this component been connected yet.
+        bool            enabled;          // Has this component been connected yet.
         bool            preProcess;         // If true, preprocess incoming data on pull request
 
         /**
@@ -83,6 +84,11 @@ namespace codal{
          * @return The current value of the sensor.
          */
         float getValue();
+
+        /**
+         * Disable component
+         */
+        void disable();
 
         /**
          * Set threshold to the given value. Events will be generated when these thresholds are crossed.

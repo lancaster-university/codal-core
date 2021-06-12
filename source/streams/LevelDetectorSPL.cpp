@@ -35,6 +35,7 @@ using namespace codal;
 
 LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id, bool preProcess, bool connectImmediately) : upstream(source)
 {
+    DMESGF("SPL created, connect? %d", connectImmediately);
     this->id = id;
     this->level = 0;
     this->windowSize = LEVEL_DETECTOR_SPL_DEFAULT_WINDOW_SIZE;
@@ -43,12 +44,14 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     this->gain = gain;
     this->status |= LEVEL_DETECTOR_SPL_INITIALISED;
     this->preProcess = preProcess;
+    enabled = true;
     if(connectImmediately){
         upstream.connect(*this);
         this->activated = true;
     }
-    else
+    else{
     	this->activated = false;
+    }
 }
 
 /**
@@ -56,6 +59,11 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
  */
 int LevelDetectorSPL::pullRequest()
 {
+    DMESGF("%d", enabled);
+    if(!enabled){
+        return DEVICE_OK;
+    }
+
     ManagedBuffer b = upstream.pull();
 
     int16_t *data = (int16_t *) &b[0];
@@ -111,6 +119,7 @@ int LevelDetectorSPL::pullRequest()
         if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
             level = level-30;
         }
+        DMESGF("%d", (int) level);
 
         samples -= windowSize;
         if ((!(status & LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
@@ -144,6 +153,16 @@ float LevelDetectorSPL::getValue()
         activated = true;
     }
     return level;
+}
+
+/*
+ * Disable / turn off this level detector
+ *
+ */
+void LevelDetectorSPL::disable(){
+    DMESGF("DISABLE");
+    enabled = false;
+
 }
 
 
