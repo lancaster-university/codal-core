@@ -124,23 +124,23 @@ void CodalComponent::removeComponent()
  */
 void CodalComponent::setAllSleep(bool doSleep)
 {
-    manageAllSleep( doSleep ? manageSleepBegin : manageSleepEnd, NULL);
+    deepSleepAll( doSleep ? deepSleepCallbackBegin : deepSleepCallbackEnd, NULL);
 }
 
 /**
   * Perform functions related to deep sleep.
   */
-int CodalComponent::manageSleep( manageSleepReason reason, manageSleepData *data)
+int CodalComponent::deepSleepCallback( deepSleepCallbackReason reason, deepSleepCallbackData *data)
 { 
     switch ( reason)
     {
-        case manageSleepBegin:
-        case manageSleepBeginWithWakeUps:
+        case deepSleepCallbackBegin:
+        case deepSleepCallbackBeginWithWakeUps:
           setSleep(true);
           break;
 
-        case manageSleepEnd:
-        case manageSleepEndWithWakeUps:
+        case deepSleepCallbackEnd:
+        case deepSleepCallbackEndWithWakeUps:
           setSleep(false);
           break;
 
@@ -154,7 +154,7 @@ int CodalComponent::manageSleep( manageSleepReason reason, manageSleepData *data
 /**
   * Perform functions related to deep sleep.
   */
-void CodalComponent::manageAllSleep( manageSleepReason reason, manageSleepData *data)
+void CodalComponent::deepSleepAll( deepSleepCallbackReason reason, deepSleepCallbackData *data)
 {
     // usually, dependencies of component X are added before X itself,
     // so iterate backwards (so from high-level components to low-level)
@@ -162,24 +162,24 @@ void CodalComponent::manageAllSleep( manageSleepReason reason, manageSleepData *
 
     switch ( reason)
     {
-        case manageSleepPrepare:
-        case manageSleepBegin:
-        case manageSleepBeginWithWakeUps:
-        case manageSleepCountWakeUps:
+        case deepSleepCallbackPrepare:
+        case deepSleepCallbackBegin:
+        case deepSleepCallbackBeginWithWakeUps:
+        case deepSleepCallbackCountWakeUps:
             for (unsigned i = 0; i < DEVICE_COMPONENT_COUNT; i++)
             {
                 if (components[i])
-                    components[i]->manageSleep( reason, data);
+                    components[i]->deepSleepCallback( reason, data);
             }
             break;
 
-        case manageSleepEnd:
-        case manageSleepEndWithWakeUps:
-        case manageSleepClearWakeUps:
+        case deepSleepCallbackEnd:
+        case deepSleepCallbackEndWithWakeUps:
+        case deepSleepCallbackClearWakeUps:
             for (int i = DEVICE_COMPONENT_COUNT - 1; i >= 0; i--)
             {
                 if (components[i])
-                    components[i]->manageSleep( reason, data);
+                    components[i]->deepSleepCallback( reason, data);
             }
             break;
     }

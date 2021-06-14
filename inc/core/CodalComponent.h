@@ -184,35 +184,35 @@ namespace codal
          */
         static void setAllSleep(bool doSleep);
 
-        typedef enum manageSleepReason
+        typedef enum deepSleepCallbackReason
         {
-            manageSleepPrepare,           //Prepare for sleep
-            manageSleepBegin,             //Puts the component in sleep (low power) mode.
-            manageSleepBeginWithWakeUps,  //and enable wake-up sources
-            manageSleepEnd,               //Brings the component out of sleep (low power) mode.
-            manageSleepEndWithWakeUps,    //and disable wake-up sources
-            manageSleepCountWakeUps,      //Count deep sleep wake-up sources.
-            manageSleepClearWakeUps       //Clear deep sleep wake up sources
-        } manageSleepReason;
+            deepSleepCallbackPrepare,           //Prepare for sleep
+            deepSleepCallbackBegin,             //Puts the component in sleep (low power) mode.
+            deepSleepCallbackBeginWithWakeUps,  //and enable wake-up sources
+            deepSleepCallbackEnd,               //Brings the component out of sleep (low power) mode.
+            deepSleepCallbackEndWithWakeUps,    //and disable wake-up sources
+            deepSleepCallbackCountWakeUps,      //Count deep sleep wake-up sources.
+            deepSleepCallbackClearWakeUps       //Clear deep sleep wake up sources
+        } deepSleepCallbackReason;
 
-        typedef struct manageSleepData
+        typedef struct deepSleepCallbackData
         {
             int count;
 
             void init() { count = 0; }
 
-            manageSleepData() { init(); }
-        } manageSleepData;
+            deepSleepCallbackData() { init(); }
+        } deepSleepCallbackData;
 
         /**
           * Perform functions related to deep sleep.
           */
-        virtual int manageSleep( manageSleepReason reason, manageSleepData *data);
+        virtual int deepSleepCallback( deepSleepCallbackReason reason, deepSleepCallbackData *data);
 
         /**
           * Perform functions related to deep sleep.
           */
-        static void manageAllSleep( manageSleepReason reason, manageSleepData *data);
+        static void deepSleepAll( deepSleepCallbackReason reason, deepSleepCallbackData *data);
 
         /**
           * If you have added your component to the idle or system tick component arrays,
