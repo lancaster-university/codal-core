@@ -423,12 +423,14 @@ TimerEvent *Timer::deepSleepWakeUpEvent()
 }
 
 /**
- * Called from power manager before sleep.
- * @param pointer to a variable to receive the current timer counter
- *
- * @return the current time since power on in microseconds
- */
-CODAL_TIMESTAMP Timer::deepSleepBegin( CODAL_TIMESTAMP *counter)
+  * Determine the current time and the corresponding timer counter,
+  * to enable the caller to take over tracking time.
+  *
+  * @param counter reference to a variable to receive the current timer counter
+  *
+  * @return the current time since power on in microseconds
+  */
+CODAL_TIMESTAMP Timer::deepSleepBegin( CODAL_TIMESTAMP &counter)
 {
     // Need to disable all IRQs - for example if SPI IRQ is triggered during
     // sync(), it might call into getTimeUs(), which would call sync()
@@ -460,15 +462,28 @@ CODAL_TIMESTAMP Timer::deepSleepBegin( CODAL_TIMESTAMP *counter)
     timer.disableIRQ();
     target_enable_irq();
 
-    *counter = val;
+    counter = val;
     return currentTimeUs;
 }
 
 /**
- * Called from power manager after sleep.
- * @param counter the current timer counter
- * @param micros time elapsed since deepSleepBegin
- */
+  * After taking over time tracking with system_timer_deepsleep_begin,
+  * hand back control by supplying a new timer counter value with
+  * corresponding elapsed time since taking over tracking.
+  *
+  * The counter and elapsed time may be zero if the time has been maintained
+  * meanwhile by calling system_timer_current_time_us().
+  * 
+  * Event timestamps are are shifted towards the present.
+  * "after" and "every" events that would have fired during deep sleep
+  * will fire once as if firing late, then "every" events will
+  * resume the same relative timings.
+  *
+  * @param counter the current timer counter.
+  * @param micros time elapsed since system_timer_deepsleep_begin
+  *
+  * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
+  */
 void Timer::deepSleepEnd( CODAL_TIMESTAMP counter, CODAL_TIMESTAMP micros)
 {
     // On entry, the timer IRQ is disabled and must not be enabled
@@ -537,17 +552,17 @@ void Timer::deepSleepEnd( CODAL_TIMESTAMP counter, CODAL_TIMESTAMP micros)
 
 /**
  * Determine the time of the next wake-up event.
- * @param timestamp Pointer to CODAL_TIMESTAMP to receive the time.
+ * @param timestamp reference to a variable to receive the time.
  * @return true if there is an event.
  */
-bool Timer::deepSleepWakeUpTime( CODAL_TIMESTAMP *timestamp)
+bool Timer::deepSleepWakeUpTime( CODAL_TIMESTAMP &timestamp)
 {
     TimerEvent *wakeUpEvent = deepSleepWakeUpEvent();
 
     if ( wakeUpEvent == NULL)
         return false;
 
-    *timestamp = wakeUpEvent->timestamp;
+    timestamp = wakeUpEvent->timestamp;
     return true;
 }
 
@@ -764,15 +779,15 @@ int codal::system_timer_wait_ms(uint32_t period)
 
 /**
   * Called from power manager before deep sleep.
-  * @param counter pointer to a variable to receive the current timer counter
+  * @param counter reference to a variable to receive the current timer counter
   *
   * @return the current time since power on in microseconds
   */
-CODAL_TIMESTAMP codal::system_timer_deepsleep_begin( CODAL_TIMESTAMP *counter)
+CODAL_TIMESTAMP codal::system_timer_deepsleep_begin( CODAL_TIMESTAMP &counter)
 {
     if(system_timer == NULL)
     {
-        *counter = 0;
+        counter = 0;
         return 0;
     }
     return system_timer->deepSleepBegin( counter);
@@ -796,10 +811,10 @@ int codal::system_timer_deepsleep_end( CODAL_TIMESTAMP counter, CODAL_TIMESTAMP 
 
 /**
  * Determine the time of the next wake up event.
- * @param timestamp Pointer to CODAL_TIMESTAMP to receive the time.
+ * @param timestamp reference to a variable to receive the time.
  * @return true if there is an event.
  */
-bool codal::system_timer_deepsleep_wakeup_time( CODAL_TIMESTAMP *timestamp)
+bool codal::system_timer_deepsleep_wakeup_time( CODAL_TIMESTAMP &timestamp)
 {
     if(system_timer == NULL)
         return false;

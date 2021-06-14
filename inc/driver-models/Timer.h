@@ -196,11 +196,11 @@ namespace codal
 
         /**
          * Called from power manager before sleep.
-         * @param counter pointer to a variable to receive the current timer counter
+         * @param counter reference to a variable to receive the current timer counter
          *
          * @return the current time since power on in microseconds
          */
-        CODAL_TIMESTAMP deepSleepBegin( CODAL_TIMESTAMP *counter);
+        CODAL_TIMESTAMP deepSleepBegin( CODAL_TIMESTAMP &counter);
 
         /**
          * Called from power manager after sleep.
@@ -211,10 +211,10 @@ namespace codal
 
         /**
          * Determine the time of the next wake up event.
-         * @param timestamp Pointer to CODAL_TIMESTAMP to receive the time.
+         * @param timestamp reference to a variable to receive the time.
          * @return true if there is an event.
          */
-        bool deepSleepWakeUpTime( CODAL_TIMESTAMP *timestamp);
+        bool deepSleepWakeUpTime( CODAL_TIMESTAMP &timestamp);
 
         /**
           * Enables interrupts for this timer instance.
@@ -365,28 +365,41 @@ namespace codal
     int system_timer_wait_ms(uint32_t period);
 
     /**
-     * Called from power manager before deep sleep.
-     * @param counter pointer to a variable to receive the current timer counter
+     * Determine the current time and the corresponding timer counter,
+     * to enable the caller to take over tracking time.
+     *
+     * @param counter reference to a variable to receive the current timer counter
      *
      * @return the current time since power on in microseconds
      */
-    CODAL_TIMESTAMP system_timer_deepsleep_begin( CODAL_TIMESTAMP *counter);
+    CODAL_TIMESTAMP system_timer_deepsleep_begin( CODAL_TIMESTAMP &counter);
 
     /**
-     * Called from power manager after deep sleep.
-     * @param counter the current timer counter
-     * @param micros time elapsed since system_timer_deepsleep_begin
-     *
-     * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
-     */
+      * After taking over time tracking with system_timer_deepsleep_begin,
+      * hand back control by supplying a new timer counter value with
+      * corresponding elapsed time since taking over tracking.
+      *
+      * The counter and elapsed time may be zero if the time has been maintained
+      * meanwhile by calling system_timer_current_time_us().
+      * 
+      * Event timestamps are are shifted towards the present.
+      * "after" and "every" events that would have fired during deep sleep
+      * will fire once as if firing late, then "every" events will
+      * resume the same relative timings.
+      *
+      * @param counter the current timer counter.
+      * @param micros time elapsed since system_timer_deepsleep_begin
+      *
+      * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
+      */
     int system_timer_deepsleep_end( CODAL_TIMESTAMP counter, CODAL_TIMESTAMP micros);
 
     /**
      * Determine the time of the next wake-up event.
-     * @param timestamp Pointer to CODAL_TIMESTAMP to receive the time.
+     * @param timestamp reference to a variable to receive the time.
      * @return true if there is an event.
      */
-    bool system_timer_deepsleep_wakeup_time( CODAL_TIMESTAMP *timestamp);
+    bool system_timer_deepsleep_wakeup_time( CODAL_TIMESTAMP &timestamp);
 
     extern Timer* system_timer;
 }
