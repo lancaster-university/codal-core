@@ -187,19 +187,24 @@ int Button::setSleep(bool doSleep)
     if (doSleep)
     {
         status &= ~DEVICE_BUTTON_STATE;
+        status &= ~DEVICE_BUTTON_STATE_HOLD_TRIGGERED;
         clickCount = 0;
         sigma = 0;
     }
     else
     {
-        if ( getWakeOnActive() && buttonActive())
+        if ( getWakeOnActive())
         {
-            DMESG("button wake");
-            sigma = DEVICE_BUTTON_SIGMA_THRESH_LO + 1;
-            status |= DEVICE_BUTTON_STATE;
-            Event evt(id,DEVICE_BUTTON_EVT_DOWN);
-            clickCount = 1;
-            downStartTime = system_timer_current_time();
+            //TODO: After a long sleep (>15mins), buttonActive() is false on first wake-up 
+            //DMESG("Button id %d active %d", (int)id, (int)buttonActive());
+            if ( buttonActive())
+            {
+                sigma = DEVICE_BUTTON_SIGMA_THRESH_LO + 1;
+                status |= DEVICE_BUTTON_STATE;
+                Event evt(id,DEVICE_BUTTON_EVT_DOWN);
+                clickCount = 1;
+                downStartTime = system_timer_current_time();
+            }
         }
     }
    
