@@ -120,9 +120,9 @@ namespace codal
           *
           * @param wake The action of the button - either 1 to trigger wake up or 0 for no
           */
-        int getWakeOnActive()
+        int isWakeOnActive()
         {
-            return _pin.getWakeOnActive();
+            return _pin.isWakeOnActive();
         }
 
         /**

@@ -526,7 +526,7 @@ namespace codal
           *
           * @param wake The action of the pin - either 1 to trigger wake up or 0 for no
           */
-        int getWakeOnActive()
+        int isWakeOnActive()
         {
             return (status & IO_STATUS_WAKE_ON_ACTIVE) ? 1 : 0;
         }
