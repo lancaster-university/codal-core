@@ -67,7 +67,7 @@ void Timer::triggerIn(CODAL_TIMESTAMP t)
     if (t < CODAL_TIMER_MINIMUM_PERIOD) t = CODAL_TIMER_MINIMUM_PERIOD;
     // Just in case, disable all IRQs
     target_disable_irq();
-    timer.setCompare(this->ccEventChannel, timer.captureCounter() + t);
+    timer.setCompare(this->ccEventChannel, timer.captureCounterPreservingIRQ() + t);
     target_enable_irq();
 }
 
@@ -117,7 +117,8 @@ Timer::Timer(LowLevelTimer& t, uint8_t ccPeriodChannel, uint8_t ccEventChannel) 
     timer.enable();
 
     delta = 0;
-    sigma = timer.captureCounter();
+    sigma = timer.captureCounterPreservingIRQ();
+    timer.enableIRQ();
 
     system_timer_calibrate_cycles();
 }
@@ -291,7 +292,7 @@ void Timer::sync()
     // sync(), it might call into getTimeUs(), which would call sync()
     target_disable_irq();
 
-    uint32_t val = timer.captureCounter();
+    uint32_t val = timer.captureCounterPreservingIRQ();
     uint32_t elapsed = 0;
 
 #if CONFIG_ENABLED(CODAL_TIMER_32BIT)
@@ -344,7 +345,7 @@ void Timer::recomputeNextTimerEvent()
 void Timer::trigger(bool isFallback)
 {
     if (isFallback)
-        timer.setCompare(ccPeriodChannel, timer.captureCounter() + 10000000);
+        timer.setCompare(ccPeriodChannel, timer.captureCounterPreservingIRQ() + 10000000);
 
     int eventsFired;
 
@@ -433,7 +434,7 @@ CODAL_TIMESTAMP Timer::deepSleepBegin( CODAL_TIMESTAMP *counter)
     // sync(), it might call into getTimeUs(), which would call sync()
     target_disable_irq();
 
-    uint32_t val = timer.captureCounter();
+    uint32_t val = timer.captureCounterPreservingIRQ();
     uint32_t elapsed = 0;
 
 #if CONFIG_ENABLED(CODAL_TIMER_32BIT)
@@ -470,6 +471,9 @@ CODAL_TIMESTAMP Timer::deepSleepBegin( CODAL_TIMESTAMP *counter)
  */
 void Timer::deepSleepEnd( CODAL_TIMESTAMP counter, CODAL_TIMESTAMP micros)
 {
+    // On entry, the timer IRQ is disabled and must not be enabled
+    target_disable_irq();
+
     if ( micros > 0)
     {
         currentTimeUs += micros;
@@ -493,8 +497,6 @@ void Timer::deepSleepEnd( CODAL_TIMESTAMP counter, CODAL_TIMESTAMP micros)
     }
 
     sync();
-
-    timer.setCompare(ccPeriodChannel, timer.captureCounter() + 10000000);
 
     // Bring any past events to the present and find the next event
     // All events that would have fired during deep sleep will fire once, but obviously late.
@@ -523,8 +525,14 @@ void Timer::deepSleepEnd( CODAL_TIMESTAMP counter, CODAL_TIMESTAMP micros)
         }
     }
 
+    uint32_t counterNow = timer.captureCounterPreservingIRQ();
+
+    timer.setCompare(ccPeriodChannel, counterNow + 10000000);
+
     if (nextTimerEvent)
-        triggerIn( CODAL_TIMER_MINIMUM_PERIOD);
+        timer.setCompare( ccEventChannel, counterNow + CODAL_TIMER_MINIMUM_PERIOD);
+
+    target_enable_irq();
 }
 
 /**
