@@ -196,7 +196,7 @@ int Button::setSleep(bool doSleep)
         if ( getWakeOnActive())
         {
             //TODO: After a long sleep (>15mins), buttonActive() is false on first wake-up 
-            //DMESG("Button id %d active %d", (int)id, (int)buttonActive());
+            //DMESG("%u:Button id %d active %d", (int) system_timer_get_current_time(), (int)id, (int)buttonActive());
             if ( buttonActive())
             {
                 sigma = DEVICE_BUTTON_SIGMA_THRESH_LO + 1;

@@ -119,11 +119,6 @@ class LowLevelTimer : public CodalComponent
     virtual int reset() = 0;
 
     /**
-     * Resets the counter of this timer, preserving the IRQ state.
-     **/
-    virtual int resetPreservingIRQ() = 0;
-
-    /**
      * Sets the mode of the timer
      *
      * @param t the timer mode to use. Underlying hardware should be configured appropriately.
@@ -159,11 +154,6 @@ class LowLevelTimer : public CodalComponent
      * Returns the counter value of the underlying hardware.
      **/
     virtual uint32_t captureCounter() = 0;
-
-    /**
-     * Returns the counter value of the underlying hardware, preserving the IRQ state.
-     **/
-    virtual uint32_t captureCounterPreservingIRQ() = 0;
 
     /**
      * Sets the frequency of the timer based on a speed given in Khz.
