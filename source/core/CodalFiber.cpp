@@ -852,6 +852,16 @@ int codal::scheduler_runqueue_empty()
 }
 
 /**
+  * Determines if any fibers are waiting for events.
+  *
+  * @return 1 if there are no fibers currently waiting for events; otherwise 0
+  */
+int codal::scheduler_waitqueue_empty()
+{
+    return (waitQueue == NULL);
+}
+
+/**
   * Calls the Fiber scheduler.
   * The calling Fiber will likely be blocked, and control given to another waiting fiber.
   * Call this function to yield control of the processor when you have nothing more to do.
@@ -982,7 +992,7 @@ void codal::idle()
         // because we enforce MESSAGE_BUS_LISTENER_IMMEDIATE for listeners placed
         // on the scheduler.
         fiber_flags &= ~DEVICE_SCHEDULER_IDLE;
-        target_wait_for_event();
+        target_scheduler_idle();
     }
 }
 
@@ -998,6 +1008,29 @@ void codal::idle_task()
         idle();
         schedule();
     }
+}
+
+/**
+  * Determines if deep sleep is pending.
+  *
+  * @return 1 if deep sleep is pending, 0 otherwise.
+  */
+int codal::fiber_scheduler_get_deepsleep_pending()
+{
+    return fiber_flags & DEVICE_SCHEDULER_DEEPSLEEP ? 1 : 0;
+}
+
+/**
+  * Flag if deep sleep is pending.
+  *
+  * @param penfing 1 if deep sleep is pending, 0 otherwise.
+  */
+void codal::fiber_scheduler_set_deepsleep_pending( int pending)
+{
+    if ( pending)
+        fiber_flags |= DEVICE_SCHEDULER_DEEPSLEEP;
+    else
+        fiber_flags &= ~DEVICE_SCHEDULER_DEEPSLEEP;
 }
 
 /**

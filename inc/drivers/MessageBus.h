@@ -142,8 +142,6 @@ namespace codal
           */
         virtual int remove(Listener *newListener);
 
-
-
         private:
 
         Listener            *listeners;           // Chain of active listeners.

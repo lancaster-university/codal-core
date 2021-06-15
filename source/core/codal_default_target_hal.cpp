@@ -33,6 +33,12 @@ __attribute__((weak)) void target_panic(int statusCode)
     }
 }
 
+__attribute__((weak)) void target_scheduler_idle()
+{
+    // if not implemented, default to WFI
+    target_wait_for_event();
+}
+
 __attribute__((weak)) void target_deepsleep()
 {
     // if not implemented, default to WFI

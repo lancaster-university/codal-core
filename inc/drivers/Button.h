@@ -106,6 +106,26 @@ namespace codal
         void periodicCallback();
 
         /**
+          * Sets whether the button should trigger power manager wake-up.
+          *
+          * @param wake The action of the button - either 1 to trigger wake-up or 0 for no wake-up
+          */
+        void wakeOnActive(int wake)
+        {
+            _pin.wakeOnActive( wake);
+        }
+
+        /**
+          * Deternine if the button should trigger power manager wake-up.
+          *
+          * @param wake The action of the button - either 1 to trigger wake up or 0 for no
+          */
+        int isWakeOnActive()
+        {
+            return _pin.isWakeOnActive();
+        }
+
+        /**
           * Destructor for Button, where we deregister this instance from the array of fiber components.
           */
         ~Button();
@@ -116,6 +136,11 @@ namespace codal
          * Internal method, use before debouncing.
          */
         virtual int buttonActive();
+
+        /**
+          * Puts the component in (or out of) sleep (low power) mode.
+          */
+        virtual int setSleep(bool doSleep) override;
 
     };
 }

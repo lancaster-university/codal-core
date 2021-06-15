@@ -184,6 +184,36 @@ namespace codal
          */
         static void setAllSleep(bool doSleep);
 
+        typedef enum deepSleepCallbackReason
+        {
+            deepSleepCallbackPrepare,           //Prepare for sleep
+            deepSleepCallbackBegin,             //Puts the component in sleep (low power) mode.
+            deepSleepCallbackBeginWithWakeUps,  //and enable wake-up sources
+            deepSleepCallbackEnd,               //Brings the component out of sleep (low power) mode.
+            deepSleepCallbackEndWithWakeUps,    //and disable wake-up sources
+            deepSleepCallbackCountWakeUps,      //Count deep sleep wake-up sources.
+            deepSleepCallbackClearWakeUps       //Clear deep sleep wake up sources
+        } deepSleepCallbackReason;
+
+        typedef struct deepSleepCallbackData
+        {
+            int count;
+
+            void init() { count = 0; }
+
+            deepSleepCallbackData() { init(); }
+        } deepSleepCallbackData;
+
+        /**
+          * Perform functions related to deep sleep.
+          */
+        virtual int deepSleepCallback( deepSleepCallbackReason reason, deepSleepCallbackData *data);
+
+        /**
+          * Perform functions related to deep sleep.
+          */
+        static void deepSleepAll( deepSleepCallbackReason reason, deepSleepCallbackData *data);
+
         /**
           * If you have added your component to the idle or system tick component arrays,
           * you must remember to remove your component from them if your component is destructed.
