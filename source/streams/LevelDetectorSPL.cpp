@@ -30,6 +30,8 @@ DEALINGS IN THE SOFTWARE.
 #include "LevelDetectorSPL.h"
 #include "ErrorNo.h"
 #include "CodalDmesg.h"
+#include "StreamNormalizer.h"
+#include <math.h>
 
 using namespace codal;
 
@@ -59,50 +61,69 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
  */
 int LevelDetectorSPL::pullRequest()
 {
-    DMESGF("%d", enabled);
-    if(!enabled){
-        return DEVICE_OK;
-    }
-
     ManagedBuffer b = upstream.pull();
 
-    int16_t *data = (int16_t *) &b[0];
+    uint8_t *data = &b[0];
+    
+    int format = upstream.getFormat();
+    int skip = 1;
+    int multiplier = 40;
+    windowSize = 256;
 
-    int samples = b.length() / 2;
+    if (format == DATASTREAM_FORMAT_16BIT_SIGNED){
+        skip = 2;
+        multiplier = 0;
+        windowSize = 128;
+    }
+    if (format == DATASTREAM_FORMAT_32BIT_SIGNED){
+        skip = 4;
+        windowSize = 64;
+        //multiplier = 0.4?
+    }
 
+    int samples = b.length() / skip;
+
+    DMESGF("--------------------------");
     while(samples){
 
-        //ensure we use at least windowSize number of samples
-        int16_t *end, *ptr;
+        //ensure we use at least windowSize number of samples (128)
         if(samples < windowSize)
         break;
 
-        end = data + windowSize;
+        uint8_t *ptr, *end;
 
+        ptr = data;
+        end = data + windowSize;
+      
         float pref = 0.00002;
 
         /*******************************
         *   REMOVE DC OFFSET
         ******************************/
-        if(preProcess){
-            int32_t avg = 0;
-            ptr = data;
-            while(ptr < end) avg += *ptr++;
-            avg = avg/windowSize;
+        int32_t avg = 0;
+        ptr = data;
+        end = data + windowSize;
+        while(ptr < end){
+            int sample = StreamNormalizer::readSample[format](ptr)* multiplier;
+            avg += sample;
+            ptr += skip;
+        } 
+        avg = avg/windowSize;
 
-            ptr = data;
-            while(ptr < end) *ptr++ -= avg;
-        }
+        ptr = data;
+        while(ptr < end) *ptr++ -= avg;
 
         /*******************************
         *   GET MAX VALUE
         ******************************/
-
         int16_t maxVal = 0;
+        int32_t v;
         ptr = data;
         while(ptr < end){
-         int32_t v = abs(*ptr++);
-         if(v > maxVal) maxVal = v;
+            int sample = StreamNormalizer::readSample[format](ptr) * multiplier;
+            v = abs(sample);
+            if(v > maxVal) maxVal = v;
+            ptr += skip;
         }
 
         float conv = ((float)maxVal)/((1 << 15)-1) * gain;
@@ -115,11 +136,7 @@ int LevelDetectorSPL::pullRequest()
         if(isfinite(conv)) level = conv;
         else level = minValue;
 
-        // Scale the values down if 8 bit is used - just done by eye at the moment
-        if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
-            level = level-30;
-        }
-        DMESGF("%d", (int) level);
+        DMESGF("level %d", (int) level);
 
         samples -= windowSize;
         if ((!(status & LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
