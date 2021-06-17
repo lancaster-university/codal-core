@@ -5,6 +5,8 @@
 #include "CodalComponent.h"
 #include "codal_target_hal.h"
 
+#define CODAL_LOWLEVELTIMER_STATUS_SLEEP_IRQENABLE    0x01
+
 namespace codal
 {
 

@@ -44,6 +44,7 @@ DEALINGS IN THE SOFTWARE.
 // Fiber Scheduler Flags
 #define DEVICE_SCHEDULER_RUNNING            0x01
 #define DEVICE_SCHEDULER_IDLE               0x02
+#define DEVICE_SCHEDULER_DEEPSLEEP          0x04
 
 // Fiber Flags
 #define DEVICE_FIBER_FLAG_FOB               0x01
@@ -55,6 +56,7 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_SCHEDULER_EVT_IDLE           2
 
 #define DEVICE_GET_FIBER_LIST_AVAILABLE     1
+
 
 namespace codal
 {
@@ -91,7 +93,7 @@ namespace codal
     /**
       * Determines if the fiber scheduler is operational.
       *
-      * @return 1 if the fber scheduler is running, 0 otherwise.
+      * @return 1 if the fiber scheduler is running, 0 otherwise.
       */
     int fiber_scheduler_running();
 
@@ -299,6 +301,13 @@ namespace codal
     int scheduler_runqueue_empty();
 
     /**
+      * Determines if any fibers are waiting for events.
+      *
+      * @return 1 if there are no fibers currently waiting for events; otherwise 0
+      */
+    int scheduler_waitqueue_empty();
+
+    /**
       * Utility function to add the currenty running fiber to the given queue.
       *
       * Perform a simple add at the head, to avoid complexity,
@@ -331,6 +340,20 @@ namespace codal
       * This function typically calls idle().
       */
     void idle_task();
+
+    /**
+      * Determines if deep sleep is pending.
+      *
+      * @return 1 if deep sleep is pending, 0 otherwise.
+      */
+    int fiber_scheduler_get_deepsleep_pending();
+
+    /**
+      * Flag if deep sleep is pending.
+      *
+      * @param pending 1 if deep sleep is pending, 0 otherwise.
+      */
+    void fiber_scheduler_set_deepsleep_pending( int pending);
 
     class FiberLock
     {
