@@ -40,6 +40,10 @@ DEALINGS IN THE SOFTWARE.
  */
 #define LEVEL_DETECTOR_SPL_DEFAULT_WINDOW_SIZE              128
 
+#ifndef LEVEL_DETECTOR_SPL_NORMALIZE
+#define LEVEL_DETECTOR_SPL_NORMALIZE    1
+#endif
+
 namespace codal{
     class LevelDetectorSPL : public CodalComponent, public DataSink
     {
@@ -54,9 +58,8 @@ namespace codal{
         int             sigma;              // Running total of the samples in the current window.
         float           gain;
         float           minValue;
-        bool            activated;          // Has this component been connected yet.
-        bool            enabled;          // Has this component been connected yet.
-        bool            preProcess;         // If true, preprocess incoming data on pull request
+        bool            activated;          // Has this component been connected yet
+        bool            enabled;            // Is the component currently running
 
         /**
           * Creates a component capable of measuring and thresholding stream data
@@ -70,7 +73,6 @@ namespace codal{
         LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain,
             float minValue = 52,
             uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL,
-            bool preProcess = true,
             bool connectImmediately  = true);
 
         /**

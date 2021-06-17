@@ -29,13 +29,12 @@ DEALINGS IN THE SOFTWARE.
 #include "LevelDetector.h"
 #include "LevelDetectorSPL.h"
 #include "ErrorNo.h"
-#include "CodalDmesg.h"
 #include "StreamNormalizer.h"
 #include <math.h>
 
 using namespace codal;
 
-LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id, bool preProcess, bool connectImmediately) : upstream(source)
+LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id, bool connectImmediately) : upstream(source)
 {
     DMESGF("SPL created, connect? %d", connectImmediately);
     this->id = id;
@@ -43,9 +42,9 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     this->windowSize = LEVEL_DETECTOR_SPL_DEFAULT_WINDOW_SIZE;
     this->lowThreshold = lowThreshold;
     this->highThreshold = highThreshold;
+    this->minValue = minValue;
     this->gain = gain;
     this->status |= LEVEL_DETECTOR_SPL_INITIALISED;
-    this->preProcess = preProcess;
     enabled = true;
     if(connectImmediately){
         upstream.connect(*this);
@@ -67,23 +66,22 @@ int LevelDetectorSPL::pullRequest()
     
     int format = upstream.getFormat();
     int skip = 1;
-    int multiplier = 40;
+    float multiplier = 256;
     windowSize = 256;
 
-    if (format == DATASTREAM_FORMAT_16BIT_SIGNED){
+    if (format == DATASTREAM_FORMAT_16BIT_SIGNED || format == DATASTREAM_FORMAT_UNKNOWN){
         skip = 2;
-        multiplier = 0;
+        multiplier = 1;
         windowSize = 128;
     }
-    if (format == DATASTREAM_FORMAT_32BIT_SIGNED){
+    else if (format == DATASTREAM_FORMAT_32BIT_SIGNED){
         skip = 4;
         windowSize = 64;
-        //multiplier = 0.4?
+        multiplier = (1/65536);
     }
 
     int samples = b.length() / skip;
 
-    DMESGF("--------------------------");
     while(samples){
 
         //ensure we use at least windowSize number of samples (128)
@@ -97,21 +95,26 @@ int LevelDetectorSPL::pullRequest()
       
         float pref = 0.00002;
 
-        /*******************************
-        *   REMOVE DC OFFSET
-        ******************************/
-        int32_t avg = 0;
-        ptr = data;
-        end = data + windowSize;
-        while(ptr < end){
-            int sample = StreamNormalizer::readSample[format](ptr)* multiplier;
-            avg += sample;
-            ptr += skip;
-        } 
-        avg = avg/windowSize;
+        if(LEVEL_DETECTOR_SPL_NORMALIZE){
+            /*******************************
+            *   REMOVE DC OFFSET
+            ******************************/
+            int32_t avg = 0;
+            ptr = data;
+            end = data + windowSize;
+            while(ptr < end){
+                int sample = StreamNormalizer::readSample[format](ptr);
+                avg += sample;
+                ptr += skip;
+            } 
+            avg = (avg/windowSize) * multiplier;
 
-        ptr = data;
-        while(ptr < end) *ptr++ -= avg;
+            ptr = data;
+            while(ptr < end){
+                ptr -= avg;
+                ptr += skip;
+            } 
+        }
 
         /*******************************
         *   GET MAX VALUE
@@ -120,23 +123,22 @@ int LevelDetectorSPL::pullRequest()
         int32_t v;
         ptr = data;
         while(ptr < end){
-            int sample = StreamNormalizer::readSample[format](ptr) * multiplier;
+            int sample = StreamNormalizer::readSample[format](ptr);
             v = abs(sample);
             if(v > maxVal) maxVal = v;
             ptr += skip;
         }
 
-        float conv = ((float)maxVal)/((1 << 15)-1) * gain;
+        float conv = ((float)maxVal * multiplier)/((1 << 15)-1) * gain;
 
         /*******************************
         *   CALCULATE SPL
         ******************************/
         conv = 20 * log10(conv/pref);
 
-        if(isfinite(conv)) level = conv;
+        if(conv < minValue) level = minValue;
+        else if(isfinite(conv)) level = conv;
         else level = minValue;
-
-        DMESGF("level %d", (int) level);
 
         samples -= windowSize;
         if ((!(status & LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
