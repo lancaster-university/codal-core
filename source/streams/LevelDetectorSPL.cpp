@@ -30,13 +30,11 @@ DEALINGS IN THE SOFTWARE.
 #include "LevelDetectorSPL.h"
 #include "ErrorNo.h"
 #include "StreamNormalizer.h"
-#include <math.h>
 
 using namespace codal;
 
 LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id, bool connectImmediately) : upstream(source)
 {
-    DMESGF("SPL created, connect? %d", connectImmediately);
     this->id = id;
     this->level = 0;
     this->windowSize = LEVEL_DETECTOR_SPL_DEFAULT_WINDOW_SIZE;
@@ -51,7 +49,7 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
         this->activated = true;
     }
     else{
-    	this->activated = false;
+        this->activated = false;
     }
 }
 
@@ -92,7 +90,7 @@ int LevelDetectorSPL::pullRequest()
 
         ptr = data;
         end = data + windowSize;
-      
+
         float pref = 0.00002;
 
         if(LEVEL_DETECTOR_SPL_NORMALIZE){
@@ -179,9 +177,7 @@ float LevelDetectorSPL::getValue()
  *
  */
 void LevelDetectorSPL::disable(){
-    DMESGF("DISABLE");
     enabled = false;
-
 }
 
 
