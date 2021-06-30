@@ -375,7 +375,7 @@ bool ManagedString::operator== (const ManagedString& s)
   */
 bool ManagedString::operator!= (const ManagedString& s)
 {
-    return ((length() != s.length()) && (strcmp(toCharArray(),s.toCharArray())!=0));
+    return !(*this == s);
 }
 
 /**
