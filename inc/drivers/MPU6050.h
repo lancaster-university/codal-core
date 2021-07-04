@@ -11,7 +11,7 @@
 #define MPU6050_DEFAULT_ADDR    0x68
 #define MPU6050_WHOAMI          0x75
 
-#define MPU6050_WHOAMI_VAL      0x34
+#define MPU6050_WHOAMI_VAL      0x68
 
 namespace codal{
 
