@@ -55,7 +55,6 @@ namespace codal
 
         virtual int classRequest(UsbEndpointIn &ctrl, USBSetup& setup);
         virtual int stdRequest(UsbEndpointIn &ctrl, USBSetup& setup);
-        virtual int endpointRequest();
         virtual const InterfaceInfo *getInterfaceInfo();
     };
 }

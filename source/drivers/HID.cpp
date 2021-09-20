@@ -95,22 +95,6 @@ int USBHID::stdRequest(UsbEndpointIn &ctrl, USBSetup &setup)
     return DEVICE_NOT_SUPPORTED;
 }
 
-int USBHID::endpointRequest()
-{
-    uint8_t buf[64];
-    int len = out->read(buf, sizeof(buf));
-    if (len <= 0)
-        return len;
-
-    for (int i = 1; i < 4; ++i)
-    {
-        buf[i] ^= 'a' - 'A';
-    }
-
-    // this should echo-back serial
-    return in->write(buf, sizeof(buf));
-}
-
 const InterfaceInfo *USBHID::getInterfaceInfo()
 {
     return &ifaceInfo;
