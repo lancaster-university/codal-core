@@ -153,6 +153,9 @@ int USBHIDMouse::moveWheel(int8_t w)
 
 int USBHIDMouse::sendReport()
 {
+	if (!in)
+		return DEVICE_INVALID_STATE;
+
 	uint8_t report[sizeof(HIDMouseState)];
 	memcpy(report, &mouseState, sizeof(HIDMouseState));
 
