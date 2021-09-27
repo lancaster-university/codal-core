@@ -35,24 +35,30 @@ using namespace codal;
 
 static void logwrite(const char *msg);
 
+REAL_TIME_FUNC
 static void logwriten(const char *msg, int l)
 {
+    target_disable_irq();
+
     if (codalLogStore.ptr + l >= sizeof(codalLogStore.buffer))
     {
-        const int jump = sizeof(codalLogStore.buffer) / 4;
-        codalLogStore.ptr -= jump;
-        memmove(codalLogStore.buffer, codalLogStore.buffer + jump, codalLogStore.ptr);
-        // zero-out the rest so it looks OK in the debugger
-        memset(codalLogStore.buffer + codalLogStore.ptr, 0, sizeof(codalLogStore.buffer) - codalLogStore.ptr);
+        *(uint32_t *)codalLogStore.buffer = 0x0a2e2e2e; // "...\n"
+        codalLogStore.ptr = 4;
+        if (l >= sizeof(codalLogStore.buffer) - 5)
+        {
+            msg = "DMESG line too long!\n";
+            l = 21;
+        }
     }
-    if (l + codalLogStore.ptr >= sizeof(codalLogStore.buffer))
-    {
-        logwrite("DMESG line too long!\n");
-        return;
-    }
-    memcpy(codalLogStore.buffer + codalLogStore.ptr, msg, l);
+
+    char *dst = &codalLogStore.buffer[codalLogStore.ptr];
+    int tmp = l;
+    while (tmp--)
+        *dst++ = *msg++;
+    *dst = 0;
     codalLogStore.ptr += l;
-    codalLogStore.buffer[codalLogStore.ptr] = 0;
+
+    target_enable_irq();
 }
 
 static void logwrite(const char *msg)
@@ -133,7 +139,6 @@ void codal_vdmesg(const char *format, bool crlf, va_list ap)
 {
     const char *end = format;
 
-    target_disable_irq();
     while (*end)
     {
         if (*end++ == '%')
@@ -173,8 +178,6 @@ void codal_vdmesg(const char *format, bool crlf, va_list ap)
 
     if (crlf)
         logwrite("\r\n");
-
-    target_enable_irq();
 }
 
 #endif
