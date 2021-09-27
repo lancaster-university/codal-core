@@ -153,6 +153,7 @@ void async_callback(void *param)
   *
   * @param The event to queue.
   */
+REAL_TIME_FUNC
 void MessageBus::queueEvent(Event &evt)
 {
     int processingComplete;
@@ -205,6 +206,7 @@ void MessageBus::queueEvent(Event &evt)
   *
   * @return a pointer to the EventQueueItem that is at the head of the list.
   */
+REAL_TIME_FUNC
 EventQueueItem* MessageBus::dequeueEvent()
 {
     EventQueueItem *item = NULL;

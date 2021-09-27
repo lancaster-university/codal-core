@@ -8,6 +8,7 @@ __attribute__((weak)) void target_wait(uint32_t milliseconds)
     codal::system_timer_wait_ms(milliseconds);
 }
 
+REAL_TIME_FUNC
 __attribute__((weak)) void target_wait_us(uint32_t us)
 {
     codal::system_timer_wait_us(us);

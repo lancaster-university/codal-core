@@ -82,6 +82,7 @@ using namespace codal;
   *
   * @param queue The run queue to add the fiber to.
   */
+REAL_TIME_FUNC
 void codal::queue_fiber(Fiber *f, Fiber **queue)
 {
     target_disable_irq();
@@ -119,6 +120,7 @@ void codal::queue_fiber(Fiber *f, Fiber **queue)
   *
   * @param f the fiber to remove.
   */
+REAL_TIME_FUNC
 void codal::dequeue_fiber(Fiber *f)
 {
     // If this fiber is already dequeued, nothing the there's nothing to do.
@@ -156,6 +158,7 @@ Fiber * codal::get_fiber_list()
 /**
   * Allocates a fiber from the fiber pool if available. Otherwise, allocates a new one from the heap.
   */
+REAL_TIME_FUNC
 Fiber *getFiberContext()
 {
     Fiber *f;
@@ -737,6 +740,7 @@ void codal::release_fiber(void *)
   *
   * Any fiber reaching the end of its entry function will return here  for recycling.
   */
+REAL_TIME_FUNC
 void codal::release_fiber(void)
 {
     if (!fiber_scheduler_running())
@@ -1045,6 +1049,7 @@ FiberLock::FiberLock()
 /**
  * Block the calling fiber until the lock is available
  **/
+REAL_TIME_FUNC
 void FiberLock::wait()
 {
     // If the scheduler is not running, then simply exit, as we're running monothreaded.
