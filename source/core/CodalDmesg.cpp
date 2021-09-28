@@ -44,7 +44,7 @@ static void logwriten(const char *msg, int l)
     {
         *(uint32_t *)codalLogStore.buffer = 0x0a2e2e2e; // "...\n"
         codalLogStore.ptr = 4;
-        if (l >= sizeof(codalLogStore.buffer) - 5)
+        if (l >= (int)sizeof(codalLogStore.buffer) - 5)
         {
             msg = "DMESG line too long!\n";
             l = 21;
