@@ -255,6 +255,7 @@ void codal::scheduler_init(EventModel &_messageBus)
   *
   * @return 1 if the fber scheduler is running, 0 otherwise.
   */
+REAL_TIME_FUNC
 int codal::fiber_scheduler_running()
 {
     if (fiber_flags & DEVICE_SCHEDULER_RUNNING)

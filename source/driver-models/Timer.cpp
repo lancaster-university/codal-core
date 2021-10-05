@@ -72,6 +72,7 @@ void Timer::triggerIn(CODAL_TIMESTAMP t)
     target_enable_irq();
 }
 
+REAL_TIME_FUNC
 TimerEvent *Timer::getTimerEvent()
 {
     // Find the first unused slot, and assign it.
@@ -247,6 +248,7 @@ int Timer::eventAfter(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, uint3
  *
  * @param flags CODAL_TIMER_EVENT_FLAGS_WAKEUP for event to trigger deep sleep wake-up.
  */
+REAL_TIME_FUNC
 int Timer::eventAfterUs(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, uint32_t flags)
 {
     return setEvent(period, id, value, false, flags);
@@ -323,6 +325,7 @@ void Timer::sync()
     target_enable_irq();
 }
 
+REAL_TIME_FUNC
 void Timer::recomputeNextTimerEvent()
 {
     nextTimerEvent = NULL;
@@ -642,6 +645,7 @@ int codal::system_timer_event_every_us(CODAL_TIMESTAMP period, uint16_t id, uint
   *
   * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
   */
+REAL_TIME_FUNC
 int codal::system_timer_event_after_us(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, uint32_t flags)
 {
     if(system_timer == NULL)
