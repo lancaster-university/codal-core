@@ -101,7 +101,7 @@ extern "C"
 
 // This is for cycle-precise wait even in presence of flash caches (forces function to sit in RAM)
 #ifndef FORCE_RAM_FUNC
-#define FORCE_RAM_FUNC __attribute__((noinline, long_call, section(".data")))
+#define FORCE_RAM_FUNC __attribute__((noinline, long_call, section(".data.ramfuncs")))
 #endif
 
 #endif
