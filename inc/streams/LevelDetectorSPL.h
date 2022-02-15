@@ -40,6 +40,10 @@ DEALINGS IN THE SOFTWARE.
  */
 #define LEVEL_DETECTOR_SPL_DEFAULT_WINDOW_SIZE              128
 
+#ifndef LEVEL_DETECTOR_SPL_NORMALIZE
+#define LEVEL_DETECTOR_SPL_NORMALIZE    1
+#endif
+
 namespace codal{
     class LevelDetectorSPL : public CodalComponent, public DataSink
     {
@@ -54,7 +58,8 @@ namespace codal{
         int             sigma;              // Running total of the samples in the current window.
         float           gain;
         float           minValue;
-
+        bool            activated;          // Has this component been connected yet
+        bool            enabled;            // Is the component currently running
 
         /**
           * Creates a component capable of measuring and thresholding stream data
@@ -63,10 +68,12 @@ namespace codal{
           * @param highThreshold the HIGH threshold at which a SPL_LEVEL_THRESHOLD_HIGH event will be generated
           * @param lowThreshold the HIGH threshold at which a SPL_LEVEL_THRESHOLD_LOW event will be generated
           * @param id The id to use for the message bus when transmitting events.
+          * @param connectImmediately Should this component connect to upstream splitter when started
           */
         LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain,
             float minValue = 52,
-            uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL);
+            uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL,
+            bool connectImmediately  = true);
 
         /**
          * Callback provided when data is ready.
@@ -79,6 +86,11 @@ namespace codal{
          * @return The current value of the sensor.
          */
         float getValue();
+
+        /**
+         * Disable component
+         */
+        void disable();
 
         /**
          * Set threshold to the given value. Events will be generated when these thresholds are crossed.
