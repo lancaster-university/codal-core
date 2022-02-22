@@ -43,7 +43,7 @@ namespace codal
           * Should never be even or one (object should be deleted then).
           * When it's set to 0xffff, it means the object sits in flash and should not be counted.
           */
-        uint16_t refCount;
+        volatile uint16_t refCount;
 
     #if CONFIG_ENABLED(DEVICE_TAG)
         uint16_t tag;

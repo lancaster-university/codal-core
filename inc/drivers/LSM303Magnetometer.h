@@ -83,8 +83,8 @@ DEALINGS IN THE SOFTWARE.
 /**
  * LSM303 Status flags
  */
-#define LSM303_M_STATUS_ENABLED       0x01
-#define LSM303_M_STATUS_SLEEPING      0x02
+#define LSM303_M_STATUS_ENABLED       0x0100
+#define LSM303_M_STATUS_SLEEPING      0x0200
 
 /**
  * Class definition for LSM303_M.

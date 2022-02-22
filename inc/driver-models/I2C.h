@@ -115,6 +115,7 @@ public:
     * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the the write request failed.
     */
     virtual int write(uint16_t address, uint8_t *data, int len, bool repeated = false);
+    int write(int address, char *data, int len, bool repeated = false);
 
     /**
       * Performs a typical register write operation to the I2C slave device provided.
@@ -153,6 +154,7 @@ public:
       * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the the read request failed.
       */
     virtual int read(uint16_t address, uint8_t *data, int len, bool repeated = false);
+    int read(int address, char *data, int len, bool repeated = false);
 
     /**
       * Performs a typical register read operation to the I2C slave device provided.

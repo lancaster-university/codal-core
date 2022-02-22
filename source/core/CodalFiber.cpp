@@ -82,6 +82,7 @@ using namespace codal;
   *
   * @param queue The run queue to add the fiber to.
   */
+REAL_TIME_FUNC
 void codal::queue_fiber(Fiber *f, Fiber **queue)
 {
     target_disable_irq();
@@ -119,6 +120,7 @@ void codal::queue_fiber(Fiber *f, Fiber **queue)
   *
   * @param f the fiber to remove.
   */
+REAL_TIME_FUNC
 void codal::dequeue_fiber(Fiber *f)
 {
     // If this fiber is already dequeued, nothing the there's nothing to do.
@@ -154,8 +156,9 @@ Fiber * codal::get_fiber_list()
 }
 
 /**
-  * Allocates a fiber from the fiber pool if availiable. Otherwise, allocates a new one from the heap.
+  * Allocates a fiber from the fiber pool if available. Otherwise, allocates a new one from the heap.
   */
+REAL_TIME_FUNC
 Fiber *getFiberContext()
 {
     Fiber *f;
@@ -252,6 +255,7 @@ void codal::scheduler_init(EventModel &_messageBus)
   *
   * @return 1 if the fber scheduler is running, 0 otherwise.
   */
+REAL_TIME_FUNC
 int codal::fiber_scheduler_running()
 {
     if (fiber_flags & DEVICE_SCHEDULER_RUNNING)
@@ -355,7 +359,7 @@ static Fiber* handle_fob()
     // it's time to spawn a new fiber...
     if (f->flags & DEVICE_FIBER_FLAG_FOB)
     {
-        // Allocate a TCB from the new fiber. This will come from the tread pool if availiable,
+        // Allocate a TCB from the new fiber. This will come from the tread pool if available,
         // else a new one will be allocated on the heap.
 
         if (!forkedFiber)
@@ -662,7 +666,7 @@ Fiber *__create_fiber(uint32_t ep, uint32_t cp, uint32_t pm, int parameterised)
     if (ep == 0 || cp == 0)
         return NULL;
 
-    // Allocate a TCB from the new fiber. This will come from the fiber pool if availiable,
+    // Allocate a TCB from the new fiber. This will come from the fiber pool if available,
     // else a new one will be allocated on the heap.
     Fiber *newFiber = getFiberContext();
 
@@ -737,6 +741,7 @@ void codal::release_fiber(void *)
   *
   * Any fiber reaching the end of its entry function will return here  for recycling.
   */
+REAL_TIME_FUNC
 void codal::release_fiber(void)
 {
     if (!fiber_scheduler_running())
@@ -849,6 +854,16 @@ void codal::verify_stack_size(Fiber *f)
 int codal::scheduler_runqueue_empty()
 {
     return (runQueue == NULL);
+}
+
+/**
+  * Determines if any fibers are waiting for events.
+  *
+  * @return 1 if there are no fibers currently waiting for events; otherwise 0
+  */
+int codal::scheduler_waitqueue_empty()
+{
+    return (waitQueue == NULL);
 }
 
 /**
@@ -982,7 +997,7 @@ void codal::idle()
         // because we enforce MESSAGE_BUS_LISTENER_IMMEDIATE for listeners placed
         // on the scheduler.
         fiber_flags &= ~DEVICE_SCHEDULER_IDLE;
-        target_wait_for_event();
+        target_scheduler_idle();
     }
 }
 
@@ -1001,6 +1016,29 @@ void codal::idle_task()
 }
 
 /**
+  * Determines if deep sleep is pending.
+  *
+  * @return 1 if deep sleep is pending, 0 otherwise.
+  */
+int codal::fiber_scheduler_get_deepsleep_pending()
+{
+    return fiber_flags & DEVICE_SCHEDULER_DEEPSLEEP ? 1 : 0;
+}
+
+/**
+  * Flag if deep sleep is pending.
+  *
+  * @param penfing 1 if deep sleep is pending, 0 otherwise.
+  */
+void codal::fiber_scheduler_set_deepsleep_pending( int pending)
+{
+    if ( pending)
+        fiber_flags |= DEVICE_SCHEDULER_DEEPSLEEP;
+    else
+        fiber_flags &= ~DEVICE_SCHEDULER_DEEPSLEEP;
+}
+
+/**
  * Create a new lock that can be used for mutual exclusion and condition synchronisation.
  */
 FiberLock::FiberLock()
@@ -1012,13 +1050,18 @@ FiberLock::FiberLock()
 /**
  * Block the calling fiber until the lock is available
  **/
+REAL_TIME_FUNC
 void FiberLock::wait()
 {
     // If the scheduler is not running, then simply exit, as we're running monothreaded.
     if (!fiber_scheduler_running())
         return;
 
-    if (locked)
+    target_disable_irq();
+    int l = ++locked;
+    target_enable_irq();
+
+    if (l > 1)
     {
         // wait() is a blocking call, so if we're in a fork on block context,
         // it's time to spawn a new fiber...
@@ -1030,11 +1073,24 @@ void FiberLock::wait()
         // Add fiber to the sleep queue. We maintain strict ordering here to reduce lookup times.
         queue_fiber(f, &queue);
 
+        // Check if we've been raced by something running in interrupt context.
+        // Note this is safe, as no IRQ can wait() and as we are non-preemptive, neither could any other fiber.
+        // It is possible that and IRQ has performed a notify() operation however.
+        // If so, put ourself back on the run queue and spin the scheduler (in case we performed a fork-on-block)
+        target_disable_irq();
+        if (locked < l)
+        {
+            // Remove fiber from the run queue
+            dequeue_fiber(f);
+
+            // Add fiber to the sleep queue. We maintain strict ordering here to reduce lookup times.
+            queue_fiber(f, &runQueue);
+        }
+        target_enable_irq();
+
         // Finally, enter the scheduler.
         schedule();
     }
-
-    locked = true;
 }
 
 /**
@@ -1049,7 +1105,9 @@ void FiberLock::notify()
         dequeue_fiber(f);
         queue_fiber(f, &runQueue);
     }
-    locked = false;
+
+    if (locked > 0)
+        locked--;
 }
 
 /**
@@ -1066,7 +1124,7 @@ void FiberLock::notifyAll()
         f = queue;
     }
 
-    locked = false;
+    locked = 0;
 }
 
 

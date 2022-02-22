@@ -66,6 +66,8 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_ID_JACDAC_CONTROL_SERVICE 32
 #define DEVICE_ID_JACDAC_CONFIGURATION_SERVICE 33
 #define DEVICE_ID_SYSTEM_ADC          34
+#define DEVICE_ID_PULSE_IN            35
+#define DEVICE_ID_USB 36
 
 #define DEVICE_ID_IO_P0               100                       // IDs 100-227 are reserved for I/O Pin IDs.
 
@@ -181,6 +183,36 @@ namespace codal
          * Puts all components in (or out of) sleep (low power) mode.
          */
         static void setAllSleep(bool doSleep);
+
+        typedef enum deepSleepCallbackReason
+        {
+            deepSleepCallbackPrepare,           //Prepare for sleep
+            deepSleepCallbackBegin,             //Puts the component in sleep (low power) mode.
+            deepSleepCallbackBeginWithWakeUps,  //and enable wake-up sources
+            deepSleepCallbackEnd,               //Brings the component out of sleep (low power) mode.
+            deepSleepCallbackEndWithWakeUps,    //and disable wake-up sources
+            deepSleepCallbackCountWakeUps,      //Count deep sleep wake-up sources.
+            deepSleepCallbackClearWakeUps       //Clear deep sleep wake up sources
+        } deepSleepCallbackReason;
+
+        typedef struct deepSleepCallbackData
+        {
+            int count;
+
+            void init() { count = 0; }
+
+            deepSleepCallbackData() { init(); }
+        } deepSleepCallbackData;
+
+        /**
+          * Perform functions related to deep sleep.
+          */
+        virtual int deepSleepCallback( deepSleepCallbackReason reason, deepSleepCallbackData *data);
+
+        /**
+          * Perform functions related to deep sleep.
+          */
+        static void deepSleepAll( deepSleepCallbackReason reason, deepSleepCallbackData *data);
 
         /**
           * If you have added your component to the idle or system tick component arrays,

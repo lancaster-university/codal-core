@@ -158,7 +158,7 @@ bool DataStream::isReadOnly()
 /**
  * Define a downstream component for data stream.
  *
- * @sink The component that data will be delivered to, when it is availiable
+ * @sink The component that data will be delivered to, when it is available
  */
 void DataStream::connect(DataSink &sink)
 {
@@ -177,7 +177,7 @@ int DataStream::getFormat()
 /**
  * Define a downstream component for data stream.
  *
- * @sink The component that data will be delivered to, when it is availiable
+ * @sink The component that data will be delivered to, when it is available
  */
 void DataStream::disconnect()
 {

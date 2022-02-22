@@ -108,7 +108,7 @@ namespace codal
           *
           * @return This default implementation simply returns NULL.
           */
-        Listener *elementAt(int)
+        virtual Listener *elementAt(int)
         {
             return NULL;
         }

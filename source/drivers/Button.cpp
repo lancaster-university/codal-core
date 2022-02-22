@@ -26,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Button.h"
 #include "Timer.h"
 #include "EventModel.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -52,6 +53,7 @@ Button::Button(Pin &pin, uint16_t id, ButtonEventConfiguration eventConfiguratio
     this->sigma = 0;
     this->polarity = polarity;
 
+    pin.setPolarity( polarity == ACTIVE_HIGH ? 1 : 0);
     pin.setPull(mode);
 
     this->status |= DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
@@ -131,6 +133,7 @@ void Button::periodicCallback()
     if(sigma < DEVICE_BUTTON_SIGMA_THRESH_LO && (status & DEVICE_BUTTON_STATE))
     {
         status &= ~DEVICE_BUTTON_STATE;
+        status &= ~DEVICE_BUTTON_STATE_HOLD_TRIGGERED;
         Event evt(id,DEVICE_BUTTON_EVT_UP);
 
        if (eventConfiguration == DEVICE_BUTTON_ALL_EVENTS)
@@ -174,4 +177,34 @@ int Button::isPressed()
   */
 Button::~Button()
 {
+}
+
+/**
+ * Puts the component in (or out of) sleep (low power) mode.
+ */
+int Button::setSleep(bool doSleep)
+{
+    if (doSleep)
+    {
+        status &= ~DEVICE_BUTTON_STATE;
+        status &= ~DEVICE_BUTTON_STATE_HOLD_TRIGGERED;
+        clickCount = 0;
+        sigma = 0;
+    }
+    else
+    {
+        if ( isWakeOnActive())
+        {
+            if ( buttonActive())
+            {
+                sigma = DEVICE_BUTTON_SIGMA_THRESH_LO + 1;
+                status |= DEVICE_BUTTON_STATE;
+                Event evt(id,DEVICE_BUTTON_EVT_DOWN);
+                clickCount = 1;
+                downStartTime = system_timer_current_time();
+            }
+        }
+    }
+   
+    return DEVICE_OK;
 }

@@ -55,6 +55,7 @@ EventModel* EventModel::defaultEventBus = NULL;
   * Event evt(id,DEVICE_BUTTON_EVT_CLICK,CREATE_AND_FIRE);
   * @endcode
   */
+REAL_TIME_FUNC
 Event::Event(uint16_t source, uint16_t value, EventLaunchMode mode)
 {
     this->source = source;
@@ -91,6 +92,7 @@ Event::Event(uint16_t source, uint16_t value, EventLaunchMode mode)
   * Event evt(id,DEVICE_BUTTON_EVT_CLICK,CREATE_AND_FIRE);
   * @endcode
   */
+  REAL_TIME_FUNC
   Event::Event(uint16_t source, uint16_t value, CODAL_TIMESTAMP currentTimeUs, EventLaunchMode mode)
   {
       this->source = source;
@@ -120,6 +122,7 @@ Event::Event()
 /**
   * Fires this Event onto the Default EventModel, or a custom one!
   */
+REAL_TIME_FUNC
 void Event::fire()
 {
     if(EventModel::defaultEventBus)

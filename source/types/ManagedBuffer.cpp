@@ -69,9 +69,9 @@ ManagedBuffer::ManagedBuffer()
  * ManagedBuffer p(16);         // Creates a ManagedBuffer 16 bytes long.
  * @endcode
  */
-ManagedBuffer::ManagedBuffer(int length)
+ManagedBuffer::ManagedBuffer(int length, BufferInitialize initialize)
 {
-    this->init(NULL, length);
+    this->init(NULL, length, initialize);
 }
 
 /**
@@ -90,7 +90,7 @@ ManagedBuffer::ManagedBuffer(int length)
  */
 ManagedBuffer::ManagedBuffer(uint8_t *data, int length)
 {
-    this->init(data, length);
+    this->init(data, length, BufferInitialize::None);
 }
 
 /**
@@ -128,9 +128,10 @@ ManagedBuffer::ManagedBuffer(BufferData *p)
  *
  * @param data The data with which to fill the buffer.
  * @param length The length of the buffer to create.
+ * @param initialize The initialization mode to use for the allocted memory in the buffer
  *
  */
-void ManagedBuffer::init(uint8_t *data, int length)
+void ManagedBuffer::init(uint8_t *data, int length, BufferInitialize initialize)
 {
     if (length <= 0) {
         initEmpty();
@@ -145,7 +146,8 @@ void ManagedBuffer::init(uint8_t *data, int length)
     // Copy in the data buffer, if provided.
     if (data)
         memcpy(ptr->payload, data, length);
-    else
+
+    if (initialize == BufferInitialize::Zero)
         memset(ptr->payload, 0, length);
 }
 

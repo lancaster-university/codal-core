@@ -42,7 +42,7 @@ DEALINGS IN THE SOFTWARE.
   * what these are, and consider the tradeoffs against simplicity...
   *
   * @note The need for this should be reviewed in the future, if a different memory allocator is
-  * made availiable in the mbed platform.
+  * made available in the mbed platform.
   *
   * TODO: Consider caching recently freed blocks to improve allocation time.
   */

@@ -82,20 +82,28 @@ int Serial::setTxInterrupt(uint8_t *string, int len, SerialMode mode)
 {
     int copiedBytes = 0;
 
-    for(copiedBytes = 0; copiedBytes < len; copiedBytes++)
+    while(copiedBytes < len)
     {
         uint16_t nextHead = (txBuffHead + 1) % txBuffSize;
-        if(nextHead != txBuffTail)
-        {
-            this->txBuff[txBuffHead] = string[copiedBytes];
-            txBuffHead = nextHead;
-        }
-        else
-            break;
-    }
 
-    if(mode != SYNC_SPINWAIT)
-        fiber_wake_on_event(DEVICE_ID_NOTIFY, CODAL_SERIAL_EVT_TX_EMPTY);
+        if(nextHead == txBuffTail)
+        {
+            enableInterrupt(TxInterrupt);
+
+            if(mode == SYNC_SLEEP)
+                fiber_wait_for_event(DEVICE_ID_NOTIFY, CODAL_SERIAL_EVT_TX_EMPTY);
+
+            if(mode == SYNC_SPINWAIT)
+                while(txBufferedSize() > 0);
+
+            if(mode == ASYNC)
+                break;
+        }
+
+        this->txBuff[txBuffHead] = string[copiedBytes];
+        txBuffHead = nextHead;
+        copiedBytes++;
+    }
 
     //set the TX interrupt
     enableInterrupt(TxInterrupt);
@@ -199,21 +207,6 @@ int Serial::initialiseTx()
 }
 
 /**
- * An internal method that either spin waits if mode is set to SYNC_SPINWAIT
- * or puts the fiber to sleep if the mode is set to SYNC_SLEEP
- *
- * @param mode the selected mode, one of: ASYNC, SYNC_SPINWAIT, SYNC_SLEEP
- */
-void Serial::send(SerialMode mode)
-{
-    if(mode == SYNC_SPINWAIT)
-        while(txBufferedSize() > 0);
-
-    if(mode == SYNC_SLEEP)
-        schedule();
-}
-
-/**
  * An internal method that copies values from a circular buffer to a linear buffer.
  *
  * @param circularBuff a pointer to the source circular buffer
@@ -310,29 +303,7 @@ Serial::Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize, uint8_t txBufferSize, uin
  */
 int Serial::sendChar(char c, SerialMode mode)
 {
-    if(txInUse())
-        return DEVICE_SERIAL_IN_USE;
-
-    lockTx();
-
-    //lazy initialisation of our tx buffer
-    if(!(status & CODAL_SERIAL_STATUS_TX_BUFF_INIT))
-    {
-        int result = initialiseTx();
-
-        if(result != DEVICE_OK)
-            return result;
-    }
-
-    uint8_t toTransmit[2] =  { c, '\0'};
-
-    int bytesWritten = setTxInterrupt(toTransmit, 1, mode);
-
-    send(mode);
-
-    unlockTx();
-
-    return bytesWritten;
+    return send((uint8_t *)&c, 1, mode);
 }
 
 /**
@@ -409,17 +380,7 @@ int Serial::send(uint8_t *buffer, int bufferLen, SerialMode mode)
             return result;
     }
 
-    bool complete = false;
-    int bytesWritten = 0;
-
-    while(!complete)
-    {
-        bytesWritten += setTxInterrupt(buffer + bytesWritten, bufferLen - bytesWritten, mode);
-        send(mode);
-
-        if(mode == ASYNC || bytesWritten >= bufferLen)
-            complete = true;
-    }
+    int bytesWritten = setTxInterrupt(buffer, bufferLen, mode);
 
     unlockTx();
 
@@ -808,6 +769,8 @@ ManagedString Serial::readUntil(ManagedString delimeters, SerialMode mode)
         eventOn(delimeters, mode);
 
         foundIndex = rxBuffHead - 1;
+        if (foundIndex < 0)
+            foundIndex += rxBuffSize;
 
         this->delimeters = ManagedString();
     }
@@ -922,12 +885,16 @@ int Serial::eventAfter(int len, SerialMode mode)
     if(mode == SYNC_SPINWAIT)
         return DEVICE_INVALID_PARAMETER;
 
+    // Schedule this fiber to wake on an event from the serial port, if necessary
+    if(mode == SYNC_SLEEP)
+        fiber_wake_on_event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
+
     //configure our head match...
     this->rxBuffHeadMatch = (rxBuffHead + len) % rxBuffSize;
 
-    //block!
+    // Deschedule this fiber, if necessary
     if(mode == SYNC_SLEEP)
-        fiber_wait_for_event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
+        schedule();
 
     return DEVICE_OK;
 }
@@ -979,6 +946,14 @@ int Serial::eventOn(ManagedString delimeters, SerialMode mode)
  */
 int Serial::isReadable()
 {
+    if(!(status & CODAL_SERIAL_STATUS_RX_BUFF_INIT))
+    {
+        int result = initialiseRx();
+
+        if(result != DEVICE_OK)
+            return result;
+    }
+
     return (rxBuffTail != rxBuffHead) ? 1 : 0;
 }
 
@@ -1011,7 +986,10 @@ int Serial::setRxBufferSize(uint8_t size)
     lockRx();
 
     // + 1 so there is a usable buffer size, of the size the user requested.
-    this->rxBuffSize = size + 1;
+    if (size != 255)
+        size++;
+
+    this->rxBuffSize = size;
 
     int result = initialiseRx();
 
@@ -1036,7 +1014,10 @@ int Serial::setTxBufferSize(uint8_t size)
     lockTx();
 
     // + 1 so there is a usable buffer size, of the size the user requested.
-    this->txBuffSize = size + 1;
+    if (size != 255)
+        size++;
+
+    this->txBuffSize = size;
 
     int result = initialiseTx();
 

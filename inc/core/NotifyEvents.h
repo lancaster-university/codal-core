@@ -33,6 +33,7 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_SERIAL_EVT_TX_EMPTY         2
 #define BLE_EVT_SERIAL_TX_EMPTY           3
 #define ARCADE_PLAYER_JOIN_RESULT         4
+#define POWER_EVT_CANCEL_DEEPSLEEP        5
 
 // Any values after 1024 are available for application use
 #define DEVICE_NOTIFY_USER_EVENT_BASE     1024

@@ -42,7 +42,7 @@ DEALINGS IN THE SOFTWARE.
   * what these are, and consider the tradeoffs against simplicity...
   *
   * @note The need for this should be reviewed in the future, if a different memory allocator is
-  * made availiable in the mbed platform.
+  * made available in the mbed platform.
   *
   * TODO: Consider caching recently freed blocks to improve allocation time.
   */
@@ -191,6 +191,7 @@ uint32_t device_heap_size(uint8_t heap_index)
   *
   * @return A pointer to the allocated memory, or NULL if insufficient memory is available.
   */
+REAL_TIME_FUNC
 void *device_malloc_in(size_t size, HeapDefinition &heap)
 {
     PROCESSOR_WORD_TYPE	blockSize = 0;
@@ -281,6 +282,7 @@ void *device_malloc_in(size_t size, HeapDefinition &heap)
   *
   * @return A pointer to the allocated memory, or NULL if insufficient memory is available.
   */
+REAL_TIME_FUNC
 void* device_malloc (size_t size)
 {
     static uint8_t initialised = 0;
@@ -340,6 +342,7 @@ void* device_malloc (size_t size)
   *
   * @param mem The memory area to release.
   */
+REAL_TIME_FUNC
 void device_free (void *mem)
 {
     PROCESSOR_WORD_TYPE	*memory = (PROCESSOR_WORD_TYPE *)mem;
