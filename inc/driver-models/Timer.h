@@ -342,7 +342,7 @@ namespace codal
      *
      * @note the amount of cycles per iteration will vary between CPUs.
      */
-    __attribute__((noinline, long_call, section(".data")))
+    FORCE_RAM_FUNC
     void system_timer_wait_cycles(uint32_t cycles);
 
     /**

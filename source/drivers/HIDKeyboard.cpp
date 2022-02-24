@@ -203,6 +203,9 @@ int USBHIDKeyboard::updateReport(HIDKeyboardReport* report)
     if(report == NULL)
         return DEVICE_INVALID_PARAMETER;
 
+    if (!in)
+        return DEVICE_INVALID_STATE;
+
     uint8_t reportBuf[report->reportSize + 1] = {report->reportID};
     memcpy(reportBuf + 1, report->keyState, report->reportSize);
 

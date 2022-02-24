@@ -62,6 +62,7 @@ void timer_callback(uint16_t chan)
     }
 }
 
+REAL_TIME_FUNC
 void Timer::triggerIn(CODAL_TIMESTAMP t)
 {
     if (t < CODAL_TIMER_MINIMUM_PERIOD) t = CODAL_TIMER_MINIMUM_PERIOD;
@@ -71,6 +72,7 @@ void Timer::triggerIn(CODAL_TIMESTAMP t)
     target_enable_irq();
 }
 
+REAL_TIME_FUNC
 TimerEvent *Timer::getTimerEvent()
 {
     // Find the first unused slot, and assign it.
@@ -141,6 +143,7 @@ CODAL_TIMESTAMP Timer::getTime()
  *
  * @return the timestamp in microseconds
  */
+REAL_TIME_FUNC
 CODAL_TIMESTAMP Timer::getTimeUs()
 {
     sync();
@@ -159,6 +162,7 @@ int Timer::enableInterrupts()
     return DEVICE_OK;
 }
 
+REAL_TIME_FUNC
 int Timer::setEvent(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, bool repeat, uint32_t flags)
 {
     TimerEvent *evt = getTimerEvent();
@@ -188,6 +192,7 @@ int Timer::setEvent(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, bool re
  *
  * @param value the value that was given upon a previous call to eventEvery / eventAfter
  */
+REAL_TIME_FUNC
 int Timer::cancel(uint16_t id, uint16_t value)
 {
     int res = DEVICE_INVALID_PARAMETER;
@@ -243,6 +248,7 @@ int Timer::eventAfter(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, uint3
  *
  * @param flags CODAL_TIMER_EVENT_FLAGS_WAKEUP for event to trigger deep sleep wake-up.
  */
+REAL_TIME_FUNC
 int Timer::eventAfterUs(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, uint32_t flags)
 {
     return setEvent(period, id, value, false, flags);
@@ -286,6 +292,7 @@ int Timer::eventEveryUs(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, uin
  * Callback from physical timer implementation code.
  * @param t Indication that t time units (typically microsends) have elapsed.
  */
+REAL_TIME_FUNC
 void Timer::sync()
 {
     // Need to disable all IRQs - for example if SPI IRQ is triggered during
@@ -318,6 +325,7 @@ void Timer::sync()
     target_enable_irq();
 }
 
+REAL_TIME_FUNC
 void Timer::recomputeNextTimerEvent()
 {
     nextTimerEvent = NULL;
@@ -430,6 +438,7 @@ TimerEvent *Timer::deepSleepWakeUpEvent()
   *
   * @return the current time since power on in microseconds
   */
+REAL_TIME_FUNC
 CODAL_TIMESTAMP Timer::deepSleepBegin( CODAL_TIMESTAMP &counter)
 {
     // Need to disable all IRQs - for example if SPI IRQ is triggered during
@@ -484,6 +493,7 @@ CODAL_TIMESTAMP Timer::deepSleepBegin( CODAL_TIMESTAMP &counter)
   *
   * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
   */
+REAL_TIME_FUNC
 void Timer::deepSleepEnd( CODAL_TIMESTAMP counter, CODAL_TIMESTAMP micros)
 {
     // On entry, the timer IRQ is disabled and must not be enabled
@@ -635,6 +645,7 @@ int codal::system_timer_event_every_us(CODAL_TIMESTAMP period, uint16_t id, uint
   *
   * @return DEVICE_OK or DEVICE_NOT_SUPPORTED if no timer has been registered.
   */
+REAL_TIME_FUNC
 int codal::system_timer_event_after_us(CODAL_TIMESTAMP period, uint16_t id, uint16_t value, uint32_t flags)
 {
     if(system_timer == NULL)
@@ -725,6 +736,7 @@ int codal::system_timer_calibrate_cycles()
  * @param cycles the number of nops to execute
  * @return DEVICE_OK
  */
+FORCE_RAM_FUNC
 void codal::system_timer_wait_cycles(uint32_t cycles)
 {
     __asm__ __volatile__(
@@ -748,6 +760,7 @@ void codal::system_timer_wait_cycles(uint32_t cycles)
  * @note this provides a good starting point for non-timing critical applications. For more accurate timings,
  * please use a cycle-based wait approach (see system_timer_wait_cycles)
  */
+REAL_TIME_FUNC
 int codal::system_timer_wait_us(uint32_t period)
 {
     if(system_timer == NULL)
@@ -772,6 +785,7 @@ int codal::system_timer_wait_us(uint32_t period)
  * @note this provides a good starting point for non-timing critical applications. For more accurate timings,
  * please use a cycle-based wait approach (see system_timer_wait_cycles)
  */
+REAL_TIME_FUNC
 int codal::system_timer_wait_ms(uint32_t period)
 {
     return system_timer_wait_us(period * 1000);

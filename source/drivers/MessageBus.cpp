@@ -83,6 +83,7 @@ MessageBus::MessageBus()
   * Internal wrapper function, used to enable
   * parameterised callbacks through the fiber scheduler.
   */
+REAL_TIME_FUNC
 void async_callback(void *param)
 {
     Listener *listener = (Listener *)param;
@@ -153,6 +154,7 @@ void async_callback(void *param)
   *
   * @param The event to queue.
   */
+REAL_TIME_FUNC
 void MessageBus::queueEvent(Event &evt)
 {
     int processingComplete;
@@ -205,6 +207,7 @@ void MessageBus::queueEvent(Event &evt)
   *
   * @return a pointer to the EventQueueItem that is at the head of the list.
   */
+REAL_TIME_FUNC
 EventQueueItem* MessageBus::dequeueEvent()
 {
     EventQueueItem *item = NULL;
@@ -321,6 +324,7 @@ void MessageBus::idle(Event)
   * evt1.fire()
   * @endcode
   */
+REAL_TIME_FUNC
 int MessageBus::send(Event evt)
 {
     // We simply queue processing of the event until we're scheduled in normal thread context.
@@ -344,6 +348,7 @@ int MessageBus::send(Event evt)
   * @note It is recommended that all external code uses the send() function instead of this function,
   *       or the constructors provided by Event.
   */
+REAL_TIME_FUNC
 int MessageBus::process(Event &evt, bool urgent)
 {
     Listener *l;

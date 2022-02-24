@@ -189,6 +189,9 @@ int USBHIDJoystick::setThrottle(uint8_t num, uint8_t val)
 
 int USBHIDJoystick::sendReport()
 {
+	if (!in)
+		return DEVICE_INVALID_STATE;
+
 	uint8_t report[sizeof(HIDJoystickState)];
 	memcpy(report, &joystickState, sizeof(HIDJoystickState));
 

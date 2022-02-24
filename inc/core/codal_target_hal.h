@@ -94,5 +94,14 @@ extern "C"
 
 }
 
+// This is re-defined in targets with external flash, that require certain functions to be placed in RAM
+#ifndef REAL_TIME_FUNC
+#define REAL_TIME_FUNC /* */
+#endif
+
+// This is for cycle-precise wait even in presence of flash caches (forces function to sit in RAM)
+#ifndef FORCE_RAM_FUNC
+#define FORCE_RAM_FUNC __attribute__((noinline, long_call, section(".data.ramfuncs")))
+#endif
 
 #endif
