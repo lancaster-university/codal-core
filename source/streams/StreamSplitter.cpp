@@ -57,7 +57,7 @@ StreamSplitter::StreamSplitter(DataSource &source, uint16_t id) : upstream(sourc
  */
 int StreamSplitter::pullRequest()
 {
-    if (processed == numberChannels)
+    if (processed >= numberChannels)
     {
         processed = 0;
         lastBuffer = upstream.pull();
