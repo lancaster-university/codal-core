@@ -219,7 +219,10 @@ void AnimatedDisplay::updateScrollImage()
 void AnimatedDisplay::updateAnimateImage()
 {
     //wait until we have rendered the last position to give a continuous animation.
-    if (scrollingImagePosition <= -scrollingImage.getWidth() + (display.getWidth() + scrollingImageStride) && scrollingImageRendered)
+    if ( ( scrollingImageStride <= 0
+          ? scrollingImagePosition <= -scrollingImage.getWidth() + (display.getWidth() + scrollingImageStride)
+          : scrollingImagePosition >= scrollingImageStride)
+        && scrollingImageRendered)
     {
         if (animationMode == ANIMATION_MODE_ANIMATE_IMAGE_WITH_CLEAR)
             display.image.clear();
@@ -230,8 +233,16 @@ void AnimatedDisplay::updateAnimateImage()
         return;
     }
 
-    if(scrollingImagePosition > 0)
-        display.image.shiftLeft(-scrollingImageStride);
+    if ( scrollingImageStride <= 0)
+    {
+        if(scrollingImagePosition > 0)
+            display.image.shiftLeft(-scrollingImageStride);
+    }
+    else
+    {
+        if ( scrollingImagePosition + scrollingImage.getWidth() < display.getWidth())
+            display.image.shiftRight( scrollingImageStride);
+    }
 
     display.image.paste(scrollingImage, scrollingImagePosition, 0, 0);
 
@@ -757,7 +768,10 @@ int AnimatedDisplay::animateAsync(Image image, int delay, int stride, int starti
         stride = -stride;
 
         //calculate starting position which is offset by the stride
-        scrollingImagePosition = (startingPosition == DISPLAY_ANIMATE_DEFAULT_POS) ? display.getWidth() + stride : startingPosition;
+        if ( stride <= 0)
+            scrollingImagePosition = (startingPosition == DISPLAY_ANIMATE_DEFAULT_POS) ? display.getWidth() + stride : startingPosition;
+        else
+            scrollingImagePosition = (startingPosition == DISPLAY_ANIMATE_DEFAULT_POS) ? stride - image.getWidth() : startingPosition - image.getWidth() + 1;
         scrollingImageStride = stride;
         scrollingImage = image;
         scrollingImageRendered = false;
