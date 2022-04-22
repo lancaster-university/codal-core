@@ -88,8 +88,8 @@ static const InterfaceInfo ifaceInfo = {
 	{
 		1,    // numEndpoints
 		0x03, /// class code - HID
-		0x01, // subclass (boot interface)
-		0x02, // protocol (joystick)
+		0x00, // subclass - none
+		0x00, // protocol - none (there isn't a protocol defined for gamepad/joystick)
 		0x00, //
 		0x00, //
 	},
