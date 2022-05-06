@@ -29,21 +29,28 @@ DEALINGS IN THE SOFTWARE.
 #include "LevelDetector.h"
 #include "LevelDetectorSPL.h"
 #include "ErrorNo.h"
+#include "StreamNormalizer.h"
 
 using namespace codal;
 
-LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id) : upstream(source)
+LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id, bool connectImmediately) : upstream(source)
 {
     this->id = id;
     this->level = 0;
     this->windowSize = LEVEL_DETECTOR_SPL_DEFAULT_WINDOW_SIZE;
     this->lowThreshold = lowThreshold;
     this->highThreshold = highThreshold;
+    this->minValue = minValue;
     this->gain = gain;
     this->status |= LEVEL_DETECTOR_SPL_INITIALISED;
-
-    // Register with our upstream component
-    source.connect(*this);
+    enabled = true;
+    if(connectImmediately){
+        upstream.connect(*this);
+        this->activated = true;
+    }
+    else{
+        this->activated = false;
+    }
 }
 
 /**
@@ -52,51 +59,83 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
 int LevelDetectorSPL::pullRequest()
 {
     ManagedBuffer b = upstream.pull();
-    int16_t *data = (int16_t *) &b[0];
 
-    int samples = b.length() / 2;
+    uint8_t *data = &b[0];
+    
+    int format = upstream.getFormat();
+    int skip = 1;
+    float multiplier = 256;
+    windowSize = 256;
+
+    if (format == DATASTREAM_FORMAT_16BIT_SIGNED || format == DATASTREAM_FORMAT_UNKNOWN){
+        skip = 2;
+        multiplier = 1;
+        windowSize = 128;
+    }
+    else if (format == DATASTREAM_FORMAT_32BIT_SIGNED){
+        skip = 4;
+        windowSize = 64;
+        multiplier = (1/65536);
+    }
+
+    int samples = b.length() / skip;
 
     while(samples){
 
-        //ensure we use at least windowSize number of samples
-        int16_t *end, *ptr;
+        //ensure we use at least windowSize number of samples (128)
         if(samples < windowSize)
         break;
 
+        uint8_t *ptr, *end;
+
+        ptr = data;
         end = data + windowSize;
 
         float pref = 0.00002;
 
-        /*******************************
-        *   REMOVE DC OFFSET
-        ******************************/
-        int32_t avg = 0;
-        ptr = data;
-        while(ptr < end) avg += *ptr++;
-        avg = avg/windowSize;
+        if(LEVEL_DETECTOR_SPL_NORMALIZE){
+            /*******************************
+            *   REMOVE DC OFFSET
+            ******************************/
+            int32_t avg = 0;
+            ptr = data;
+            end = data + windowSize;
+            while(ptr < end){
+                int sample = StreamNormalizer::readSample[format](ptr);
+                avg += sample;
+                ptr += skip;
+            } 
+            avg = (avg/windowSize) * multiplier;
 
-        ptr = data;
-        while(ptr < end) *ptr++ -= avg;
+            ptr = data;
+            while(ptr < end){
+                ptr -= avg;
+                ptr += skip;
+            } 
+        }
 
         /*******************************
         *   GET MAX VALUE
         ******************************/
-
         int16_t maxVal = 0;
+        int32_t v;
         ptr = data;
         while(ptr < end){
-         int32_t v = abs(*ptr++);
-         if(v > maxVal) maxVal = v;
+            int sample = StreamNormalizer::readSample[format](ptr);
+            v = abs(sample);
+            if(v > maxVal) maxVal = v;
+            ptr += skip;
         }
 
-        float conv = ((float)maxVal)/((1 << 15)-1) * gain;
+        float conv = ((float)maxVal * multiplier)/((1 << 15)-1) * gain;
 
         /*******************************
         *   CALCULATE SPL
         ******************************/
         conv = 20 * log10(conv/pref);
 
-        if(isfinite(conv)) level = conv;
+        if(conv < minValue) level = minValue;
+        else if(isfinite(conv)) level = conv;
         else level = minValue;
 
         samples -= windowSize;
@@ -125,7 +164,20 @@ int LevelDetectorSPL::pullRequest()
  */
 float LevelDetectorSPL::getValue()
 {
+    if(!activated){
+        // Register with our upstream component: on demand activated
+        upstream.connect(*this);
+        activated = true;
+    }
     return level;
+}
+
+/*
+ * Disable / turn off this level detector
+ *
+ */
+void LevelDetectorSPL::disable(){
+    enabled = false;
 }
 
 

@@ -28,10 +28,11 @@ DEALINGS IN THE SOFTWARE.
 #include "Timer.h"
 #include "LevelDetector.h"
 #include "ErrorNo.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
-LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id) : upstream(source)
+LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id, bool connectImmediately) : upstream(source)
 {
     this->id = id;
     this->level = 0;
@@ -41,9 +42,11 @@ LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThres
     this->lowThreshold = lowThreshold;
     this->highThreshold = highThreshold;
     this->status |= LEVEL_DETECTOR_INITIALISED;
-
-    // Register with our upstream component
-    source.connect(*this);
+    this->activated = false;
+    if(connectImmediately){
+        upstream.connect(*this);
+        activated = true;
+    }
 }
 
 /**
@@ -52,20 +55,32 @@ LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThres
 int LevelDetector::pullRequest()
 {
     ManagedBuffer b = upstream.pull();
+
     int16_t *data = (int16_t *) &b[0];
 
     int samples = b.length() / 2;
 
     for (int i=0; i < samples; i++)
     {
-        sigma += abs(*data);
+        if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
+            sigma += abs((int8_t) *data);
+        }
+        else
+            sigma += abs(*data);
+
         windowPosition++;
 
         if (windowPosition == windowSize)
         {
             level = sigma / windowSize;
+
             sigma = 0;
             windowPosition = 0;
+
+            // If 8 bit - then multiply by 8 to upscale result. High 8 bit ~20, High 16 bit ~150 so roughly 8 times higher
+            if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
+                level = level*8;
+            }
 
             if ((!(status & LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
             {
@@ -95,9 +110,14 @@ int LevelDetector::pullRequest()
  */
 int LevelDetector::getValue()
 {
+    if(!activated){
+        // Register with our upstream component: on demand activated
+        DMESG("activating LD");
+        upstream.connect(*this);
+        activated = true;
+    }
     return level;
 }
-
 
 /**
  * Set threshold to the given value. Events will be generated when these thresholds are crossed.
