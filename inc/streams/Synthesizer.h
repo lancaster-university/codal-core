@@ -34,11 +34,6 @@ namespace codal
 {
     typedef uint16_t (*SynthesizerGetSample)(void *arg, int position);
 
-    /**
-      * Class definition for DataStream.
-      * A Datastream holds a number of ManagedBuffer references, provides basic flow control through a push/pull mechanism
-      * and byte level access to the datastream, even if it spans different buffers.
-      */
     class Synthesizer : public DataSource, public CodalComponent
     {
         int     samplePeriodNs;        // The length of a single sample, in nanoseconds.
