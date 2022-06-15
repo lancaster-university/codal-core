@@ -97,7 +97,7 @@ int Serial::setTxInterrupt(uint8_t *string, int len, SerialMode mode)
                 while(txBufferedSize() > 0);
 
             if(mode == ASYNC)
-                break;
+                fiber_sleep(0); // Deschedule ourselves until there's room to continue copying!
         }
 
         this->txBuff[txBuffHead] = string[copiedBytes];
