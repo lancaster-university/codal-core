@@ -97,7 +97,8 @@ int Serial::setTxInterrupt(uint8_t *string, int len, SerialMode mode)
                 while(txBufferedSize() > 0);
 
             if(mode == ASYNC)
-                fiber_sleep(0); // Deschedule ourselves until there's room to continue copying!
+                return copiedBytes; // Explicitly return less than the full string. We can't 'immediately return' if we have to wait for more buffer space.
+                                    // Note that for applications that need to guarantee this works every time, they should set the buffer length before calling send().
         }
 
         this->txBuff[txBuffHead] = string[copiedBytes];
