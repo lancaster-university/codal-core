@@ -607,6 +607,7 @@ CODAL_TIMESTAMP codal::system_timer_current_time()
   *
   * @return the current time since power on in microseconds
   */
+REAL_TIME_FUNC
 CODAL_TIMESTAMP codal::system_timer_current_time_us()
 {
     if(system_timer == NULL)
