@@ -81,15 +81,6 @@ DEALINGS IN THE SOFTWARE.
 #define USB_FEATURE_SELFPOWERED_ENABLED (1 << 0)
 #define USB_FEATURE_REMOTE_WAKEUP_ENABLED (1 << 1)
 
-#ifndef USB_EP_FLAG_NO_AUTO_ZLP
-#define USB_EP_FLAG_NO_AUTO_ZLP 0x01
-#endif
-
-// when set on In endpoint, the write() may fail when buffer is full; implies no auto ZLP
-#ifndef USB_EP_FLAG_ASYNC
-#define USB_EP_FLAG_ASYNC 0x02
-#endif
-
 enum usb_ep_type
 {
     USB_EP_TYPE_CONTROL = 0x00,
@@ -219,7 +210,9 @@ public:
     int clearStall();
     int reset();
     int write(const void *buf, int length);
+#ifdef USB_EP_FLAG_ASYNC
     bool canWrite();
+#endif
 
     UsbEndpointIn(uint8_t idx, uint8_t type, uint8_t size = USB_MAX_PKT_SIZE);
 };
