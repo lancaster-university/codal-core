@@ -682,4 +682,11 @@ void usb_panic(int lineNumber)
     target_panic(DEVICE_USB_ERROR);
 }
 
+__attribute__((weak))
+bool UsbEndpointIn::canWrite()
+{
+    // defaults to yes; if ASYNC In endpoint is not implemented this is even correct
+    return true;
+}
+
 #endif
