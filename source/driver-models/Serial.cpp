@@ -846,6 +846,9 @@ int Serial::redirect(Pin& tx, Pin& rx)
 
     disableInterrupt(RxInterrupt);
 
+    // To be compatible with V1 behaviour
+    rx.setPull( PullMode::Up );
+
     configurePins(tx, rx);
 
     enableInterrupt(RxInterrupt);
