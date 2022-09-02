@@ -635,6 +635,12 @@ void codal::verify_stack_size(Fiber *f)
         Fiber *prevCurrFiber = currentFiber;
         currentFiber = f;
 
+        // GCC would normally assume malloc() and free() can't access currentFiber variable
+        // and thus skip emitting the store above.
+        // We invoke an external function that GCC knows nothing about (any function will do)
+        // to force GCC to emit the store.
+        get_current_sp();
+
         // To ease heap churn, we choose the next largest multple of 32 bytes.
         bufferSize = (stackDepth + 32) & 0xffffffe0;
 
