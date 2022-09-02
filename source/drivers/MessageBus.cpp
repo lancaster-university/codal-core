@@ -49,6 +49,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "MessageBus.h"
 #include "CodalFiber.h"
+#include "CodalDmesg.h"
 #include "ErrorNo.h"
 #include "NotifyEvents.h"
 #include "codal_target_hal.h"
@@ -172,7 +173,11 @@ void MessageBus::queueEvent(Event &evt)
 
     // If we need to queue, but there is no space, then there's nothg we can do.
     if (queueLength >= MESSAGE_BUS_LISTENER_MAX_QUEUE_DEPTH)
+    {
+        // Note that this can lead to strange lockups, where we await an event that never arrives.
+        DMESG("evt %d/%d: overflow!", evt.source, evt.value);
         return;
+    }
 
     // Otherwise, we need to queue this event for later processing...
     // We queue this event at the tail of the queue at the point where we entered queueEvent()

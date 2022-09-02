@@ -91,8 +91,9 @@ enum PanicCode{
     // Dereference of a NULL pointer through the ManagedType class,
     DEVICE_NULL_DEREFERENCE = 40,
 
-    // Non-recoverable error in USB driver
-    DEVICE_USB_ERROR = 50,
+    // All ob-board peripheral failures should report from the 50-59 range, but may be device specific
+    // DO NOT USE ANYTHING BETWEEN 50 AND 60 HERE - used by implementing boards/libraries
+    DEVICE_PERIPHERAL_ERROR = 50,
 
     // Non-recoverable error in the JACDAC stack
     DEVICE_JACDAC_ERROR = 60,

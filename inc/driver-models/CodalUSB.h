@@ -210,6 +210,9 @@ public:
     int clearStall();
     int reset();
     int write(const void *buf, int length);
+#ifdef USB_EP_FLAG_ASYNC
+    bool canWrite();
+#endif
 
     UsbEndpointIn(uint8_t idx, uint8_t type, uint8_t size = USB_MAX_PKT_SIZE);
 };

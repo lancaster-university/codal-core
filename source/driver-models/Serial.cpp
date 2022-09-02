@@ -97,8 +97,7 @@ int Serial::setTxInterrupt(uint8_t *string, int len, SerialMode mode)
                 while(txBufferedSize() > 0);
 
             if(mode == ASYNC)
-                return copiedBytes; // Explicitly return less than the full string. We can't 'immediately return' if we have to wait for more buffer space.
-                                    // Note that for applications that need to guarantee this works every time, they should set the buffer length before calling send().
+                break;
         }
 
         this->txBuff[txBuffHead] = string[copiedBytes];
@@ -846,6 +845,9 @@ int Serial::redirect(Pin& tx, Pin& rx)
         disableInterrupt(TxInterrupt);
 
     disableInterrupt(RxInterrupt);
+
+    // To be compatible with V1 behaviour
+    rx.setPull( PullMode::Up );
 
     configurePins(tx, rx);
 
