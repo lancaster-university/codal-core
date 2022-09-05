@@ -819,7 +819,7 @@ void codal::fiber_scheduler_set_deepsleep_pending( int pending)
 FiberLock::FiberLock( int initial )
 {
     queue = NULL;
-    locked = 1-initial;
+    locked = 0-initial;
 }
 
 FiberLock::FiberLock() : FiberLock( 0 ) {}
