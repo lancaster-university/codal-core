@@ -44,6 +44,29 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_SPL_NORMALIZE    1
 #endif
 
+/**
+ * Define the parameters for the dB->8bit translation function.
+ */
+
+// The level (in dB) that corresponds to an 8bit value of 0.
+#ifndef LEVEL_DETECTOR_SPL_8BIT_000_POINT
+#define LEVEL_DETECTOR_SPL_8BIT_000_POINT                   35.0f
+#endif
+
+// The level (in dB) that corresponds to an 8bit value of 255.
+#ifndef LEVEL_DETECTOR_SPL_8BIT_255_POINT
+#define LEVEL_DETECTOR_SPL_8BIT_255_POINT                   100.0f
+#endif
+
+#define LEVEL_DETECTOR_SPL_8BIT_CONVERSION                  (255.0f/(LEVEL_DETECTOR_SPL_8BIT_255_POINT-LEVEL_DETECTOR_SPL_8BIT_000_POINT))
+
+/**
+ * Level detetor unit enumeration.
+ */
+#define LEVEL_DETECTOR_SPL_DB                               1
+#define LEVEL_DETECTOR_SPL_8BIT                             2
+
+
 namespace codal{
     class LevelDetectorSPL : public CodalComponent, public DataSink
     {
@@ -60,6 +83,7 @@ namespace codal{
         float           minValue;
         bool            activated;          // Has this component been connected yet
         bool            enabled;            // Is the component currently running
+        int             unit;               // The units to be returned from this level detector (e.g. dB or linear 8bit)
 
         /**
           * Creates a component capable of measuring and thresholding stream data
@@ -138,10 +162,21 @@ namespace codal{
         int setGain(float gain);
 
         /**
+         * Defines the units that will be returned by the getValue() function.
+         *
+         * @param unit Either LEVEL_DETECTOR_SPL_DB or LEVEL_DETECTOR_SPL_8BIT.
+         * @return DEVICE_OK or DEVICE_INVALID_PARAMETER.
+         */
+         int setUnit(int unit);
+
+        /**
          * Destructor.
          */
         ~LevelDetectorSPL();
 
+        private:
+        float splToUnit(float f);
+        float unitToSpl(float f);
     };
 }
 

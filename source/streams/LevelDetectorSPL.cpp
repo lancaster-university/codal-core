@@ -30,6 +30,7 @@ DEALINGS IN THE SOFTWARE.
 #include "LevelDetectorSPL.h"
 #include "ErrorNo.h"
 #include "StreamNormalizer.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -43,6 +44,7 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     this->minValue = minValue;
     this->gain = gain;
     this->status |= LEVEL_DETECTOR_SPL_INITIALISED;
+    this->unit = LEVEL_DETECTOR_SPL_DB;
     enabled = true;
     if(connectImmediately){
         upstream.connect(*this);
@@ -93,45 +95,26 @@ int LevelDetectorSPL::pullRequest()
 
         float pref = 0.00002;
 
-        if(LEVEL_DETECTOR_SPL_NORMALIZE){
-            /*******************************
-            *   REMOVE DC OFFSET
-            ******************************/
-            int32_t avg = 0;
-            ptr = data;
-            end = data + windowSize;
-            while(ptr < end){
-                int sample = StreamNormalizer::readSample[format](ptr);
-                avg += sample;
-                ptr += skip;
-            } 
-            avg = (avg/windowSize) * multiplier;
-
-            ptr = data;
-            while(ptr < end){
-                ptr -= avg;
-                ptr += skip;
-            } 
-        }
-
         /*******************************
         *   GET MAX VALUE
         ******************************/
         int16_t maxVal = 0;
+        int16_t minVal = 32766;
         int32_t v;
         ptr = data;
         while(ptr < end){
-            int sample = StreamNormalizer::readSample[format](ptr);
-            v = abs(sample);
+            v = (int32_t) StreamNormalizer::readSample[format](ptr);
             if(v > maxVal) maxVal = v;
+            if(v < minVal) minVal = v;
             ptr += skip;
         }
 
-        float conv = ((float)maxVal * multiplier)/((1 << 15)-1) * gain;
+        maxVal = (maxVal - minVal) / 2;
 
         /*******************************
         *   CALCULATE SPL
         ******************************/
+        float conv = ((float)maxVal * multiplier)/((1 << 15)-1) * gain;
         conv = 20 * log10(conv/pref);
 
         if(conv < minValue) level = minValue;
@@ -169,7 +152,8 @@ float LevelDetectorSPL::getValue()
         upstream.connect(*this);
         activated = true;
     }
-    return level;
+
+    return splToUnit(level);
 }
 
 /*
@@ -190,6 +174,9 @@ void LevelDetectorSPL::disable(){
  */
 int LevelDetectorSPL::setLowThreshold(float value)
 {
+    // Convert specified unit into db if necessary
+    value = unitToSpl(value);
+
     // Protect against churn if the same threshold is set repeatedly.
     if (lowThreshold == value)
         return DEVICE_OK;
@@ -216,6 +203,9 @@ int LevelDetectorSPL::setLowThreshold(float value)
  */
 int LevelDetectorSPL::setHighThreshold(float value)
 {
+    // Convert specified unit into db if necessary
+    value = unitToSpl(value);
+
     // Protect against churn if the same threshold is set repeatedly.
     if (highThreshold == value)
         return DEVICE_OK;
@@ -240,7 +230,7 @@ int LevelDetectorSPL::setHighThreshold(float value)
  */
 float LevelDetectorSPL::getLowThreshold()
 {
-    return lowThreshold;
+    return splToUnit(lowThreshold);
 }
 
 /**
@@ -250,7 +240,7 @@ float LevelDetectorSPL::getLowThreshold()
  */
 float LevelDetectorSPL::getHighThreshold()
 {
-    return highThreshold;
+    return splToUnit(highThreshold);
 }
 
 /**
@@ -275,6 +265,50 @@ int LevelDetectorSPL::setGain(float gain)
 {
     this->gain = gain;
     return DEVICE_OK;
+}
+
+/**
+ * Defines the units that will be returned by the getValue() function.
+ *
+ * @param unit Either LEVEL_DETECTOR_SPL_DB or LEVEL_DETECTOR_SPL_8BIT.
+ * @return DEVICE_OK or DEVICE_INVALID_PARAMETER.
+ */
+int LevelDetectorSPL::setUnit(int unit)
+{
+    if (unit == LEVEL_DETECTOR_SPL_DB || unit == LEVEL_DETECTOR_SPL_8BIT)
+    {
+        this->unit = unit;
+        return DEVICE_OK;
+    }
+
+    return DEVICE_INVALID_PARAMETER;
+}
+
+
+float LevelDetectorSPL::splToUnit(float level)
+{
+    if (unit == LEVEL_DETECTOR_SPL_8BIT)
+    {
+        level = (level - LEVEL_DETECTOR_SPL_8BIT_000_POINT) * LEVEL_DETECTOR_SPL_8BIT_CONVERSION;
+
+        // Ensure the result is clamped into the expected range.
+        if (level < 0.0f)
+            level = 0.0f;
+
+        if (level > 255.0f)
+            level = 255.0f;
+    }
+
+    return level;
+}
+
+
+float LevelDetectorSPL::unitToSpl(float level)
+{
+    if (unit == LEVEL_DETECTOR_SPL_8BIT)
+        level = LEVEL_DETECTOR_SPL_8BIT_000_POINT + level / LEVEL_DETECTOR_SPL_8BIT_CONVERSION;
+
+    return level;
 }
 
 /**
