@@ -38,7 +38,7 @@ namespace codal
       *
       * Represents a single, generic button on the device.
       */
-    class Button : public AbstractButton
+    class Button : public AbstractButton, public PinPeripheral
     {
         unsigned long downStartTime;                            // used to store the current system clock when a button down event occurs
         uint8_t sigma;                                          // integration of samples over time. We use this for debouncing, and noise tolerance for touch sensing
@@ -124,6 +124,15 @@ namespace codal
         {
             return _pin.isWakeOnActive();
         }
+
+        /**
+          * Method to release the given pin from a peripheral, if already bound.
+          * Device drivers should override this method to disconnect themselves from the give pin
+          * to allow it to be used by a different peripheral.
+          *
+          * @param pin the Pin to be released
+          */
+        virtual int releasePin(Pin &pin) override;
 
         /**
           * Destructor for Button, where we deregister this instance from the array of fiber components.

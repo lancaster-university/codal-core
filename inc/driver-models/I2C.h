@@ -37,7 +37,7 @@ namespace codal
 
 enum AcknowledgeType {ACK, NACK};
 
-class I2C
+class I2C : public PinPeripheral
 {
 public:
     I2C(Pin &sda, Pin &scl);
@@ -80,6 +80,15 @@ protected:
     virtual int read(AcknowledgeType ack = ACK);
 
 public:
+    /**
+      * Change the pins used by this I2C peripheral to those provided.
+      *
+      * @param sda the Pin to use for the I2C SDA line.
+      * @param scl the Pin to use for the I2C SCL line.
+      * @return DEVICE_OK on success, or DEVICE_NOT_IMPLEMENTED / DEVICE_NOT_SUPPORTED if the request cannot be performed.
+      */
+    virtual int redirect(Pin &sda, Pin &scl);
+      
     /**
       * Issues a standard, 2 byte I2C command write to the I2C bus.
       * This consists of:
