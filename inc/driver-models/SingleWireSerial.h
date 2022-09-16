@@ -22,7 +22,7 @@ namespace codal
         SingleWireDisconnected
     };
 
-    class SingleWireSerial : public CodalComponent
+    class SingleWireSerial : public PinPeripheral, public CodalComponent
     {
         protected:
         virtual void configureRxInterrupt(int enable) = 0;
@@ -39,6 +39,7 @@ namespace codal
         {
             this->id = id;
             this->cb = NULL;
+            p.connect(*this);
         }
 
         /**

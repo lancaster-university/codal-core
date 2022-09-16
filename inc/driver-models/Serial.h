@@ -65,12 +65,12 @@ namespace codal
       *
       * Represents an instance of RawSerial which accepts codal device specific data types.
       */
-    class Serial : public CodalComponent
+    class Serial : public PinPeripheral, public CodalComponent
     {
         protected:
 
-        Pin& tx;
-        Pin& rx;
+        Pin* tx;
+        Pin* rx;
 
         //delimeters used for matching on receive.
         ManagedString delimeters;

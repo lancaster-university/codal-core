@@ -27,6 +27,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 #include "CodalComponent.h"
+#include "PinPeripheral.h"
                                                           // Status Field flags...
 #define IO_STATUS_DIGITAL_IN                0x0001        // Pin is configured as a digital input, with no pull up.
 #define IO_STATUS_DIGITAL_OUT               0x0002        // Pin is configured as a digital output
@@ -59,6 +60,7 @@ DEALINGS IN THE SOFTWARE.
 namespace codal
 {
     using namespace codal;
+
     /**
       * Pin capabilities enum.
       * Used to determine the capabilities of each Pin as some can only be digital, or can be both digital and analogue.
@@ -531,6 +533,13 @@ namespace codal
             return (status & IO_STATUS_WAKE_ON_ACTIVE) ? 1 : 0;
         }
 
+        /**
+          * Record that a given peripheral has been connected to this pin.
+          */
+        virtual void connect(PinPeripheral &p, bool deleteOnRelease = false)
+        {
+            p.deleteOnRelease = deleteOnRelease;
+        }
         /**
           * Disconnect any attached peripherals from this pin.
           */
