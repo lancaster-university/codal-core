@@ -92,7 +92,7 @@ int TouchSensor::addTouchButton(TouchButton *button)
     numberOfButtons++;
 
     // Put the button into input mode.
-    button->_pin.getDigitalValue();
+    button->getPinValue();
 
     return DEVICE_OK;
 }
@@ -149,7 +149,7 @@ void TouchSensor::onSampleEvent(Event)
         {
             if (buttons[i]->active)
             {
-                if(buttons[i]->_pin.getDigitalValue() == 1 || cycles >= (buttons[i]->threshold))
+                if(buttons[i]->getPinValue() == 1 || cycles >= (buttons[i]->threshold))
                 {
                     buttons[i]->active = false;
                     buttons[i]->setValue(cycles);

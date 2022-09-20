@@ -86,7 +86,13 @@ void Button::setEventConfiguration(ButtonEventConfiguration config)
  */
 int Button::buttonActive()
 {
-    return _pin.getDigitalValue() == polarity;
+    bool active;
+    
+    setPinLock(true);
+    active = _pin.getDigitalValue() == polarity;
+    setPinLock(false);
+
+    return active;
 }
 
 /**

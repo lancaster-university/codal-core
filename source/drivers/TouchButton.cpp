@@ -104,6 +104,34 @@ int TouchButton::getThreshold()
 }
 
 /**
+ * Determines the instantneous digital value of the pin associated with this TouchButton
+ *
+ * @return true if a digital read of the attached pin is a logic 1, false otherwise.
+ */
+int TouchButton::getPinValue()
+{
+    int result;
+
+    setPinLock(true);
+    result = _pin.getDigitalValue();
+    setPinLock(false);
+
+    return result;
+}
+
+/**
+ * Drives a given digital value to the pin associated with this TouchButton
+ *
+ * @param v the digital value to write to the pin associated with this TouchButton.
+ */
+void TouchButton::setPinValue(int v)
+{
+    setPinLock(true);
+    _pin.setDigitalValue(v);
+    setPinLock(false);
+}
+
+/**
  * Determine the last reading taken from this button.
  *
  * @return the last reading taken.

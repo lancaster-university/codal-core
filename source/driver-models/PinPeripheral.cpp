@@ -23,6 +23,7 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "Pin.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -40,6 +41,32 @@ int PinPeripheral::releasePin(Pin &pin)
 }
 
 /**
+    * Determines if this peripheral has locked any attached pins to this peripheral.
+    * During a locked period, any attempts to release or reassign those pins to a differnet peripheral are ignored.
+    * This mechanism is primarily useful to use functions such as Pin::setDigitalValue() within a peripheral driver,
+    * but without releasing the pin's binding to that peripheral.
+    *
+    * @return true if this peripherals pin bindings are locked, false otherwise.
+    */
+bool PinPeripheral::isPinLocked()
+{
+    return pinLock;
+}
+
+/**
+    * Controls if this peripheral has locked any attached pins to this peripheral.
+    * During a locked period, any attempts to release or reassign those pins to a differnet peripheral are ignored.
+    * This mechanism is primarily useful to use functions such as Pin::setDigitalValue() within a peripheral driver,
+    * but without releasing the pin's binding to that peripheral.
+    *
+    * @param true if this peripherals pin bindings are to be locked, false otherwise.
+    */
+void PinPeripheral::setPinLock(bool locked)
+{
+    pinLock = locked;
+}
+
+/**
     * Utility function, to assist in redirect() operations and consistent use of disconnect()/connect() by peripherals.
     * Safely disconnects pin from any attached peripherals, upfates pin to the new pin, and attaches to the given peripheral.
     * Also validates out NULL cases.
@@ -54,13 +81,24 @@ int PinPeripheral::reassignPin(void *p, Pin *newPin)
     if (pin == NULL)
         return DEVICE_INVALID_PARAMETER;
 
-    if (*pin && *pin != newPin)
-        (*pin)->disconnect();
+    // If the pin is changing state, reelase any old peripherals and attach the new one.
+    if (*pin != newPin)
+    {
+        if (*pin)
+        {
+            DMESG("DISCONNECTING PIN: %p", *pin);
+            (*pin)->disconnect();
+        }
 
-    if (newPin)
-        newPin->connect(*this);
-
-    *pin = newPin;   
+        if (newPin)
+        {
+            DMESG("CONNECTING PIN: %p to %p", newPin, this);
+            newPin->connect(*this);
+        }
+    
+        DMESG("ASSIGNING PIN: %p to %p", pin, newPin);
+        *pin = newPin;   
+    }
 
     return DEVICE_OK;
 }
