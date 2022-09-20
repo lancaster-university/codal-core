@@ -40,6 +40,8 @@ namespace codal
     class PinPeripheral
     {        
         public:
+        bool deleteOnRelease = false;
+        bool pinLock = false;
 
         /**
           * Method to release the given pin from a peripheral, if already bound.
@@ -49,7 +51,26 @@ namespace codal
           * @param pin the Pin to be released
           */
         virtual int releasePin(Pin &pin);
-        bool deleteOnRelease = false;
+
+        /**
+          * Determines if this peripheral has locked any attached pins to this peripheral.
+          * During a locked period, any attempts to release or reassign those pins to a differnet peripheral are ignored.
+          * This mechanism is primarily useful to use functions such as Pin::setDigitalValue() within a peripheral driver,
+          * but without releasing the pin's binding to that peripheral.
+          *
+          * @return true if this peripherals pin bindings are locked, false otherwise.
+          */
+        bool isPinLocked();
+
+        /**
+          * Controls if this peripheral has locked any attached pins to this peripheral.
+          * During a locked period, any attempts to release or reassign those pins to a differnet peripheral are ignored.
+          * This mechanism is primarily useful to use functions such as Pin::setDigitalValue() within a peripheral driver,
+          * but without releasing the pin's binding to that peripheral.
+          *
+          * @param true if this peripherals pin bindings are to be locked, false otherwise.
+          */
+        void setPinLock(bool locked);
 
         /**
          * Utility function, to assist in redirect() operations and consistent use of disconnect()/connect() by peripherals.
