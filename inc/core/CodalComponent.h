@@ -71,6 +71,16 @@ DEALINGS IN THE SOFTWARE.
 #define DEVICE_ID_SPLITTER            37
 #define DEVICE_ID_AUDIO_PROCESSOR     38
 #define DEVICE_ID_TAP                 39
+#define DEVICE_ID_POWER_MANAGER       40
+
+// Slightly dubious IDs, moved here for now to remove conflicts
+#define DEVICE_ID_PARTIAL_FLASHING    41
+#define DEVICE_ID_USB_FLASH_MANAGER   42
+#define DEVICE_ID_VIRTUAL_SPEAKER_PIN 43
+#define DEVICE_ID_LOG                 44
+
+// Suggested range for device-specific IDs: 50-79
+// NOTE - not final, just suggested currently.
 
 #define DEVICE_ID_IO_P0               100                       // IDs 100-227 are reserved for I/O Pin IDs.
 

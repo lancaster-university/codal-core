@@ -374,6 +374,8 @@ void Timer::trigger(bool isFallback)
                     uint16_t id = e->id;
                     uint16_t value = e->value;
 
+
+
                     // Release before triggering event. Otherwise, an immediate event handler
                     // can cancel this event, another event might be put in its place
                     // and we end up releasing (or repeating) a completely different event.
