@@ -275,10 +275,9 @@ Serial::Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize, uint8_t txBufferSize, uin
 
     this->rxBuffHeadMatch = -1;
 
-    DMESG("SERIAL::SERIAL [this:%p] [this->tx:%p[%p]] [this->rx:%p[%p]] [tx:%p] [rx:%p]", this, &this->tx, this->tx, &this->rx, this->rx, &tx, &rx);
     reassignPin(&this->tx, &tx);
     reassignPin(&this->rx, &rx);
-    
+
     this->status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 }
 
@@ -845,11 +844,9 @@ int Serial::redirect(Pin& tx, Pin& rx)
     lockTx();
     lockRx();
 
-    DMESG("SERIAL::redirect [this:%p] [this->tx:%p[%p]] [this->rx:%p[%p]] [tx:%p] [rx:%p]", this, &this->tx, this->tx, &this->rx, this->rx, &tx, &rx);
-
     reassignPin(&this->tx, &tx);
     reassignPin(&this->rx, &rx);
-    
+
     if(txBufferedSize() > 0)
         disableInterrupt(TxInterrupt);
 

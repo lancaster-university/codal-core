@@ -38,7 +38,7 @@ namespace codal
       */
     class Pin;
     class PinPeripheral
-    {        
+    {
         public:
         bool deleteOnRelease = false;
         bool pinLock = false;
