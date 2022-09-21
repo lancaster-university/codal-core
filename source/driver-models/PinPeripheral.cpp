@@ -85,19 +85,12 @@ int PinPeripheral::reassignPin(void *p, Pin *newPin)
     if (*pin != newPin)
     {
         if (*pin)
-        {
-            DMESG("DISCONNECTING PIN: %p", *pin);
             (*pin)->disconnect();
-        }
 
         if (newPin)
-        {
-            DMESG("CONNECTING PIN: %p to %p", newPin, this);
             newPin->connect(*this);
-        }
-    
-        DMESG("ASSIGNING PIN: %p to %p", pin, newPin);
-        *pin = newPin;   
+
+        *pin = newPin;
     }
 
     return DEVICE_OK;
