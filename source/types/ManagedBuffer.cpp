@@ -304,7 +304,7 @@ void ManagedBuffer::shift(int offset, int start, int len)
     if (start < 0 || start + len > (int)ptr->length || start + len < start
         || len == 0 || offset == 0 || offset == INT_MIN) return;
     if (offset <= -len || offset >= len) {
-        fill(0);
+        fill(0, start, len);
         return;
     }
 
