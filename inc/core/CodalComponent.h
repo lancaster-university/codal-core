@@ -82,6 +82,8 @@ DEALINGS IN THE SOFTWARE.
 // Suggested range for device-specific IDs: 50-79
 // NOTE - not final, just suggested currently.
 
+// Range 80-99 - RESERVED (deprecated space, do not use!)
+
 #define DEVICE_ID_IO_P0               100                       // IDs 100-227 are reserved for I/O Pin IDs.
 
 #define DEVICE_ID_MESSAGE_BUS_LISTENER            1021          // Message bus indication that a handler for a given ID has been registered.
