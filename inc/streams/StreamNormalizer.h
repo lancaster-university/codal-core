@@ -137,6 +137,10 @@ namespace codal{
          */
         int setOrMask(uint32_t mask);
 
+        virtual float getSampleRate();
+        
+        virtual float requestSampleRate(float sampleRate);
+
         /**
          * Destructor.
          */

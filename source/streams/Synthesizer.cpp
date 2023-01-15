@@ -316,7 +316,7 @@ ManagedBuffer Synthesizer::pull()
  * Determine the sample rate currently in use by this Synthesizer.
  * @return the current sample rate, in Hz.
  */
-int Synthesizer::getSampleRate()
+float Synthesizer::getSampleRate()
 {
     return 1000000000 / samplePeriodNs;
 }

@@ -319,3 +319,11 @@ int StreamNormalizer::setOrMask(uint32_t mask)
 StreamNormalizer::~StreamNormalizer()
 {
 }
+
+float StreamNormalizer::getSampleRate() {
+    return this->upstream.getSampleRate();
+}
+
+float StreamNormalizer::requestSampleRate(float sampleRate) {
+    return this->upstream.requestSampleRate( sampleRate );
+}

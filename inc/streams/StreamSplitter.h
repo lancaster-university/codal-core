@@ -49,49 +49,56 @@ DEALINGS IN THE SOFTWARE.
 
 namespace codal{
 
-    class StreamSplitter : public DataSink, public DataSource, public CodalComponent 
+    class StreamSplitter;
+
+    class SplitterChannel : public DataSource, public DataSink {
+        private:
+            StreamSplitter * parent;
+            float sampleRate;
+        
+        public:
+            DataSink * output;
+
+            SplitterChannel( StreamSplitter *parent, DataSink *output );
+            ~SplitterChannel();
+
+            virtual int pullRequest();
+            virtual ManagedBuffer pull();
+            virtual void connect(DataSink &sink);
+            virtual void disconnect();
+            virtual int getFormat();
+            virtual int setFormat(int format);
+            virtual float getSampleRate();
+            virtual float requestSampleRate(float sampleRate);
+    };
+
+    class StreamSplitter : public DataSink, public CodalComponent 
     {
+    private:
+        ManagedBuffer       lastBuffer;                            // Buffer being processed
 
     public:    
-        int                 numberChannels;                    // Current Number of channels Splitter is serving
-        int                 processed;                         // How many downstream components have responded to pull request
-        int                 numberAttempts;                    // Number of failed pull request attempts
-        DataSource          &upstream;                         // The upstream component of this Splitter
-        DataSink            *outputChannels[CONFIG_MAX_CHANNELS];     // Array of Datasinks the Splitter is serving
-        ManagedBuffer       lastBuffer;                        // Buffer being processed
+        int                 numberChannels;                        // Current Number of channels Splitter is serving
+        int                 processed;                             // How many downstream components have responded to pull request
+        //int                 numberAttempts;                      // Number of failed pull request attempts
+        DataSource          &upstream;                             // The upstream component of this Splitter
+        SplitterChannel   * outputChannels[CONFIG_MAX_CHANNELS];   // Array of SplitterChannels the Splitter is serving
 
         /**
           * Creates a component that distributes a single upstream datasource to many downstream datasinks
           *
           * @param source a DataSource to receive data from
           */
-        StreamSplitter(DataSource &source, uint16_t id = DEVICE_ID_SPLITTER);
+        StreamSplitter(DataSource &source, uint16_t id = CodalComponent::generateDynamicID());
 
         /**
          * Callback provided when data is ready.
          */
         virtual int pullRequest();
 
-        /**
-         * Provide the next available ManagedBuffer to our downstream caller, if available.
-         */
-        virtual ManagedBuffer pull();
-
-        /**
-         * Register a downstream connection with splitter
-         */
-        virtual void connect(DataSink &downstream);
-
-        /**
-         *  Determine the data format of the buffers streamed out of this component.
-         */
-        virtual int getFormat();
-
-        /**
-         * Defines the data format of the buffers streamed out of this component.
-         * @param format the format to use, one of
-         */
-        virtual int setFormat(int format);
+        virtual ManagedBuffer getBuffer();
+        virtual SplitterChannel * createChannel();
+        virtual SplitterChannel * getChannel( DataSink * output );
 
         /**
          * Destructor.
