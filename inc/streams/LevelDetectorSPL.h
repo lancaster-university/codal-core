@@ -68,8 +68,9 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_SPL_8BIT                             2
 
 // Clap threshold
-#define LEVEL_DETECTOR_SPL_CLAP_THRESHOLD                   300
-#define LEVEL_DETECTOR_SPL_MAX_LOUD_BLOCKS                  2       // ensure noise not too long to be a clap
+#define LEVEL_DETECTOR_SPL_CLAP_HIGH_THRESHOLD              400      // threshold to start considering clap
+#define LEVEL_DETECTOR_SPL_CLAP_LOW_THRESHOLD               100      // threshold once in clap to consider noise over
+#define LEVEL_DETECTOR_SPL_MAX_LOUD_BLOCKS                  13       // ensure noise not too long to be a clap
 
 
 namespace codal{
@@ -91,6 +92,7 @@ namespace codal{
         int             unit;               // The units to be returned from this level detector (e.g. dB or linear 8bit)
         int             quietBlockCount;    // number of quiet blocks consecutively - used for clap detection
         int             noisyBlockCount;    // number of noisy blocks consecutively - used for clap detection
+        bool            inNoisyBlock;       // if had noisy and waiting to lower beyond lower threshold
 
         /**
           * Creates a component capable of measuring and thresholding stream data
