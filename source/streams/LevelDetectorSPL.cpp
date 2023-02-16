@@ -53,6 +53,9 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     else{
         this->activated = false;
     }
+
+    this->quietBlockCount = 0;
+    this->noisyBlockCount = 0;
 }
 
 /**
@@ -107,6 +110,31 @@ int LevelDetectorSPL::pullRequest()
             if(v > maxVal) maxVal = v;
             if(v < minVal) minVal = v;
             ptr += skip;
+        }
+
+        // work out rms amplitude for clap detection
+        // -> inspired by http://stackoverflow.com/questions/4160175/detect-tap-with-pyaudio-from-live-mic
+        int sumSquares = 0;         // TODO consider breaking them up into smaller blocks to improve clap detect
+        int count = 0;
+        ptr = data;
+        while(ptr < end) {
+            count ++;
+            v = (int32_t) StreamNormalizer::readSample[format](ptr) - minVal;   // need to sub minVal to avoid overflow
+            sumSquares += v*v;
+            ptr += skip;
+        }
+        float rms = sqrt(sumSquares/count);
+
+        if (rms > LEVEL_DETECTOR_SPL_CLAP_THRESHOLD) {
+            // noisy block
+            this->quietBlockCount = 0;
+            this->noisyBlockCount += 1;
+        } else {
+            // quiet block
+            if (this->noisyBlockCount >= 1 && this->noisyBlockCount <= LEVEL_DETECTOR_SPL_MAX_LOUD_BLOCKS)
+                Event(id, LEVEL_DETECTOR_SPL_CLAP);
+            this->noisyBlockCount = 0;
+            this->quietBlockCount += 1;
         }
 
         maxVal = (maxVal - minVal) / 2;

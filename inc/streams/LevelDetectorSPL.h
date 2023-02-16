@@ -34,6 +34,7 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_SPL_INITIALISED                       0x01
 #define LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED             0x02
 #define LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED              0x04
+#define LEVEL_DETECTOR_SPL_CLAP                              0x05
 
 /**
  * Default configuration values
@@ -66,6 +67,10 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_SPL_DB                               1
 #define LEVEL_DETECTOR_SPL_8BIT                             2
 
+// Clap threshold
+#define LEVEL_DETECTOR_SPL_CLAP_THRESHOLD                   300
+#define LEVEL_DETECTOR_SPL_MAX_LOUD_BLOCKS                  2       // ensure noise not too long to be a clap
+
 
 namespace codal{
     class LevelDetectorSPL : public CodalComponent, public DataSink
@@ -84,6 +89,8 @@ namespace codal{
         bool            activated;          // Has this component been connected yet
         bool            enabled;            // Is the component currently running
         int             unit;               // The units to be returned from this level detector (e.g. dB or linear 8bit)
+        int             quietBlockCount;    // number of quiet blocks consecutively - used for clap detection
+        int             noisyBlockCount;    // number of noisy blocks consecutively - used for clap detection
 
         /**
           * Creates a component capable of measuring and thresholding stream data
