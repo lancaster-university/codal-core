@@ -29,6 +29,8 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalDmesg.h"
 #include "Event.h"
 
+
+
 using namespace codal;
 
 SplitterChannel::SplitterChannel( StreamSplitter * parent, DataSink * output = NULL )
@@ -44,6 +46,7 @@ SplitterChannel::~SplitterChannel()
 }
 
 int SplitterChannel::pullRequest() {
+    pullAttempts++;
     if( output != NULL )
         return output->pullRequest();
     return -1;
@@ -51,6 +54,7 @@ int SplitterChannel::pullRequest() {
 
 ManagedBuffer SplitterChannel::pull()
 {
+    pullAttempts--;
     // Shortcut!
     if( sampleRate == DATASTREAM_SAMPLE_RATE_UNKNOWN )
         return parent->getBuffer();
@@ -81,11 +85,15 @@ ManagedBuffer SplitterChannel::pull()
 void SplitterChannel::connect(DataSink &sink)
 {
     output = &sink;
+    parent->numberActiveChannels++;
+    Event e( parent->id, SPLITTER_CHANNEL_CONNECT );
 }
 
 void SplitterChannel::disconnect()
 {
     output = NULL;
+    parent->numberActiveChannels--;
+    Event e( parent->id, SPLITTER_CHANNEL_DISCONNECT );
 }
 
 int SplitterChannel::getFormat()
@@ -186,22 +194,34 @@ SplitterChannel * StreamSplitter::createChannel()
         if (outputChannels[i] == NULL){
             outputChannels[i] = new SplitterChannel( this, NULL );
             placed = i;
-            DMESG("%s %d","Channel Added at location ", i);
             break;
         }
     }
     if(placed != -1)
         numberChannels++;
 
-    if(numberChannels > 0){
-        //Activate ADC
-        Event e( id, SPLITTER_ACTIVATE_CHANNEL );
-    }
+    if(numberChannels > 0)
+        Event e( id, SPLITTER_ACTIVATE_CHANNEL ); //Activate ADC
 
     if( placed != -1 )
         return outputChannels[placed];
     
     return NULL;
+}
+
+bool StreamSplitter::destroyChannel( SplitterChannel * channel ) {
+    for( int i=0; i<CONFIG_MAX_CHANNELS; i++ ) {
+        if( outputChannels[i] == channel ) {
+            outputChannels[i] = NULL;
+            numberChannels--;
+            delete channel;
+            Event e( id, SPLITTER_DEACTIVATE_CHANNEL ); // Signal the change
+            return true;
+        }
+    }
+
+    DMESG( "StreamSplitter::destroyChannel -> The SplitterChannel supplied did not exist on this splitter, refusing to destroy it." );
+    return false;
 }
 
 SplitterChannel * StreamSplitter::getChannel( DataSink * output ) {

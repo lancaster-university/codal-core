@@ -41,6 +41,8 @@ DEALINGS IN THE SOFTWARE.
   */
 #define SPLITTER_ACTIVATE_CHANNEL    1
 #define SPLITTER_DEACTIVATE_CHANNEL  2
+#define SPLITTER_CHANNEL_CONNECT     3
+#define SPLITTER_CHANNEL_DISCONNECT  4
 
 
 /**
@@ -57,8 +59,18 @@ namespace codal{
             float sampleRate;
         
         public:
+            int pullAttempts;       // Number of failed pull request attempts
             DataSink * output;
 
+            /**
+             * @brief Construct a new Splitter Channel object.
+             * 
+             * This should not normally be done manually; StreamSplitter objects will create these
+             * on-demand via createChannel()
+             * 
+             * @param parent The StreamSplitter this channel is part of
+             * @param output An output DataSink to send data to. Can be NULL for a disconnected channel.
+             */
             SplitterChannel( StreamSplitter *parent, DataSink *output );
             ~SplitterChannel();
 
@@ -78,9 +90,9 @@ namespace codal{
         ManagedBuffer       lastBuffer;                            // Buffer being processed
 
     public:    
-        int                 numberChannels;                        // Current Number of channels Splitter is serving
+        int                 numberChannels;                        // Current number of channels Splitter is serving
+        int                 numberActiveChannels;                  // Current number of /active/ channels this Splitter is serving
         int                 processed;                             // How many downstream components have responded to pull request
-        //int                 numberAttempts;                      // Number of failed pull request attempts
         DataSource          &upstream;                             // The upstream component of this Splitter
         SplitterChannel   * outputChannels[CONFIG_MAX_CHANNELS];   // Array of SplitterChannels the Splitter is serving
 
@@ -98,6 +110,7 @@ namespace codal{
 
         virtual ManagedBuffer getBuffer();
         virtual SplitterChannel * createChannel();
+        virtual bool destroyChannel( SplitterChannel * channel );
         virtual SplitterChannel * getChannel( DataSink * output );
 
         /**
