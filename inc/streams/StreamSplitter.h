@@ -72,7 +72,7 @@ namespace codal{
              * @param output An output DataSink to send data to. Can be NULL for a disconnected channel.
              */
             SplitterChannel( StreamSplitter *parent, DataSink *output );
-            ~SplitterChannel();
+            virtual ~SplitterChannel();
 
             virtual int pullRequest();
             virtual ManagedBuffer pull();
