@@ -39,6 +39,7 @@ DEALINGS IN THE SOFTWARE.
 #define IO_STATUS_INTERRUPT_ON_EDGE         0x0080        // Pin will generate events on pin change
 #define IO_STATUS_ACTIVE_HI                 0x0100        // Pin is ACTIVE_HI if set, or ACTIVE_LO if clear
 #define IO_STATUS_WAKE_ON_ACTIVE            0x0200        // Pin should trigger power manager wake-up
+#define IO_STATUS_DISCONNECTING             0x0400        // Pin is currently in the process of disconnecting from a peripheral
 
 #define DEVICE_PIN_MAX_OUTPUT             1023
 
@@ -270,6 +271,17 @@ namespace codal
         {
             return (status & (IO_STATUS_ANALOG_IN | IO_STATUS_ANALOG_OUT)) == 0 ? 0 : 1;
         }
+
+        /**
+          * Determines if this IO pin is currently in the processing of being disconnected from a peripheral.
+          *
+          * @return 1 if pin is disconnecting, 0 otherwise.
+          */
+        virtual int isDisconnecting()
+        {
+            return (status & IO_STATUS_DISCONNECTING) == 0 ? 0 : 1;
+        }
+
 
         /**
           * Configures this IO pin as a "makey makey" style touch sensor (if necessary)
