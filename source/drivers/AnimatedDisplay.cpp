@@ -107,11 +107,11 @@ void AnimatedDisplay::animationUpdate()
   */
 void AnimatedDisplay::sendAnimationCompleteEvent()
 {
-    // Signal that we've completed an animation.
-    Event(id, DISPLAY_EVT_ANIMATION_COMPLETE);
-
     // Wake up a fiber that was blocked on the animation (if any).
     Event(DEVICE_ID_NOTIFY_ONE, DISPLAY_EVT_FREE);
+
+    // Signal that we've completed an animation.
+    Event(id, DISPLAY_EVT_ANIMATION_COMPLETE);
 }
 
 /**
