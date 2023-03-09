@@ -87,8 +87,7 @@ int LevelDetectorSPL::pullRequest()
     int samples = b.length() / skip;
 
     while(samples){
-
-        //ensure we use at least windowSize number of samples (128)
+        // ensure we use at least windowSize number of samples (128)
         if(samples < windowSize)
         break;
 
@@ -112,9 +111,11 @@ int LevelDetectorSPL::pullRequest()
             if(v < minVal) minVal = v;
             ptr += skip;
         }
+        maxVal = (maxVal - minVal) / 2;
 
-        // work out rms amplitude for clap detection
-        // -> inspired by http://stackoverflow.com/questions/4160175/detect-tap-with-pyaudio-from-live-mic
+        /*******************************
+        *   GET RMS AMPLITUDE FOR CLAP DETECTION
+        ******************************/
         int sumSquares = 0;
         int count = 0;
         ptr = data;
@@ -125,22 +126,6 @@ int LevelDetectorSPL::pullRequest()
             ptr += skip;
         }
         float rms = sqrt(sumSquares/count);
-
-        if ((!this->inNoisyBlock && rms > LEVEL_DETECTOR_SPL_CLAP_HIGH_THRESHOLD) || (this->inNoisyBlock && rms > LEVEL_DETECTOR_SPL_CLAP_LOW_THRESHOLD)) {
-            // noisy block
-            this->quietBlockCount = 0;
-            this->noisyBlockCount += 1;
-            this->inNoisyBlock = true;
-        } else {
-            // quiet block
-            if (this->noisyBlockCount >= 1 && this->noisyBlockCount <= LEVEL_DETECTOR_SPL_MAX_LOUD_BLOCKS)
-                Event(id, LEVEL_DETECTOR_SPL_CLAP);
-            this->inNoisyBlock = false;
-            this->noisyBlockCount = 0;
-            this->quietBlockCount += 1;
-        }
-
-        maxVal = (maxVal - minVal) / 2;
 
         /*******************************
         *   CALCULATE SPL
@@ -155,6 +140,11 @@ int LevelDetectorSPL::pullRequest()
         samples -= windowSize;
         data += windowSize;
 
+        /*******************************
+        *   EMIT EVENTS
+        ******************************/
+
+        // HIGH THRESHOLD
         if ((!(status & LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
         {
             Event(id, LEVEL_THRESHOLD_HIGH);
@@ -162,12 +152,46 @@ int LevelDetectorSPL::pullRequest()
             status &= ~LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED;
         }
 
+        // LOW THRESHOLD
         if ((!(status & LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED)) && level < lowThreshold)
         {
             Event(id, LEVEL_THRESHOLD_LOW);
             status |=  LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED;
             status &= ~LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED;
         }
+
+        // CLAP DETECTION HANDLING
+        if (
+                (
+                        !this->inNoisyBlock &&
+                        rms > LEVEL_DETECTOR_SPL_CLAP_HIGH_THRESHOLD &&
+                        this->quietBlockCount >= LEVEL_DETECTOR_SPL_CLAP_MIN_QUIET_TIME
+                ) ||
+                (this->inNoisyBlock && rms > LEVEL_DETECTOR_SPL_CLAP_LOW_THRESHOLD)
+            ) {
+//            if (!this->inNoisyBlock) DMESGF("POSSIBLE CLAP - quiet count was %d", this->quietBlockCount);
+            // noisy block
+            this->quietBlockCount = 0;
+            this->noisyBlockCount += 1;
+            this->inNoisyBlock = true;
+        } else {
+            // quiet block
+            if (
+                    this->noisyBlockCount >= 1 &&
+                    this->noisyBlockCount <= LEVEL_DETECTOR_SPL_MAX_LOUD_BLOCKS &&
+                    this->noisyBlockCount >= LEVEL_DETECTOR_SPL_MIN_LOUD_BLOCKS
+                ) {
+                Event(id, LEVEL_DETECTOR_SPL_CLAP);
+//                DMESGF("CLAP EVENT EMITTED");
+            }
+            this->inNoisyBlock = false;
+            this->noisyBlockCount = 0;
+            this->quietBlockCount += 1;
+        }
+
+//        if (this->inNoisyBlock) {
+//            DMESGF("rms: %d | level: %d", (int) rms, (int) level);
+//        }
    }
 
    return DEVICE_OK;
