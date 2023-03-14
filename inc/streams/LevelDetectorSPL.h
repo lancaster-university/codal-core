@@ -67,12 +67,13 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_SPL_DB                               1
 #define LEVEL_DETECTOR_SPL_8BIT                             2
 
-// Clap threshold
-#define LEVEL_DETECTOR_SPL_CLAP_HIGH_THRESHOLD              200      // threshold to start considering clap
-#define LEVEL_DETECTOR_SPL_CLAP_LOW_THRESHOLD               100      // threshold once in clap to consider noise over
-#define LEVEL_DETECTOR_SPL_MAX_LOUD_BLOCKS                  13       // ensure noise not too long to be a clap
-#define LEVEL_DETECTOR_SPL_MIN_LOUD_BLOCKS                  2        // ensure noise not too short to be a clap
-#define LEVEL_DETECTOR_SPL_CLAP_MIN_QUIET_TIME              20       // prevent very fast taps being registered as clap
+// Clap detection constants
+#define LEVEL_DETECTOR_SPL_BEGIN_POSS_CLAP_RMS              200      // threshold to start considering clap - rms value
+#define LEVEL_DETECTOR_SPL_MIN_IN_CLAP_RMS                  300      // minimum amount to be within a clap once considering
+#define LEVEL_DETECTOR_SPL_CLAP_OVER_RMS                    100      // threshold once in clap to consider noise over
+#define LEVEL_DETECTOR_SPL_CLAP_MAX_LOUD_BLOCKS             13       // ensure noise not too long to be a clap
+#define LEVEL_DETECTOR_SPL_CLAP_MIN_LOUD_BLOCKS             2        // ensure noise not too short to be a clap
+#define LEVEL_DETECTOR_SPL_CLAP_MIN_QUIET_BLOCKS            20       // prevent very fast taps being registered as clap
 
 
 namespace codal{
@@ -95,6 +96,7 @@ namespace codal{
         int             quietBlockCount;    // number of quiet blocks consecutively - used for clap detection
         int             noisyBlockCount;    // number of noisy blocks consecutively - used for clap detection
         bool            inNoisyBlock;       // if had noisy and waiting to lower beyond lower threshold
+        float           maxRms;             // maximum rms within a noisy block
 
         /**
           * Creates a component capable of measuring and thresholding stream data
