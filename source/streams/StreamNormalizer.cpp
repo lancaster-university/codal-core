@@ -24,7 +24,6 @@ DEALINGS IN THE SOFTWARE.
 
 #include "StreamNormalizer.h"
 #include "ErrorNo.h"
-#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -145,14 +144,6 @@ StreamNormalizer::StreamNormalizer(DataSource &source, float gain, bool normaliz
  */
 ManagedBuffer StreamNormalizer::pull()
 {
-    return buffer;
-}
-
-/**
- * Callback provided when data is ready.
- */
-int StreamNormalizer::pullRequest()
-{
     int samples;                // Number of samples in the input buffer.
     int s;                      // The sample being processed, encpasulated inside a 32 bit number.
     uint8_t *data;              // Input buffer read pointer.
@@ -161,7 +152,8 @@ int StreamNormalizer::pullRequest()
     int bytesPerSampleIn;       // number of bit per sample of the input buffer.
     int bytesPerSampleOut;      // number of bit per sample of the input buffer.
     int z = 0;                  // normalized zero point calculated from this buffer.
-    int zo = (int) zeroOffset;  // Snapshot of our previously calculate zero point
+    int zo = (int) zeroOffset;  // Snapshot of our previously calculate zero point.
+    ManagedBuffer buffer;       // The buffer being processed.
     
     // Determine the input format.
     inputFormat = upstream.getFormat();
@@ -226,11 +218,15 @@ int StreamNormalizer::pullRequest()
     // Ensure output buffer is the correct size;
     buffer.truncate(samples * bytesPerSampleOut);
 
-    // Signal downstream component that a buffer is ready.
-    if (outputEnabled)
-        output.pullRequest();
+    return buffer;
+}
 
-    return DEVICE_OK;
+/**
+ * Callback provided when data is ready.
+ */
+int StreamNormalizer::pullRequest()
+{
+    return output.pullRequest();
 }
 
 /**

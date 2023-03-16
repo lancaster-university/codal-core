@@ -61,6 +61,7 @@ namespace codal{
         int             level;              // The current, instantaneous level.
         int             sigma;              // Running total of the samples in the current window.
         bool            activated;          // Has this component been connected yet.
+        int             ttl;
 
 
         /**
@@ -85,6 +86,8 @@ namespace codal{
          * @return The current value of the sensor.
          */
         int getValue();
+
+        void activateForEvents( bool state );
 
         /**
          * Set threshold to the given value. Events will be generated when these thresholds are crossed.

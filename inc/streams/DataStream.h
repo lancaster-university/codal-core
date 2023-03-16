@@ -81,12 +81,13 @@ namespace codal
     class DataStream : public DataSource, public DataSink
     {
         ManagedBuffer stream[DATASTREAM_MAXIMUM_BUFFERS];
-        int bufferCount;
-        int bufferLength;
-        int preferredBufferSize;
-        int writers;
-        uint16_t spaceAvailableEventCode;
-        uint16_t pullRequestEventCode;
+        //int bufferCount;
+        //int bufferLength;
+        //int preferredBufferSize;
+        //int writers;
+        //uint16_t spaceAvailableEventCode;
+        //uint16_t pullRequestEventCode;
+        ManagedBuffer * nextBuffer;
         bool isBlocking;
 
         DataSink *downStream;
@@ -114,7 +115,7 @@ namespace codal
              * @param position The index of the byte to read.
              * @return The value of the byte at the given position, or DEVICE_INVALID_PARAMETER.
              */
-            int get(int position);
+            //int get(int position);
 
             /**
              * Sets the byte at the given index to value provided.
@@ -123,13 +124,13 @@ namespace codal
              * @return DEVICE_OK, or DEVICE_INVALID_PARAMETER.
              *
              */
-            int set(int position, uint8_t value);
+            //int set(int position, uint8_t value);
 
             /**
              * Gets number of bytes that are ready to be consumed in this data stream.
              * @return The size in bytes.
              */
-            int length();
+            //int length();
 
             /**
              * Determines if any of the data currently flowing through this stream is held in non-volatile (FLASH) memory.
@@ -160,13 +161,13 @@ namespace codal
              * Determine the number of bytes that are currnetly buffered before blocking subsequent push() operations.
              * @return the current preferred buffer size for this DataStream
              */
-            int getPreferredBufferSize();
+            //int getPreferredBufferSize();
 
             /**
              * Define the number of bytes that should be buffered before blocking subsequent push() operations.
              * @param size The number of bytes to buffer.
              */
-            void setPreferredBufferSize(int size);
+            //void setPreferredBufferSize(int size);
 
             /**
              * Determines if this stream acts in a synchronous, blocking mode or asynchronous mode. In blocking mode, writes to a full buffer
@@ -189,7 +190,7 @@ namespace codal
              *
              * @return true if there if the buffer is ful, and can accept no more data at this time. False otherwise.
              */
-            bool full();
+            ///bool full();
 
             /**
              * Provide the next available ManagedBuffer to our downstream caller, if available.
@@ -209,7 +210,7 @@ namespace codal
             /**
              * Issue a deferred pull request to our downstream component, if one has been registered.
              */
-            void onDeferredPullRequest(Event);
+            //void onDeferredPullRequest(Event);
 
     };
 }

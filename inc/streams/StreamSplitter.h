@@ -43,6 +43,8 @@ DEALINGS IN THE SOFTWARE.
 #define SPLITTER_DEACTIVATE_CHANNEL  2
 #define SPLITTER_CHANNEL_CONNECT     3
 #define SPLITTER_CHANNEL_DISCONNECT  4
+#define SPLITTER_ACTIVATE            5
+#define SPLITTER_DEACTIVATE          6
 
 
 /**
@@ -88,11 +90,12 @@ namespace codal{
     {
     private:
         ManagedBuffer       lastBuffer;                            // Buffer being processed
+        uint64_t            __cycle;
 
-    public:    
-        int                 numberChannels;                        // Current number of channels Splitter is serving
-        int                 numberActiveChannels;                  // Current number of /active/ channels this Splitter is serving
-        int                 processed;                             // How many downstream components have responded to pull request
+    public:
+        bool                isActive;                              // Track if we need to emit activate/deactivate messages
+        int                 channels;                              // Current number of channels Splitter is serving
+        volatile int        activeChannels;                        // Current number of /active/ channels this Splitter is serving
         DataSource          &upstream;                             // The upstream component of this Splitter
         SplitterChannel   * outputChannels[CONFIG_MAX_CHANNELS];   // Array of SplitterChannels the Splitter is serving
 
@@ -102,6 +105,8 @@ namespace codal{
           * @param source a DataSource to receive data from
           */
         StreamSplitter(DataSource &source, uint16_t id = CodalComponent::generateDynamicID());
+
+        void periodicCallback();
 
         /**
          * Callback provided when data is ready.
@@ -116,7 +121,9 @@ namespace codal{
         /**
          * Destructor.
          */
-        ~StreamSplitter();
+        virtual ~StreamSplitter();
+
+        friend SplitterChannel;
 
     };
 }

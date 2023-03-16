@@ -78,17 +78,17 @@ int DataSink::pullRequest()
   */
 DataStream::DataStream(DataSource &upstream)
 {
-    this->bufferCount = 0;
-    this->bufferLength = 0;
-    this->preferredBufferSize = 0;
-    this->pullRequestEventCode = 0;
-    this->spaceAvailableEventCode = allocateNotifyEvent();
+    //this->bufferCount = 0;
+    //this->bufferLength = 0;
+    //this->preferredBufferSize = 0;
+    //this->pullRequestEventCode = 0;
+    //this->spaceAvailableEventCode = allocateNotifyEvent();
+    this->nextBuffer = NULL;
     this->isBlocking = true;
-    this->writers = 0;
+    //this->writers = 0;
 
     this->downStream = NULL;
     this->upStream = &upstream;
-
 }
 
 /**
@@ -105,7 +105,7 @@ DataStream::~DataStream()
  * @param position The index of the byte to read.
  * @return The value of the byte at the given position, or DEVICE_INVALID_PARAMETER.
  */
-int DataStream::get(int position)
+/*int DataStream::get(int position)
 {
 	for (int i = 0; i < bufferCount; i++)
 	{
@@ -116,7 +116,7 @@ int DataStream::get(int position)
 	}
 
 	return DEVICE_INVALID_PARAMETER;
-}
+}*/
 
 /**
  * Sets the byte at the given index to value provided.
@@ -125,7 +125,7 @@ int DataStream::get(int position)
  * @return DEVICE_OK, or DEVICE_INVALID_PARAMETER.
  *
  */
-int DataStream::set(int position, uint8_t value)
+/*int DataStream::set(int position, uint8_t value)
 {
 	for (int i = 0; i < bufferCount; i++)
 	{
@@ -139,16 +139,16 @@ int DataStream::set(int position, uint8_t value)
 	}
 
 	return DEVICE_INVALID_PARAMETER;
-}
+}*/
 
 /**
  * Gets number of bytes that are ready to be consumed in this data stream.
  * @return The size in bytes.
  */
-int DataStream::length()
+/*int DataStream::length()
 {
 	return this->bufferLength;
-}
+}*/
 
 /**
  * Determines if any of the data currently flowing through this stream is held in non-volatile (FLASH) memory.
@@ -156,13 +156,17 @@ int DataStream::length()
  */
 bool DataStream::isReadOnly()
 {
-    bool r = true;
+    /*bool r = true;
 
     for (int i=0; i<bufferCount;i++)
         if (stream[i].isReadOnly() == false)
             r = false;
 
-    return r;
+    return r;*/
+
+    if( this->nextBuffer != NULL )
+        return nextBuffer->isReadOnly();
+    return true;
 }
 
 /**
@@ -198,19 +202,19 @@ void DataStream::disconnect()
  * Determine the number of bytes that are currnetly buffered before blocking subsequent push() operations.
  * @return the current preferred buffer size for this DataStream
  */
-int DataStream::getPreferredBufferSize()
+/*int DataStream::getPreferredBufferSize()
 {
 	return preferredBufferSize;
-}
+}*/
 
 /**
  * Define the number of bytes that should be buffered before blocking subsequent push() operations.
  * @param size The number of bytes to buffer.
  */
-void DataStream::setPreferredBufferSize(int size)
+/*void DataStream::setPreferredBufferSize(int size)
 {
 	this->preferredBufferSize = size;
-}
+}*/
 
 /**
  * Determines if this stream acts in a synchronous, blocking mode or asynchronous mode. In blocking mode, writes to a full buffer
@@ -223,13 +227,13 @@ void DataStream::setBlocking(bool isBlocking)
     this->isBlocking = isBlocking;
 
     // If this is the first time async mode has been used on this stream, allocate the necessary resources.
-    if (!isBlocking && this->pullRequestEventCode == 0)
+    /*if (!isBlocking && this->pullRequestEventCode == 0)
     {
         this->pullRequestEventCode = allocateNotifyEvent();
 
         if(EventModel::defaultEventBus)
             EventModel::defaultEventBus->listen(DEVICE_ID_NOTIFY, pullRequestEventCode, this, &DataStream::onDeferredPullRequest);
-    }
+    }*/
 }
 
 /**
@@ -237,7 +241,7 @@ void DataStream::setBlocking(bool isBlocking)
  */
 ManagedBuffer DataStream::pull()
 {
-	ManagedBuffer out = stream[0];
+	/*ManagedBuffer out = stream[0];
 
 	//
 	// A simplistic FIFO for now. Copy cost is actually pretty low because ManagedBuffer is a managed type,
@@ -256,17 +260,24 @@ ManagedBuffer DataStream::pull()
 
     Event(DEVICE_ID_NOTIFY_ONE, spaceAvailableEventCode);
 
-	return out;
+	return out;*/
+
+    /*if( this->nextBuffer != NULL )
+        return *this->nextBuffer;
+
+    return ManagedBuffer();*/
+
+    return this->upStream->pull();
 }
 
 /**
  * Issue a pull request to our downstream component, if one has been registered.
  */
-void DataStream::onDeferredPullRequest(Event)
+/*void DataStream::onDeferredPullRequest(Event)
 {
     if (downStream != NULL)
         downStream->pullRequest();
-}
+}*/
 
 /**
  * Determines if a buffer of the given size can be added to the buffer.
@@ -276,13 +287,16 @@ void DataStream::onDeferredPullRequest(Event)
  */
 bool DataStream::canPull(int size)
 {
-    if(bufferCount + writers >= DATASTREAM_MAXIMUM_BUFFERS)
+    DMESG( "DataStream::canPull()" );
+    /*if(bufferCount + writers >= DATASTREAM_MAXIMUM_BUFFERS)
         return false;
 
     if(preferredBufferSize > 0 && (bufferLength + size > preferredBufferSize))
         return false;
 
-    return true;
+    return true;*/
+
+    return this->nextBuffer != NULL;
 }
 
 /**
@@ -290,16 +304,17 @@ bool DataStream::canPull(int size)
  *
  * @return true if there if the buffer is ful, and can accept no more data at this time. False otherwise.
  */
-bool DataStream::full()
+/*bool DataStream::full()
 {
     return !canPull();
-}
+}*/
 
 /**
  * Store the given buffer in our stream, possibly also causing a push operation on our downstream component.
  */
 int DataStream::pullRequest()
 {
+    /*
     // If we're defined as non-blocking and no space is available, then there's nothing we can do.
     if (full() && this->isBlocking == false)
         return DEVICE_NO_RESOURCES;
@@ -328,14 +343,25 @@ int DataStream::pullRequest()
 
 	if (downStream != NULL)
     {
-        if (this->isBlocking)
+        DMESG( "DS(blocking = %d) -> PR?", this->isBlocking );
+        if (this->isBlocking) {
+            DMESG( "DS -> Direct PR" );
             downStream->pullRequest();
-        else
+        }
+        else {
+            DMESG( "DS -> Defer PR" );
             Event(DEVICE_ID_NOTIFY, pullRequestEventCode);
+        }
         
     }
 
-	return DEVICE_OK;
+	return DEVICE_OK;*/
+
+    if( this->downStream != NULL ) {
+        this->downStream->pullRequest();
+    }
+
+    return DEVICE_OK;
 }
 
 /**

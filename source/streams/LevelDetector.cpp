@@ -45,7 +45,6 @@ LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThres
     this->activated = false;
     if(connectImmediately){
         upstream.connect(*this);
-        activated = true;
     }
 }
 
@@ -54,6 +53,9 @@ LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThres
  */
 int LevelDetector::pullRequest()
 {
+    if( ttl < 1 && !activated )
+        return DEVICE_OK;
+
     ManagedBuffer b = upstream.pull();
 
     int16_t *data = (int16_t *) &b[0];
@@ -100,6 +102,10 @@ int LevelDetector::pullRequest()
         data++;
     }
 
+    // Disconnect when our TTL is less than 1, if we're not set to always active
+    if( !activated && --ttl < 1 )
+        upstream.disconnect();
+
     return DEVICE_OK;
 }
 
@@ -110,13 +116,17 @@ int LevelDetector::pullRequest()
  */
 int LevelDetector::getValue()
 {
-    if(!activated){
-        // Register with our upstream component: on demand activated
-        DMESG("activating LD");
-        upstream.connect(*this);
-        activated = true;
-    }
+    this->ttl = 100; // In buffers
+    upstream.connect(*this);
+    target_wait( 100 );
     return level;
+}
+
+void LevelDetector::activateForEvents( bool state )
+{
+    this->activated = state;
+    if( this->activated )
+        upstream.connect(*this);
 }
 
 /**

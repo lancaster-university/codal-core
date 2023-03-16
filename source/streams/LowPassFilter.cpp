@@ -1,4 +1,5 @@
 #include "LowPassFilter.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 

@@ -26,10 +26,8 @@ DEALINGS IN THE SOFTWARE.
 #include "StreamSplitter.h"
 #include "StreamNormalizer.h"
 #include "ErrorNo.h"
-#include "CodalDmesg.h"
 #include "Event.h"
-
-
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -54,14 +52,15 @@ int SplitterChannel::pullRequest() {
 
 ManagedBuffer SplitterChannel::pull()
 {
-    pullAttempts--;
-    // Shortcut!
-    if( sampleRate == DATASTREAM_SAMPLE_RATE_UNKNOWN )
-        return parent->getBuffer();
+    pullAttempts = 0;
+    ManagedBuffer inData = parent->getBuffer();
+
+    // Shortcuts - we can't fabricate samples, so just pass on what we can if we don't know or can't keep up.
+    if( sampleRate == DATASTREAM_SAMPLE_RATE_UNKNOWN || sampleRate >= parent->upstream.getSampleRate() )
+        return inData;
     
     // Going the long way around - drop any extra samples...
     float inRate = parent->upstream.getSampleRate();
-    ManagedBuffer inData = parent->getBuffer();
     int inFmt = parent->upstream.getFormat();
     int bytesPerSample = DATASTREAM_FORMAT_BYTES_PER_SAMPLE( inFmt );
     int inSamples = inData.length() / bytesPerSample;
@@ -71,7 +70,8 @@ ManagedBuffer SplitterChannel::pull()
 
     uint8_t *inPtr = &inData[0];
     uint8_t *outPtr = &outData[0];
-    for( int i=0; i<inSamples/step; i++ ) {
+    while( outPtr - &outData[0] < outData.length() )
+    {
         int s = StreamNormalizer::readSample[inFmt](inPtr);
         inPtr += bytesPerSample * step;
 
@@ -84,16 +84,21 @@ ManagedBuffer SplitterChannel::pull()
 
 void SplitterChannel::connect(DataSink &sink)
 {
-    output = &sink;
-    parent->numberActiveChannels++;
-    Event e( parent->id, SPLITTER_CHANNEL_CONNECT );
+    // Prevent repeated events on calling connect multiple times (so consumers can blindly connect!)
+    if( output != &sink ) {
+        output = &sink;
+        parent->activeChannels++; // Notify that we have might _at least_ one sink available
+        Event e( parent->id, SPLITTER_CHANNEL_CONNECT );
+    }
 }
 
 void SplitterChannel::disconnect()
 {
-    output = NULL;
-    parent->numberActiveChannels--;
-    Event e( parent->id, SPLITTER_CHANNEL_DISCONNECT );
+    // Prevent repeated events on calling disconnect multiple times (so consumers can blindly disconnect!)
+    if( output != NULL ) {
+        output = NULL;
+        Event e( parent->id, SPLITTER_CHANNEL_DISCONNECT );
+    }
 }
 
 int SplitterChannel::getFormat()
@@ -115,7 +120,7 @@ float SplitterChannel::getSampleRate()
 
 float SplitterChannel::requestSampleRate( float sampleRate )
 {
-    sampleRate = sampleRate;
+    this->sampleRate = sampleRate;
 
     // Do we need to request a higher rate upstream?
     if( parent->upstream.getSampleRate() < sampleRate ) {
@@ -141,12 +146,15 @@ float SplitterChannel::requestSampleRate( float sampleRate )
 StreamSplitter::StreamSplitter(DataSource &source, uint16_t id) : upstream(source)
 {
     this->id = id;
-    this->numberChannels = 0;
+    this->channels = 0;
     // init array to NULL.
     for (int i = 0; i < CONFIG_MAX_CHANNELS; i++)
         outputChannels[i] = NULL;
     
     source.connect(*this);
+
+    this->__cycle = 0;
+    //this->status |= DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
 }
 
 StreamSplitter::~StreamSplitter()
@@ -156,8 +164,29 @@ StreamSplitter::~StreamSplitter()
 
 ManagedBuffer StreamSplitter::getBuffer()
 {
-    processed++;
+    activeChannels++;
     return lastBuffer;
+}
+
+void StreamSplitter::periodicCallback() {
+    if( this->__cycle++ % 50 != 0 )
+        return;
+
+    if( this->id == 64000 ) {
+        char const CLEAR_SRC[] = {0x1B, 0x5B, 0x32, 0x4A };
+        DMESG( CLEAR_SRC );
+    }
+    
+    DMESG( "%d - Active Channels: %d (active = %d, sampleRate = %d)", this->id, this->activeChannels, this->isActive, (int)this->upstream.getSampleRate() );
+    for( int i=0; i<CONFIG_MAX_CHANNELS; i++ ){
+        if( this->outputChannels[i] != NULL ) {
+            if( this->outputChannels[i]->output != NULL )
+                DMESG( "\t- %d [CONN] failed = %d (sampleRate = %d)", i, this->outputChannels[i]->pullAttempts, (int)this->outputChannels[i]->getSampleRate() );
+            else
+                DMESG( "\t- %d [DISC] failed = %d (sampleRate = %d)", i, this->outputChannels[i]->pullAttempts, (int)this->outputChannels[i]->getSampleRate() );
+        } else
+            DMESG( "\t- %d [----]", i );
+    }
 }
 
 /**
@@ -165,20 +194,28 @@ ManagedBuffer StreamSplitter::getBuffer()
  */
 int StreamSplitter::pullRequest()
 {
-    if( processed >= numberChannels )
+    if( activeChannels > 0 )
     {
-        processed = 0;
+        if( !isActive )
+            Event e( id, SPLITTER_ACTIVATE );
+        isActive = true;
         lastBuffer = upstream.pull();
-
-        // For each downstream channel that exists in array outputChannels - make a pullRequest
-        for (int i = 0; i < CONFIG_MAX_CHANNELS; i++)
-            if (outputChannels[i] != NULL)
-                outputChannels[i]->pullRequest();
     }
-    else {
-        // Unfortunately we have to drop a buffer, otherwise we might stall the pipeline!
-        upstream.pull();
-        processed = CONFIG_MAX_CHANNELS + 1;
+    else
+    {
+        if( isActive )
+            Event e( id, SPLITTER_DEACTIVATE );
+        isActive = false;
+        lastBuffer = ManagedBuffer();
+    }
+    
+    activeChannels = 0;
+
+    // For each downstream channel that exists in array outputChannels - make a pullRequest
+    for (int i = 0; i < CONFIG_MAX_CHANNELS; i++)
+    {
+        if (outputChannels[i] != NULL)
+            outputChannels[i]->pullRequest();
     }
     
     return DEVICE_OK;
@@ -197,14 +234,11 @@ SplitterChannel * StreamSplitter::createChannel()
             break;
         }
     }
-    if(placed != -1)
-        numberChannels++;
-
-    if(numberChannels > 0)
-        Event e( id, SPLITTER_ACTIVATE_CHANNEL ); //Activate ADC
-
-    if( placed != -1 )
+    if(placed != -1) {
+        channels++;
+        Event e( id, SPLITTER_ACTIVATE_CHANNEL );
         return outputChannels[placed];
+    }
     
     return NULL;
 }
@@ -213,14 +247,13 @@ bool StreamSplitter::destroyChannel( SplitterChannel * channel ) {
     for( int i=0; i<CONFIG_MAX_CHANNELS; i++ ) {
         if( outputChannels[i] == channel ) {
             outputChannels[i] = NULL;
-            numberChannels--;
+            channels--;
             delete channel;
-            Event e( id, SPLITTER_DEACTIVATE_CHANNEL ); // Signal the change
+            Event e( id, SPLITTER_DEACTIVATE_CHANNEL );
             return true;
         }
     }
 
-    DMESG( "StreamSplitter::destroyChannel -> The SplitterChannel supplied did not exist on this splitter, refusing to destroy it." );
     return false;
 }
 

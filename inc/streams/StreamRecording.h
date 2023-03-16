@@ -5,7 +5,7 @@
 #include "DataStream.h"
 
 // Pretty much the largest sensible number we can have on a v2
-#define REC_MAX_BUFFERS     256
+#define REC_MAX_BUFFERS     200
 
 #define REC_STATE_STOPPED   0
 #define REC_STATE_PLAYING   1
@@ -148,6 +148,8 @@ namespace codal
          * @return True if stopped, else false if recording or playing back. 
          */
         bool isStopped();
+
+        virtual float getSampleRate();
 
     };
 

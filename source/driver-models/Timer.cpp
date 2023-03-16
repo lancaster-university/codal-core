@@ -100,6 +100,7 @@ Timer::Timer(LowLevelTimer& t, uint8_t ccPeriodChannel, uint8_t ccEventChannel) 
 {
     // Register ourselves as the defualt timer - most recent timer wins.
     system_timer = this;
+    
 
     this->ccPeriodChannel = ccPeriodChannel;
     this->ccEventChannel = ccEventChannel;
