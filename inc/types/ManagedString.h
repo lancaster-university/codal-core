@@ -341,7 +341,9 @@ namespace codal
           * display.scroll(s + p) // scrolls "abcdefgh"
           * @endcode
           */
+        #ifndef DOXYGEN_SHOULD_SKIP_THIS // Friend members as 'const ... &' currently break breathe/exhale doc generation, so we MUST skip this for now.
         friend ManagedString (codal::operator+) (const ManagedString& lhs, const ManagedString& rhs);
+        #endif
 
         /**
           * Provides a character value at a given position in the string, indexed from zero.
