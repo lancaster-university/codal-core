@@ -120,6 +120,20 @@ namespace codal
         int buttonActive();
 
         /**
+         * Determines the instantneous digital value of the pin associated with this TouchButton
+         *
+         * @return true if a digital read of the attached pin is a logic 1, false otherwise.
+         */
+         int getPinValue();
+
+        /**
+         * Drives a given digital value to the pin associated with this TouchButton
+         *
+         * @param v the digital value to write to the pin associated with this TouchButton.
+         */
+         void setPinValue(int v);
+
+        /**
           * Destructor for Button, where we deregister this instance from the array of fiber components.
           */
         ~TouchButton();

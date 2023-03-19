@@ -44,6 +44,8 @@ DEALINGS IN THE SOFTWARE.
 
 #define DATASTREAM_FORMAT_BYTES_PER_SAMPLE(x) ((x+1)/2)
 
+#define DATASTREAM_SAMPLE_RATE_UNKNOWN      0.0f
+
 namespace codal
 {
     /**
@@ -53,7 +55,7 @@ namespace codal
     {
     	public:
 
-    	virtual int pullRequest();
+            virtual int pullRequest();
     };
 
     /**
@@ -62,12 +64,13 @@ namespace codal
     class DataSource
     {
     	public:
-
-    	virtual ManagedBuffer pull();
-    	virtual void connect(DataSink &sink);
-        virtual void disconnect();
-        virtual int getFormat();
-        virtual int setFormat(int format);
+            virtual ManagedBuffer pull();
+            virtual void connect(DataSink &sink);
+            virtual void disconnect();
+            virtual int getFormat();
+            virtual int setFormat(int format);
+            virtual float getSampleRate();
+            virtual float requestSampleRate(float sampleRate);
     };
 
     /**
@@ -91,118 +94,122 @@ namespace codal
 
         public:
 
-        /**
-          * Default Constructor.
-          * Creates an empty DataStream.
-          *
-          * @param upstream the component that will normally feed this datastream with data.
-          */
-        DataStream(DataSource &upstream);
+            /**
+             * Default Constructor.
+             * Creates an empty DataStream.
+             *
+             * @param upstream the component that will normally feed this datastream with data.
+             */
+            DataStream(DataSource &upstream);
 
-        /**
-          * Destructor.
-          * Removes all resources held by the instance.
-          */
-        ~DataStream();
+            /**
+             * Destructor.
+             * Removes all resources held by the instance.
+             */
+            ~DataStream();
 
-        /**
-          * Determines the value of the given byte in the buffer.
-          *
-          * @param position The index of the byte to read.
-          * @return The value of the byte at the given position, or DEVICE_INVALID_PARAMETER.
-          */
-        int get(int position);
+            /**
+             * Determines the value of the given byte in the buffer.
+             *
+             * @param position The index of the byte to read.
+             * @return The value of the byte at the given position, or DEVICE_INVALID_PARAMETER.
+             */
+            int get(int position);
 
-        /**
-          * Sets the byte at the given index to value provided.
-          * @param position The index of the byte to change.
-          * @param value The new value of the byte (0-255).
-          * @return DEVICE_OK, or DEVICE_INVALID_PARAMETER.
-          *
-          */
-        int set(int position, uint8_t value);
+            /**
+             * Sets the byte at the given index to value provided.
+             * @param position The index of the byte to change.
+             * @param value The new value of the byte (0-255).
+             * @return DEVICE_OK, or DEVICE_INVALID_PARAMETER.
+             *
+             */
+            int set(int position, uint8_t value);
 
-        /**
-          * Gets number of bytes that are ready to be consumed in this data stream.
-          * @return The size in bytes.
-          */
-        int length();
+            /**
+             * Gets number of bytes that are ready to be consumed in this data stream.
+             * @return The size in bytes.
+             */
+            int length();
 
-        /**
-         * Determines if any of the data currently flowing through this stream is held in non-volatile (FLASH) memory.
-         * @return true if one or more of the ManagedBuffers in this stream reside in FLASH memory, false otherwise.
-         */
-    	  bool isReadOnly();
+            /**
+             * Determines if any of the data currently flowing through this stream is held in non-volatile (FLASH) memory.
+             * @return true if one or more of the ManagedBuffers in this stream reside in FLASH memory, false otherwise.
+             */
+            bool isReadOnly();
 
-        /**
-         * Define a downstream component for data stream.
-         *
-         * @sink The component that data will be delivered to, when it is available
-         */
-        virtual void connect(DataSink &sink) override;
+            /**
+             * Define a downstream component for data stream.
+             *
+             * @sink The component that data will be delivered to, when it is available
+             */
+            virtual void connect(DataSink &sink) override;
 
-        /**
-         * Define a downstream component for data stream.
-         *
-         * @sink The component that data will be delivered to, when it is available
-         */
-        virtual void disconnect() override;
+            /**
+             * Define a downstream component for data stream.
+             *
+             * @sink The component that data will be delivered to, when it is available
+             */
+            virtual void disconnect() override;
 
-        /**
-         *  Determine the data format of the buffers streamed out of this component.
-         */
-        virtual int getFormat() override;
+            /**
+             *  Determine the data format of the buffers streamed out of this component.
+             */
+            virtual int getFormat() override;
 
-        /**
-         * Determine the number of bytes that are currnetly buffered before blocking subsequent push() operations.
-         * @return the current preferred buffer size for this DataStream
-         */
-        int getPreferredBufferSize();
+            /**
+             * Determine the number of bytes that are currnetly buffered before blocking subsequent push() operations.
+             * @return the current preferred buffer size for this DataStream
+             */
+            int getPreferredBufferSize();
 
-        /**
-         * Define the number of bytes that should be buffered before blocking subsequent push() operations.
-         * @param size The number of bytes to buffer.
-         */
-        void setPreferredBufferSize(int size);
+            /**
+             * Define the number of bytes that should be buffered before blocking subsequent push() operations.
+             * @param size The number of bytes to buffer.
+             */
+            void setPreferredBufferSize(int size);
 
-        /**
-         * Determines if this stream acts in a synchronous, blocking mode or asynchronous mode. In blocking mode, writes to a full buffer
-         * will result int he calling fiber being blocked until space is available. Downstream DataSinks will also attempt to process data
-         * immediately as it becomes available. In non-blocking asynchronpus mode, writes to a full buffer are dropped and downstream Datasinks will
-         * be processed in a new fiber.
-         */
-        void setBlocking(bool isBlocking);
+            /**
+             * Determines if this stream acts in a synchronous, blocking mode or asynchronous mode. In blocking mode, writes to a full buffer
+             * will result int he calling fiber being blocked until space is available. Downstream DataSinks will also attempt to process data
+             * immediately as it becomes available. In non-blocking asynchronpus mode, writes to a full buffer are dropped and downstream Datasinks will
+             * be processed in a new fiber.
+             */
+            void setBlocking(bool isBlocking);
 
-        /**
-         * Determines if a buffer of the given size can be added to the buffer.
-         *
-         * @param size The number of bytes to add to the buffer.
-         * @return true if there is space for "size" bytes in the buffer. false otherwise.
-         */
-        bool canPull(int size = 0);
+            /**
+             * Determines if a buffer of the given size can be added to the buffer.
+             *
+             * @param size The number of bytes to add to the buffer.
+             * @return true if there is space for "size" bytes in the buffer. false otherwise.
+             */
+            bool canPull(int size = 0);
 
-        /**
-         * Determines if the DataStream can accept any more data.
-         *
-         * @return true if there if the buffer is ful, and can accept no more data at this time. False otherwise.
-         */
-        bool full();
+            /**
+             * Determines if the DataStream can accept any more data.
+             *
+             * @return true if there if the buffer is ful, and can accept no more data at this time. False otherwise.
+             */
+            bool full();
 
-    	/**
-    	 * Provide the next available ManagedBuffer to our downstream caller, if available.
-    	 */
-    	virtual ManagedBuffer pull();
+            /**
+             * Provide the next available ManagedBuffer to our downstream caller, if available.
+             */
+            virtual ManagedBuffer pull();
 
-    	/**
-    	 * Deliver the next available ManagedBuffer to our downstream caller.
-    	 */
-    	virtual int pullRequest();
+            /**
+             * Deliver the next available ManagedBuffer to our downstream caller.
+             */
+            virtual int pullRequest();
+
+            virtual float getSampleRate() override;
+
+            virtual float requestSampleRate(float sampleRate) override;
 
         private:
-        /**
-         * Issue a deferred pull request to our downstream component, if one has been registered.
-         */
-        void onDeferredPullRequest(Event);
+            /**
+             * Issue a deferred pull request to our downstream component, if one has been registered.
+             */
+            void onDeferredPullRequest(Event);
 
     };
 }

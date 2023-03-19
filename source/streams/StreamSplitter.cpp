@@ -24,11 +24,113 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 #include "StreamSplitter.h"
+#include "StreamNormalizer.h"
 #include "ErrorNo.h"
 #include "CodalDmesg.h"
 #include "Event.h"
 
+
+
 using namespace codal;
+
+SplitterChannel::SplitterChannel( StreamSplitter * parent, DataSink * output = NULL )
+{
+    this->sampleRate = DATASTREAM_SAMPLE_RATE_UNKNOWN;
+    this->parent = parent;
+    this->output = output;
+}
+
+SplitterChannel::~SplitterChannel()
+{
+    //
+}
+
+int SplitterChannel::pullRequest() {
+    pullAttempts++;
+    if( output != NULL )
+        return output->pullRequest();
+    return -1;
+}
+
+ManagedBuffer SplitterChannel::pull()
+{
+    pullAttempts--;
+    // Shortcut!
+    if( sampleRate == DATASTREAM_SAMPLE_RATE_UNKNOWN )
+        return parent->getBuffer();
+    
+    // Going the long way around - drop any extra samples...
+    float inRate = parent->upstream.getSampleRate();
+    ManagedBuffer inData = parent->getBuffer();
+    int inFmt = parent->upstream.getFormat();
+    int bytesPerSample = DATASTREAM_FORMAT_BYTES_PER_SAMPLE( inFmt );
+    int inSamples = inData.length() / bytesPerSample;
+    int step = (inRate / sampleRate);
+
+    ManagedBuffer outData = ManagedBuffer( (inSamples/step) * bytesPerSample );
+
+    uint8_t *inPtr = &inData[0];
+    uint8_t *outPtr = &outData[0];
+    for( int i=0; i<inSamples/step; i++ ) {
+        int s = StreamNormalizer::readSample[inFmt](inPtr);
+        inPtr += bytesPerSample * step;
+
+        StreamNormalizer::writeSample[inFmt](outPtr, s);
+        outPtr += bytesPerSample;
+    }
+
+    return outData;
+}
+
+void SplitterChannel::connect(DataSink &sink)
+{
+    output = &sink;
+    parent->numberActiveChannels++;
+    Event e( parent->id, SPLITTER_CHANNEL_CONNECT );
+}
+
+void SplitterChannel::disconnect()
+{
+    output = NULL;
+    parent->numberActiveChannels--;
+    Event e( parent->id, SPLITTER_CHANNEL_DISCONNECT );
+}
+
+int SplitterChannel::getFormat()
+{
+    return parent->upstream.getFormat();
+}
+
+int SplitterChannel::setFormat(int format)
+{
+    return parent->upstream.setFormat( format );
+}
+
+float SplitterChannel::getSampleRate()
+{
+    if( sampleRate != DATASTREAM_SAMPLE_RATE_UNKNOWN )
+        return sampleRate;
+    return parent->upstream.getSampleRate();
+}
+
+float SplitterChannel::requestSampleRate( float sampleRate )
+{
+    sampleRate = sampleRate;
+
+    // Do we need to request a higher rate upstream?
+    if( parent->upstream.getSampleRate() < sampleRate ) {
+
+        // Request it, and if we got less that we expected, report that rate
+        if( parent->upstream.requestSampleRate( sampleRate ) < sampleRate )
+            return parent->upstream.getSampleRate();
+    }
+
+    // Otherwise, report our own rate (we're matching or altering it ourselves)
+    return sampleRate;
+}
+
+
+
 
 
 /**
@@ -38,18 +140,24 @@ using namespace codal;
  */
 StreamSplitter::StreamSplitter(DataSource &source, uint16_t id) : upstream(source)
 {
-
     this->id = id;
-    this->processed = 0;
     this->numberChannels = 0;
-    this->numberAttempts = 0;
     // init array to NULL.
     for (int i = 0; i < CONFIG_MAX_CHANNELS; i++)
-    {
         outputChannels[i] = NULL;
-    } 
     
     source.connect(*this);
+}
+
+StreamSplitter::~StreamSplitter()
+{
+    // Nop.
+}
+
+ManagedBuffer StreamSplitter::getBuffer()
+{
+    processed++;
+    return lastBuffer;
 }
 
 /**
@@ -57,105 +165,75 @@ StreamSplitter::StreamSplitter(DataSource &source, uint16_t id) : upstream(sourc
  */
 int StreamSplitter::pullRequest()
 {
-    if (processed >= numberChannels)
+    if( processed >= numberChannels )
     {
         processed = 0;
         lastBuffer = upstream.pull();
 
         // For each downstream channel that exists in array outputChannels - make a pullRequest
         for (int i = 0; i < CONFIG_MAX_CHANNELS; i++)
-        {
-            if (outputChannels[i] != NULL){
+            if (outputChannels[i] != NULL)
                 outputChannels[i]->pullRequest();
-            }
-        } 
     }
-    else
-    {
-        numberAttempts++;
-        // If BLOCKING_THREASHOLD number of pull requests have been made whilst waiting for a
-        // downstream component to respond with a pull - assume death, remove channel and continue.
-        if(numberAttempts > CONFIG_BLOCKING_THRESHOLD){   
-            numberChannels--;
-            numberAttempts = 0;
-            if(numberChannels < 1){
-                Event e(id, SPLITTER_DEACTIVATE_CHANNEL);
-            }
-        }
+    else {
+        // Unfortunately we have to drop a buffer, otherwise we might stall the pipeline!
+        upstream.pull();
+        processed = CONFIG_MAX_CHANNELS + 1;
     }
+    
     return DEVICE_OK;
 }
 
-/**
- * Provide the next available ManagedBuffer to our downstream caller, if available.
- */
-ManagedBuffer StreamSplitter::pull()
-{
-    processed++;
-    return lastBuffer;
-}
 
-/**
- * Called by downstream components to register this splitter as its dataSource.
- */
-void StreamSplitter::connect(DataSink &downstream)
+SplitterChannel * StreamSplitter::createChannel()
 {
-    int placed = 0;
-    DMESG("%s %p","Adding New Channel, ", &downstream);
-
+    int placed = -1;
     for (int i = 0; i < CONFIG_MAX_CHANNELS; i++)
     {
         // Add downstream as one of the splitters datasinks that will be served
         if (outputChannels[i] == NULL){
-            outputChannels[i] = &downstream;
-            placed = 1;
-            DMESG("%s %d","Channel Added at location ", i);
+            outputChannels[i] = new SplitterChannel( this, NULL );
+            placed = i;
             break;
         }
-        else{
-            DMESG("Channel Filled, Trying Next one");
+    }
+    if(placed != -1)
+        numberChannels++;
+
+    if(numberChannels > 0)
+        Event e( id, SPLITTER_ACTIVATE_CHANNEL ); //Activate ADC
+
+    if( placed != -1 )
+        return outputChannels[placed];
+    
+    return NULL;
+}
+
+bool StreamSplitter::destroyChannel( SplitterChannel * channel ) {
+    for( int i=0; i<CONFIG_MAX_CHANNELS; i++ ) {
+        if( outputChannels[i] == channel ) {
+            outputChannels[i] = NULL;
+            numberChannels--;
+            delete channel;
+            Event e( id, SPLITTER_DEACTIVATE_CHANNEL ); // Signal the change
+            return true;
         }
     }
-    if(placed == 1){
-        numberChannels++;
-        processed++;
-        
-            for (int i = 0; i < CONFIG_MAX_CHANNELS; i++)
-            {
-                DMESG("%p", outputChannels[i]);
-                DMESG("%s", "-------");
+
+    DMESG( "StreamSplitter::destroyChannel -> The SplitterChannel supplied did not exist on this splitter, refusing to destroy it." );
+    return false;
+}
+
+SplitterChannel * StreamSplitter::getChannel( DataSink * output ) {
+    for( int i=0; i<CONFIG_MAX_CHANNELS; i++ )
+    {
+        if( outputChannels[i] != NULL )
+        {
+            if( outputChannels[i]->output == output ) {
+                return outputChannels[i];
             }
-    }
-    else{
-        DMESG("Channel Not Added - Max Number of Channels Reached?");
+        }
     }
 
-    if(numberChannels > 0){
-        //Activate ADC
-        Event e(id, SPLITTER_ACTIVATE_CHANNEL);
-    }
-}
-
-/**
- *  Determine the data format of the buffers streamed out of this component.
- */
-int StreamSplitter::getFormat()
-{
-    return upstream.getFormat();
-}
-
-/**
- * Defines the data format of the buffers streamed out of this component.
- * @param format the format to use
- */
-int StreamSplitter::setFormat(int format)
-{
-    return DEVICE_NOT_SUPPORTED;
-}
-
-/**
- * Destructor.
- */
-StreamSplitter::~StreamSplitter()
-{
+    return NULL;
 }

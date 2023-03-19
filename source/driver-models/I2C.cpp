@@ -35,6 +35,18 @@ namespace codal
     }
 
     /**
+      * Change the pins used by this I2C peripheral to those provided.
+      *
+      * @param sda the Pin to use for the I2C SDA line.
+      * @param scl the Pin to use for the I2C SCL line.
+      * @return DEVICE_OK on success, or DEVICE_NOT_IMPLEMENTED / DEVICE_NOT_SUPPORTED if the request cannot be performed.
+      */
+    int I2C::redirect(Pin &sda, Pin &scl)
+    {
+        return DEVICE_NOT_IMPLEMENTED;
+    }
+
+    /**
      * Set the frequency of the I2C interface
      *
      * @param frequency The bus frequency in hertz

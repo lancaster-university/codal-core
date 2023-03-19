@@ -26,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalComponent.h"
 #include "CodalFiber.h"
 #include "ErrorNo.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -53,6 +54,15 @@ int DataSource::getFormat()
 int DataSource::setFormat(int format)
 {
     return DEVICE_NOT_SUPPORTED;
+}
+
+float DataSource::getSampleRate() {
+    return DATASTREAM_SAMPLE_RATE_UNKNOWN;
+}
+
+float DataSource::requestSampleRate(float sampleRate) {
+    // Just consume this by default, we don't _have_ to honour requests for specific rates.
+    return DATASTREAM_SAMPLE_RATE_UNKNOWN;
 }
 
 int DataSink::pullRequest()
@@ -326,4 +336,30 @@ int DataStream::pullRequest()
     }
 
 	return DEVICE_OK;
+}
+
+/**
+ * Gets the sample rate for the stream that this component is part of.
+ * 
+ * This will query 'up stream' towards the stream source to determine the current sample rate.
+ * 
+ * @return float The sample rate, in samples-per-second, or DATASTREAM_SAMPLE_RATE_UNKNOWN if not known or unconfigured
+ */
+float DataStream::getSampleRate() {
+    if( this->upStream != NULL )
+        return this->upStream->getSampleRate();
+    return DATASTREAM_SAMPLE_RATE_UNKNOWN;
+}
+
+/**
+ * Sents a request 'up stream' towards the stream source for a higher sample rate, if possible.
+ * 
+ * @note Components are not required to respect this request, and this mechanism is best-effort, so if the caller needs a specific rate, it should check via getSampleRate after making this request.
+ * 
+ * @param sampleRate The sample rate requestd, in samples-per-second
+ */
+float DataStream::requestSampleRate(float sampleRate) {
+    if( this->upStream != NULL )
+        return this->upStream->requestSampleRate( sampleRate );
+    return DATASTREAM_SAMPLE_RATE_UNKNOWN;
 }

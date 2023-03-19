@@ -82,6 +82,8 @@ DEALINGS IN THE SOFTWARE.
 // Suggested range for device-specific IDs: 50-79
 // NOTE - not final, just suggested currently.
 
+// Range 80-99 - RESERVED (deprecated space, do not use!)
+
 #define DEVICE_ID_IO_P0               100                       // IDs 100-227 are reserved for I/O Pin IDs.
 
 #define DEVICE_ID_MESSAGE_BUS_LISTENER            1021          // Message bus indication that a handler for a given ID has been registered.
@@ -96,6 +98,9 @@ DEALINGS IN THE SOFTWARE.
 // jacadac reserved from 3000 - 4000
 #define DEVICE_ID_JD_DYNAMIC_ID 3000
 
+// Range 64000-65000 RESERVED (dynamic ID space)
+#define DEVICE_ID_DYNAMIC_MIN 64000
+#define DEVICE_ID_DYNAMIC_MAX 65000
 
 // Universal flags used as part of the status field
 #define DEVICE_COMPONENT_RUNNING                0x1000
@@ -137,6 +142,24 @@ namespace codal
         static uint8_t configuration;
 
         public:
+        /**
+         * @brief Generates a new component ID from the dynamic block.
+         * 
+         * There are some cases where multiple instances of the same component need unique IDs, this
+         * static method allows application code to request a safe (unused) globally unique ID for
+         * this purpose.
+         * 
+         * This currently creates monotonically incrementing IDs, with no reuse. When they're gone
+         * they're gone!
+         * 
+         * @note While currently monotonic, this may change in the future for more complex schemes.
+         * 
+         * @note The dynamic block is a finite resource, and may eventually be exhausted causing a PANIC.
+         * 
+         * @return uint16_t A new, unique component ID, until the ID space is exhausted.
+         */
+        static uint16_t generateDynamicID();
+
         /**
           * Adds the current CodalComponent instance to our array of components.
           */

@@ -256,7 +256,7 @@ void Serial::circularCopy(uint8_t *circularBuff, uint8_t circularBuffSize, uint8
  *
  *       Buffers aren't allocated until the first send or receive respectively.
  */
-Serial::Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize, uint8_t txBufferSize, uint16_t id) : tx(tx), rx(rx)
+Serial::Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize, uint8_t txBufferSize, uint16_t id) : tx(&tx), rx(&rx)
 {
     this->id = id;
 
@@ -274,6 +274,9 @@ Serial::Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize, uint8_t txBufferSize, uin
     this->txBuffTail = 0;
 
     this->rxBuffHeadMatch = -1;
+
+    reassignPin(&this->tx, &tx);
+    reassignPin(&this->rx, &rx);
 
     this->status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 }
@@ -840,6 +843,9 @@ int Serial::redirect(Pin& tx, Pin& rx)
 
     lockTx();
     lockRx();
+
+    reassignPin(&this->tx, &tx);
+    reassignPin(&this->rx, &rx);
 
     if(txBufferedSize() > 0)
         disableInterrupt(TxInterrupt);

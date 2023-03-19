@@ -34,7 +34,7 @@ DEALINGS IN THE SOFTWARE.
 namespace codal
 {
 
-class PulseIn
+class PulseIn : public PinPeripheral
 {
     Pin             &pin;
     uint32_t        lastPeriod;
@@ -75,9 +75,21 @@ class PulseIn
     onTimeout(Event e);
 
     /**
+    * Method to release the given pin from a peripheral, if already bound.
+    * Device drivers should override this method to disconnect themselves from the give pin
+    * to allow it to be used by a different peripheral.
+    *
+    * @param pin the Pin to be released
+    */
+    virtual int releasePin(Pin &pin) override;
+
+    /**
      * Destructor
      */
-    ~PulseIn();
+    virtual ~PulseIn();
+
+    private:
+    void disable();
 };
 
 }
