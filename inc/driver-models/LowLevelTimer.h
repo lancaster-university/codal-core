@@ -71,8 +71,8 @@ class LowLevelTimer : public CodalComponent
      **/
     virtual int setIRQPriority(int)
     {
-        target_panic(DEVICE_NOT_IMPLEMENTED);
-        return DEVICE_NOT_IMPLEMENTED;
+        target_panic(DEVICE_HARDWARE_CONFIGURATION_ERROR);
+        return DEVICE_HARDWARE_CONFIGURATION_ERROR;
     }
 
     /**
