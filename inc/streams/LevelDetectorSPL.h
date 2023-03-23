@@ -34,6 +34,7 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_SPL_INITIALISED                       0x01
 #define LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED             0x02
 #define LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED              0x04
+#define LEVEL_DETECTOR_SPL_CLAP                              0x05
 
 /**
  * Default configuration values
@@ -66,6 +67,14 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_SPL_DB                               1
 #define LEVEL_DETECTOR_SPL_8BIT                             2
 
+// Clap detection constants
+#define LEVEL_DETECTOR_SPL_BEGIN_POSS_CLAP_RMS              200      // threshold to start considering clap - rms value
+#define LEVEL_DETECTOR_SPL_MIN_IN_CLAP_RMS                  300      // minimum amount to be within a clap once considering
+#define LEVEL_DETECTOR_SPL_CLAP_OVER_RMS                    100      // threshold once in clap to consider noise over
+#define LEVEL_DETECTOR_SPL_CLAP_MAX_LOUD_BLOCKS             13       // ensure noise not too long to be a clap
+#define LEVEL_DETECTOR_SPL_CLAP_MIN_LOUD_BLOCKS             2        // ensure noise not too short to be a clap
+#define LEVEL_DETECTOR_SPL_CLAP_MIN_QUIET_BLOCKS            20       // prevent very fast taps being registered as clap
+
 
 namespace codal{
     class LevelDetectorSPL : public CodalComponent, public DataSink
@@ -85,6 +94,10 @@ namespace codal{
         bool            enabled;            // Is the component currently running
         int             unit;               // The units to be returned from this level detector (e.g. dB or linear 8bit)
         uint64_t        timeout;
+        int             quietBlockCount;    // number of quiet blocks consecutively - used for clap detection
+        int             noisyBlockCount;    // number of noisy blocks consecutively - used for clap detection
+        bool            inNoisyBlock;       // if had noisy and waiting to lower beyond lower threshold
+        float           maxRms;             // maximum rms within a noisy block
 
         /**
           * Creates a component capable of measuring and thresholding stream data

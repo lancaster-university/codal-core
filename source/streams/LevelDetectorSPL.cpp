@@ -56,6 +56,11 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     else{
         this->activated = false;
     }
+
+    this->quietBlockCount = 0;
+    this->noisyBlockCount = 0;
+    this->inNoisyBlock = false;
+    this->maxRms = 0;
 }
 
 /**
@@ -91,8 +96,7 @@ int LevelDetectorSPL::pullRequest()
     int samples = b.length() / skip;
 
     while(samples){
-
-        //ensure we use at least windowSize number of samples (128)
+        // ensure we use at least windowSize number of samples (128)
         if(samples < windowSize)
         break;
 
@@ -110,26 +114,46 @@ int LevelDetectorSPL::pullRequest()
         int16_t minVal = 32766;
         int32_t v;
         ptr = data;
-        while(ptr < end){
+        while (ptr < end) {
             v = (int32_t) StreamNormalizer::readSample[format](ptr);
-            if(v > maxVal) maxVal = v;
-            if(v < minVal) minVal = v;
+            if (v > maxVal) maxVal = v;
+            if (v < minVal) minVal = v;
             ptr += skip;
         }
-
         maxVal = (maxVal - minVal) / 2;
+
+        /*******************************
+        *   GET RMS AMPLITUDE FOR CLAP DETECTION
+        ******************************/
+        int sumSquares = 0;
+        int count = 0;
+        ptr = data;
+        while (ptr < end) {
+            count++;
+            v = (int32_t) StreamNormalizer::readSample[format](ptr) - minVal;   // need to sub minVal to avoid overflow
+            sumSquares += v * v;
+            ptr += skip;
+        }
+        float rms = sqrt(sumSquares / count);
 
         /*******************************
         *   CALCULATE SPL
         ******************************/
-        float conv = ((float)maxVal * multiplier)/((1 << 15)-1) * gain;
-        conv = 20 * log10(conv/pref);
+        float conv = ((float) maxVal * multiplier) / ((1 << 15) - 1) * gain;
+        conv = 20 * log10(conv / pref);
 
-        if(conv < minValue) level = minValue;
-        else if(isfinite(conv)) level = conv;
+        if (conv < minValue) level = minValue;
+        else if (isfinite(conv)) level = conv;
         else level = minValue;
 
         samples -= windowSize;
+        data += windowSize;
+
+        /*******************************
+        *   EMIT EVENTS
+        ******************************/
+
+        // HIGH THRESHOLD
         if ((!(status & LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
         {
             Event(id, LEVEL_THRESHOLD_HIGH);
@@ -137,15 +161,50 @@ int LevelDetectorSPL::pullRequest()
             status &= ~LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED;
         }
 
+        // LOW THRESHOLD
         if ((!(status & LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED)) && level < lowThreshold)
         {
             Event(id, LEVEL_THRESHOLD_LOW);
             status |=  LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED;
             status &= ~LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED;
         }
+
+        // CLAP DETECTION HANDLING
+        if (this->inNoisyBlock && rms > this->maxRms) this->maxRms = rms;
+
+        if (
+                (       // if start of clap
+                        !this->inNoisyBlock &&
+                        rms > LEVEL_DETECTOR_SPL_BEGIN_POSS_CLAP_RMS &&
+                        this->quietBlockCount >= LEVEL_DETECTOR_SPL_CLAP_MIN_QUIET_BLOCKS
+                ) ||
+                (       // or if continuing a clap
+                        this->inNoisyBlock &&
+                        rms > LEVEL_DETECTOR_SPL_CLAP_OVER_RMS
+                )) {
+            // noisy block
+            if (!this->inNoisyBlock) this->maxRms = rms;
+            this->quietBlockCount = 0;
+            this->noisyBlockCount += 1;
+            this->inNoisyBlock = true;
+
+        } else {
+            // quiet block
+            if (    // if not too long, not too short, and loud enough
+                    this->noisyBlockCount <= LEVEL_DETECTOR_SPL_CLAP_MAX_LOUD_BLOCKS &&
+                    this->noisyBlockCount >= LEVEL_DETECTOR_SPL_CLAP_MIN_LOUD_BLOCKS &&
+                    this->maxRms >= LEVEL_DETECTOR_SPL_MIN_IN_CLAP_RMS
+                    ) {
+                Event(id, LEVEL_DETECTOR_SPL_CLAP);
+            }
+            this->inNoisyBlock = false;
+            this->noisyBlockCount = 0;
+            this->quietBlockCount += 1;
+            this->maxRms = 0;
+        }
     }
 
-   return DEVICE_OK;
+    return DEVICE_OK;
 }
 
 /*
