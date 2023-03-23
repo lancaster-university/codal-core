@@ -32,6 +32,9 @@ DEALINGS IN THE SOFTWARE.
 #include "StreamNormalizer.h"
 #include "CodalDmesg.h"
 
+#define CODAL_STREAM_IDLE_TIMEOUT_MS 250
+#define CODAL_STREAM_MIC_STABLE_MS 5
+
 using namespace codal;
 
 LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id, bool connectImmediately) : upstream(source)
@@ -60,6 +63,11 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
  */
 int LevelDetectorSPL::pullRequest()
 {
+    if( this->timeout - system_timer_current_time() > CODAL_STREAM_IDLE_TIMEOUT_MS && !activated ) {
+        upstream.disconnect();
+        return DEVICE_OK;
+    }
+    
     ManagedBuffer b = upstream.pull();
 
     uint8_t *data = &b[0];
@@ -135,7 +143,7 @@ int LevelDetectorSPL::pullRequest()
             status |=  LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED;
             status &= ~LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED;
         }
-   }
+    }
 
    return DEVICE_OK;
 }
@@ -147,13 +155,19 @@ int LevelDetectorSPL::pullRequest()
  */
 float LevelDetectorSPL::getValue()
 {
-    if(!activated){
-        // Register with our upstream component: on demand activated
-        upstream.connect(*this);
-        activated = true;
-    }
-
+    bool wasAwake = this->activated || system_timer_current_time() - this->timeout ;
+    this->timeout = system_timer_current_time() + CODAL_STREAM_IDLE_TIMEOUT_MS;
+    upstream.connect(*this);
+    if( !wasAwake )
+        target_wait( CODAL_STREAM_MIC_STABLE_MS );
     return splToUnit(level);
+}
+
+void LevelDetectorSPL::activateForEvents( bool state )
+{
+    this->activated = state;
+    if( this->activated )
+        upstream.connect(*this);
 }
 
 /*

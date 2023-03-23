@@ -84,6 +84,7 @@ namespace codal{
         bool            activated;          // Has this component been connected yet
         bool            enabled;            // Is the component currently running
         int             unit;               // The units to be returned from this level detector (e.g. dB or linear 8bit)
+        uint64_t        timeout;
 
         /**
           * Creates a component capable of measuring and thresholding stream data
@@ -110,6 +111,8 @@ namespace codal{
          * @return The current value of the sensor.
          */
         float getValue();
+
+        void activateForEvents( bool state );
 
         /**
          * Disable component

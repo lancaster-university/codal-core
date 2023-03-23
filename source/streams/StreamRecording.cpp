@@ -9,12 +9,13 @@ using namespace codal;
 
 StreamRecording::StreamRecording( DataSource &source ) : upStream( source )
 {   
+    this->state = REC_STATE_STOPPED;
     this->bufferLength = 0;
     this->lastBuffer = 0;
     this->readWriteHead = 0;
 
     this->downStream = NULL;
-    source.connect( *this );
+    //upStream.connect( *this );
 }
 
 StreamRecording::~StreamRecording()
@@ -38,6 +39,8 @@ ManagedBuffer StreamRecording::pull()
         stop();
         return ManagedBuffer();
     }
+
+    //DMESGF( "Output: %d of %d", this->readWriteHead, REC_MAX_BUFFERS );
     
     // Grab the next block
     ManagedBuffer out = this->buffer[this->readWriteHead++];
@@ -77,15 +80,17 @@ void StreamRecording::dumpState()
 
 int StreamRecording::pullRequest()
 {
-    ManagedBuffer data = this->upStream.pull();
-
     // Are we recording?
     if( this->state != REC_STATE_RECORDING )
         return DEVICE_OK;
+
+    ManagedBuffer data = this->upStream.pull();
     
+    DMESGN( "Input: %d of %d (%d B)\r", this->readWriteHead, REC_MAX_BUFFERS, this->bufferLength );
+
     // Are we getting empty buffers (probably because we're out of RAM!)
     if( data.length() == 0 )
-        return DEVICE_NO_RESOURCES;
+        return DEVICE_NO_DATA;
 
     // Can we record any more?
     if( this->readWriteHead < REC_MAX_BUFFERS )
@@ -130,9 +135,10 @@ bool StreamRecording::record()
     erase();
 
     bool changed = this->state != REC_STATE_RECORDING;
+    if( changed )
+        upStream.connect( *this );
 
     this->state = REC_STATE_RECORDING;
-    this->upStream.pull(); // Kickstart the upstream??
 
     return changed;
 }
@@ -155,13 +161,18 @@ bool StreamRecording::play()
     bool changed = this->state != REC_STATE_PLAYING;
     
     this->state = REC_STATE_PLAYING;
-    this->downStream->pullRequest();
+    if( this->downStream != NULL )
+        this->downStream->pullRequest();
 
     return changed;
 }
 
 void StreamRecording::stop()
 {
+    bool changed = this->state != REC_STATE_STOPPED;
+    if( changed )
+        upStream.disconnect();
+
     this->state = REC_STATE_STOPPED;
     this->readWriteHead = 0; // Snap to the start
 }
@@ -179,4 +190,9 @@ bool StreamRecording::isRecording()
 bool StreamRecording::isStopped()
 {
     return this->state == REC_STATE_STOPPED;
+}
+
+float StreamRecording::getSampleRate()
+{
+    return this->upStream.getSampleRate();
 }
