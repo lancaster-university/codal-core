@@ -5,6 +5,8 @@ using namespace codal;
 
 LowPassFilter::LowPassFilter( DataSource &source, float beta, bool deepCopy) : EffectFilter( source, deepCopy )
 {
+    this->lpf_value = 1.0;
+    this->lpf_beta = 0.0;
     setBeta(beta);
 }
 
