@@ -153,15 +153,28 @@ DEALINGS IN THE SOFTWARE.
 //
 // Debug options
 //
-#ifndef DEVICE_DMESG
-#define DEVICE_DMESG                          0
+#ifndef DMESG_SERIAL_DEBUG
+  #define DMESG_SERIAL_DEBUG                  0
+#else
+  // Automatically enable DMESG_ENABLE if DMESG_SERIAL_DEBUG is set
+  #if DMESG_SERIAL_DEBUG > 0
+    #define DMESG_ENABLE                      1
+  #endif
+#endif
+
+#ifndef DMESG_ENABLE
+#define DMESG_ENABLE                          0
 #endif
 
 // When non-zero internal debug messages (DMESG() macro) go to a in-memory buffer of this size (in bytes).
 // It can be inspected from GDB (with 'print codalLogStore'), or accessed by the application.
 // Typical size range between 512 and 4096. Set to 0 to disable.
 #ifndef DEVICE_DMESG_BUFFER_SIZE
-#define DEVICE_DMESG_BUFFER_SIZE              1024
+  #if DMESG_ENABLE > 0
+    #define DEVICE_DMESG_BUFFER_SIZE          1024
+  #else
+    #define DEVICE_DMESG_BUFFER_SIZE          0
+  #endif
 #endif
 
 #ifndef CODAL_DEBUG
