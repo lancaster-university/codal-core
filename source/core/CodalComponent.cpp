@@ -34,8 +34,18 @@ CodalComponent* CodalComponent::components[DEVICE_COMPONENT_COUNT];
 uint8_t CodalComponent::configuration = 0;
 
 #if DEVICE_COMPONENT_COUNT > 255
-#error "DEVICE_COMPONENT_COUNT has to fit in uint8_t"
+    #error "DEVICE_COMPONENT_COUNT has to fit in uint8_t"
 #endif
+
+uint16_t CodalComponent::generateDynamicID() {
+    static uint16_t __nextDynamicID = DEVICE_ID_DYNAMIC_MIN;
+    
+    // Have we blown off the end of our dynamic space?
+    if( __nextDynamicID > DEVICE_ID_DYNAMIC_MAX )
+        target_panic( PanicCode::DEVICE_RESORUCES_EXHAUSTED );
+    
+    return __nextDynamicID++;
+}
 
 /**
   * The periodic callback for all components.

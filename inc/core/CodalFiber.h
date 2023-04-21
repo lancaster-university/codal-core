@@ -369,6 +369,13 @@ namespace codal
         FiberLock();
 
         /**
+         * Create a new semaphore-mode lock that can be used for mutual exclusion and condition synchronisation.
+         * 
+         * @param initial The number of access requests to grant before blocking
+         */
+        FiberLock( int initial );
+
+        /**
          * Block the calling fiber until the lock is available
          **/
         void wait();
@@ -380,8 +387,10 @@ namespace codal
 
         /**
          * Release the lock, and signal to all waiting fibers to continue
+         * 
+         * @param reset The number of slots to reinitialise the FiberLock to, for semaphore duty
          */
-        void notifyAll();
+        void notifyAll( int reset = 0 );
 
         /**
          * Determine the number of fibers currently blocked on this lock

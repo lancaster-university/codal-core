@@ -28,10 +28,11 @@ DEALINGS IN THE SOFTWARE.
 #include "Timer.h"
 #include "LevelDetector.h"
 #include "ErrorNo.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
-LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id) : upstream(source)
+LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id, bool connectImmediately) : upstream(source)
 {
     this->id = id;
     this->level = 0;
@@ -41,9 +42,10 @@ LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThres
     this->lowThreshold = lowThreshold;
     this->highThreshold = highThreshold;
     this->status |= LEVEL_DETECTOR_INITIALISED;
-
-    // Register with our upstream component
-    source.connect(*this);
+    this->activated = false;
+    if(connectImmediately){
+        upstream.connect(*this);
+    }
 }
 
 /**
@@ -51,21 +53,36 @@ LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThres
  */
 int LevelDetector::pullRequest()
 {
+    if( ttl < 1 && !activated )
+        return DEVICE_OK;
+
     ManagedBuffer b = upstream.pull();
+
     int16_t *data = (int16_t *) &b[0];
 
     int samples = b.length() / 2;
 
     for (int i=0; i < samples; i++)
     {
-        sigma += abs(*data);
+        if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
+            sigma += abs((int8_t) *data);
+        }
+        else
+            sigma += abs(*data);
+
         windowPosition++;
 
         if (windowPosition == windowSize)
         {
             level = sigma / windowSize;
+
             sigma = 0;
             windowPosition = 0;
+
+            // If 8 bit - then multiply by 8 to upscale result. High 8 bit ~20, High 16 bit ~150 so roughly 8 times higher
+            if(upstream.getFormat() == DATASTREAM_FORMAT_8BIT_SIGNED){
+                level = level*8;
+            }
 
             if ((!(status & LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
             {
@@ -85,6 +102,10 @@ int LevelDetector::pullRequest()
         data++;
     }
 
+    // Disconnect when our TTL is less than 1, if we're not set to always active
+    if( !activated && --ttl < 1 )
+        upstream.disconnect();
+
     return DEVICE_OK;
 }
 
@@ -95,9 +116,18 @@ int LevelDetector::pullRequest()
  */
 int LevelDetector::getValue()
 {
+    this->ttl = 100; // In buffers
+    upstream.connect(*this);
+    target_wait( 100 );
     return level;
 }
 
+void LevelDetector::activateForEvents( bool state )
+{
+    this->activated = state;
+    if( this->activated )
+        upstream.connect(*this);
+}
 
 /**
  * Set threshold to the given value. Events will be generated when these thresholds are crossed.

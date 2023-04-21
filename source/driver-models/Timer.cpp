@@ -100,6 +100,7 @@ Timer::Timer(LowLevelTimer& t, uint8_t ccPeriodChannel, uint8_t ccEventChannel) 
 {
     // Register ourselves as the defualt timer - most recent timer wins.
     system_timer = this;
+    
 
     this->ccPeriodChannel = ccPeriodChannel;
     this->ccEventChannel = ccEventChannel;
@@ -374,6 +375,8 @@ void Timer::trigger(bool isFallback)
                     uint16_t id = e->id;
                     uint16_t value = e->value;
 
+
+
                     // Release before triggering event. Otherwise, an immediate event handler
                     // can cancel this event, another event might be put in its place
                     // and we end up releasing (or repeating) a completely different event.
@@ -607,6 +610,7 @@ CODAL_TIMESTAMP codal::system_timer_current_time()
   *
   * @return the current time since power on in microseconds
   */
+REAL_TIME_FUNC
 CODAL_TIMESTAMP codal::system_timer_current_time_us()
 {
     if(system_timer == NULL)

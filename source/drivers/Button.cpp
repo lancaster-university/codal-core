@@ -86,7 +86,13 @@ void Button::setEventConfiguration(ButtonEventConfiguration config)
  */
 int Button::buttonActive()
 {
-    return _pin.getDigitalValue() == polarity;
+    bool active;
+
+    setPinLock(true);
+    active = _pin.getDigitalValue() == polarity;
+    setPinLock(false);
+
+    return active;
 }
 
 /**
@@ -170,6 +176,26 @@ void Button::periodicCallback()
 int Button::isPressed()
 {
     return status & DEVICE_BUTTON_STATE ? 1 : 0;
+}
+
+/**
+ * Method to release the given pin from a peripheral, if already bound.
+ * Device drivers should override this method to disconnect themselves from the give pin
+ * to allow it to be used by a different peripheral.
+ *
+ * @param pin the Pin to be released.
+ * @return DEVICE_OK on success, or DEVICE_NOT_IMPLEMENTED if unsupported, or DEVICE_INVALID_PARAMETER if the pin is not bound to this peripheral.
+ */
+int Button::releasePin(Pin &pin)
+{
+    // We've been asked to disconnect from the given pin.
+    // Stop requesting periodic callbacks from the scheduler.
+    this->status &= ~DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
+
+    if (deleteOnRelease)
+        delete this;
+
+    return DEVICE_OK;
 }
 
 /**

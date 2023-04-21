@@ -51,10 +51,10 @@ namespace codal{
         uint32_t        orMask;                 // post processing step - or'd with each sample.
         bool            normalize;              // If set, will recalculate a zero offset.
         bool            zeroOffsetValid;        // Set to true after the first buffer has been processed.
-        bool            outputEnabled;          // When set any buffer processed will be forwarded downstream.
+        bool            outputEnabled;          // When set any bxuffer processed will be forwarded downstream.
         DataSource      &upstream;              // The upstream component of this StreamNormalizer.
         DataStream      output;                 // The downstream output stream of this StreamNormalizer.
-        ManagedBuffer   buffer;                 // The buffer being processed.
+        //ManagedBuffer   buffer;                 // The buffer being processed.
 
         static SampleReadFn readSample[9];
         static SampleWriteFn writeSample[9];
@@ -136,6 +136,10 @@ namespace codal{
          * @return DEVICE_OK on success.
          */
         int setOrMask(uint32_t mask);
+
+        virtual float getSampleRate();
+        
+        virtual float requestSampleRate(float sampleRate);
 
         /**
          * Destructor.

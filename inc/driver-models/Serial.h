@@ -65,12 +65,12 @@ namespace codal
       *
       * Represents an instance of RawSerial which accepts codal device specific data types.
       */
-    class Serial : public CodalComponent
+    class Serial : public PinPeripheral, public CodalComponent
     {
         protected:
 
-        Pin& tx;
-        Pin& rx;
+        Pin* tx;
+        Pin* rx;
 
         //delimeters used for matching on receive.
         ManagedString delimeters;
@@ -182,6 +182,11 @@ namespace codal
           *        gives a different behaviour:
           *
           *            ASYNC - bytes are copied into the txBuff and returns immediately.
+          *                    If there is insufficient space in txBuff, then only the first 'n'
+          *                    bytes will actually be sent, refer to the return value to get
+          *                    how many bytes were actually put in the buffer.
+          *                    To ensure all bytes are sent on an ASYNC call, set an appropriate
+          *                    buffer length beforehand using setTxBufferSize.
           *
           *            SYNC_SPINWAIT - bytes are copied into the txBuff and this method
           *                            will spin (lock up the processor) until all bytes
@@ -210,6 +215,11 @@ namespace codal
           *        gives a different behaviour:
           *
           *            ASYNC - bytes are copied into the txBuff and returns immediately.
+          *                    If there is insufficient space in txBuff, then only the first 'n'
+          *                    bytes will actually be sent, refer to the return value to get
+          *                    how many bytes were actually put in the buffer.
+          *                    To ensure all bytes are sent on an ASYNC call, set an appropriate
+          *                    buffer length beforehand using setTxBufferSize.
           *
           *            SYNC_SPINWAIT - bytes are copied into the txBuff and this method
           *                            will spin (lock up the processor) until all bytes

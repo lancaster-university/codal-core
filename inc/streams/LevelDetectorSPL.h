@@ -34,11 +34,47 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_SPL_INITIALISED                       0x01
 #define LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED             0x02
 #define LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED              0x04
+#define LEVEL_DETECTOR_SPL_CLAP                              0x05
 
 /**
  * Default configuration values
  */
 #define LEVEL_DETECTOR_SPL_DEFAULT_WINDOW_SIZE              128
+
+#ifndef LEVEL_DETECTOR_SPL_NORMALIZE
+#define LEVEL_DETECTOR_SPL_NORMALIZE    1
+#endif
+
+/**
+ * Define the parameters for the dB->8bit translation function.
+ */
+
+// The level (in dB) that corresponds to an 8bit value of 0.
+#ifndef LEVEL_DETECTOR_SPL_8BIT_000_POINT
+#define LEVEL_DETECTOR_SPL_8BIT_000_POINT                   35.0f
+#endif
+
+// The level (in dB) that corresponds to an 8bit value of 255.
+#ifndef LEVEL_DETECTOR_SPL_8BIT_255_POINT
+#define LEVEL_DETECTOR_SPL_8BIT_255_POINT                   100.0f
+#endif
+
+#define LEVEL_DETECTOR_SPL_8BIT_CONVERSION                  (255.0f/(LEVEL_DETECTOR_SPL_8BIT_255_POINT-LEVEL_DETECTOR_SPL_8BIT_000_POINT))
+
+/**
+ * Level detetor unit enumeration.
+ */
+#define LEVEL_DETECTOR_SPL_DB                               1
+#define LEVEL_DETECTOR_SPL_8BIT                             2
+
+// Clap detection constants
+#define LEVEL_DETECTOR_SPL_BEGIN_POSS_CLAP_RMS              200      // threshold to start considering clap - rms value
+#define LEVEL_DETECTOR_SPL_MIN_IN_CLAP_RMS                  300      // minimum amount to be within a clap once considering
+#define LEVEL_DETECTOR_SPL_CLAP_OVER_RMS                    100      // threshold once in clap to consider noise over
+#define LEVEL_DETECTOR_SPL_CLAP_MAX_LOUD_BLOCKS             13       // ensure noise not too long to be a clap
+#define LEVEL_DETECTOR_SPL_CLAP_MIN_LOUD_BLOCKS             2        // ensure noise not too short to be a clap
+#define LEVEL_DETECTOR_SPL_CLAP_MIN_QUIET_BLOCKS            20       // prevent very fast taps being registered as clap
+
 
 namespace codal{
     class LevelDetectorSPL : public CodalComponent, public DataSink
@@ -54,7 +90,14 @@ namespace codal{
         int             sigma;              // Running total of the samples in the current window.
         float           gain;
         float           minValue;
-
+        bool            activated;          // Has this component been connected yet
+        bool            enabled;            // Is the component currently running
+        int             unit;               // The units to be returned from this level detector (e.g. dB or linear 8bit)
+        uint64_t        timeout;
+        int             quietBlockCount;    // number of quiet blocks consecutively - used for clap detection
+        int             noisyBlockCount;    // number of noisy blocks consecutively - used for clap detection
+        bool            inNoisyBlock;       // if had noisy and waiting to lower beyond lower threshold
+        float           maxRms;             // maximum rms within a noisy block
 
         /**
           * Creates a component capable of measuring and thresholding stream data
@@ -63,10 +106,12 @@ namespace codal{
           * @param highThreshold the HIGH threshold at which a SPL_LEVEL_THRESHOLD_HIGH event will be generated
           * @param lowThreshold the HIGH threshold at which a SPL_LEVEL_THRESHOLD_LOW event will be generated
           * @param id The id to use for the message bus when transmitting events.
+          * @param connectImmediately Should this component connect to upstream splitter when started
           */
         LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain,
             float minValue = 52,
-            uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL);
+            uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL,
+            bool connectImmediately  = true);
 
         /**
          * Callback provided when data is ready.
@@ -79,6 +124,13 @@ namespace codal{
          * @return The current value of the sensor.
          */
         float getValue();
+
+        void activateForEvents( bool state );
+
+        /**
+         * Disable component
+         */
+        void disable();
 
         /**
          * Set threshold to the given value. Events will be generated when these thresholds are crossed.
@@ -126,10 +178,21 @@ namespace codal{
         int setGain(float gain);
 
         /**
+         * Defines the units that will be returned by the getValue() function.
+         *
+         * @param unit Either LEVEL_DETECTOR_SPL_DB or LEVEL_DETECTOR_SPL_8BIT.
+         * @return DEVICE_OK or DEVICE_INVALID_PARAMETER.
+         */
+         int setUnit(int unit);
+
+        /**
          * Destructor.
          */
         ~LevelDetectorSPL();
 
+        private:
+        float splToUnit(float f);
+        float unitToSpl(float f);
     };
 }
 
