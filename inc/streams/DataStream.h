@@ -80,15 +80,12 @@ namespace codal
       */
     class DataStream : public DataSource, public DataSink
     {
-        ManagedBuffer stream[DATASTREAM_MAXIMUM_BUFFERS];
-        //int bufferCount;
-        //int bufferLength;
-        //int preferredBufferSize;
-        //int writers;
-        //uint16_t spaceAvailableEventCode;
-        //uint16_t pullRequestEventCode;
-        ManagedBuffer * nextBuffer;
+        uint16_t pullRequestEventCode;
+        uint16_t flowEventCode;
+        ManagedBuffer nextBuffer;
         bool isBlocking;
+        unsigned int missedBuffers;
+        int downstreamReturn;
 
         DataSink *downStream;
         DataSource *upStream;
@@ -109,34 +106,22 @@ namespace codal
              */
             ~DataStream();
 
-            /**
-             * Determines the value of the given byte in the buffer.
-             *
-             * @param position The index of the byte to read.
-             * @return The value of the byte at the given position, or DEVICE_INVALID_PARAMETER.
-             */
-            //int get(int position);
-
-            /**
-             * Sets the byte at the given index to value provided.
-             * @param position The index of the byte to change.
-             * @param value The new value of the byte (0-255).
-             * @return DEVICE_OK, or DEVICE_INVALID_PARAMETER.
-             *
-             */
-            //int set(int position, uint8_t value);
-
-            /**
-             * Gets number of bytes that are ready to be consumed in this data stream.
-             * @return The size in bytes.
-             */
-            //int length();
+            uint16_t emitFlowEvents( uint16_t id = 0 );
 
             /**
              * Determines if any of the data currently flowing through this stream is held in non-volatile (FLASH) memory.
              * @return true if one or more of the ManagedBuffers in this stream reside in FLASH memory, false otherwise.
              */
             bool isReadOnly();
+
+            /**
+             * Attempts to determine if another component downstream of this one is _actually_ pulling data, and thus, data
+             * is flowing.
+             * 
+             * @return true If there is a count-match between `pullRequest` and `pull` calls.
+             * @return false If `pullRequest` calls are not currently being matched by `pull` calls.
+             */
+            bool isFlowing();
 
             /**
              * Define a downstream component for data stream.
@@ -158,18 +143,6 @@ namespace codal
             virtual int getFormat() override;
 
             /**
-             * Determine the number of bytes that are currnetly buffered before blocking subsequent push() operations.
-             * @return the current preferred buffer size for this DataStream
-             */
-            //int getPreferredBufferSize();
-
-            /**
-             * Define the number of bytes that should be buffered before blocking subsequent push() operations.
-             * @param size The number of bytes to buffer.
-             */
-            //void setPreferredBufferSize(int size);
-
-            /**
              * Determines if this stream acts in a synchronous, blocking mode or asynchronous mode. In blocking mode, writes to a full buffer
              * will result int he calling fiber being blocked until space is available. Downstream DataSinks will also attempt to process data
              * immediately as it becomes available. In non-blocking asynchronpus mode, writes to a full buffer are dropped and downstream Datasinks will
@@ -184,13 +157,6 @@ namespace codal
              * @return true if there is space for "size" bytes in the buffer. false otherwise.
              */
             bool canPull(int size = 0);
-
-            /**
-             * Determines if the DataStream can accept any more data.
-             *
-             * @return true if there if the buffer is ful, and can accept no more data at this time. False otherwise.
-             */
-            ///bool full();
 
             /**
              * Provide the next available ManagedBuffer to our downstream caller, if available.
@@ -210,7 +176,7 @@ namespace codal
             /**
              * Issue a deferred pull request to our downstream component, if one has been registered.
              */
-            //void onDeferredPullRequest(Event);
+            void onDeferredPullRequest(Event);
 
     };
 }
