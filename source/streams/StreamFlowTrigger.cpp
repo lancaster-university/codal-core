@@ -32,9 +32,9 @@ int StreamFlowTrigger::pullRequest()
 {
     (*this->eventHandler)( TRIGGER_REQUEST );
     if( this->downStream != NULL )
-        this->downStream->pullRequest();
+        return this->downStream->pullRequest();
     
-    return 0;
+    return DEVICE_BUSY;
 }
 
 void StreamFlowTrigger::connect( DataSink &sink )
