@@ -32,19 +32,13 @@ DEALINGS IN THE SOFTWARE.
 #define CONFIG_MAX_CHANNELS 10
 #endif
 
-#ifndef CONFIG_BLOCKING_THRESHOLD
-#define CONFIG_BLOCKING_THRESHOLD 100
-#endif
-
 /**
   * Splitter events
   */
-#define SPLITTER_ACTIVATE_CHANNEL    1
-#define SPLITTER_DEACTIVATE_CHANNEL  2
-#define SPLITTER_CHANNEL_CONNECT     3
-#define SPLITTER_CHANNEL_DISCONNECT  4
-#define SPLITTER_ACTIVATE            5
-#define SPLITTER_DEACTIVATE          6
+#define SPLITTER_CHANNEL_CONNECT     1
+#define SPLITTER_CHANNEL_DISCONNECT  2
+#define SPLITTER_ACTIVATE            3
+#define SPLITTER_DEACTIVATE          4
 
 
 /**
@@ -62,6 +56,7 @@ namespace codal{
         
         public:
             int pullAttempts;       // Number of failed pull request attempts
+            uint32_t sentBuffers;
             DataSink * output;
 
             /**
@@ -105,8 +100,6 @@ namespace codal{
           * @param source a DataSource to receive data from
           */
         StreamSplitter(DataSource &source, uint16_t id = CodalComponent::generateDynamicID());
-
-        void periodicCallback();
 
         /**
          * Callback provided when data is ready.
