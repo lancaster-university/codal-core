@@ -54,7 +54,7 @@ LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThres
 int LevelDetector::pullRequest()
 {
     if( ttl < 1 && !activated )
-        return DEVICE_OK;
+        return DEVICE_BUSY;
 
     ManagedBuffer b = upstream.pull();
 
@@ -106,7 +106,7 @@ int LevelDetector::pullRequest()
     if( !activated && --ttl < 1 )
         upstream.disconnect();
 
-    return DEVICE_OK;
+    return DEVICE_BUSY;
 }
 
 /*
