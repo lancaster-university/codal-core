@@ -2,7 +2,6 @@
 #include "ErrorNo.h"
 #include "DataStream.h"
 #include "ManagedBuffer.h"
-#include "CodalDmesg.h"
 #include "MessageBus.h"
 
 using namespace codal;
@@ -15,7 +14,7 @@ StreamRecording::StreamRecording( DataSource &source ) : upStream( source )
     this->readWriteHead = 0;
 
     this->downStream = NULL;
-    //upStream.connect( *this );
+    upStream.connect( *this );
 }
 
 StreamRecording::~StreamRecording()
@@ -39,8 +38,6 @@ ManagedBuffer StreamRecording::pull()
         stop();
         return ManagedBuffer();
     }
-
-    //DMESGF( "Output: %d of %d", this->readWriteHead, REC_MAX_BUFFERS );
     
     // Grab the next block
     ManagedBuffer out = this->buffer[this->readWriteHead++];
@@ -68,25 +65,13 @@ bool StreamRecording::isFull() {
     return this->lastBuffer < REC_MAX_BUFFERS;
 }
 
-void StreamRecording::dumpState()
-{
-    DMESG(
-        "TapeDeck { bufferCount = %d/%d, RWHead = %d }",
-        this->lastBuffer,
-        REC_MAX_BUFFERS,
-        this->readWriteHead
-    );
-}
-
 int StreamRecording::pullRequest()
 {
     // Are we recording?
     if( this->state != REC_STATE_RECORDING )
-        return DEVICE_OK;
+        return DEVICE_BUSY;
 
     ManagedBuffer data = this->upStream.pull();
-    
-    DMESGN( "Input: %d of %d (%d B)\r", this->readWriteHead, REC_MAX_BUFFERS, this->bufferLength );
 
     // Are we getting empty buffers (probably because we're out of RAM!)
     if( data.length() == 0 )
@@ -135,8 +120,6 @@ bool StreamRecording::record()
     erase();
 
     bool changed = this->state != REC_STATE_RECORDING;
-    if( changed )
-        upStream.connect( *this );
 
     this->state = REC_STATE_RECORDING;
 
@@ -167,14 +150,14 @@ bool StreamRecording::play()
     return changed;
 }
 
-void StreamRecording::stop()
+bool StreamRecording::stop()
 {
     bool changed = this->state != REC_STATE_STOPPED;
-    if( changed )
-        upStream.disconnect();
 
     this->state = REC_STATE_STOPPED;
     this->readWriteHead = 0; // Snap to the start
+
+    return changed;
 }
 
 bool StreamRecording::isPlaying()

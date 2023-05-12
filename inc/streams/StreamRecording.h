@@ -66,11 +66,6 @@ namespace codal
         float duration( unsigned int sampleRate );
 
         /**
-         * @brief Prints information about the internal state of this object, for debugging.
-         */
-        void dumpState();
-
-        /**
          * @brief Downstream classes should use this to determing if there is data to pull from this StreamRecording object.
          * 
          * @return true If data is available
@@ -117,14 +112,12 @@ namespace codal
          * 
          * @return Do not use this value, return semantics are changing.
          */
-        void stop();
+        bool stop();
 
         /**
          * @brief Erase the internal buffer.
          * 
          * Will also stop playback or recording, if either are active.
-         * 
-         * @return Do not use this value, return semantics are changing.
          */
         void erase();
 
