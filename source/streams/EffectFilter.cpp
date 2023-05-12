@@ -20,7 +20,7 @@ EffectFilter::~EffectFilter()
 ManagedBuffer EffectFilter::pull()
 {
     ManagedBuffer input = this->upStream.pull();
-    ManagedBuffer output = deepCopy ? ManagedBuffer(input.length()) : input;
+    ManagedBuffer output = (deepCopy || input.isReadOnly()) ? ManagedBuffer(input.length()) : input;
 
     applyEffect(input, output, this->upStream.getFormat());
     return output;
@@ -29,9 +29,8 @@ ManagedBuffer EffectFilter::pull()
 int EffectFilter::pullRequest()
 {
     if( this->downStream != NULL )
-        this->downStream->pullRequest();
-
-    return 0;
+        return this->downStream->pullRequest();
+    return DEVICE_BUSY;
 }
 
 void EffectFilter::connect(DataSink &sink)
