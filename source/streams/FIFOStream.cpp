@@ -74,21 +74,21 @@ void FIFOStream::dumpState()
 
 int FIFOStream::pullRequest()
 {
-    ManagedBuffer inBuffer = this->upStream.pull();
-
     if( this->bufferCount >= FIFO_MAXIMUM_BUFFERS )
         return DEVICE_NO_RESOURCES;
 
+    ManagedBuffer inBuffer = this->upStream.pull();
     if( this->allowInput && inBuffer.length() > 0 )
     {
         this->buffer[ this->bufferCount++ ] = inBuffer;
         this->bufferLength += inBuffer.length();
-
-        // If we've just received a buffer after being idle, issue a downstream pullrequest to notify that data is ready.
-        if (bufferCount == 1 && this->allowOutput && downStream != NULL)
-            downStream->pullRequest();
     }
 
+    if (bufferCount > 0 && this->allowOutput && downStream != NULL)
+        return downStream->pullRequest();
+
+    if( this->bufferCount >= FIFO_MAXIMUM_BUFFERS )
+        return DEVICE_BUSY;
     return DEVICE_OK;
 }
 
