@@ -6,7 +6,6 @@ using namespace codal;
 LowPassFilter::LowPassFilter( DataSource &source, float beta, bool deepCopy) : EffectFilter( source, deepCopy )
 {
     this->lpf_value = 1.0;
-    this->lpf_beta = 0.0;
     setBeta(beta);
 }
 
@@ -24,6 +23,9 @@ LowPassFilter::~LowPassFilter()
  */
 void LowPassFilter::applyEffect(ManagedBuffer inputBuffer, ManagedBuffer outputBuffer, int format)
 {
+    if( inputBuffer.length() < 1 )
+        return;
+    
     int bytesPerSample = DATASTREAM_FORMAT_BYTES_PER_SAMPLE(format);
     int sampleCount = inputBuffer.length() / bytesPerSample;
     uint8_t *in = inputBuffer.getBytes();
