@@ -30,9 +30,7 @@ DEALINGS IN THE SOFTWARE.
 #include "LevelDetectorSPL.h"
 #include "ErrorNo.h"
 #include "StreamNormalizer.h"
-
-#define CODAL_STREAM_IDLE_TIMEOUT_MS 250
-#define CODAL_STREAM_MIC_STABLE_MS 10
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -48,8 +46,8 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     this->status |= LEVEL_DETECTOR_SPL_INITIALISED;
     this->unit = LEVEL_DETECTOR_SPL_DB;
     enabled = true;
-    upstream.connect(*this);
     if(activateImmediately){
+        upstream.connect(*this);
         this->activated = true;
     }
     else{
@@ -60,6 +58,8 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     this->noisyBlockCount = 0;
     this->inNoisyBlock = false;
     this->maxRms = 0;
+
+    this->timeout = 0;
 }
 
 /**
@@ -67,10 +67,10 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
  */
 int LevelDetectorSPL::pullRequest()
 {
-    if( this->timeout - system_timer_current_time() > CODAL_STREAM_IDLE_TIMEOUT_MS && !activated ) {
+    if( !activated && this->timeout - system_timer_current_time() > CODAL_STREAM_IDLE_TIMEOUT_MS ) {
         return DEVICE_BUSY;
     }
-    
+
     ManagedBuffer b = upstream.pull();
 
     uint8_t *data = &b[0];
@@ -96,7 +96,7 @@ int LevelDetectorSPL::pullRequest()
     while(samples){
         // ensure we use at least windowSize number of samples (128)
         if(samples < windowSize)
-        break;
+            break;
 
         uint8_t *ptr, *end;
 
@@ -140,9 +140,12 @@ int LevelDetectorSPL::pullRequest()
         float conv = ((float) maxVal * multiplier) / ((1 << 15) - 1) * gain;
         conv = 20 * log10(conv / pref);
 
-        if (conv < minValue) level = minValue;
-        else if (isfinite(conv)) level = conv;
-        else level = minValue;
+        if (conv < minValue)
+            level = minValue;
+        else if (isfinite(conv))
+            level = conv;
+        else
+            level = minValue;
 
         samples -= windowSize;
         data += windowSize;
@@ -160,7 +163,7 @@ int LevelDetectorSPL::pullRequest()
         }
 
         // LOW THRESHOLD
-        if ((!(status & LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED)) && level < lowThreshold)
+        else if ((!(status & LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED)) && level < lowThreshold)
         {
             Event(id, LEVEL_THRESHOLD_LOW);
             status |=  LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED;
@@ -171,17 +174,18 @@ int LevelDetectorSPL::pullRequest()
         if (this->inNoisyBlock && rms > this->maxRms) this->maxRms = rms;
 
         if (
-                (       // if start of clap
-                        !this->inNoisyBlock &&
-                        rms > LEVEL_DETECTOR_SPL_BEGIN_POSS_CLAP_RMS &&
-                        this->quietBlockCount >= LEVEL_DETECTOR_SPL_CLAP_MIN_QUIET_BLOCKS
-                ) ||
-                (       // or if continuing a clap
-                        this->inNoisyBlock &&
-                        rms > LEVEL_DETECTOR_SPL_CLAP_OVER_RMS
-                )) {
+            (       // if start of clap
+                    !this->inNoisyBlock &&
+                    rms > LEVEL_DETECTOR_SPL_BEGIN_POSS_CLAP_RMS &&
+                    this->quietBlockCount >= LEVEL_DETECTOR_SPL_CLAP_MIN_QUIET_BLOCKS
+            ) ||
+            (       // or if continuing a clap
+                    this->inNoisyBlock &&
+                    rms > LEVEL_DETECTOR_SPL_CLAP_OVER_RMS
+            )) {
             // noisy block
-            if (!this->inNoisyBlock) this->maxRms = rms;
+            if (!this->inNoisyBlock)
+                this->maxRms = rms;
             this->quietBlockCount = 0;
             this->noisyBlockCount += 1;
             this->inNoisyBlock = true;
@@ -212,17 +216,20 @@ int LevelDetectorSPL::pullRequest()
  */
 float LevelDetectorSPL::getValue()
 {
-    bool wasAwake = this->activated || system_timer_current_time() - this->timeout ;
-    this->timeout = system_timer_current_time() + CODAL_STREAM_IDLE_TIMEOUT_MS;
-    if( !wasAwake ) {
-        target_wait( CODAL_STREAM_MIC_STABLE_MS );
+    if( !this->upstream.isConnected() ) {
+        this->upstream.connect( *this );
     }
+    bool wasAwake = this->activated || system_timer_current_time() - this->timeout;
+    this->timeout = system_timer_current_time() + CODAL_STREAM_IDLE_TIMEOUT_MS;
     return splToUnit(level);
 }
 
 void LevelDetectorSPL::activateForEvents( bool state )
 {
     this->activated = state;
+    if( this->activated && !this->upstream.isConnected() ) {
+        this->upstream.connect( *this );
+    }
 }
 
 /*

@@ -27,6 +27,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "ManagedBuffer.h"
 #include "MessageBus.h"
+#include "CodalConfig.h"
 
 #define DATASTREAM_MAXIMUM_BUFFERS      1
 
@@ -66,6 +67,7 @@ namespace codal
     	public:
             virtual ManagedBuffer pull();
             virtual void connect(DataSink &sink);
+            bool isConnected() { return false; } // <-- Uncomment to break. What. The. heck.
             virtual void disconnect();
             virtual int getFormat();
             virtual int setFormat(int format);
@@ -106,6 +108,14 @@ namespace codal
              */
             ~DataStream();
 
+            /**
+             * Controls if this component should emit flow state events.
+             * 
+             * @warning Should not be called mutliple times with `id == 0`, as it will spuriously reallocate event IDs
+             * 
+             * @param id If zero, this will auto-allocate a new event ID
+             * @return uint16_t The new event ID for this DataStream
+             */
             uint16_t emitFlowEvents( uint16_t id = 0 );
 
             /**
@@ -129,6 +139,14 @@ namespace codal
              * @sink The component that data will be delivered to, when it is available
              */
             virtual void connect(DataSink &sink) override;
+
+            /**
+             * Determines if this source is connected to a downstream component
+             * 
+             * @return true If a downstream is connected
+             * @return false If a downstream is not connected
+             */
+            virtual bool isConnected();
 
             /**
              * Define a downstream component for data stream.
@@ -168,8 +186,28 @@ namespace codal
              */
             virtual int pullRequest();
 
+            /**
+             * Query the stream for its current sample rate.
+             * 
+             * If the current object is unable to determine this itself, it will pass the call upstream until it reaches a component can respond.
+             * 
+             * @warning The sample rate for a stream may change during its lifetime. If a component is sensitive to this, it should periodically check.
+             * 
+             * @return float The current sample rate for this stream, or `DATASTREAM_SAMPLE_RATE_UNKNOWN` if none is found.
+             */
             virtual float getSampleRate() override;
 
+            /**
+             * Request a new sample rate on this stream.
+             * 
+             * Most components will simply forward this call upstream, and upon reaching a data source, if possible the source should change
+             * the sample rate to accomodate the request.
+             * 
+             * @warning Not all sample rates will be possible for all devices, so if the caller needs to know the _actual_ rate, they should check the returned value here
+             * 
+             * @param sampleRate The requested sample rate, to be handled by the nearest component capable of doing so.
+             * @return float The actual sample rate this stream will now run at, may differ from the requested sample rate.
+             */
             virtual float requestSampleRate(float sampleRate) override;
 
         private:

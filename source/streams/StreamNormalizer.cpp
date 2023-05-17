@@ -323,3 +323,9 @@ float StreamNormalizer::getSampleRate() {
 float StreamNormalizer::requestSampleRate(float sampleRate) {
     return this->upstream.requestSampleRate( sampleRate );
 }
+
+bool StreamNormalizer::isConnected()
+{
+    //return this->output.isConnected();
+    return false;
+}

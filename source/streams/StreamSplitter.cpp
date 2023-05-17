@@ -90,6 +90,11 @@ void SplitterChannel::connect(DataSink &sink)
     Event e( parent->id, SPLITTER_CHANNEL_CONNECT );
 }
 
+bool SplitterChannel::isConnected()
+{
+    return this->output != NULL;
+}
+
 void SplitterChannel::disconnect()
 {
     output = NULL;

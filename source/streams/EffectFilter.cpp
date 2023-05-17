@@ -38,6 +38,11 @@ void EffectFilter::connect(DataSink &sink)
     this->downStream = &sink;
 }
 
+bool EffectFilter::isConnected()
+{
+    return this->downStream != NULL;
+}
+
 void EffectFilter::disconnect()
 {
     this->downStream = NULL;

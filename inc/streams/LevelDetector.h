@@ -61,7 +61,7 @@ namespace codal{
         int             level;              // The current, instantaneous level.
         int             sigma;              // Running total of the samples in the current window.
         bool            activated;          // Has this component been connected yet.
-        int             ttl;
+        uint64_t        timeout;            // The timestamp at which this component will cease actively sampling the data stream
 
 
         /**
@@ -78,7 +78,7 @@ namespace codal{
         /**
          * Callback provided when data is ready.
          */
-    	virtual int pullRequest();
+    	  virtual int pullRequest();
 
         /*
          * Determines the instantaneous value of the sensor, in SI units, and returns it.
@@ -87,6 +87,13 @@ namespace codal{
          */
         int getValue();
 
+        /**
+         * Enable (or disable) this component constantly listening for events.
+         * 
+         * This will supporess the sampling timeout mechanisms.
+         * 
+         * @param state If true, keep the component consuming buffers and emitting events.
+         */
         void activateForEvents( bool state );
 
         /**

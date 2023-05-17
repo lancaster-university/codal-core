@@ -42,6 +42,11 @@ void StreamFlowTrigger::connect( DataSink &sink )
     this->downStream = &sink;
 }
 
+bool StreamFlowTrigger::isConnected()
+{
+    return this->downStream != NULL;
+}
+
 void StreamFlowTrigger::disconnect()
 {
     this->downStream = NULL;

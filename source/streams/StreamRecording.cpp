@@ -96,6 +96,11 @@ void StreamRecording::connect( DataSink &sink )
     this->downStream = &sink;
 }
 
+bool StreamRecording::isConnected()
+{
+    return this->downStream != NULL;
+}
+
 void StreamRecording::disconnect()
 {
     this->downStream = NULL;

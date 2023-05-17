@@ -29,9 +29,6 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalFiber.h"
 #include "ErrorNo.h"
 
-// Do not set this to less than 2, otherwise events will spuriously trigger
-#define HIGH_WATER_MARK 32
-
 using namespace codal;
 
 /**
@@ -78,7 +75,7 @@ DataStream::DataStream(DataSource &upstream)
 {
     this->pullRequestEventCode = 0;
     this->isBlocking = true;
-    this->missedBuffers = HIGH_WATER_MARK;
+    this->missedBuffers = CODAL_DATASTREAM_HIGH_WATER_MARK;
     this->downstreamReturn = DEVICE_OK;
     this->flowEventCode = 0;
 
@@ -110,13 +107,18 @@ bool DataStream::isReadOnly()
 
 bool DataStream::isFlowing()
 {
-    return this->missedBuffers < HIGH_WATER_MARK;
+    return this->missedBuffers < CODAL_DATASTREAM_HIGH_WATER_MARK;
 }
 
 void DataStream::connect(DataSink &sink)
 {
 	this->downStream = &sink;
     this->upStream->connect(*this);
+}
+
+bool DataStream::isConnected()
+{
+    return this->downStream != NULL;
 }
 
 int DataStream::getFormat()
@@ -176,8 +178,8 @@ bool DataStream::canPull(int size)
 int DataStream::pullRequest()
 {
     // _Technically_ not a missed buffer... yet. But we can only check later.
-    if( this->missedBuffers < HIGH_WATER_MARK )
-        if( ++this->missedBuffers == HIGH_WATER_MARK )
+    if( this->missedBuffers < CODAL_DATASTREAM_HIGH_WATER_MARK )
+        if( ++this->missedBuffers == CODAL_DATASTREAM_HIGH_WATER_MARK )
             if( this->flowEventCode != 0 )
                 Event evt( DEVICE_ID_NOTIFY, this->flowEventCode );
 

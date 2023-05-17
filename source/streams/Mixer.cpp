@@ -110,3 +110,8 @@ void Mixer::connect(DataSink &sink)
 {
     this->downStream = &sink;
 }
+
+bool Mixer::isConnected()
+{
+    return this->downStream != NULL;
+}

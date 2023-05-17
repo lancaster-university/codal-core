@@ -97,6 +97,11 @@ void FIFOStream::connect( DataSink &sink )
     this->downStream = &sink;
 }
 
+bool FIFOStream::isConnected()
+{
+    return this->downStream != NULL;
+}
+
 void FIFOStream::disconnect()
 {
     this->downStream = NULL;

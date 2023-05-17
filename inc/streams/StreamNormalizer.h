@@ -137,9 +137,17 @@ namespace codal{
          */
         int setOrMask(uint32_t mask);
 
-        virtual float getSampleRate();
+        float getSampleRate();
         
-        virtual float requestSampleRate(float sampleRate);
+        float requestSampleRate(float sampleRate);
+
+        /**
+         * Determines if this source is connected to a downstream component
+         * 
+         * @return true If a downstream is connected
+         * @return false If a downstream is not connected
+         */
+        bool isConnected();
 
         /**
          * Destructor.

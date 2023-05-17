@@ -53,8 +53,9 @@ LevelDetector::LevelDetector(DataSource &source, int highThreshold, int lowThres
  */
 int LevelDetector::pullRequest()
 {
-    if( ttl < 1 && !activated )
+    if( this->timeout - system_timer_current_time() > CODAL_STREAM_IDLE_TIMEOUT_MS && !activated ) {
         return DEVICE_BUSY;
+    }
 
     ManagedBuffer b = upstream.pull();
 
@@ -102,10 +103,6 @@ int LevelDetector::pullRequest()
         data++;
     }
 
-    // Disconnect when our TTL is less than 1, if we're not set to always active
-    if( !activated && --ttl < 1 )
-        upstream.disconnect();
-
     return DEVICE_BUSY;
 }
 
@@ -116,8 +113,10 @@ int LevelDetector::pullRequest()
  */
 int LevelDetector::getValue()
 {
-    this->ttl = 100; // In buffers
-    upstream.connect(*this);
+    if( !this->upstream.isConnected() )
+        this->upstream.connect( *this );
+    bool wasAwake = this->activated || system_timer_current_time() - this->timeout;
+    this->timeout = system_timer_current_time() + CODAL_STREAM_IDLE_TIMEOUT_MS;
     target_wait( 100 );
     return level;
 }
@@ -125,7 +124,7 @@ int LevelDetector::getValue()
 void LevelDetector::activateForEvents( bool state )
 {
     this->activated = state;
-    if( this->activated )
+    if( this->activated && !upstream.isConnected() )
         upstream.connect(*this);
 }
 

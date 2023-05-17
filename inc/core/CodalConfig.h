@@ -212,6 +212,19 @@ DEALINGS IN THE SOFTWARE.
 #endif
 
 //
+// Stream API global constants
+//
+
+// Do not set this to less than 2, otherwise events will spuriously trigger
+#ifndef CODAL_DATASTREAM_HIGH_WATER_MARK
+    #define CODAL_DATASTREAM_HIGH_WATER_MARK    4
+#endif
+
+#ifndef CODAL_STREAM_IDLE_TIMEOUT_MS
+  #define CODAL_STREAM_IDLE_TIMEOUT_MS   250
+#endif
+
+//
 // Helper macro used by the codal device runtime to determine if a boolean configuration option is set.
 //
 #define CONFIG_ENABLED(X) (X == 1)

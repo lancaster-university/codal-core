@@ -49,6 +49,16 @@ void MemorySource::connect(DataSink &sink)
     this->downstream = &sink;
 }
 
+/**
+ * Determines if this source is connected to a downstream component
+ * 
+ * @return true If a downstream is connected
+ * @return false If a downstream is not connected
+ */
+bool MemorySource::isConnected()
+{
+    return this->downstream != NULL;
+}
 
 /**
  *  Determine the data format of the buffers streamed out of this component.

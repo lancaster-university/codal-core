@@ -34,7 +34,8 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_SPL_INITIALISED                       0x01
 #define LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED             0x02
 #define LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED              0x04
-#define LEVEL_DETECTOR_SPL_CLAP                              0x05
+#define LEVEL_DETECTOR_SPL_CLAP                              0x08
+
 
 /**
  * Default configuration values
@@ -93,11 +94,14 @@ namespace codal{
         bool            activated;          // Has this component been connected yet
         bool            enabled;            // Is the component currently running
         int             unit;               // The units to be returned from this level detector (e.g. dB or linear 8bit)
-        uint64_t        timeout;
         int             quietBlockCount;    // number of quiet blocks consecutively - used for clap detection
         int             noisyBlockCount;    // number of noisy blocks consecutively - used for clap detection
         bool            inNoisyBlock;       // if had noisy and waiting to lower beyond lower threshold
         float           maxRms;             // maximum rms within a noisy block
+
+        private:
+        uint64_t        timeout;            // The timestamp at which this component will cease actively sampling the data stream
+        public:
 
         /**
           * Creates a component capable of measuring and thresholding stream data

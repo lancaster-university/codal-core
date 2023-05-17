@@ -74,6 +74,7 @@ namespace codal{
             virtual int pullRequest();
             virtual ManagedBuffer pull();
             virtual void connect(DataSink &sink);
+            bool isConnected();
             virtual void disconnect();
             virtual int getFormat();
             virtual int setFormat(int format);
