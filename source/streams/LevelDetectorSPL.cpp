@@ -62,9 +62,6 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     this->timeout = 0;
 }
 
-/**
- * Callback provided when data is ready.
- */
 int LevelDetectorSPL::pullRequest()
 {
     if( !activated && this->timeout - system_timer_current_time() > CODAL_STREAM_IDLE_TIMEOUT_MS ) {
@@ -209,19 +206,13 @@ int LevelDetectorSPL::pullRequest()
     return DEVICE_OK;
 }
 
-/*
- * Determines the instantaneous value of the sensor, in SI units, and returns it.
- *
- * @return The current value of the sensor.
- */
-float LevelDetectorSPL::getValue()
+float LevelDetectorSPL::getValue( int scale )
 {
     if( !this->upstream.isConnected() ) {
         this->upstream.connect( *this );
     }
-    bool wasAwake = this->activated || system_timer_current_time() - this->timeout;
     this->timeout = system_timer_current_time() + CODAL_STREAM_IDLE_TIMEOUT_MS;
-    return splToUnit(level);
+    return splToUnit( this->level, scale );
 }
 
 void LevelDetectorSPL::activateForEvents( bool state )
@@ -232,22 +223,11 @@ void LevelDetectorSPL::activateForEvents( bool state )
     }
 }
 
-/*
- * Disable / turn off this level detector
- *
- */
 void LevelDetectorSPL::disable(){
     enabled = false;
 }
 
 
-/**
- * Set threshold to the given value. Events will be generated when these thresholds are crossed.
- *
- * @param value the LOW threshold at which a LEVEL_THRESHOLD_LOW will be generated.
- *
- * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
- */
 int LevelDetectorSPL::setLowThreshold(float value)
 {
     // Convert specified unit into db if necessary
@@ -270,13 +250,6 @@ int LevelDetectorSPL::setLowThreshold(float value)
     return DEVICE_OK;
 }
 
-/**
- * Set threshold to the given value. Events will be generated when these thresholds are crossed.
- *
- * @param value the HIGH threshold at which a LEVEL_THRESHOLD_HIGH will be generated.
- *
- * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
- */
 int LevelDetectorSPL::setHighThreshold(float value)
 {
     // Convert specified unit into db if necessary
@@ -299,35 +272,16 @@ int LevelDetectorSPL::setHighThreshold(float value)
     return DEVICE_OK;
 }
 
-/**
- * Determines the currently defined low threshold.
- *
- * @return The current low threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
- */
 float LevelDetectorSPL::getLowThreshold()
 {
     return splToUnit(lowThreshold);
 }
 
-/**
- * Determines the currently defined high threshold.
- *
- * @return The current high threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
- */
 float LevelDetectorSPL::getHighThreshold()
 {
     return splToUnit(highThreshold);
 }
 
-/**
- * Set the window size to the given value. The window size defines the number of samples used to determine a sound level.
- * The higher the value, the more accurate the result will be. The lower the value, the more responsive the result will be.
- * Adjust this value to suit the requirements of your applicaiton.
- *
- * @param size The size of the window to use (number of samples).
- *
- * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
- */
 int LevelDetectorSPL::setWindowSize(int size)
 {
     if (size <= 0)
@@ -343,12 +297,6 @@ int LevelDetectorSPL::setGain(float gain)
     return DEVICE_OK;
 }
 
-/**
- * Defines the units that will be returned by the getValue() function.
- *
- * @param unit Either LEVEL_DETECTOR_SPL_DB or LEVEL_DETECTOR_SPL_8BIT.
- * @return DEVICE_OK or DEVICE_INVALID_PARAMETER.
- */
 int LevelDetectorSPL::setUnit(int unit)
 {
     if (unit == LEVEL_DETECTOR_SPL_DB || unit == LEVEL_DETECTOR_SPL_8BIT)
@@ -361,9 +309,11 @@ int LevelDetectorSPL::setUnit(int unit)
 }
 
 
-float LevelDetectorSPL::splToUnit(float level)
+float LevelDetectorSPL::splToUnit(float level, int queryUnit)
 {
-    if (unit == LEVEL_DETECTOR_SPL_8BIT)
+    queryUnit = queryUnit == -1 ? unit : queryUnit;
+
+    if (queryUnit == LEVEL_DETECTOR_SPL_8BIT)
     {
         level = (level - LEVEL_DETECTOR_SPL_8BIT_000_POINT) * LEVEL_DETECTOR_SPL_8BIT_CONVERSION;
 
@@ -379,17 +329,16 @@ float LevelDetectorSPL::splToUnit(float level)
 }
 
 
-float LevelDetectorSPL::unitToSpl(float level)
+float LevelDetectorSPL::unitToSpl(float level, int queryUnit)
 {
+    queryUnit = queryUnit == -1 ? unit : queryUnit;
+
     if (unit == LEVEL_DETECTOR_SPL_8BIT)
         level = LEVEL_DETECTOR_SPL_8BIT_000_POINT + level / LEVEL_DETECTOR_SPL_8BIT_CONVERSION;
 
     return level;
 }
 
-/**
- * Destructor.
- */
 LevelDetectorSPL::~LevelDetectorSPL()
 {
 }

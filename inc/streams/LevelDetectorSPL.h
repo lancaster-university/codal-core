@@ -125,10 +125,16 @@ namespace codal{
         /*
          * Determines the instantaneous value of the sensor, in SI units, and returns it.
          *
+         * @param scale either LEVEL_DETECTOR_SPL_DB or LEVEL_DETECTOR_SPL_8BIT to select the scale for this call. If not supplied it will default to the current system setting.
          * @return The current value of the sensor.
          */
-        float getValue();
+        float getValue( int scale = -1 );
 
+        /**
+         * Keep this component active and processing buffers so that events can be produced
+         * 
+         * @param state If set to true, this component will connect (if required) and start consuming buffers
+         */
         void activateForEvents( bool state );
 
         /**
@@ -195,8 +201,8 @@ namespace codal{
         ~LevelDetectorSPL();
 
         private:
-        float splToUnit(float f);
-        float unitToSpl(float f);
+        float splToUnit(float f, int queryUnit = -1);
+        float unitToSpl(float f, int queryUnit = -1);
     };
 }
 
