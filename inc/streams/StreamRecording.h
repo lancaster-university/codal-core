@@ -91,9 +91,18 @@ namespace codal
          * 
          * Non-blocking, will return immediately.
          * 
-         * @return Do not use this value, return semantics are changing.
+         * @return Returns true if the object state actually changed (ie. we weren't already recording)
          */
-        bool record();
+        bool recordAsync();
+
+        /**
+         * @brief Begin recording data from the connected upstream
+         * 
+         * The StreamRecording object will, if already playing; stop playback, erase its buffer, and start recording.
+         * 
+         * Blocking call, will repeatedly deschedule the current fiber until the recording completes.
+         */
+        void record();
 
         /**
          * @brief Begin playing data from the connected upstream
@@ -102,9 +111,18 @@ namespace codal
          * 
          * Non-blocking, will return immediately.
          * 
-         * @return Do not use this value, return semantics are changing.
+         * @return Returns true if the object state actually changed (ie. we weren't already recording)
          */
-        bool play();
+        bool playAsync();
+
+        /**
+         * @brief Begin playing data from the connected upstream
+         * 
+         * The StreamRecording object will, if already recording; stop recording, rewind to the start of its buffer, and start playing.
+         * 
+         * Blocking call, will repeatedly deschedule the current fiber until the playback completes.
+         */
+        void play();
 
         /**
          * @brief Stop recording or playing the data stored in this StreamRecording object.

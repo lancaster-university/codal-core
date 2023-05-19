@@ -116,7 +116,7 @@ int StreamRecording::setFormat( int format )
     return this->upStream.setFormat( format );
 }
 
-bool StreamRecording::record()
+bool StreamRecording::recordAsync()
 {
     // Duplicate check from within erase(), but here for safety in case of later code edits...
     if( this->state != REC_STATE_STOPPED )
@@ -131,6 +131,13 @@ bool StreamRecording::record()
     return changed;
 }
 
+void StreamRecording::record()
+{
+    recordAsync();
+    while( isRecording() )
+        schedule();
+}
+
 void StreamRecording::erase()
 {
     if( this->state != REC_STATE_STOPPED )
@@ -142,7 +149,7 @@ void StreamRecording::erase()
     this->readWriteHead = 0;
 }
 
-bool StreamRecording::play()
+bool StreamRecording::playAsync()
 {
     if( this->state != REC_STATE_STOPPED )
         this->stop();
@@ -153,6 +160,13 @@ bool StreamRecording::play()
         this->downStream->pullRequest();
 
     return changed;
+}
+
+void StreamRecording::play()
+{
+    playAsync();
+    while( isPlaying() )
+        schedule();
 }
 
 bool StreamRecording::stop()
