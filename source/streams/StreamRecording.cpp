@@ -135,7 +135,7 @@ void StreamRecording::record()
 {
     recordAsync();
     while( isRecording() )
-        schedule();
+        fiber_sleep(5);
 }
 
 void StreamRecording::erase()
@@ -166,7 +166,7 @@ void StreamRecording::play()
 {
     playAsync();
     while( isPlaying() )
-        schedule();
+        fiber_sleep(5);
 }
 
 bool StreamRecording::stop()
