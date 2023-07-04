@@ -154,7 +154,7 @@ StreamSplitter::StreamSplitter(DataSource &source, uint16_t id) : upstream(sourc
     for (int i = 0; i < CONFIG_MAX_CHANNELS; i++)
         outputChannels[i] = NULL;
     
-    source.connect(*this);
+    upstream.connect(*this);
 
     this->__cycle = 0;
     //this->status |= DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
