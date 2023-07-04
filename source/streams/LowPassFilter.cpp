@@ -33,8 +33,9 @@ void LowPassFilter::applyEffect(ManagedBuffer inputBuffer, ManagedBuffer outputB
 
     for( int i=0; i<sampleCount; i++)
     {
-        float value = StreamNormalizer::readSample[format]( in );
+        int value = StreamNormalizer::readSample[format]( in );
         lpf_value = lpf_value - (lpf_beta * (lpf_value - (float)value));
+        //lpf_value = value & 0xFE; // Strips the last few bits...
         StreamNormalizer::writeSample[format]( out, (int)lpf_value );
 
         in += bytesPerSample; 
