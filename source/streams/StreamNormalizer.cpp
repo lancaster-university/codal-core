@@ -280,8 +280,7 @@ int StreamNormalizer::setFormat(int format)
  * @param gain The gain to apply to this input stream.
  * @return DEVICE_OK on success.
  */
-int
-StreamNormalizer::setGain(float gain)
+int StreamNormalizer::setGain(float gain)
 {
     this->gain = gain;
     return DEVICE_OK;
@@ -291,8 +290,7 @@ StreamNormalizer::setGain(float gain)
  * Determines the  gain being applied to the input, as a floating point multiple.
  * @return the gain applied.
  */
-float
-StreamNormalizer::getGain()
+float StreamNormalizer::getGain()
 {
     return gain;
 }
