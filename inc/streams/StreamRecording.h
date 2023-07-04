@@ -5,7 +5,9 @@
 #include "DataStream.h"
 
 // Pretty much the largest sensible number we can have on a v2
-#define REC_MAX_BUFFERS     200
+#ifndef CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH
+    #define CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH      60000 // 60k, in bytes
+#endif
 
 #define REC_STATE_STOPPED   0
 #define REC_STATE_PLAYING   1
@@ -14,14 +16,27 @@
 namespace codal
 {
 
+    class StreamRecording_Buffer {
+        public:
+        ManagedBuffer buffer;
+        StreamRecording_Buffer * next;
+
+        StreamRecording_Buffer() {
+            this->buffer = ManagedBuffer();
+            this->next = NULL;
+        }
+    };
+
     class StreamRecording : public DataSource, public DataSink
     {
         private:
 
-        ManagedBuffer buffer[REC_MAX_BUFFERS];
-        unsigned int lastBuffer;
-        unsigned int bufferLength;
-        unsigned int readWriteHead;
+        //ManagedBuffer buffer[REC_MAX_BUFFERS];
+        //StreamRecording_Buffer_t * bufferChain;
+        StreamRecording_Buffer * lastBuffer;
+        StreamRecording_Buffer * readHead;
+        uint32_t maxBufferLenth;
+        uint32_t totalBufferLength;
         int state;
 
         DataSink *downStream;
@@ -29,12 +44,14 @@ namespace codal
 
         public:
 
+        StreamRecording_Buffer * bufferChain;
+
         /**
          * @brief Construct a new Stream Recording object
          * 
          * @param source An upstream DataSource to connect to
          */
-        StreamRecording( DataSource &source );
+        StreamRecording( DataSource &source, uint32_t length = CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH );
 
         /**
          * @brief Destroy the Stream Recording object
