@@ -156,7 +156,7 @@ ManagedBuffer DataStream::pull()
     if( this->isBlocking )
         return this->upStream->pull();
     
-    ManagedBuffer tmp = this->nextBuffer;
+    ManagedBuffer tmp = this->nextBuffer; // Deep copy!
     this->nextBuffer = ManagedBuffer();
     return tmp;
 }
