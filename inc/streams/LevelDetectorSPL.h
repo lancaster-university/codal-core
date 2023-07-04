@@ -24,6 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 #include "DataStream.h"
+#include "CodalFiber.h"
 
 #ifndef LEVEL_DETECTOR_SPL_H
 #define LEVEL_DETECTOR_SPL_H
@@ -44,6 +45,11 @@ DEALINGS IN THE SOFTWARE.
 
 #ifndef LEVEL_DETECTOR_SPL_NORMALIZE
 #define LEVEL_DETECTOR_SPL_NORMALIZE    1
+#endif
+
+// The number of buffers to use to settle the room ambient SPL before reporting events and values.
+#ifndef LEVEL_DETECTOR_SPL_MIN_BUFFERS
+#define LEVEL_DETECTOR_SPL_MIN_BUFFERS 2
 #endif
 
 /**
@@ -101,6 +107,8 @@ namespace codal{
 
         private:
         uint64_t        timeout;            // The timestamp at which this component will cease actively sampling the data stream
+        uint8_t         bufferCount;        // Used to track that enough buffers have been seen since activation to output a valid value/event
+        FiberLock       resourceLock;
         public:
 
         /**
