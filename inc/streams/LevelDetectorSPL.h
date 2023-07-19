@@ -49,7 +49,7 @@ DEALINGS IN THE SOFTWARE.
 
 // The number of buffers to use to settle the room ambient SPL before reporting events and values.
 #ifndef LEVEL_DETECTOR_SPL_MIN_BUFFERS
-#define LEVEL_DETECTOR_SPL_MIN_BUFFERS 2
+#define LEVEL_DETECTOR_SPL_MIN_BUFFERS  2
 #endif
 
 /**
