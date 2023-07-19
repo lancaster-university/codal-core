@@ -26,7 +26,9 @@ DEALINGS IN THE SOFTWARE.
 #if DEVICE_DMESG_BUFFER_SIZE > 0
 
 #include "CodalDevice.h"
+#include "CodalConfig.h"
 #include "CodalCompat.h"
+#include "Timer.h"
 
 CodalLogStore codalLogStore;
 static void (*dmesg_flush_fn)(void) = NULL;
@@ -138,6 +140,16 @@ void codal_dmesg_flush()
 void codal_vdmesg(const char *format, bool crlf, va_list ap)
 {
     const char *end = format;
+
+    #if CONFIG_ENABLED(DMESG_SHOW_TIMES)
+    logwritenum( (uint32_t)system_timer_current_time(), false, false );
+    logwrite( "\t" );
+    #endif
+
+    #if CONFIG_ENABLED(DMESG_SHOW_FIBERS)
+    logwritenum( (uint32_t)((uint64_t)currentFiber & 0x000000000000FFFF), false, true );
+    logwrite( "\t" );
+    #endif
 
     while (*end)
     {
