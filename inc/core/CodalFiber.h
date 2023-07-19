@@ -387,10 +387,8 @@ namespace codal
 
         /**
          * Release the lock, and signal to all waiting fibers to continue
-         * 
-         * @param reset The number of slots to reinitialise the FiberLock to, for semaphore duty
          */
-        void notifyAll( int reset = 0 );
+        void notifyAll();
 
         /**
          * Determine the number of fibers currently blocked on this lock

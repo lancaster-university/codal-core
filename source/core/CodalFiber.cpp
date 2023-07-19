@@ -819,10 +819,11 @@ void codal::fiber_scheduler_set_deepsleep_pending( int pending)
 FiberLock::FiberLock( int initial )
 {
     queue = NULL;
-    locked = 0-initial;
+    locked = initial;
 }
 
 FiberLock::FiberLock() : FiberLock( 0 ) {}
+
 
 REAL_TIME_FUNC
 void FiberLock::wait()
@@ -832,10 +833,10 @@ void FiberLock::wait()
         return;
 
     target_disable_irq();
-    int l = ++locked;
+    int l = --locked;
     target_enable_irq();
 
-    if (l > 1)
+    if (l < 0)
     {
         // wait() is a blocking call, so if we're in a fork on block context,
         // it's time to spawn a new fiber...
@@ -869,43 +870,30 @@ void FiberLock::wait()
 
 void FiberLock::notify()
 {
-    Fiber *f = queue;
-
-    if (f)
-    {
-        dequeue_fiber(f);
-        queue_fiber(f, &runQueue);
+    int l = locked++;
+    if( l < 0 ) {
+        Fiber *f = queue;
+        if (f)
+        {
+            dequeue_fiber(f);
+            queue_fiber(f, &runQueue);
+        }
     }
-
-    // This allows the lock to reach into the negative, to allow limited access to an
-    // access constrained resource
-    locked--;
 }
 
-void FiberLock::notifyAll( int reset )
+void FiberLock::notifyAll()
 {
     Fiber *f = queue;
-
     while (f)
     {
-        dequeue_fiber(f);
-        queue_fiber(f, &runQueue);
+        this->notify();
         f = queue;
     }
-
-    locked = reset;
 }
 
 int FiberLock::getWaitCount()
 {
-    Fiber *f = queue;
-    int count = 0;
-
-    while (f)
-    {
-        count++;
-        f = f->qnext;
-    }
-
-    return count;
+    if( locked > -1 )
+        return 0;
+    return 0 - locked;
 }
