@@ -4,7 +4,7 @@
 #include "ManagedBuffer.h"
 #include "DataStream.h"
 
-// Pretty much the largest sensible number we can have on a v2
+// Pretty much the largest sensible number we can have on a Micro:bit v2
 #ifndef CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH
     #define CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH      60000 // 60k, in bytes
 #endif
@@ -50,6 +50,7 @@ namespace codal
          * @brief Construct a new Stream Recording object
          * 
          * @param source An upstream DataSource to connect to
+         * @param length The maximum amount of memory (RAM) in bytes to allow this recording object to use. Defaults to CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH.
          */
         StreamRecording( DataSource &source, uint32_t length = CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH );
 
