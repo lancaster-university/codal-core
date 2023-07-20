@@ -157,7 +157,6 @@ int LevelDetectorSPL::pullRequest()
             this->bufferCount++; // Here to prevent this endlessly increasing
             return DEVICE_OK;
         }
-        assert_true( this->bufferCount >= LEVEL_DETECTOR_SPL_MIN_BUFFERS, "Minimum buffers not reached!" );
         if( this->resourceLock.getWaitCount() > 0 )
             this->resourceLock.notify();
 
