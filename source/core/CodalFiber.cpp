@@ -822,7 +822,7 @@ FiberLock::FiberLock( int initial )
     locked = initial;
 }
 
-FiberLock::FiberLock() : FiberLock( 0 ) {}
+FiberLock::FiberLock() : FiberLock( 1 ) {}
 
 
 REAL_TIME_FUNC
