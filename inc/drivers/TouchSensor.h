@@ -48,7 +48,7 @@ namespace codal
       *
       * Drives a number of TouchButtons ona device.
       */
-    class TouchSensor : CodalComponent
+    class TouchSensor : public CodalComponent
     {
         protected:
 
