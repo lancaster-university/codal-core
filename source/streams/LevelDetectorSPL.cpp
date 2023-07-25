@@ -158,7 +158,7 @@ int LevelDetectorSPL::pullRequest()
             return DEVICE_OK;
         }
         if( this->resourceLock.getWaitCount() > 0 )
-            this->resourceLock.notify();
+            this->resourceLock.notifyAll();
 
         // HIGH THRESHOLD
         if ((!(status & LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
@@ -221,7 +221,8 @@ float LevelDetectorSPL::getValue( int scale )
         this->upstream.connect( *this );
 
     // Lock the resource, THEN bump the timout, so we get consistent on-time
-    resourceLock.wait();
+    if( this->bufferCount < LEVEL_DETECTOR_SPL_MIN_BUFFERS )
+        resourceLock.wait();
 
     this->timeout = system_timer_current_time();
 
