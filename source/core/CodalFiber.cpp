@@ -26,6 +26,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalFiber.h"
 #include "Timer.h"
 #include "codal_target_hal.h"
+#include "CodalDmesg.h"
 
 #define INITIAL_STACK_DEPTH (fiber_initial_stack_base() - 0x04)
 
@@ -816,13 +817,13 @@ void codal::fiber_scheduler_set_deepsleep_pending( int pending)
         fiber_flags &= ~DEVICE_SCHEDULER_DEEPSLEEP;
 }
 
-FiberLock::FiberLock( int initial )
+FiberLock::FiberLock( int initial, FiberLockMode mode )
 {
-    queue = NULL;
-    locked = initial;
+    this->queue = NULL;
+    this->locked = initial;
+    this->resetTo = initial;
+    this->mode = mode;
 }
-
-FiberLock::FiberLock() : FiberLock( 1 ) {}
 
 
 REAL_TIME_FUNC
@@ -835,6 +836,8 @@ void FiberLock::wait()
     target_disable_irq();
     int l = --locked;
     target_enable_irq();
+
+    //DMESGF( "%d, wait(%d)", (uint32_t)this & 0xFFFF, locked );
 
     if (l < 0)
     {
@@ -871,24 +874,29 @@ void FiberLock::wait()
 void FiberLock::notify()
 {
     int l = locked++;
-    if( l < 0 ) {
-        Fiber *f = queue;
-        if (f)
-        {
-            dequeue_fiber(f);
-            queue_fiber(f, &runQueue);
-        }
+    //DMESGF( "%d, notify(%d)", (uint32_t)this & 0xFFFF, locked );
+    Fiber *f = queue;
+    if (f)
+    {
+        dequeue_fiber(f);
+        queue_fiber(f, &runQueue);
     }
 }
 
 void FiberLock::notifyAll()
 {
+    //DMESGF( "%d, notifyAll(%d)", (uint32_t)this & 0xFFFF, locked );
     Fiber *f = queue;
     while (f)
     {
         this->notify();
         f = queue;
     }
+
+    if( this->mode == FiberLockMode::MUTEX )
+        this->locked = this->resetTo;
+
+    //DMESGF( "%d, { notifyAll(%d) }", (uint32_t)this & 0xFFFF, locked );
 }
 
 int FiberLock::getWaitCount()
