@@ -223,6 +223,7 @@ int Compass::isCalibrating()
  */
 void Compass::clearCalibration()
 {
+    calibration = CompassCalibration();
     status &= ~COMPASS_STATUS_CALIBRATED;
 }
 
