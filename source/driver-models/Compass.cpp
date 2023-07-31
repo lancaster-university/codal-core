@@ -63,7 +63,6 @@ Compass::Compass(Accelerometer &accel, CoordinateSpace &cspace, uint16_t id) :  
 
 /**
  * Internal helper used to de-duplicate code in the constructors
- * @param coordinateSpace the orientation of the sensor. Defaults to: SIMPLE_CARTESIAN
  * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_COMPASS
  *
  */
@@ -75,7 +74,6 @@ void Compass::init(uint16_t id)
 
     // Set a default rate of 50Hz.
     this->samplePeriod = 20;
-    this->configure();
 
     // Assume that we have no calibration information.
     status &= ~COMPASS_STATUS_CALIBRATED;
@@ -238,19 +236,6 @@ void Compass::setAccelerometer(Accelerometer &accelerometer)
 }
 
 /**
- * Configures the device for the sample rate defined
- * in this object. The nearest values are chosen to those defined
- * that are supported by the hardware. The instance variables are then
- * updated to reflect reality.
- *
- * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the compass could not be configured.
- */
-int Compass::configure()
-{
-    return DEVICE_NOT_SUPPORTED;
-}
-
-/**
  * Attempts to set the sample rate of the compass to the specified period value (in ms).
  *
  * @param period the requested time between samples, in milliseconds.
@@ -281,22 +266,6 @@ int Compass::setPeriod(int period)
 int Compass::getPeriod()
 {
     return (int)samplePeriod;
-}
-
-/**
- * Poll to see if new data is available from the hardware. If so, update it.
- * n.b. it is not necessary to explicitly call this function to update data
- * (it normally happens in the background when the scheduler is idle), but a check is performed
- * if the user explicitly requests up to date data.
- *
- * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the update fails.
- *
- * @note This method should be overidden by the hardware driver to implement the requested
- * changes in hardware.
- */
-int Compass::requestUpdate()
-{
-    return DEVICE_NOT_SUPPORTED;
 }
 
 /**
