@@ -41,21 +41,6 @@ AbstractButton::AbstractButton()
 }
 
 /**
- * Tests if this Button is currently pressed.
- *
- * @code
- * if(buttonA.isPressed())
- *     display.scroll("Pressed!");
- * @endcode
- *
- * @return 1 if this button is pressed, 0 otherwise.
- */
-int AbstractButton::isPressed()
-{
-    return 0;
-}
-
-/**
  * Determines if this button has been pressed.
  *
  * @code
