@@ -45,7 +45,7 @@ using namespace codal;
   * @param mode the configuration of internal pullups/pulldowns, as defined in the mbed PullMode class. PullNone by default.
   *
   */
-Button::Button(Pin &pin, uint16_t id, ButtonEventConfiguration eventConfiguration, ButtonPolarity polarity, PullMode mode) : _pin(pin)
+Button::Button(Pin &pin, uint16_t id, ButtonEventConfiguration eventConfiguration, ButtonPolarity polarity, PullMode mode) : _pin(pin), pullMode(mode)
 {
     this->id = id;
     this->eventConfiguration = eventConfiguration;
@@ -53,10 +53,8 @@ Button::Button(Pin &pin, uint16_t id, ButtonEventConfiguration eventConfiguratio
     this->sigma = 0;
     this->polarity = polarity;
 
-    pin.setPolarity( polarity == ACTIVE_HIGH ? 1 : 0);
-    pin.setPull(mode);
-
-    this->status |= DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
+    // For backward compatibility, always perform demand activation.
+    this->isPressed();
 }
 
 /**
@@ -175,6 +173,17 @@ void Button::periodicCallback()
   */
 int Button::isPressed()
 {
+    if (_pin.obj != this)
+    {
+        if (_pin.obj != NULL)
+            _pin.obj->releasePin(_pin);
+
+        _pin.obj = this;
+        _pin.setPolarity( polarity == ACTIVE_HIGH ? 1 : 0);
+        _pin.setPull(pullMode);
+        this->status |= DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
+    }
+
     return status & DEVICE_BUTTON_STATE ? 1 : 0;
 }
 
@@ -191,6 +200,7 @@ int Button::releasePin(Pin &pin)
     // We've been asked to disconnect from the given pin.
     // Stop requesting periodic callbacks from the scheduler.
     this->status &= ~DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
+    pin.obj = NULL;
 
     if (deleteOnRelease)
         delete this;

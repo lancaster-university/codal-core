@@ -50,8 +50,7 @@ TouchButton::TouchButton(Pin &pin, TouchSensor &sensor, int threshold) : Button(
     this->threshold = threshold;
     this->reading = 0;
 
-    // register ourselves with the sensor
-    touchSensor.addTouchButton(this);
+    this->buttonActive();
 
     // Perform a calibraiton if necessary
     if (threshold < 0)
@@ -64,6 +63,13 @@ TouchButton::TouchButton(Pin &pin, TouchSensor &sensor, int threshold) : Button(
  */
 int TouchButton::buttonActive()
 {
+    // register ourselves with the sensor if necessary
+    if (!(status & TOUCH_BUTTON_RUNNING))
+    {
+        touchSensor.addTouchButton(this);
+        status |= TOUCH_BUTTON_RUNNING;
+    }
+
     if (status & TOUCH_BUTTON_CALIBRATING)
         return 0;
 
@@ -177,6 +183,21 @@ void TouchButton::setValue(int reading)
 #endif
 }
 
+/**
+ * Method to release the given pin from a peripheral, if already bound.
+ * Device drivers should override this method to disconnect themselves from the give pin
+ * to allow it to be used by a different peripheral.
+ *
+ * @param pin the Pin to be released
+ */
+int TouchButton::releasePin(Pin &pin)
+{
+    Button::releasePin(pin);
+    touchSensor.removeTouchButton(this);
+    status &= ~TOUCH_BUTTON_RUNNING;
+
+    return DEVICE_OK;
+}
 
 /**
   * Destructor for TouchButton, where we deregister this touch button with our sensor...

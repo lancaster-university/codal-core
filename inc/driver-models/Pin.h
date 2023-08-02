@@ -97,6 +97,8 @@ namespace codal
         public:
         uint16_t status;
         uint16_t id;
+        PinPeripheral* obj;
+
 
         void (*gpio_irq)(int state);
 
@@ -125,6 +127,7 @@ namespace codal
             this->name = name;
             this->capability = capability;
             this->gpio_irq = NULL;
+            this->obj = NULL;
         }
 
         /**

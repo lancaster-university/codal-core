@@ -50,6 +50,7 @@ DEALINGS IN THE SOFTWARE.
 
 // Status flags associated with a touch sensor
 #define TOUCH_BUTTON_CALIBRATING            0x10
+#define TOUCH_BUTTON_RUNNING                0x20
 
 namespace codal
 {
@@ -133,6 +134,14 @@ namespace codal
          */
          void setPinValue(int v);
 
+        /**
+          * Method to release the given pin from a peripheral, if already bound.
+          * Device drivers should override this method to disconnect themselves from the give pin
+          * to allow it to be used by a different peripheral.
+          *
+          * @param pin the Pin to be released
+          */
+        virtual int releasePin(Pin &pin) override;
         /**
           * Destructor for Button, where we deregister this instance from the array of fiber components.
           */

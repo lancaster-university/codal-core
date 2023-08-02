@@ -47,6 +47,7 @@ namespace codal
 
         public:
         Pin &_pin;                                        // The pin this button is connected to.
+        PullMode pullMode;                                // Determines if pull up or pull down resistors should be applied.
 
         /**
           * Constructor.
