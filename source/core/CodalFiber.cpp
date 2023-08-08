@@ -873,7 +873,7 @@ void FiberLock::wait()
 
 void FiberLock::notify()
 {
-    int l = locked++;
+    locked++;
     //DMESGF( "%d, notify(%d)", (uint32_t)this & 0xFFFF, locked );
     Fiber *f = queue;
     if (f)
