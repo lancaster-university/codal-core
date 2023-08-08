@@ -22,6 +22,20 @@ void __codal_assert__( const char * file, const int line, bool condition, const 
     #else
         DMESG( "\tFailed %d tests", ++test_failures );
     #endif
+    
+    codal_dmesg_flush();
+}
+
+void __codal_fault__( const char * file, const int line, const char * message  ) {
+    DMESGN( "%s:%d; ASSERT_FAULT (user invoked)", file, line );
+    if( message != NULL )
+        DMESG( "\t%s", message );
+    
+    #if CONFIG_ENABLED(CODAL_ASSERT_PANIC)
+        target_panic( 999 );
+    #endif
+
+    codal_dmesg_flush();
 }
 
 void __codal_assert_pass__( const char * file, const int line, const char * message ) {
@@ -30,6 +44,8 @@ void __codal_assert_pass__( const char * file, const int line, const char * mess
     DMESG( "Test SUCCESS in %s:%d (PASS: %d, FAIL: %d)", file, line, test_successes, test_failures );
     if( message != NULL )
         DMESG( "\t%s", message );
+    
+    codal_dmesg_flush();
 }
 
 void __codal_assert_fail__( const char * file, const int line, const char * message ) {
@@ -43,4 +59,6 @@ void __codal_assert_fail__( const char * file, const int line, const char * mess
     #else
         DMESG( "\tFailed %d tests", ++test_failures );
     #endif
+
+    codal_dmesg_flush();
 }
