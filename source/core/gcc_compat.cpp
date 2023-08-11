@@ -2,6 +2,7 @@
 #include "codal_target_hal.h"
 #include "CodalAssert.h"
 
+#if __GNUC__ > 11
 extern "C" {
     int _close( int fd )
     {
@@ -38,3 +39,4 @@ extern "C" {
         return -1;
     }
 }
+#endif
