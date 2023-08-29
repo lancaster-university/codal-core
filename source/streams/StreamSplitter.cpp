@@ -55,7 +55,7 @@ ManagedBuffer SplitterChannel::pull()
 {
     this->pullAttempts = 0;
     this->sentBuffers++;
-    ManagedBuffer inData = parent->getBuffer();
+    ManagedBuffer inData( parent->getBuffer() );
 
     // Shortcuts - we can't fabricate samples, so just pass on what we can if we don't know or can't keep up.
     if( sampleRate == DATASTREAM_SAMPLE_RATE_UNKNOWN || sampleRate >= parent->upstream.getSampleRate() )
