@@ -92,7 +92,7 @@ namespace codal
           *
           * @return 1 if this button is pressed, 0 otherwise.
           */
-        virtual int isPressed();
+        virtual int isPressed() = 0;
 
         /**
           * Determines if this button has been pressed.

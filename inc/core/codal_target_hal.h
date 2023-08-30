@@ -82,16 +82,19 @@ extern "C"
 
     void tcb_configure_args(void* tcb, PROCESSOR_WORD_TYPE ep, PROCESSOR_WORD_TYPE cp, PROCESSOR_WORD_TYPE pm);
 
-    /**
-     * Default implementation of atomic fetch and add opertaion.
-     * GCC provides this where possible, but this is not supported on some CPU architectures...
-     *
-     * @param ptr pointer to the memory to access.
-     * @param value the value to add to the memory location.
-     * @return the value of th ememory location BEFORE the add operation took place.
-     */
-    short unsigned int __sync_fetch_and_add_2 (volatile void *ptr, short unsigned int value);
-
+	// Preprocessor Directive to ignore redecleration when using clang
+    #ifndef __clang__
+		/**
+		 * Default implementation of atomic fetch and add opertaion.
+		 * GCC provides this where possible, but this is not supported on some CPU architectures...
+		 *
+		 * @param ptr pointer to the memory to access.
+		 * @param value the value to add to the memory location.
+		 * @return the value of th ememory location BEFORE the add operation took place.
+		 */
+		short unsigned int __sync_fetch_and_add_2 (volatile void *ptr, short unsigned int value);
+    
+    #endif
 }
 
 // This is re-defined in targets with external flash, that require certain functions to be placed in RAM

@@ -119,10 +119,10 @@ namespace codal
          *
          * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the gyroscope could not be configured.
          *
-         * @note This method should be overidden by the hardware driver to implement the requested
+         * @note This method should be overridden by the hardware driver to implement the requested
          * changes in hardware.
          */
-        virtual int configure();
+        virtual int configure() = 0;
 
         /**
          * Poll to see if new data is available from the hardware. If so, update it.
@@ -132,10 +132,10 @@ namespace codal
          *
          * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the update fails.
          *
-         * @note This method should be overidden by the hardware driver to implement the requested
+         * @note This method should be overridden by the hardware driver to implement the requested
          * changes in hardware.
          */
-        virtual int requestUpdate();
+        virtual int requestUpdate() = 0;
 
         /**
          * Stores data from the gyroscope sensor in our buffer, and perform gesture tracking.
