@@ -30,6 +30,10 @@ DEALINGS IN THE SOFTWARE.
 #include "codal_target_hal.h"
 #include "CodalFiber.h"
 
+#include "CodalLoadable.h"
+#include "NullTimeSource.h"
+#include "CodalDmesg.h"
+
 /**
   * Class definition for CodalDevice.
   *
@@ -42,12 +46,16 @@ namespace codal
     class CodalDevice
     {
         public:
+          CodalLoadable * timeSource = NULL;
+          CodalLoadable * storageSource = NULL;
+        
 
         /**
           * The default constructor of a DeviceComponent
           */
         CodalDevice()
         {
+          this->timeSource = CodalLoadable::assign( this->timeSource, new NullTimeSource(), false );
         }
 
         /**

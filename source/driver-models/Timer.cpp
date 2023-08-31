@@ -151,6 +151,17 @@ CODAL_TIMESTAMP Timer::getTimeUs()
     return currentTimeUs;
 }
 
+CODAL_TIMESTAMP Timer::adjustTime( CODAL_TIMESTAMP offset ) {
+    disableInterrupts();
+    currentTime += offset;
+    currentTimeUs += offset * 1000;
+    enableInterrupts();
+
+    recomputeNextTimerEvent();
+
+    return currentTime;
+}
+
 int Timer::disableInterrupts()
 {
     timer.disableIRQ();

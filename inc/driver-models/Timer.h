@@ -226,6 +226,11 @@ namespace codal
           */
         virtual int disableInterrupts();
 
+        /**
+         * Adjust the system time by some offset
+         */
+        CODAL_TIMESTAMP adjustTime( CODAL_TIMESTAMP offset );
+
     protected:
         CODAL_TIMESTAMP currentTime;
         CODAL_TIMESTAMP currentTimeUs;
