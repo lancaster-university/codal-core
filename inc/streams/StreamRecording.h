@@ -38,6 +38,7 @@ namespace codal
         uint32_t maxBufferLenth;
         uint32_t totalBufferLength;
         int state;
+        float lastUpstreamRate;
 
         DataSink *downStream;
         DataSource &upStream;

@@ -14,6 +14,7 @@ StreamRecording::StreamRecording( DataSource &source, uint32_t maxLength ) : upS
     this->readHead = NULL;
     this->maxBufferLenth = maxLength;
     this->totalBufferLength = 0;
+    this->lastUpstreamRate = DATASTREAM_SAMPLE_RATE_UNKNOWN;
 
     this->downStream = NULL;
     upStream.connect( *this );
@@ -74,6 +75,7 @@ int StreamRecording::pullRequest()
         return DEVICE_BUSY;
 
     ManagedBuffer data = this->upStream.pull();
+    this->lastUpstreamRate = this->upStream.getSampleRate();
 
     // Are we getting empty buffers (probably because we're out of RAM!)
     if( data == ManagedBuffer() || data.length() <= 1 ) {
@@ -169,6 +171,7 @@ void StreamRecording::erase()
     this->lastBuffer = NULL;
     this->readHead = NULL;
     this->bufferChain = NULL;
+    this->lastUpstreamRate = DATASTREAM_SAMPLE_RATE_UNKNOWN;
 }
 
 bool StreamRecording::playAsync()
@@ -221,5 +224,8 @@ bool StreamRecording::isStopped()
 
 float StreamRecording::getSampleRate()
 {
-    return this->upStream.getSampleRate();
+    if( this->lastUpstreamRate == DATASTREAM_SAMPLE_RATE_UNKNOWN )
+        return this->upStream.getSampleRate();
+    
+    return this->lastUpstreamRate;
 }
