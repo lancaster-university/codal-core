@@ -6,7 +6,7 @@
 
 // Pretty much the largest sensible number we can have on a Micro:bit v2
 #ifndef CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH
-    #define CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH      60000 // 60k, in bytes
+    #define CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH      50000 // 50k, in bytes
 #endif
 
 #define REC_STATE_STOPPED   0
