@@ -21,8 +21,8 @@ namespace codal
         ManagedBuffer buffer;
         StreamRecording_Buffer * next;
 
-        StreamRecording_Buffer() {
-            this->buffer = ManagedBuffer();
+        StreamRecording_Buffer( ManagedBuffer data ) {
+            this->buffer = data;
             this->next = NULL;
         }
     };
@@ -67,6 +67,8 @@ namespace codal
         virtual void disconnect();
         virtual int getFormat();
         virtual int setFormat( int format );
+
+        void printChain();
 
         /**
          * @brief Calculate and return the length <b>in bytes</b> that this StreamRecording represents

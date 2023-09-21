@@ -3,6 +3,7 @@
 #include "DataStream.h"
 #include "ManagedBuffer.h"
 #include "MessageBus.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -46,6 +47,8 @@ ManagedBuffer StreamRecording::pull()
     ManagedBuffer out = this->readHead->buffer;
     this->readHead = this->readHead->next;
 
+    DMESG( "Pull %x (%d hz)", (int)(out.getBytes()), (int)this->getSampleRate() );
+
     // Prod the downstream that we're good to go
     if( downStream != NULL )
         downStream->pullRequest();
@@ -68,6 +71,18 @@ bool StreamRecording::isFull() {
     return this->totalBufferLength >= this->maxBufferLenth;
 }
 
+void StreamRecording::printChain()
+{
+    DMESGN( "START -> " );
+    StreamRecording_Buffer * node = this->bufferChain;
+    while( node != NULL ) {
+        DMESGN( "%x -> ", (int)(node->buffer.getBytes()) );
+        codal_dmesg_flush();
+        node = node->next;
+    }
+    DMESG( "END (%d hz)", (int)this->lastUpstreamRate );
+}
+
 int StreamRecording::pullRequest()
 {
     // Are we recording?
@@ -77,6 +92,8 @@ int StreamRecording::pullRequest()
     ManagedBuffer data = this->upStream.pull();
     this->lastUpstreamRate = this->upStream.getSampleRate();
 
+    DMESGF( "PR: %d: %d (%x)", data.length(), (int)this->getSampleRate(), (int)(data.getBytes()) );
+
     // Are we getting empty buffers (probably because we're out of RAM!)
     if( data == ManagedBuffer() || data.length() <= 1 ) {
         return DEVICE_OK;
@@ -85,10 +102,9 @@ int StreamRecording::pullRequest()
     // Can we record any more?
     if( !isFull() )
     {
-        StreamRecording_Buffer * block = new StreamRecording_Buffer();
+        StreamRecording_Buffer * block = new StreamRecording_Buffer( data );
         if( block == NULL )
             return DEVICE_NO_RESOURCES;
-        block->buffer = data;
         block->next = NULL;
 
         // Are we initialising stuff? If so, hook the front of the chain up too...
