@@ -63,7 +63,7 @@ using namespace codal;
 HeapDefinition heap[DEVICE_MAXIMUM_HEAPS] = { };
 uint8_t heap_count = 0;
 
-#if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
+#if (CODAL_DEBUG > 0)
 // Diplays a usage summary about a given heap...
 void device_heap_print(HeapDefinition &heap)
 {
@@ -109,9 +109,6 @@ void device_heap_print(HeapDefinition &heap)
     DMESG("mb_total_free : %d", totalFreeBlock*DEVICE_HEAP_BLOCK_SIZE);
     DMESG("mb_total_used : %d", totalUsedBlock*DEVICE_HEAP_BLOCK_SIZE);
 }
-#endif
-
-#if CODAL_DEBUG > 0
 
 // Diagnostics function. Displays a usage summary about all initialised heaps.
 void device_heap_print()
