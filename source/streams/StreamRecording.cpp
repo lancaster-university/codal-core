@@ -77,7 +77,9 @@ void StreamRecording::printChain()
     StreamRecording_Buffer * node = this->bufferChain;
     while( node != NULL ) {
         DMESGN( "%x -> ", (int)(node->buffer.getBytes()) );
-        codal_dmesg_flush();
+        #if CONFIG_ENABLED(DMESG_SERIAL_DEBUG)
+            codal_dmesg_flush();
+        #endif
         node = node->next;
     }
     DMESG( "END (%d hz)", (int)this->lastUpstreamRate );
