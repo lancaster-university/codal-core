@@ -110,7 +110,7 @@ namespace codal
          * Determine the sample rate currently in use by this Synthesizer.
          * @return the current sample rate, in Hz.
          */
-        float getSampleRate();
+        virtual float getSampleRate() override;
 
         /**
          * Change the sample rate used by this Synthesizer,
@@ -122,12 +122,12 @@ namespace codal
         /**
          * Provide the next available ManagedBuffer to our downstream caller, if available.
          */
-        virtual ManagedBuffer pull();
+        virtual ManagedBuffer pull() override;
 
         /**
          * Implement this function to receive a callback when the device is idling.
          */
-        virtual void idleCallback();
+        virtual void idleCallback() override;
 
         /**
         * Creates the next audio buffer, and attmepts to queue this on the output stream.

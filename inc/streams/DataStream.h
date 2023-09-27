@@ -146,7 +146,7 @@ namespace codal
              * @return true If a downstream is connected
              * @return false If a downstream is not connected
              */
-            virtual bool isConnected();
+            virtual bool isConnected() override;
 
             /**
              * Define a downstream component for data stream.
@@ -179,12 +179,12 @@ namespace codal
             /**
              * Provide the next available ManagedBuffer to our downstream caller, if available.
              */
-            virtual ManagedBuffer pull();
+            virtual ManagedBuffer pull() override;
 
             /**
              * Deliver the next available ManagedBuffer to our downstream caller.
              */
-            virtual int pullRequest();
+            virtual int pullRequest() override;
 
             /**
              * Query the stream for its current sample rate.

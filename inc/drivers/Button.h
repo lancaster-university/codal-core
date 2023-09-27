@@ -79,7 +79,7 @@ namespace codal
           *
           * @return 1 if this button is pressed, 0 otherwise.
           */
-        virtual int isPressed();
+        virtual int isPressed() override;
 
         /**
           * Changes the event configuration used by this button to the given ButtonEventConfiguration.
@@ -104,7 +104,7 @@ namespace codal
          *
          * Check for state change for this button, and fires various events on a state change.
          */
-        void periodicCallback();
+        virtual void periodicCallback() override;
 
         /**
           * Sets whether the button should trigger power manager wake-up.

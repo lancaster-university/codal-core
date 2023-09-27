@@ -73,12 +73,12 @@ namespace codal{
         /**
          * Callback provided when data is ready.
          */
-    	virtual int pullRequest();
+        virtual int pullRequest() override;
 
         /**
          * Provide the next available ManagedBuffer to our downstream caller, if available.
          */
-        virtual ManagedBuffer pull();
+        virtual ManagedBuffer pull() override;
 
         /**
          * Defines whether this input stream will be normalized based on its mean average value.
@@ -97,7 +97,7 @@ namespace codal{
         /**
          *  Determine the data format of the buffers streamed out of this component.
          */
-        virtual int getFormat();
+        virtual int getFormat() override;
 
         /**
          * Defines the data format of the buffers streamed out of this component.
@@ -112,7 +112,7 @@ namespace codal{
          * DATASTREAM_FORMAT_32BIT_UNSIGNED
          * DATASTREAM_FORMAT_32BIT_SIGNED
          */
-        virtual int setFormat(int format);
+        virtual int setFormat(int format) override;
 
         /**
          * Defines an optional gain to apply to the input, as a floating point multiple.
@@ -137,9 +137,9 @@ namespace codal{
          */
         int setOrMask(uint32_t mask);
 
-        float getSampleRate();
-        
-        float requestSampleRate(float sampleRate);
+        virtual float getSampleRate() override;
+
+        virtual float requestSampleRate(float sampleRate) override;
 
         /**
          * Determines if this source is connected to a downstream component
@@ -147,7 +147,7 @@ namespace codal{
          * @return true If a downstream is connected
          * @return false If a downstream is not connected
          */
-        bool isConnected();
+        virtual bool isConnected() override;
 
         /**
          * Destructor.

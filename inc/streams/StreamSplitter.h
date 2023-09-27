@@ -71,15 +71,15 @@ namespace codal{
             SplitterChannel( StreamSplitter *parent, DataSink *output );
             virtual ~SplitterChannel();
 
-            virtual int pullRequest();
-            virtual ManagedBuffer pull();
-            virtual void connect(DataSink &sink);
-            bool isConnected();
-            virtual void disconnect();
-            virtual int getFormat();
-            virtual int setFormat(int format);
-            virtual float getSampleRate();
-            virtual float requestSampleRate(float sampleRate);
+            virtual int pullRequest() override;
+            virtual ManagedBuffer pull() override;
+            virtual void connect(DataSink &sink) override;
+            virtual bool isConnected() override;
+            virtual void disconnect() override;
+            virtual int getFormat() override;
+            virtual int setFormat(int format) override;
+            virtual float getSampleRate() override;
+            virtual float requestSampleRate(float sampleRate) override;
     };
 
     class StreamSplitter : public DataSink, public CodalComponent 
@@ -105,7 +105,7 @@ namespace codal{
         /**
          * Callback provided when data is ready.
          */
-        virtual int pullRequest();
+        virtual int pullRequest() override;
 
         virtual ManagedBuffer getBuffer();
         virtual SplitterChannel * createChannel();

@@ -78,7 +78,7 @@ namespace codal{
         /**
          * Callback provided when data is ready.
          */
-    	  virtual int pullRequest();
+    	  virtual int pullRequest() override;
 
         /*
          * Determines the instantaneous value of the sensor, in SI units, and returns it.

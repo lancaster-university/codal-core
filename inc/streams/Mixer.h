@@ -65,19 +65,19 @@ public:
     /**
      * Provide the next available ManagedBuffer to our downstream caller, if available.
      */
-    virtual ManagedBuffer pull();
+    virtual ManagedBuffer pull() override;
 
     /**
      * Deliver the next available ManagedBuffer to our downstream caller.
      */
-    virtual int pullRequest();
+    virtual int pullRequest() override;
 
     /**
      * Define a downstream component for data stream.
      *
      * @sink The component that data will be delivered to, when it is available
      */
-    virtual void connect(DataSink &sink);
+    virtual void connect(DataSink &sink) override;
 
     /**
      * Determines if this source is connected to a downstream component
@@ -85,7 +85,7 @@ public:
      * @return true If a downstream is connected
      * @return false If a downstream is not connected
      */
-    bool isConnected();
+    virtual bool isConnected() override;
 };
 
 } // namespace codal

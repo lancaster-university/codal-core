@@ -60,13 +60,13 @@ namespace codal
          */
         ~StreamRecording();
 
-        virtual ManagedBuffer pull();
-        virtual int pullRequest();
-    	virtual void connect( DataSink &sink );
-        bool isConnected();
-        virtual void disconnect();
-        virtual int getFormat();
-        virtual int setFormat( int format );
+        virtual ManagedBuffer pull() override;
+        virtual int pullRequest() override;
+    	virtual void connect( DataSink &sink ) override;
+        virtual bool isConnected() override;
+        virtual void disconnect() override;
+        virtual int getFormat() override;
+        virtual int setFormat( int format ) override;
 
         void printChain();
 
@@ -182,7 +182,7 @@ namespace codal
          */
         bool isStopped();
 
-        virtual float getSampleRate();
+        virtual float getSampleRate() override;
 
     };
 

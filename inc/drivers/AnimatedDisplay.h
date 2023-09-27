@@ -211,7 +211,7 @@ namespace codal
         /**
          * Frame update method, invoked periodically to strobe the display.
          */
-        virtual void periodicCallback();
+        virtual void periodicCallback() override;
 
         /**
          * Stops any currently running animation, and any that are waiting to be displayed.

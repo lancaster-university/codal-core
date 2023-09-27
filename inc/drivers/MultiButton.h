@@ -144,7 +144,7 @@ namespace codal
           *     display.scroll("Pressed!");
           * @endcode
           */
-        virtual int isPressed();
+        virtual int isPressed() override;
 
         /**
           * Changes the event configuration of this button to the given ButtonEventConfiguration.

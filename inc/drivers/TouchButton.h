@@ -118,7 +118,7 @@ namespace codal
          * Determines if this button is instantenously active (i.e. pressed).
          * Internal method, use before debouncing.
          */
-        int buttonActive();
+        virtual int buttonActive() override;
 
         /**
          * Determines the instantneous digital value of the pin associated with this TouchButton
