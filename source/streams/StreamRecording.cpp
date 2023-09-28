@@ -72,14 +72,16 @@ bool StreamRecording::isFull() {
 void StreamRecording::printChain()
 {
     #if CONFIG_ENABLED(DMESG_SERIAL_DEBUG) && CONFIG_ENABLED(DMESG_AUDIO_DEBUG)
-        DMESGN( "START -> " );
+        DMESG( "=== START ===" );
+        DMESG( "index\tnode\tbuffer" );
+        uint32_t index = 0;
         StreamRecording_Buffer * node = this->bufferChain;
         while( node != NULL ) {
-            DMESGN( "%x -> ", (int)(node->buffer.getBytes()) );
+            DMESG( "%d\t%x\t%x", (int)index++, (int)(node), (int)(node->buffer.getBytes()) );
             codal_dmesg_flush();
             node = node->next;
         }
-        DMESG( "END (%d hz)", (int)this->lastUpstreamRate );
+        DMESG( "=== END (%d hz) ===", (int)this->lastUpstreamRate );
     #endif
 }
 
