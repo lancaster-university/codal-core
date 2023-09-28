@@ -47,8 +47,6 @@ ManagedBuffer StreamRecording::pull()
     ManagedBuffer out = this->readHead->buffer;
     this->readHead = this->readHead->next;
 
-    DMESG( "Pull %x (%d hz)", (int)(out.getBytes()), (int)this->getSampleRate() );
-
     // Prod the downstream that we're good to go
     if( downStream != NULL )
         downStream->pullRequest();
@@ -73,16 +71,16 @@ bool StreamRecording::isFull() {
 
 void StreamRecording::printChain()
 {
-    DMESGN( "START -> " );
-    StreamRecording_Buffer * node = this->bufferChain;
-    while( node != NULL ) {
-        DMESGN( "%x -> ", (int)(node->buffer.getBytes()) );
-        #if CONFIG_ENABLED(DMESG_SERIAL_DEBUG)
+    #if CONFIG_ENABLED(DMESG_SERIAL_DEBUG) && CONFIG_ENABLED(DMESG_AUDIO_DEBUG)
+        DMESGN( "START -> " );
+        StreamRecording_Buffer * node = this->bufferChain;
+        while( node != NULL ) {
+            DMESGN( "%x -> ", (int)(node->buffer.getBytes()) );
             codal_dmesg_flush();
-        #endif
-        node = node->next;
-    }
-    DMESG( "END (%d hz)", (int)this->lastUpstreamRate );
+            node = node->next;
+        }
+        DMESG( "END (%d hz)", (int)this->lastUpstreamRate );
+    #endif
 }
 
 int StreamRecording::pullRequest()
@@ -93,8 +91,6 @@ int StreamRecording::pullRequest()
 
     ManagedBuffer data = this->upStream.pull();
     this->lastUpstreamRate = this->upStream.getSampleRate();
-
-    DMESGF( "PR: %d: %d (%x)", data.length(), (int)this->getSampleRate(), (int)(data.getBytes()) );
 
     // Are we getting empty buffers (probably because we're out of RAM!)
     if( data == ManagedBuffer() || data.length() <= 1 ) {
@@ -171,6 +167,7 @@ void StreamRecording::record()
     recordAsync();
     while( isRecording() )
         fiber_sleep(5);
+    printChain();
 }
 
 void StreamRecording::erase()
