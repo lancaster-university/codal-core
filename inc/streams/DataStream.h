@@ -85,6 +85,7 @@ namespace codal
         uint16_t pullRequestEventCode;
         uint16_t flowEventCode;
         ManagedBuffer nextBuffer;
+        bool hasPending;
         bool isBlocking;
         unsigned int missedBuffers;
         int downstreamReturn;

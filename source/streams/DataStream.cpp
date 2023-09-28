@@ -75,6 +75,7 @@ DataStream::DataStream(DataSource &upstream)
 {
     this->pullRequestEventCode = 0;
     this->isBlocking = true;
+    this->hasPending = false;
     this->missedBuffers = CODAL_DATASTREAM_HIGH_WATER_MARK;
     this->downstreamReturn = DEVICE_OK;
     this->flowEventCode = 0;
@@ -100,7 +101,7 @@ uint16_t DataStream::emitFlowEvents( uint16_t id )
 
 bool DataStream::isReadOnly()
 {
-    if( this->nextBuffer.length() != 0 )
+    if( this->hasPending )
         return this->nextBuffer.isReadOnly();
     return true;
 }
@@ -156,9 +157,8 @@ ManagedBuffer DataStream::pull()
     if( this->isBlocking )
         return this->upStream->pull();
     
-    ManagedBuffer tmp = this->nextBuffer; // Deep copy!
-    this->nextBuffer = ManagedBuffer();
-    return tmp;
+    this->hasPending = false;
+    return ManagedBuffer( this->nextBuffer ); // Deep copy!
 }
 
 void DataStream::onDeferredPullRequest(Event)
@@ -172,7 +172,7 @@ void DataStream::onDeferredPullRequest(Event)
 bool DataStream::canPull(int size)
 {
     // We only buffer '1' ahead at most, so if we have one already, refuse more
-    return this->nextBuffer.length() != 0;
+    return this->hasPending;
 }
 
 int DataStream::pullRequest()
@@ -185,12 +185,13 @@ int DataStream::pullRequest()
 
     // Are we running in async (non-blocking) mode?
     if( !this->isBlocking ) {
-        if( this->nextBuffer.length() != 0 && this->downstreamReturn != DEVICE_OK ) {
+        if( this->hasPending && this->downstreamReturn != DEVICE_OK ) {
             Event evt( DEVICE_ID_NOTIFY, this->pullRequestEventCode );
             return this->downstreamReturn;
         }
 
         this->nextBuffer = this->upStream->pull();
+        this->hasPending = true;
 
         Event evt( DEVICE_ID_NOTIFY, this->pullRequestEventCode );
         return this->downstreamReturn;
