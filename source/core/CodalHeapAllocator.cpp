@@ -318,7 +318,7 @@ void* device_malloc (size_t size)
     if (p != NULL)
     {
 #if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
-            //DMESG("device_malloc: ALLOCATED: %d [%p]", size, p);
+            DMESG("device_malloc: ALLOCATED: %d [%p]", size, p);
 #endif
             return p;
     }
@@ -350,7 +350,7 @@ void device_free (void *mem)
 
 #if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
     if (heap_count > 0)
-        //DMESG("device_free:   %p", mem);
+        DMESG("device_free:   %p", mem);
 #endif
     // Sanity check.
     if (memory == NULL)
