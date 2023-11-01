@@ -181,6 +181,9 @@ void TouchButton::setValue(int reading)
 #ifdef TOUCH_BUTTON_DECAY_AVERAGE
     this->reading = ((this->reading * (100-TOUCH_BUTTON_DECAY_AVERAGE)) / 100) + ((reading * TOUCH_BUTTON_DECAY_AVERAGE) / 100);
 #endif
+
+    if( this->reading >= this->threshold )
+        this->clickCount++;
 }
 
 /**
