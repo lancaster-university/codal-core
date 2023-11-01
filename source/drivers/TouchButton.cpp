@@ -29,7 +29,6 @@ DEALINGS IN THE SOFTWARE.
  */
 
 #include "CodalConfig.h"
-#include "CodalDmesg.h"
 #include "TouchButton.h"
 #include "Timer.h"
 #include "EventModel.h"
@@ -181,9 +180,6 @@ void TouchButton::setValue(int reading)
 #ifdef TOUCH_BUTTON_DECAY_AVERAGE
     this->reading = ((this->reading * (100-TOUCH_BUTTON_DECAY_AVERAGE)) / 100) + ((reading * TOUCH_BUTTON_DECAY_AVERAGE) / 100);
 #endif
-
-    if( this->reading >= this->threshold )
-        this->clickCount++;
 }
 
 /**
