@@ -24,6 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "StreamNormalizer.h"
 #include "ErrorNo.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 

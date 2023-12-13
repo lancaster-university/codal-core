@@ -27,6 +27,7 @@ DEALINGS IN THE SOFTWARE.
 #include "StreamNormalizer.h"
 #include "ErrorNo.h"
 #include "Event.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -178,7 +179,6 @@ ManagedBuffer StreamSplitter::getBuffer()
  */
 int StreamSplitter::pullRequest()
 {
-
     activeChannels = 0;
 
     // For each downstream channel that exists in array outputChannels - make a pullRequest
@@ -201,6 +201,8 @@ int StreamSplitter::pullRequest()
     }
 
     lastBuffer = ManagedBuffer();
+
+    Event e( id, SPLITTER_TICK );
     return DEVICE_BUSY;
 }
 

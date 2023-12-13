@@ -39,6 +39,7 @@ DEALINGS IN THE SOFTWARE.
 #define SPLITTER_CHANNEL_DISCONNECT  2
 #define SPLITTER_ACTIVATE            3
 #define SPLITTER_DEACTIVATE          4
+#define SPLITTER_TICK                10
 
 
 /**
