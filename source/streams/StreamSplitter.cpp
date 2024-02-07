@@ -38,6 +38,7 @@ SplitterChannel::SplitterChannel( StreamSplitter * parent, DataSink * output = N
     this->output = output;
     this->pullAttempts = 0;
     this->sentBuffers = 0;
+    this->inUnderflow = 0;
 }
 
 SplitterChannel::~SplitterChannel()
@@ -52,6 +53,71 @@ int SplitterChannel::pullRequest() {
     return DEVICE_BUSY;
 }
 
+ManagedBuffer SplitterChannel::resample( ManagedBuffer _in, uint8_t * buffer, int length ) {
+    
+    // Going the long way around - drop any extra samples...
+    float inRate = parent->upstream.getSampleRate();
+    float outRate = sampleRate;
+
+    int inFmt = parent->upstream.getFormat();
+    int bytesPerSample = DATASTREAM_FORMAT_BYTES_PER_SAMPLE( inFmt );
+    int totalSamples = _in.length() / bytesPerSample;
+
+    // Integer estimate the number of sample drops required
+    int byteDeficit = (int)inRate - (int)outRate;
+    int packetsPerSec = (int)inRate / totalSamples;
+    int dropPerPacket = byteDeficit / packetsPerSec;
+    int samplesPerOut = totalSamples - dropPerPacket;
+
+    // If we're not supplied an external buffer, make our own...
+    uint8_t * output = buffer;
+    if( output == NULL ) {
+        output = (uint8_t *)malloc( samplesPerOut * bytesPerSample );
+        length = samplesPerOut * bytesPerSample;
+    }
+
+    int oversample_offset = 0;
+    int oversample_step = (totalSamples * CONFIG_SPLITTER_OVERSAMPLE_STEP) / samplesPerOut;
+
+    uint8_t *inPtr = &_in[0];
+    uint8_t *outPtr = output;
+    while( outPtr - output < length )
+    {
+        int a = StreamNormalizer::readSample[inFmt]( inPtr + ((int)(oversample_offset / CONFIG_SPLITTER_OVERSAMPLE_STEP) * bytesPerSample) );
+        int b = StreamNormalizer::readSample[inFmt]( inPtr + (((int)(oversample_offset / CONFIG_SPLITTER_OVERSAMPLE_STEP) + 1) * bytesPerSample) );
+        int s = a + ((int)((b - a)/CONFIG_SPLITTER_OVERSAMPLE_STEP) * (oversample_offset % CONFIG_SPLITTER_OVERSAMPLE_STEP));
+
+        oversample_offset += oversample_step;
+
+        StreamNormalizer::writeSample[inFmt](outPtr, s);
+        outPtr += bytesPerSample;
+    }
+
+    ManagedBuffer result = ManagedBuffer( output, length );
+
+    // Did we create this memory? If so, free it again.
+    if( buffer == NULL )
+        free( output );
+
+    return result;
+}
+
+uint8_t * SplitterChannel::pullInto( uint8_t * rawBuffer, int length )
+{
+    this->pullAttempts = 0;
+    this->sentBuffers++;
+    ManagedBuffer inData = parent->getBuffer();
+
+    // Shortcuts - we can't fabricate samples, so just pass on what we can if we don't know or can't keep up.
+    if( this->sampleRate == DATASTREAM_SAMPLE_RATE_UNKNOWN || this->sampleRate >= this->parent->upstream.getSampleRate() ) {
+        inData.readBytes( rawBuffer, 0, min(inData.length(), length) );
+        return rawBuffer + min(inData.length(), length);
+    }
+
+    ManagedBuffer result = this->resample( inData, rawBuffer, length );
+    return rawBuffer + result.length();
+}
+
 ManagedBuffer SplitterChannel::pull()
 {
     this->pullAttempts = 0;
@@ -59,30 +125,10 @@ ManagedBuffer SplitterChannel::pull()
     ManagedBuffer inData = parent->getBuffer();
 
     // Shortcuts - we can't fabricate samples, so just pass on what we can if we don't know or can't keep up.
-    if( sampleRate == DATASTREAM_SAMPLE_RATE_UNKNOWN || sampleRate >= parent->upstream.getSampleRate() )
+    if( this->sampleRate == DATASTREAM_SAMPLE_RATE_UNKNOWN || this->sampleRate >= this->parent->upstream.getSampleRate() )
         return inData;
     
-    // Going the long way around - drop any extra samples...
-    float inRate = parent->upstream.getSampleRate();
-    int inFmt = parent->upstream.getFormat();
-    int bytesPerSample = DATASTREAM_FORMAT_BYTES_PER_SAMPLE( inFmt );
-    int inSamples = inData.length() / bytesPerSample;
-    int step = (inRate / sampleRate);
-
-    ManagedBuffer outData = ManagedBuffer( (inSamples/step) * bytesPerSample );
-
-    uint8_t *inPtr = &inData[0];
-    uint8_t *outPtr = &outData[0];
-    while( outPtr - &outData[0] < outData.length() )
-    {
-        int s = StreamNormalizer::readSample[inFmt](inPtr);
-        inPtr += bytesPerSample * step;
-
-        StreamNormalizer::writeSample[inFmt](outPtr, s);
-        outPtr += bytesPerSample;
-    }
-
-    return outData;
+    return this->resample( inData ); // Autocreate the output buffer
 }
 
 void SplitterChannel::connect(DataSink &sink)

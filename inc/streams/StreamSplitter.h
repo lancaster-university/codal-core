@@ -32,6 +32,11 @@ DEALINGS IN THE SOFTWARE.
 #define CONFIG_MAX_CHANNELS 10
 #endif
 
+// 4 steps are usually sufficient to get reasonable quality audio
+#ifndef CONFIG_SPLITTER_OVERSAMPLE_STEP
+#define CONFIG_SPLITTER_OVERSAMPLE_STEP 16
+#endif
+
 /**
   * Splitter events
   */
@@ -54,6 +59,9 @@ namespace codal{
         private:
             StreamSplitter * parent;
             float sampleRate;
+            unsigned int inUnderflow;
+
+            ManagedBuffer resample( ManagedBuffer _in, uint8_t * buffer = NULL, int length = -1 );
         
         public:
             int pullAttempts;       // Number of failed pull request attempts
@@ -73,6 +81,7 @@ namespace codal{
             virtual ~SplitterChannel();
 
             virtual int pullRequest();
+            uint8_t * pullInto( uint8_t * rawBuffer, int length );
             virtual ManagedBuffer pull();
             virtual void connect(DataSink &sink);
             bool isConnected();

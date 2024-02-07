@@ -101,6 +101,21 @@ static void logwritenum(uint32_t n, bool full, bool hex)
     logwrite(buff);
 }
 
+static void logwritedouble( double v, int precision = 8 )
+{
+    int iVal = (int)v;
+    double fRem = v - (double)iVal;
+
+    logwritenum( iVal, false, false );
+    logwrite(".");
+
+    while( precision-- > 0 ) {
+        fRem = fRem * 10.0;
+        logwritenum( (uint32_t)fRem, false, false );
+        fRem -= (int)fRem;
+    }
+}
+
 void codal_dmesg_nocrlf(const char *format, ...)
 {
     va_list arg;
@@ -151,31 +166,52 @@ void codal_vdmesg(const char *format, bool crlf, va_list ap)
     logwrite( "\t" );
     #endif
 
+    int param = 0;
+
     while (*end)
     {
         if (*end++ == '%')
         {
             logwriten(format, end - format - 1);
-            uint32_t val = va_arg(ap, uint32_t);
+            param = 0;
+l_parse_continue:
             switch (*end++)
             {
-            case 'c':
+            case '0' ... '9': {
+                int val = (int)*(end-1) - (int)'0';
+                param = (param * 10) + val;
+                goto l_parse_continue; // Note that labels are only valid within a single method context, so this is semi-safe
+            } break;
+
+            case 'c': {
+                uint32_t val = va_arg(ap, uint32_t);
                 logwriten((const char *)&val, 1);
-                break;
+            } break;
             case 'u': // should be printed as unsigned, but will do for now
-            case 'd':
+            case 'd': {
+                uint32_t val = va_arg(ap, uint32_t);
                 logwritenum(val, false, false);
-                break;
-            case 'x':
+            } break;
+            case 'x': {
+                uint32_t val = va_arg(ap, uint32_t);
                 logwritenum(val, false, true);
-                break;
+            } break;
             case 'p':
-            case 'X':
+            case 'X': {
+                uint32_t val = va_arg(ap, uint32_t);
                 logwritenum(val, true, true);
-                break;
-            case 's':
+            } break;
+            case 's': {
+                uint32_t val = va_arg(ap, uint32_t);
                 logwrite((char *)(void *)val);
-                break;
+            } break;
+            case 'f': {
+                double val = va_arg(ap, double);
+                if( param > 0 )
+                    logwritedouble( val, param );
+                else
+                    logwritedouble( val, 4 );
+            } break;
             case '%':
                 logwrite("%");
                 break;
