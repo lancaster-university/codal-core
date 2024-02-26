@@ -74,7 +74,11 @@ ManagedBuffer SplitterChannel::resample( ManagedBuffer _in, uint8_t * buffer, in
     if( output == NULL ) {
         output = (uint8_t *)malloc( samplesPerOut * bytesPerSample );
         length = samplesPerOut * bytesPerSample;
-    }
+    } else {
+        if (length > samplesPerOut * bytesPerSample) {
+            length = samplesPerOut * bytesPerSample;
+        }
+     }
 
     int oversample_offset = 0;
     int oversample_step = (totalSamples * CONFIG_SPLITTER_OVERSAMPLE_STEP) / samplesPerOut;
