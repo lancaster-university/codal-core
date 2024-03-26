@@ -1,0 +1,31 @@
+#ifndef CODAL_VERSION_H
+#define CODAL_VERSION_H
+
+    #define STR_HELPER(x) #x
+    #define STR(x) STR_HELPER(x)
+
+    #ifndef CODAL_VERSION_MAJOR
+        #define CODAL_VERSION_MAJOR ${CODAL_VERSION_MAJOR}
+    #endif
+
+    #ifndef CODAL_VERSION_MINOR
+        #define CODAL_VERSION_MINOR ${CODAL_VERSION_MINOR}
+    #endif
+
+    #ifndef CODAL_VERSION_PATCH
+        #define CODAL_VERSION_PATCH ${CODAL_VERSION_PATCH}
+    #endif
+
+    #ifndef CODAL_VERSION_BRANCH
+        #define CODAL_VERSION_BRANCH "${CODAL_VERSION_BRANCH}"
+    #endif
+
+    #ifndef CODAL_VERSION
+        #define CODAL_VERSION  "v" STR(CODAL_VERSION_MAJOR) "." STR(CODAL_VERSION_MINOR) "." STR(CODAL_VERSION_PATCH)
+    #endif
+
+    #ifndef CODAL_VERSION_LONG
+        #define CODAL_VERSION_LONG  "v" STR(CODAL_VERSION_MAJOR) "." STR(CODAL_VERSION_MINOR) "." STR(CODAL_VERSION_PATCH) "-" CODAL_VERSION_BRANCH
+    #endif
+
+#endif
