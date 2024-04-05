@@ -145,6 +145,9 @@ void AnimatedDisplay::updateScrollText()
     if (scrollingPosition < BITMAP_FONT_WIDTH && scrollingChar < scrollingText.length())
     {
         const uint8_t *v = font.get(scrollingText.charAt(scrollingChar));
+        if (v == NULL) {
+            v = font.get(' ');
+        }
         uint8_t mask = 1 << (BITMAP_FONT_WIDTH - scrollingPosition - 1);
         uint8_t x = display.getWidth()-1;
 
