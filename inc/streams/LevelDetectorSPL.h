@@ -151,18 +151,28 @@ namespace codal{
         void disable();
 
         /**
-         * Set threshold to the given value. Events will be generated when these thresholds are crossed.
+         * Set the LOW threshold to the given value. Events will be generated when these thresholds are crossed.
          *
-         * @param value the LOW threshold at which a ANALOG_THRESHOLD_LOW will be generated.
+         * If the provided value is higher than the HIGH threshold, the HIGH threshold will be
+         * increased to one dB above this value.
+         *
+         * The unit used for the input value will be the unit configured via setUnit().
+         *
+         * @param value The LOW threshold at which a LEVEL_THRESHOLD_LOW will be generated.
          *
          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
          */
         int setLowThreshold(float value);
 
         /**
-         * Set threshold to the given value. Events will be generated when these thresholds are crossed.
+         * Set the HIGH threshold to the given value. Events will be generated when these thresholds are crossed.
          *
-         * @param value the HIGH threshold at which a ANALOG_THRESHOLD_HIGH will be generated.
+         * If the provided value is lower than the LOW threshold, the LOW threshold will be
+         * reduced to one dB below this value.
+         *
+         * The unit used for the input value will be the unit configured via setUnit().
+         *
+         * @param value The HIGH threshold at which a LEVEL_THRESHOLD_HIGH will be generated.
          *
          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
          */
@@ -172,6 +182,7 @@ namespace codal{
          * Determines the currently defined low threshold.
          *
          * @return The current low threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
+         *         The returned value unit can be configured via setUnit().
          */
         float getLowThreshold();
 
@@ -179,6 +190,7 @@ namespace codal{
          * Determines the currently defined high threshold.
          *
          * @return The current high threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
+         *         The returned value unit can be configured via setUnit().
          */
         float getHighThreshold();
 

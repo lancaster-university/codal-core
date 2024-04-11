@@ -97,18 +97,24 @@ namespace codal{
         void activateForEvents( bool state );
 
         /**
-         * Set threshold to the given value. Events will be generated when these thresholds are crossed.
+         * Set the LOW threshold to the given value. Events will be generated when these thresholds are crossed.
          *
-         * @param value the LOW threshold at which a ANALOG_THRESHOLD_LOW will be generated.
+         * If the provided value is higher than the HIGH threshold, the HIGH threshold will be
+         * increased to one unit above this value.
+         *
+         * @param value the LOW threshold at which a LEVEL_THRESHOLD_LOW will be generated.
          *
          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
          */
         int setLowThreshold(int value);
 
         /**
-         * Set threshold to the given value. Events will be generated when these thresholds are crossed.
+         * Set the HIGH threshold to the given value. Events will be generated when these thresholds are crossed.
          *
-         * @param value the HIGH threshold at which a ANALOG_THRESHOLD_HIGH will be generated.
+         * If the provided value is lower than the LOW threshold, the LOW threshold will be
+         * reduced to one unit below this value.
+         *
+         * @param value the HIGH threshold at which a LEVEL_THRESHOLD_HIGH will be generated.
          *
          * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
          */
