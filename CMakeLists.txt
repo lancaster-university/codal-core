@@ -1,9 +1,9 @@
 project(codal-core C CXX)
 
 # Set all our default version values
-set( CODAL_VERSION_MAJOR  0 )
-set( CODAL_VERSION_MINOR  0 )
-set( CODAL_VERSION_PATCH  0 )
+set( CODAL_VERSION_MAJOR  -1 )
+set( CODAL_VERSION_MINOR  -1 )
+set( CODAL_VERSION_PATCH  -1 )
 set( CODAL_VERSION_BRANCH "master" )
 
 # Grab the latest tag, hash and branch from git
