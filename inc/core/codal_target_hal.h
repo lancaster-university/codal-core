@@ -104,7 +104,12 @@ extern "C"
 
 // This is for cycle-precise wait even in presence of flash caches (forces function to sit in RAM)
 #ifndef FORCE_RAM_FUNC
-#define FORCE_RAM_FUNC __attribute__((noinline, long_call, section(".data.ramfuncs")))
+#if defined(__clang__)
+    // LLVM doesn't support long_call attribute for ARM: https://github.com/llvm/llvm-project/issues/39969
+    #define FORCE_RAM_FUNC __attribute__((noinline, section(".data.ramfuncs")))
+#else
+    #define FORCE_RAM_FUNC __attribute__((noinline, long_call, section(".data.ramfuncs")))
+#endif
 #endif
 
 #endif
