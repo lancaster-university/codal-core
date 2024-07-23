@@ -228,6 +228,15 @@ DEALINGS IN THE SOFTWARE.
   #define CODAL_STREAM_IDLE_TIMEOUT_MS   75
 #endif
 
+// During early CODAL development there was some misuse of `using namespace codal;` in header files.
+// Removing it from CODAL libs can cause targets to break unless they apply a large patch like:
+// https://github.com/lancaster-university/codal-microbit-v2/pull/437
+// This global namespace can be a problem when using CODAL together with other libraries/frameworks.
+// So we can use this flag to enable/disable whether to use the codal namespace globally or not.
+#ifndef CODAL_USE_GLOBAL_NAMESPACE
+  #define CODAL_USE_GLOBAL_NAMESPACE 1
+#endif
+
 //
 // Helper macro used by the codal device runtime to determine if a boolean configuration option is set.
 //
