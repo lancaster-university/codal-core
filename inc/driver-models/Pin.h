@@ -60,8 +60,6 @@ DEALINGS IN THE SOFTWARE.
 
 namespace codal
 {
-    using namespace codal;
-
     /**
       * Pin capabilities enum.
       * Used to determine the capabilities of each Pin as some can only be digital, or can be both digital and analogue.

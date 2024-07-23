@@ -25,6 +25,8 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "Matrix4.h"
 
+using namespace codal;
+
 /**
 * Class definition for a simple matrix, optimised for n x 4 or 4 x n matrices.
 *

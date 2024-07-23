@@ -38,6 +38,8 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalDmesg.h"
 #include "codal_target_hal.h"
 
+using namespace codal;
+
 #define send(p, l) ctrlIn->write(p, l)
 
 CodalUSB *CodalUSB::usbInstance = NULL;
