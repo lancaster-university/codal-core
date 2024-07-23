@@ -27,6 +27,9 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 
+namespace codal
+{
+
 /**
 * Class definition for a simple matrix, that is optimised for nx4 or 4xn matrices.
 *
@@ -197,5 +200,7 @@ inline Matrix4 Matrix4::multiplyT(Matrix4 &matrix)
 {
     return multiply(matrix, true);
 }
+
+} // namespace codal
 
 #endif
