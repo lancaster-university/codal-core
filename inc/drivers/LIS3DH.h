@@ -84,7 +84,7 @@ namespace codal
     /**
      * Class definition for Accelerometer.
      *
-     * Represents an implementation of the Freescale MMA8653 3 axis accelerometer
+     * Represents an implementation of the ST LIS3DH 3 axis accelerometer
      * Also includes basic data caching and on demand activation.
      */
     class LIS3DH : public Accelerometer
@@ -92,6 +92,7 @@ namespace codal
         I2C&            i2c;                // The I2C interface to use.
         Pin             &int1;              // Data ready interrupt.
         uint16_t        address;            // I2C address of this accelerometer.
+        uint32_t        lastUpdate;
 
         public:
 
