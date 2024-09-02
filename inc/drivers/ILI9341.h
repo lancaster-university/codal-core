@@ -27,16 +27,14 @@ DEALINGS IN THE SOFTWARE.
 
 #include "ST7735.h"
 
-namespace codal
-{
+namespace codal {
 
-class ILI9341 : public ST7735
-{
-public:
-    ILI9341(ScreenIO &io, Pin &cs, Pin &dc);
+class ILI9341 : public ST7735 {
+  public:
+    ILI9341(ScreenIO& io, Pin& cs, Pin& dc);
     int init();
 };
 
-}
+}  // namespace codal
 
 #endif

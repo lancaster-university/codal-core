@@ -24,51 +24,51 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "Gyroscope.h"
-#include "ErrorNo.h"
-#include "Event.h"
+
 #include "CodalCompat.h"
 #include "CodalFiber.h"
+#include "ErrorNo.h"
+#include "Event.h"
 
 using namespace codal;
 
-
 /**
-  * Constructor.
-  * Create a software abstraction of an FXSO8700 combined accelerometer/magnetometer
-  *
-  * @param _i2c an instance of I2C used to communicate with the device.
-  *
-  * @param address the default I2C address of the accelerometer. Defaults to: FXS8700_DEFAULT_ADDR.
-  *
+ * Constructor.
+ * Create a software abstraction of an FXSO8700 combined accelerometer/magnetometer
+ *
+ * @param _i2c an instance of I2C used to communicate with the device.
+ *
+ * @param address the default I2C address of the accelerometer. Defaults to: FXS8700_DEFAULT_ADDR.
+ *
  */
-Gyroscope::Gyroscope(CoordinateSpace &cspace, uint16_t id) : sample(), sampleENU(), coordinateSpace(cspace)
+Gyroscope::Gyroscope(CoordinateSpace& cspace, uint16_t id) : sample(), sampleENU(), coordinateSpace(cspace)
 {
     // Store our identifiers.
-    this->id = id;
+    this->id     = id;
     this->status = 0;
 
     // Set a default rate of 50Hz and a +/-2g range.
     this->samplePeriod = 20;
-    this->sampleRange = 2;
+    this->sampleRange  = 2;
 }
 
 /**
-  * Stores data from the accelerometer sensor in our buffer, and perform gesture tracking.
-  *
-  * On first use, this member function will attempt to add this component to the
-  * list of fiber components in order to constantly update the values stored
-  * by this object.
-  *
-  * This lazy instantiation means that we do not
-  * obtain the overhead from non-chalantly adding this component to fiber components.
-  *
-  * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
-  */
+ * Stores data from the accelerometer sensor in our buffer, and perform gesture tracking.
+ *
+ * On first use, this member function will attempt to add this component to the
+ * list of fiber components in order to constantly update the values stored
+ * by this object.
+ *
+ * This lazy instantiation means that we do not
+ * obtain the overhead from non-chalantly adding this component to fiber components.
+ *
+ * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
+ */
 int Gyroscope::update(Sample3D s)
 {
     // Store the new data, after performing any necessary coordinate transformations.
     sampleENU = s;
-    sample = coordinateSpace.transform(s);
+    sample    = coordinateSpace.transform(s);
 
     // Indicate that pitch and roll data is now stale, and needs to be recalculated if needed.
     status &= ~GYROSCOPE_IMU_DATA_VALID;
@@ -80,90 +80,90 @@ int Gyroscope::update(Sample3D s)
 };
 
 /**
-  * A service function.
-  * It calculates the current scalar acceleration of the device (x^2 + y^2 + z^2).
-  * It does not, however, square root the result, as this is a relatively high cost operation.
-  *
-  * This is left to application code should it be needed.
-  *
-  * @return the sum of the square of the acceleration of the device across all axes.
-  */
+ * A service function.
+ * It calculates the current scalar acceleration of the device (x^2 + y^2 + z^2).
+ * It does not, however, square root the result, as this is a relatively high cost operation.
+ *
+ * This is left to application code should it be needed.
+ *
+ * @return the sum of the square of the acceleration of the device across all axes.
+ */
 uint32_t Gyroscope::instantaneousAccelerationSquared()
 {
     requestUpdate();
 
     // Use pythagoras theorem to determine the combined force acting on the device.
-    return (uint32_t)sample.x*(uint32_t)sample.x + (uint32_t)sample.y*(uint32_t)sample.y + (uint32_t)sample.z*(uint32_t)sample.z;
+    return (uint32_t)sample.x * (uint32_t)sample.x + (uint32_t)sample.y * (uint32_t)sample.y +
+           (uint32_t)sample.z * (uint32_t)sample.z;
 }
 
 /**
-  * Attempts to set the sample rate of the accelerometer to the specified value (in ms).
-  *
-  * @param period the requested time between samples, in milliseconds.
-  *
-  * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
-  *
-  * @code
-  * // sample rate is now 20 ms.
-  * accelerometer.setPeriod(20);
-  * @endcode
-  *
-  * @note The requested rate may not be possible on the hardware. In this case, the
-  * nearest lower rate is chosen.
-  */
+ * Attempts to set the sample rate of the accelerometer to the specified value (in ms).
+ *
+ * @param period the requested time between samples, in milliseconds.
+ *
+ * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
+ *
+ * @code
+ * // sample rate is now 20 ms.
+ * accelerometer.setPeriod(20);
+ * @endcode
+ *
+ * @note The requested rate may not be possible on the hardware. In this case, the
+ * nearest lower rate is chosen.
+ */
 int Gyroscope::setPeriod(int period)
 {
     int result;
 
     samplePeriod = period;
-    result = configure();
+    result       = configure();
 
     samplePeriod = getPeriod();
     return result;
-
 }
 
 /**
-  * Reads the currently configured sample rate of the accelerometer.
-  *
-  * @return The time between samples, in milliseconds.
-  */
+ * Reads the currently configured sample rate of the accelerometer.
+ *
+ * @return The time between samples, in milliseconds.
+ */
 int Gyroscope::getPeriod()
 {
     return (int)samplePeriod;
 }
 
 /**
-  * Attempts to set the sample range of the accelerometer to the specified value (in g).
-  *
-  * @param range The requested sample range of samples, in g.
-  *
-  * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
-  *
-  * @code
-  * // the sample range of the accelerometer is now 8G.
-  * accelerometer.setRange(8);
-  * @endcode
-  *
-  * @note The requested range may not be possible on the hardware. In this case, the
-  * nearest lower range is chosen.
-  */
+ * Attempts to set the sample range of the accelerometer to the specified value (in g).
+ *
+ * @param range The requested sample range of samples, in g.
+ *
+ * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
+ *
+ * @code
+ * // the sample range of the accelerometer is now 8G.
+ * accelerometer.setRange(8);
+ * @endcode
+ *
+ * @note The requested range may not be possible on the hardware. In this case, the
+ * nearest lower range is chosen.
+ */
 int Gyroscope::setRange(int range)
 {
     int result;
 
     sampleRange = range;
-    result = configure();
+    result      = configure();
 
     sampleRange = getRange();
     return result;
 }
 
 /**
-  * Reads the currently configured sample range of the accelerometer.
-  *
-  * @return The sample range, in g.
-  */
+ * Reads the currently configured sample range of the accelerometer.
+ *
+ * @return The sample range, in g.
+ */
 int Gyroscope::getRange()
 {
     return (int)sampleRange;
@@ -228,9 +228,6 @@ int Gyroscope::getZ()
 }
 
 /**
-  * Destructor for FXS8700, where we deregister from the array of fiber components.
-  */
-Gyroscope::~Gyroscope()
-{
-}
-
+ * Destructor for FXS8700, where we deregister from the array of fiber components.
+ */
+Gyroscope::~Gyroscope() {}

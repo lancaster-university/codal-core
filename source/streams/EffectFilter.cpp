@@ -1,25 +1,24 @@
 #include "EffectFilter.h"
-#include "ManagedBuffer.h"
-#include "DataStream.h"
-#include "StreamNormalizer.h"
+
 #include "CodalDmesg.h"
+#include "DataStream.h"
+#include "ManagedBuffer.h"
+#include "StreamNormalizer.h"
 
 using namespace codal;
 
-EffectFilter::EffectFilter(DataSource &source, bool deepCopy) : upStream( source )
+EffectFilter::EffectFilter(DataSource& source, bool deepCopy) : upStream(source)
 {
     this->downStream = NULL;
-    this->deepCopy = deepCopy;
-    source.connect( *this );
+    this->deepCopy   = deepCopy;
+    source.connect(*this);
 }
 
-EffectFilter::~EffectFilter()
-{
-}
+EffectFilter::~EffectFilter() {}
 
 ManagedBuffer EffectFilter::pull()
 {
-    ManagedBuffer input = this->upStream.pull();
+    ManagedBuffer input  = this->upStream.pull();
     ManagedBuffer output = (deepCopy || input.isReadOnly()) ? ManagedBuffer(input.length()) : input;
 
     applyEffect(input, output, this->upStream.getFormat());
@@ -28,12 +27,11 @@ ManagedBuffer EffectFilter::pull()
 
 int EffectFilter::pullRequest()
 {
-    if( this->downStream != NULL )
-        return this->downStream->pullRequest();
+    if (this->downStream != NULL) return this->downStream->pullRequest();
     return DEVICE_BUSY;
 }
 
-void EffectFilter::connect(DataSink &sink)
+void EffectFilter::connect(DataSink& sink)
 {
     this->downStream = &sink;
 }
@@ -53,9 +51,9 @@ int EffectFilter::getFormat()
     return this->upStream.getFormat();
 }
 
-int EffectFilter::setFormat( int format )
+int EffectFilter::setFormat(int format)
 {
-    return this->upStream.setFormat( format );
+    return this->upStream.setFormat(format);
 }
 
 float EffectFilter::getSampleRate()
@@ -65,7 +63,7 @@ float EffectFilter::getSampleRate()
 
 float EffectFilter::requestSampleRate(float sampleRate)
 {
-    return this->upStream.requestSampleRate( sampleRate );
+    return this->upStream.requestSampleRate(sampleRate);
 }
 
 /**
@@ -73,14 +71,14 @@ float EffectFilter::requestSampleRate(float sampleRate)
  *
  * @param deepCopy Set to true to copy incoming data into a freshly allocated buffer, or false to change data in place.
  */
-void EffectFilter::setDeepCopy( bool deepCopy )
+void EffectFilter::setDeepCopy(bool deepCopy)
 {
     this->deepCopy = deepCopy;
 }
 
 /**
  * Default effect - a simple pass through filter.
- * 
+ *
  * @param inputBuffer the buffer containing data to process.
  * @param outputBuffer the buffer in which to store the filtered data. n.b. MAY be the same memory as the input buffer.
  * @param format the format of the data (word size and signed/unsigned representation)

@@ -29,19 +29,16 @@ DEALINGS IN THE SOFTWARE.
 #include "SPI.h"
 #include "ScreenIO.h"
 
-namespace codal
-{
+namespace codal {
 
-class SPIScreenIO : public ScreenIO
-{
-public:
-    SPI &spi;
-    SPIScreenIO(SPI &spi);
-    virtual void send(const void *txBuffer, uint32_t txSize);
-    virtual void startSend(const void *txBuffer, uint32_t txSize, PVoidCallback doneHandler,
-                           void *handlerArg);
+class SPIScreenIO : public ScreenIO {
+  public:
+    SPI& spi;
+    SPIScreenIO(SPI& spi);
+    virtual void send(const void* txBuffer, uint32_t txSize);
+    virtual void startSend(const void* txBuffer, uint32_t txSize, PVoidCallback doneHandler, void* handlerArg);
 };
 
-} // namespace codal
+}  // namespace codal
 
 #endif

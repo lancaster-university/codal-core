@@ -23,6 +23,7 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "CodalDevice.h"
+
 #include "CodalDmesg.h"
 
 using namespace codal;

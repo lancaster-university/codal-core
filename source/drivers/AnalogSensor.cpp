@@ -25,8 +25,9 @@ DEALINGS IN THE SOFTWARE.
 #include "AnalogSensor.h"
 
 /**
- * Class definition for a generic analog sensor, that takes the general form of a logarithmic response to a sensed value, in a potential divider.
- * Implements a base class for such a sensor, using the Steinhart-Hart equation to delineate a result.
+ * Class definition for a generic analog sensor, that takes the general form of a logarithmic response to a sensed
+ * value, in a potential divider. Implements a base class for such a sensor, using the Steinhart-Hart equation to
+ * delineate a result.
  */
 
 using namespace codal;
@@ -39,7 +40,7 @@ using namespace codal;
  * @param pin The pin on which to sense
  * @param id The ID of this component e.g. DEVICE_ID_THERMOMETER
  */
-AnalogSensor::AnalogSensor(Pin &pin, uint16_t id) : Sensor( id), pin(pin)
+AnalogSensor::AnalogSensor(Pin& pin, uint16_t id) : Sensor(id), pin(pin)
 {
     updateSample();
 }
@@ -55,6 +56,4 @@ int AnalogSensor::readValue()
 /**
  * Destructor.
  */
-AnalogSensor::~AnalogSensor()
-{
-}
+AnalogSensor::~AnalogSensor() {}

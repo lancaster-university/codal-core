@@ -22,41 +22,39 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
+#include "CodalFiber.h"
 #include "Event.h"
 #include "Pin.h"
-#include "CodalFiber.h"
 
 #ifndef CODAL_PULSE_IN_H
 #define CODAL_PULSE_IN_H
 
-#define DEVICE_EVT_PULSE_IN_TIMEOUT           10000
+#define DEVICE_EVT_PULSE_IN_TIMEOUT 10000
 
-namespace codal
-{
+namespace codal {
 
-class PulseIn : public PinPeripheral
-{
-    Pin             &pin;
-    uint32_t        lastPeriod;
-    FiberLock       lock;
-    CODAL_TIMESTAMP timeout;   
-    static bool     timeoutGeneratorStarted;
-    bool            enabled;
+class PulseIn : public PinPeripheral {
+    Pin& pin;
+    uint32_t lastPeriod;
+    FiberLock lock;
+    CODAL_TIMESTAMP timeout;
+    static bool timeoutGeneratorStarted;
+    bool enabled;
 
-    public:
-    uint32_t        lastEdge;
-    
+  public:
+    uint32_t lastEdge;
+
     /**
      * Creates a new instance of a synchronous pulse detector ont he given pin.
-     * 
+     *
      * @param pin The pin to observe for pulse events
      * @return the period of the next pulse in microseconds, or XXX if the given timeout expires.
      */
-    PulseIn(Pin &pin);
+    PulseIn(Pin& pin);
 
     /**
      * Synchronously await a pulse, and return the period of the pulse.
-     * 
+     *
      * @param timeout The maximum amount of time to wait for a pulse, in microseconds. Set to zero to wait indefinitely.
      * @return The period of the next pulse, in microseconds, or DEVICE_CANCELLED if the timeout passes.
      */
@@ -65,32 +63,30 @@ class PulseIn : public PinPeripheral
     /**
      * Event handler called when a pulse is detected.
      */
-    void
-    onPulse(Event e);
+    void onPulse(Event e);
 
     /**
      * Event handler called when a timeout event is generated.
      */
-    void
-    onTimeout(Event e);
+    void onTimeout(Event e);
 
     /**
-    * Method to release the given pin from a peripheral, if already bound.
-    * Device drivers should override this method to disconnect themselves from the give pin
-    * to allow it to be used by a different peripheral.
-    *
-    * @param pin the Pin to be released
-    */
-    virtual int releasePin(Pin &pin) override;
+     * Method to release the given pin from a peripheral, if already bound.
+     * Device drivers should override this method to disconnect themselves from the give pin
+     * to allow it to be used by a different peripheral.
+     *
+     * @param pin the Pin to be released
+     */
+    virtual int releasePin(Pin& pin) override;
 
     /**
      * Destructor
      */
     virtual ~PulseIn();
 
-    private:
+  private:
     void disable();
 };
 
-}
+}  // namespace codal
 #endif

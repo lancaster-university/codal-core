@@ -23,8 +23,9 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
- * Class definition for a normalised, non-linear analog sensor, that takes the general form of a logarithmic response to a sensed value, in a potential divider.
- * Implements a base class for such a sensor, using the Steinhart-Hart equation to delineate a result.
+ * Class definition for a normalised, non-linear analog sensor, that takes the general form of a logarithmic response to
+ * a sensed value, in a potential divider. Implements a base class for such a sensor, using the Steinhart-Hart equation
+ * to delineate a result.
  */
 
 #include "LinearAnalogSensor.h"
@@ -44,10 +45,12 @@ using namespace codal;
  * @param outputCeiling The maximum level in the output range. Default: 1023.
  *
  */
-LinearAnalogSensor::LinearAnalogSensor(Pin &pin, uint16_t id, uint16_t inputFloor, uint16_t inputCeiling, float outputFloor, float outputCeiling) : AnalogSensor(pin, id)
+LinearAnalogSensor::LinearAnalogSensor(Pin& pin, uint16_t id, uint16_t inputFloor, uint16_t inputCeiling,
+                                       float outputFloor, float outputCeiling)
+    : AnalogSensor(pin, id)
 {
-    this->inputFloor = inputFloor;
-    this->outputFloor = outputFloor;
+    this->inputFloor       = inputFloor;
+    this->outputFloor      = outputFloor;
     this->conversionFactor = (outputCeiling - outputFloor) / ((float)(inputCeiling - inputFloor));
 }
 
@@ -61,18 +64,17 @@ void LinearAnalogSensor::updateSample()
     float sensorReading;
     float value;
 
-    sensorReading = (float) (this->readValue() - this->inputFloor);
+    sensorReading = (float)(this->readValue() - this->inputFloor);
 
     value = this->outputFloor + sensorReading * this->conversionFactor;
 
-    // If this is the first reading performed, take it a a baseline. Otherwise, perform a decay average to smooth out the data.
-    if (!(this->status & ANALOG_SENSOR_INITIALISED))
-    {
+    // If this is the first reading performed, take it a a baseline. Otherwise, perform a decay average to smooth out
+    // the data.
+    if (!(this->status & ANALOG_SENSOR_INITIALISED)) {
         this->sensorValue = value;
-        this->status |=  ANALOG_SENSOR_INITIALISED;
+        this->status |= ANALOG_SENSOR_INITIALISED;
     }
-    else
-    {
+    else {
         this->sensorValue = (this->sensorValue * (1.0f - this->sensitivity)) + (value * this->sensitivity);
     }
 

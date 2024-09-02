@@ -23,63 +23,63 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "Mixer.h"
-#include "ErrorNo.h"
+
 #include "CodalDmesg.h"
+#include "ErrorNo.h"
 
 using namespace codal;
 
 Mixer::Mixer()
 {
-    channels = NULL;
+    channels   = NULL;
     downStream = NULL;
 }
 
 Mixer::~Mixer()
 {
-    while (channels)
-    {
-        auto n = channels;
+    while (channels) {
+        auto n   = channels;
         channels = n->next;
         n->stream->disconnect();
         delete n;
     }
 }
 
-MixerChannel *Mixer::addChannel(DataStream &stream)
+MixerChannel* Mixer::addChannel(DataStream& stream)
 {
-    auto c = new MixerChannel();
-    c->stream = &stream;
-    c->next = channels;
-    c->volume = 1024;
+    auto c      = new MixerChannel();
+    c->stream   = &stream;
+    c->next     = channels;
+    c->volume   = 1024;
     c->isSigned = true;
-    channels = c;
+    channels    = c;
     stream.connect(*this);
     return c;
 }
 
-ManagedBuffer Mixer::pull() {
-    if (!channels)
-        return ManagedBuffer(512);
+ManagedBuffer Mixer::pull()
+{
+    if (!channels) return ManagedBuffer(512);
 
     ManagedBuffer sum;
-    MixerChannel *next;
+    MixerChannel* next;
 
     for (auto ch = channels; ch; ch = next) {
-        next = ch->next; // save next in case the current channel gets deleted
-        bool isSigned = ch->isSigned;
-        int vol = ch->volume;
+        next               = ch->next;  // save next in case the current channel gets deleted
+        bool isSigned      = ch->isSigned;
+        int vol            = ch->volume;
         ManagedBuffer data = ch->stream->pull();
         if (sum.length() < data.length()) {
             ManagedBuffer newsum(data.length());
             newsum.writeBuffer(0, sum);
             sum = newsum;
         }
-        auto d = (int16_t*)&data[0];
-        auto s = (int16_t*)&sum[0];
+        auto d   = (int16_t*)&data[0];
+        auto s   = (int16_t*)&sum[0];
         auto len = data.length() >> 1;
         while (len--) {
             int v = isSigned ? *d : *(uint16_t*)d - 512;
-            v = ((v * vol) + (*s << 10)) >> 10;
+            v     = ((v * vol) + (*s << 10)) >> 10;
             if (v < -512) v = -512;
             if (v > 511) v = 511;
             *s = v;
@@ -88,11 +88,10 @@ ManagedBuffer Mixer::pull() {
         }
     }
 
-    auto s = (int16_t*)&sum[0];
+    auto s   = (int16_t*)&sum[0];
     auto len = sum.length() >> 1;
-    while (len--)
-        *s++ += 512;
-        
+    while (len--) *s++ += 512;
+
     return sum;
 }
 
@@ -101,12 +100,11 @@ int Mixer::pullRequest()
     // we might call it too much if we have more than one channel, but we
     // assume the downStream is only going to call pull() as much as it needs
     // and not more
-    if (downStream)
-        downStream->pullRequest();
+    if (downStream) downStream->pullRequest();
     return DEVICE_OK;
 }
 
-void Mixer::connect(DataSink &sink)
+void Mixer::connect(DataSink& sink)
 {
     this->downStream = &sink;
 }

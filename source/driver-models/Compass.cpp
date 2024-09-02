@@ -23,10 +23,11 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "Compass.h"
-#include "ErrorNo.h"
-#include "Event.h"
+
 #include "CodalCompat.h"
 #include "CodalFiber.h"
+#include "ErrorNo.h"
+#include "Event.h"
 
 #define CALIBRATED_SAMPLE(sample, axis) (((sample.axis - calibration.centre.axis) * calibration.scale.axis) >> 10)
 
@@ -40,7 +41,7 @@ using namespace codal;
  * @param coordinateSpace the orientation of the sensor. Defaults to: SIMPLE_CARTESIAN
  *
  */
-Compass::Compass(CoordinateSpace &cspace, uint16_t id) : sample(), sampleENU(), coordinateSpace(cspace)
+Compass::Compass(CoordinateSpace& cspace, uint16_t id) : sample(), sampleENU(), coordinateSpace(cspace)
 {
     accelerometer = NULL;
     init(id);
@@ -55,7 +56,8 @@ Compass::Compass(CoordinateSpace &cspace, uint16_t id) : sample(), sampleENU(), 
  * @param coordinateSpace the orientation of the sensor. Defaults to: SIMPLE_CARTESIAN
  *
  */
-Compass::Compass(Accelerometer &accel, CoordinateSpace &cspace, uint16_t id) :  sample(), sampleENU(), coordinateSpace(cspace)
+Compass::Compass(Accelerometer& accel, CoordinateSpace& cspace, uint16_t id)
+    : sample(), sampleENU(), coordinateSpace(cspace)
 {
     accelerometer = &accel;
     init(id);
@@ -69,7 +71,7 @@ Compass::Compass(Accelerometer &accel, CoordinateSpace &cspace, uint16_t id) :  
 void Compass::init(uint16_t id)
 {
     // Store our identifiers.
-    this->id = id;
+    this->id     = id;
     this->status = 0;
 
     // Set a default rate of 50Hz.
@@ -81,7 +83,6 @@ void Compass::init(uint16_t id)
     // Indicate that we're up and running.
     status |= DEVICE_COMPONENT_RUNNING;
 }
-
 
 /**
  * Gets the current heading of the device, relative to magnetic north.
@@ -100,14 +101,11 @@ void Compass::init(uint16_t id)
  */
 int Compass::heading()
 {
-    if(status & COMPASS_STATUS_CALIBRATING)
-        return DEVICE_CALIBRATION_IN_PROGRESS;
+    if (status & COMPASS_STATUS_CALIBRATING) return DEVICE_CALIBRATION_IN_PROGRESS;
 
-    if(!(status & COMPASS_STATUS_CALIBRATED))
-        calibrate();
+    if (!(status & COMPASS_STATUS_CALIBRATED)) calibrate();
 
-    if(accelerometer != NULL)
-        return tiltCompensatedBearing();
+    if (accelerometer != NULL) return tiltCompensatedBearing();
 
     return basicBearing();
 }
@@ -129,7 +127,7 @@ int Compass::getFieldStrength()
     double y = s.y;
     double z = s.z;
 
-    return (int) sqrt(x*x + y*y + z*z);
+    return (int)sqrt(x * x + y * y + z * z);
 }
 
 /**
@@ -148,8 +146,7 @@ int Compass::getFieldStrength()
 int Compass::calibrate()
 {
     // Only perform one calibration process at a time.
-    if(isCalibrating())
-        return DEVICE_CALIBRATION_IN_PROGRESS;
+    if (isCalibrating()) return DEVICE_CALIBRATION_IN_PROGRESS;
 
     requestUpdate();
 
@@ -165,9 +162,9 @@ int Compass::calibrate()
     // Record that we've finished calibrating.
     status &= ~COMPASS_STATUS_CALIBRATING;
 
-    // If there are no changes to our sample data, we either have no calibration algorithm, or it couldn't complete succesfully.
-    if(!(status & COMPASS_STATUS_CALIBRATED))
-        return DEVICE_CALIBRATION_REQUIRED;
+    // If there are no changes to our sample data, we either have no calibration algorithm, or it couldn't complete
+    // succesfully.
+    if (!(status & COMPASS_STATUS_CALIBRATED)) return DEVICE_CALIBRATION_REQUIRED;
 
     return DEVICE_OK;
 }
@@ -231,7 +228,7 @@ void Compass::clearCalibration()
  *
  * @param acceleromter Reference to the accelerometer to use.
  */
-void Compass::setAccelerometer(Accelerometer &accelerometer)
+void Compass::setAccelerometer(Accelerometer& accelerometer)
 {
     this->accelerometer = &accelerometer;
 }
@@ -252,11 +249,10 @@ int Compass::setPeriod(int period)
     int result;
 
     samplePeriod = period;
-    result = configure();
+    result       = configure();
 
     samplePeriod = getPeriod();
     return result;
-
 }
 
 /**
@@ -288,7 +284,8 @@ int Compass::update()
     sampleENU.y = CALIBRATED_SAMPLE(sampleENU, y);
     sampleENU.z = CALIBRATED_SAMPLE(sampleENU, z);
 
-    // Store the user accessible data, in the requested coordinate space, and taking into account component placement of the sensor.
+    // Store the user accessible data, in the requested coordinate space, and taking into account component placement of
+    // the sensor.
     sample = coordinateSpace.transform(sampleENU);
 
     // Indicate that a new sample is available
@@ -361,32 +358,32 @@ int Compass::getZ()
 int Compass::tiltCompensatedBearing()
 {
     // Precompute the tilt compensation parameters to improve readability.
-    float phi = accelerometer->getRollRadians();
+    float phi   = accelerometer->getRollRadians();
     float theta = accelerometer->getPitchRadians();
 
     Sample3D s = getSample(NORTH_EAST_DOWN);
 
-    float x = (float) s.x;
-    float y = (float) s.y;
-    float z = (float) s.z;
+    float x = (float)s.x;
+    float y = (float)s.y;
+    float z = (float)s.z;
 
     // Precompute cos and sin of pitch and roll angles to make the calculation a little more efficient.
-    float sinPhi = sin(phi);
-    float cosPhi = cos(phi);
+    float sinPhi   = sin(phi);
+    float cosPhi   = cos(phi);
     float sinTheta = sin(theta);
     float cosTheta = cos(theta);
 
-     // Calculate the tilt compensated bearing, and convert to degrees.
-    float bearing = (360*atan2(x*cosTheta + y*sinTheta*sinPhi + z*sinTheta*cosPhi, z*sinPhi - y*cosPhi)) / (2*PI);
+    // Calculate the tilt compensated bearing, and convert to degrees.
+    float bearing =
+        (360 * atan2(x * cosTheta + y * sinTheta * sinPhi + z * sinTheta * cosPhi, z * sinPhi - y * cosPhi)) / (2 * PI);
 
     // Handle the 90 degree offset caused by the NORTH_EAST_DOWN based calculation.
     bearing = 90 - bearing;
 
     // Ensure the calculated bearing is in the 0..359 degree range.
-    if (bearing < 0)
-        bearing += 360.0f;
+    if (bearing < 0) bearing += 360.0f;
 
-    return (int) (bearing);
+    return (int)(bearing);
 }
 
 /**
@@ -396,22 +393,17 @@ int Compass::basicBearing()
 {
     // Convert to floating point to reduce rounding errors
     Sample3D cs = this->getSample(SIMPLE_CARTESIAN);
-    float x = (float) cs.x;
-    float y = (float) cs.y;
+    float x     = (float)cs.x;
+    float y     = (float)cs.y;
 
-    float bearing = (atan2(x,y))*180/PI;
+    float bearing = (atan2(x, y)) * 180 / PI;
 
-    if (bearing < 0)
-        bearing += 360.0;
+    if (bearing < 0) bearing += 360.0;
 
     return (int)bearing;
 }
 
 /**
-  * Destructor.
-  */
-Compass::~Compass()
-{
-}
-
-
+ * Destructor.
+ */
+Compass::~Compass() {}

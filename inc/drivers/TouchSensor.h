@@ -25,79 +25,75 @@ DEALINGS IN THE SOFTWARE.
 #ifndef TOUCH_SENSOR_H
 #define TOUCH_SENSOR_H
 
-#include "CodalConfig.h"
 #include "CodalComponent.h"
+#include "CodalConfig.h"
 #include "Event.h"
 #include "Pin.h"
 #include "TouchButton.h"
 
 // Constants
-#define TOUCH_SENSOR_MAX_BUTTONS        10
-#define TOUCH_SENSOR_SAMPLE_PERIOD      50
-#define TOUCH_SENSE_SAMPLE_MAX          1000
+#define TOUCH_SENSOR_MAX_BUTTONS   10
+#define TOUCH_SENSOR_SAMPLE_PERIOD 50
+#define TOUCH_SENSE_SAMPLE_MAX     1000
 
 // Event codes associate with this touch sensor.
-#define TOUCH_SENSOR_UPDATE_NEEDED      1
+#define TOUCH_SENSOR_UPDATE_NEEDED 1
 
-namespace codal
-{
-    class TouchButton;
+namespace codal {
+class TouchButton;
+
+/**
+ * Class definition for a TouchSensor
+ *
+ * Drives a number of TouchButtons ona device.
+ */
+class TouchSensor : public CodalComponent {
+  protected:
+    TouchButton* buttons[TOUCH_SENSOR_MAX_BUTTONS];
+    Pin& drivePin;
+    int numberOfButtons;
+
+  public:
+    /**
+     * Constructor.
+     *
+     * Enables software controlled capacitative touch sensing on a set of pins.
+     *
+     * @param pin The physical pin on the device that drives the capacitative sensing.
+     * @id The ID of this component, defaults to DEVICE_ID_TOUCH_SENSOR
+     */
+    TouchSensor(Pin& pin, uint16_t id = DEVICE_ID_TOUCH_SENSOR);
 
     /**
-      * Class definition for a TouchSensor
-      *
-      * Drives a number of TouchButtons ona device.
-      */
-    class TouchSensor : public CodalComponent
-    {
-        protected:
+     * Default Constructor.
+     *
+     * Enables software controlled capacitative touch sensing on a set of pins.
+     * Use this default constructor when using TouchSensor as a base class.
+     *
+     * @id The ID of this component, defaults to DEVICE_ID_TOUCH_SENSOR
+     */
+    TouchSensor(uint16_t id);
 
-        TouchButton*    buttons[TOUCH_SENSOR_MAX_BUTTONS];
-        Pin             &drivePin;
-        int             numberOfButtons;
+    /**
+     * Begin touch sensing on the given button
+     */
+    virtual int addTouchButton(TouchButton* button);
 
-        public:
+    /**
+     * Stop touch sensing on the given button
+     */
+    virtual int removeTouchButton(TouchButton* button);
 
-        /**
-          * Constructor.
-          *
-          * Enables software controlled capacitative touch sensing on a set of pins.
-          *
-          * @param pin The physical pin on the device that drives the capacitative sensing.
-          * @id The ID of this component, defaults to DEVICE_ID_TOUCH_SENSOR
-          */
-        TouchSensor(Pin &pin, uint16_t id = DEVICE_ID_TOUCH_SENSOR);
+    /**
+     * Initiate a scan of the sensors.
+     */
+    virtual void onSampleEvent(Event);
 
-        /**
-         * Default Constructor.
-         *
-         * Enables software controlled capacitative touch sensing on a set of pins.
-         * Use this default constructor when using TouchSensor as a base class.
-         *
-         * @id The ID of this component, defaults to DEVICE_ID_TOUCH_SENSOR
-         */
-        TouchSensor(uint16_t id);
-
-        /**
-          * Begin touch sensing on the given button
-          */
-        virtual int addTouchButton(TouchButton *button);
-
-        /**
-          * Stop touch sensing on the given button
-          */
-        virtual int removeTouchButton(TouchButton *button);
-
-        /**
-         * Initiate a scan of the sensors.
-         */
-        virtual void onSampleEvent(Event);
-
-        /**
-          * Destructor.
-          */
-        ~TouchSensor();
-    };
-}
+    /**
+     * Destructor.
+     */
+    ~TouchSensor();
+};
+}  // namespace codal
 
 #endif

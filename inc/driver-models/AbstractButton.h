@@ -25,104 +25,94 @@ DEALINGS IN THE SOFTWARE.
 #ifndef ABSTRACT_BUTTON_H
 #define ABSTRACT_BUTTON_H
 
-#include "CodalConfig.h"
 #include "CodalComponent.h"
+#include "CodalConfig.h"
 #include "Event.h"
 
-#define DEVICE_BUTTON_EVT_DOWN                1
-#define DEVICE_BUTTON_EVT_UP                  2
-#define DEVICE_BUTTON_EVT_CLICK               3
-#define DEVICE_BUTTON_EVT_LONG_CLICK          4
-#define DEVICE_BUTTON_EVT_HOLD                5
-#define DEVICE_BUTTON_EVT_DOUBLE_CLICK        6
+#define DEVICE_BUTTON_EVT_DOWN         1
+#define DEVICE_BUTTON_EVT_UP           2
+#define DEVICE_BUTTON_EVT_CLICK        3
+#define DEVICE_BUTTON_EVT_LONG_CLICK   4
+#define DEVICE_BUTTON_EVT_HOLD         5
+#define DEVICE_BUTTON_EVT_DOUBLE_CLICK 6
 
-#define DEVICE_BUTTON_LONG_CLICK_TIME         1000
-#define DEVICE_BUTTON_HOLD_TIME               1500
+#define DEVICE_BUTTON_LONG_CLICK_TIME 1000
+#define DEVICE_BUTTON_HOLD_TIME       1500
 
-#define DEVICE_BUTTON_STATE                   0x01
-#define DEVICE_BUTTON_STATE_HOLD_TRIGGERED    0x02
-#define DEVICE_BUTTON_STATE_CLICK             0x04
-#define DEVICE_BUTTON_STATE_LONG_CLICK        0x08
+#define DEVICE_BUTTON_STATE                0x01
+#define DEVICE_BUTTON_STATE_HOLD_TRIGGERED 0x02
+#define DEVICE_BUTTON_STATE_CLICK          0x04
+#define DEVICE_BUTTON_STATE_LONG_CLICK     0x08
 
-#define DEVICE_BUTTON_SIGMA_MIN               0
-#define DEVICE_BUTTON_SIGMA_MAX               12
-#define DEVICE_BUTTON_SIGMA_THRESH_HI         8
-#define DEVICE_BUTTON_SIGMA_THRESH_LO         2
-#define DEVICE_BUTTON_DOUBLE_CLICK_THRESH     50
+#define DEVICE_BUTTON_SIGMA_MIN           0
+#define DEVICE_BUTTON_SIGMA_MAX           12
+#define DEVICE_BUTTON_SIGMA_THRESH_HI     8
+#define DEVICE_BUTTON_SIGMA_THRESH_LO     2
+#define DEVICE_BUTTON_DOUBLE_CLICK_THRESH 50
 
-enum ButtonEventConfiguration
-{
-    DEVICE_BUTTON_SIMPLE_EVENTS,
-    DEVICE_BUTTON_ALL_EVENTS
-};
+enum ButtonEventConfiguration { DEVICE_BUTTON_SIMPLE_EVENTS, DEVICE_BUTTON_ALL_EVENTS };
 
-enum ButtonPolarity
-{
-    ACTIVE_LOW = 0,
-    ACTIVE_HIGH = 1
-};
+enum ButtonPolarity { ACTIVE_LOW = 0, ACTIVE_HIGH = 1 };
 
-namespace codal
-{
+namespace codal {
+/**
+ * Class definition for Device Button.
+ *
+ * Represents a single, generic button on the device.
+ */
+class AbstractButton : public CodalComponent {
+  public:
+    uint16_t clickCount;
+
     /**
-      * Class definition for Device Button.
-      *
-      * Represents a single, generic button on the device.
-      */
-    class AbstractButton : public CodalComponent
-    {
-        public:
+     * Constructor.
+     *
+     * Create a abstract software representation of a button.
+     */
+    AbstractButton();
 
-        uint16_t clickCount;
+    /**
+     * Tests if this Button is currently pressed.
+     *
+     * @code
+     * if(buttonA.isPressed())
+     *     display.scroll("Pressed!");
+     * @endcode
+     *
+     * @return 1 if this button is pressed, 0 otherwise.
+     */
+    virtual int isPressed() = 0;
 
-        /**
-          * Constructor.
-          *
-          * Create a abstract software representation of a button.
-          */
-        AbstractButton();
+    /**
+     * Determines if this button has been pressed.
+     *
+     * @code
+     * if(buttonA.wasPressed())
+     *     display.scroll("Pressed!");
+     * @endcode
+     *
+     * @return the number of time this button has been pressed since the last time wasPressed() has been called.
+     */
+    int wasPressed();
 
-        /**
-          * Tests if this Button is currently pressed.
-          *
-          * @code
-          * if(buttonA.isPressed())
-          *     display.scroll("Pressed!");
-          * @endcode
-          *
-          * @return 1 if this button is pressed, 0 otherwise.
-          */
-        virtual int isPressed() = 0;
+    /**
+     * Enables this button.
+     * Buttons are normally created in an enabled state, but use this function to re-enable a previously disabled
+     * button.
+     */
+    void enable();
 
-        /**
-          * Determines if this button has been pressed.
-          *
-          * @code
-          * if(buttonA.wasPressed())
-          *     display.scroll("Pressed!");
-          * @endcode
-          *
-          * @return the number of time this button has been pressed since the last time wasPressed() has been called.
-          */
-        int wasPressed();
+    /**
+     * Disable this button.
+     * Buttons are normally created in an enabled state. Use this function to disable this button.
+     */
+    void disable();
 
-        /**
-         * Enables this button.
-         * Buttons are normally created in an enabled state, but use this function to re-enable a previously disabled button.
-         */
-        void enable();
-
-        /**
-         * Disable this button.
-         * Buttons are normally created in an enabled state. Use this function to disable this button.
-         */
-        void disable();
-
-        /**
-         * Destructor
-         */
-        ~AbstractButton();
-    };
-}
+    /**
+     * Destructor
+     */
+    ~AbstractButton();
+};
+}  // namespace codal
 
 #endif

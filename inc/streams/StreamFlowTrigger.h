@@ -1,5 +1,5 @@
-#include "ManagedBuffer.h"
 #include "DataStream.h"
+#include "ManagedBuffer.h"
 
 #ifndef STREAM_FLOW_TRIGGER_H
 #define STREAM_FLOW_TRIGGER_H
@@ -9,29 +9,27 @@
 
 namespace codal {
 
-    class StreamFlowTrigger : public DataSource, public DataSink {
-        private:
+class StreamFlowTrigger : public DataSource, public DataSink {
+  private:
+    DataSink* downStream;
+    DataSource& upStream;
 
-        DataSink *downStream;
-        DataSource &upStream;
+    void (*eventHandler)(int);
 
-        void (*eventHandler)(int);
+  public:
+    StreamFlowTrigger(DataSource& source);
+    ~StreamFlowTrigger();
 
-        public:
+    void setDataHandler(void (*handler)(int));
 
-        StreamFlowTrigger( DataSource &source );
-        ~StreamFlowTrigger();
-
-        void setDataHandler( void (*handler)(int) );
-
-        virtual ManagedBuffer pull();
-        virtual int pullRequest();
-    	virtual void connect( DataSink &sink );
-        bool isConnected();
-        virtual void disconnect();
-        virtual int getFormat();
-        virtual int setFormat( int format );
-    };
-}
+    virtual ManagedBuffer pull();
+    virtual int pullRequest();
+    virtual void connect(DataSink& sink);
+    bool isConnected();
+    virtual void disconnect();
+    virtual int getFormat();
+    virtual int setFormat(int format);
+};
+}  // namespace codal
 
 #endif

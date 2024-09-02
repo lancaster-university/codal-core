@@ -29,53 +29,49 @@ DEALINGS IN THE SOFTWARE.
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
-namespace codal
-{
-    typedef enum {
-        HID_MOUSE_LEFT = 0x01,
-        HID_MOUSE_RIGHT = 0x02,
-        HID_MOUSE_MIDDLE = 0x04,
-    } USBHIDMouseButton;
+namespace codal {
+typedef enum {
+    HID_MOUSE_LEFT   = 0x01,
+    HID_MOUSE_RIGHT  = 0x02,
+    HID_MOUSE_MIDDLE = 0x04,
+} USBHIDMouseButton;
 
-    typedef union {
-        struct {
-            bool rightButton:1;
-            bool middleButton:1;
-            bool leftButton:1;
-            uint8_t reserved:5;
-        } bit;
-        uint8_t reg;
-    } HIDMouseButtons;
+typedef union {
+    struct {
+        bool rightButton : 1;
+        bool middleButton : 1;
+        bool leftButton : 1;
+        uint8_t reserved : 5;
+    } bit;
+    uint8_t reg;
+} HIDMouseButtons;
 
-    typedef struct {
-        HIDMouseButtons buttons;
+typedef struct {
+    HIDMouseButtons buttons;
 
-        int8_t xMovement;
-        int8_t yMovement;
-        int8_t wheelMovement;
+    int8_t xMovement;
+    int8_t yMovement;
+    int8_t wheelMovement;
 
-    } __attribute__((packed)) HIDMouseState;
+} __attribute__((packed)) HIDMouseState;
 
-    class USBHIDMouse : public USBHID
-    {
+class USBHIDMouse : public USBHID {
+  public:
+    USBHIDMouse();
 
-public:
-        USBHIDMouse();
+    virtual int stdRequest(UsbEndpointIn& ctrl, USBSetup& setup);
+    virtual const InterfaceInfo* getInterfaceInfo();
 
-        virtual int stdRequest(UsbEndpointIn &ctrl, USBSetup& setup);
-        virtual const InterfaceInfo *getInterfaceInfo();
+    int buttonDown(USBHIDMouseButton b);
+    int buttonUp(USBHIDMouseButton b);
 
-        int buttonDown(USBHIDMouseButton b);
-        int buttonUp(USBHIDMouseButton b);
+    int move(int8_t x, int8_t y);
+    int moveWheel(int8_t w);
 
-        int move(int8_t x, int8_t y);
-        int moveWheel(int8_t w);
-
-private:
-        int sendReport();
-    };
-}
-
+  private:
+    int sendReport();
+};
+}  // namespace codal
 
 #endif
 

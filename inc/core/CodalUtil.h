@@ -23,42 +23,39 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
-  * This file contains functions used to maintain compatability and portability.
-  * It also contains constants that are used elsewhere in the DAL.
-  */
+ * This file contains functions used to maintain compatability and portability.
+ * It also contains constants that are used elsewhere in the DAL.
+ */
 
 #ifndef CODAL_UTIL_H
 #define CODAL_UTIL_H
 
 #include "CodalConfig.h"
 
-#define CREATE_KEY_VALUE_TABLE(NAME, PAIRS) const KeyValueTable NAME { PAIRS, sizeof(PAIRS) / sizeof(KeyValueTableEntry) };
+#define CREATE_KEY_VALUE_TABLE(NAME, PAIRS) const KeyValueTable NAME{PAIRS, sizeof(PAIRS) / sizeof(KeyValueTableEntry)};
 
-namespace codal
-{
-    /**
-     * Provides a simple key/value pair lookup table with range lookup support.
-     * Normally stored in FLASH to reduce RAM usage. Keys should be pre-sorted
-     * in ascending order.
-     */
+namespace codal {
+/**
+ * Provides a simple key/value pair lookup table with range lookup support.
+ * Normally stored in FLASH to reduce RAM usage. Keys should be pre-sorted
+ * in ascending order.
+ */
 
-    struct KeyValueTableEntry
-    {
-        const uint32_t key;
-        const uint32_t value;
-    };
+struct KeyValueTableEntry {
+    const uint32_t key;
+    const uint32_t value;
+};
 
-    struct KeyValueTable
-    {
-        const KeyValueTableEntry *data;
-        const int length;
+struct KeyValueTable {
+    const KeyValueTableEntry* data;
+    const int length;
 
-        KeyValueTableEntry* find(const uint32_t key) const;
-        uint32_t get(const uint32_t key) const;
-        uint32_t getKey(const uint32_t key) const;
-        bool hasKey(const uint32_t key) const;
-    };
+    KeyValueTableEntry* find(const uint32_t key) const;
+    uint32_t get(const uint32_t key) const;
+    uint32_t getKey(const uint32_t key) const;
+    bool hasKey(const uint32_t key) const;
+};
 
-}
+}  // namespace codal
 
 #endif

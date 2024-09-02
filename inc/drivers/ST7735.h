@@ -25,32 +25,30 @@ DEALINGS IN THE SOFTWARE.
 #ifndef DEVICE_ST7735_H
 #define DEVICE_ST7735_H
 
+#include "Event.h"
 #include "Pin.h"
 #include "SPI.h"
-#include "Event.h"
 #include "ScreenIO.h"
 
-namespace codal
-{
+namespace codal {
 
 struct ST7735WorkBuffer;
 
-#define MADCTL_MY 0x80
-#define MADCTL_MX 0x40
-#define MADCTL_MV 0x20
-#define MADCTL_ML 0x10
+#define MADCTL_MY  0x80
+#define MADCTL_MX  0x40
+#define MADCTL_MV  0x20
+#define MADCTL_ML  0x10
 #define MADCTL_RGB 0x00
 #define MADCTL_BGR 0x08
-#define MADCTL_MH 0x04
+#define MADCTL_MH  0x04
 
-class ST7735 : public CodalComponent
-{
-protected:
-    ScreenIO &io;
-    Pin *cs;
-    Pin *dc;
+class ST7735 : public CodalComponent {
+  protected:
+    ScreenIO& io;
+    Pin* cs;
+    Pin* dc;
     uint8_t cmdBuf[20];
-    ST7735WorkBuffer *work;
+    ST7735WorkBuffer* work;
     bool inSleepMode;
 
     // if true, every pixel will be plotted as 4 pixels and 16 bit color mode
@@ -58,23 +56,29 @@ protected:
     // and doesn't support 12 bit color
     bool double16;
 
-    void beginCS() { if (cs) cs->setDigitalValue(0); }
-    void endCS() { if (cs) cs->setDigitalValue(1); }
+    void beginCS()
+    {
+        if (cs) cs->setDigitalValue(0);
+    }
+    void endCS()
+    {
+        if (cs) cs->setDigitalValue(1);
+    }
     void setCommand() { dc->setDigitalValue(0); }
     void setData() { dc->setDigitalValue(1); }
 
-    void sendCmd(uint8_t *buf, int len);
-    void sendCmdSeq(const uint8_t *buf);
+    void sendCmd(uint8_t* buf, int len);
+    void sendCmdSeq(const uint8_t* buf);
     void sendDone(Event);
     void sendWords(unsigned numBytes);
     void startTransfer(unsigned size);
     void sendBytes(unsigned num);
     void startRAMWR(int cmd = 0);
 
-    static void sendColorsStep(ST7735 *st);
+    static void sendColorsStep(ST7735* st);
 
-public:
-    ST7735(ScreenIO &io, Pin &cs, Pin &dc);
+  public:
+    ST7735(ScreenIO& io, Pin& cs, Pin& dc);
     virtual int init();
 
     /**
@@ -93,7 +97,7 @@ public:
      * Send 4 bit indexed color image, little endian, column-major, using specified palette (use
      * NULL if unchanged).
      */
-    int sendIndexedImage(const uint8_t *src, unsigned width, unsigned height, uint32_t *palette);
+    int sendIndexedImage(const uint8_t* src, unsigned width, unsigned height, uint32_t* palette);
     /**
      * Waits for the previous sendIndexedImage() operation to complete (it normally executes in
      * background).
@@ -106,6 +110,6 @@ public:
     virtual int setSleep(bool sleepMode);
 };
 
-} // namespace codal
+}  // namespace codal
 
 #endif

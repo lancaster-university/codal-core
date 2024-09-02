@@ -23,8 +23,8 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
-  * Compile time configuration options for the codal device runtime.
-  */
+ * Compile time configuration options for the codal device runtime.
+ */
 
 #ifndef CODAL_CONFIG_H
 #define CODAL_CONFIG_H
@@ -36,26 +36,24 @@ DEALINGS IN THE SOFTWARE.
 // 2: Heap allocaion diagnostics
 //
 #ifndef CODAL_DEBUG_DISABLED
-#define CODAL_DEBUG_DISABLED                  0
-#define CODAL_DEBUG_DIAGNOSTICS               1
-#define CODAL_DEBUG_HEAP                      2
+#define CODAL_DEBUG_DISABLED    0
+#define CODAL_DEBUG_DIAGNOSTICS 1
+#define CODAL_DEBUG_HEAP        2
 #endif
 
+#define CODAL_ASSERT(cond, panic_num)         \
+    {                                         \
+        if (!(cond)) target_panic(panic_num); \
+    }
 
-#define CODAL_ASSERT(cond, panic_num) {\
-  if (!(cond)) \
-      target_panic(panic_num);\
-}
-
-
-#include "platform_includes.h"
 #include "codal_version.h"
+#include "platform_includes.h"
 
 // Enables or disables the DeviceHeapllocator. Note that if disabled, no reuse of the SRAM normally
 // reserved for SoftDevice is possible, and out of memory condition will no longer be trapped...
 // i.e. panic() will no longer be triggered on memory full conditions.
 #ifndef DEVICE_HEAP_ALLOCATOR
-#define DEVICE_HEAP_ALLOCATOR                 1
+#define DEVICE_HEAP_ALLOCATOR 1
 #endif
 
 //
@@ -64,17 +62,17 @@ DEALINGS IN THE SOFTWARE.
 // n.b. Setting this option to '1' will also optimise the heap allocator for code space.
 //
 #ifndef DEVICE_MAXIMUM_HEAPS
-#define DEVICE_MAXIMUM_HEAPS                  1
+#define DEVICE_MAXIMUM_HEAPS 1
 #endif
 
 // If enabled, RefCounted objects include a constant tag at the beginning.
 // Set '1' to enable.
 #ifndef DEVICE_TAG
-#define DEVICE_TAG                            0
+#define DEVICE_TAG 0
 #endif
 
 #ifndef CODAL_TIMESTAMP
-#define CODAL_TIMESTAMP                       uint32_t
+#define CODAL_TIMESTAMP uint32_t
 #endif
 
 //
@@ -82,9 +80,8 @@ DEALINGS IN THE SOFTWARE.
 // risk of a race condition. Can be overridden in a target config.json.
 //
 #ifndef CODAL_TIMER_MINIMUM_PERIOD
-#define CODAL_TIMER_MINIMUM_PERIOD            10
+#define CODAL_TIMER_MINIMUM_PERIOD 10
 #endif
-
 
 //
 // Fiber scheduler configuration
@@ -93,11 +90,11 @@ DEALINGS IN THE SOFTWARE.
 // Scheduling quantum (milliseconds)
 // Also used to drive the codal device runtime system ticker.
 #ifndef SCHEDULER_TICK_PERIOD_US
-#define SCHEDULER_TICK_PERIOD_US                   6000
+#define SCHEDULER_TICK_PERIOD_US 6000
 #endif
 
 #ifndef DEVICE_FIBER_USER_DATA
-#define DEVICE_FIBER_USER_DATA                     1
+#define DEVICE_FIBER_USER_DATA 1
 #endif
 
 //
@@ -111,7 +108,7 @@ DEALINGS IN THE SOFTWARE.
 //   MESSAGE_BUS_LISTENER_IMMEDIATE
 
 #ifndef EVENT_LISTENER_DEFAULT_FLAGS
-#define EVENT_LISTENER_DEFAULT_FLAGS            MESSAGE_BUS_LISTENER_QUEUE_IF_BUSY
+#define EVENT_LISTENER_DEFAULT_FLAGS MESSAGE_BUS_LISTENER_QUEUE_IF_BUSY
 #endif
 
 //
@@ -119,26 +116,26 @@ DEALINGS IN THE SOFTWARE.
 // Used to prevent message queues growing uncontrollably due to badly behaved user code and causing panic conditions.
 //
 #ifndef MESSAGE_BUS_LISTENER_MAX_QUEUE_DEPTH
-#define MESSAGE_BUS_LISTENER_MAX_QUEUE_DEPTH    10
+#define MESSAGE_BUS_LISTENER_MAX_QUEUE_DEPTH 10
 #endif
 
-//Configures the default serial mode used by serial read and send calls.
+// Configures the default serial mode used by serial read and send calls.
 #ifndef DEVICE_DEFAULT_SERIAL_MODE
-#define DEVICE_DEFAULT_SERIAL_MODE            SYNC_SLEEP
+#define DEVICE_DEFAULT_SERIAL_MODE SYNC_SLEEP
 #endif
 
 //
 // I/O Options
 //
 #ifndef DEVICE_COMPONENT_COUNT
-#define DEVICE_COMPONENT_COUNT               100
+#define DEVICE_COMPONENT_COUNT 100
 #endif
 //
 // Define the default mode in which the digital input pins are configured.
 // valid options are PullDown, PullUp and PullNone.
 //
 #ifndef DEVICE_DEFAULT_PULLMODE
-#define DEVICE_DEFAULT_PULLMODE                PullMode::None
+#define DEVICE_DEFAULT_PULLMODE PullMode::None
 #endif
 
 //
@@ -148,38 +145,38 @@ DEALINGS IN THE SOFTWARE.
 // Enable this to invoke a panic on out of memory conditions.
 // Set '1' to enable.
 #ifndef DEVICE_PANIC_HEAP_FULL
-#define DEVICE_PANIC_HEAP_FULL                1
+#define DEVICE_PANIC_HEAP_FULL 1
 #endif
 
 //
 // Debug options
 //
 #ifndef DMESG_SERIAL_DEBUG
-  #define DMESG_SERIAL_DEBUG                  0
+#define DMESG_SERIAL_DEBUG 0
 #else
-  // Automatically enable DMESG_ENABLE if DMESG_SERIAL_DEBUG is set
-  #if DMESG_SERIAL_DEBUG > 0
-    #define DMESG_ENABLE                      1
-  #endif
+// Automatically enable DMESG_ENABLE if DMESG_SERIAL_DEBUG is set
+#if DMESG_SERIAL_DEBUG > 0
+#define DMESG_ENABLE 1
+#endif
 #endif
 
 #ifndef DMESG_ENABLE
-#define DMESG_ENABLE                          0
+#define DMESG_ENABLE 0
 #endif
 
 // When non-zero internal debug messages (DMESG() macro) go to a in-memory buffer of this size (in bytes).
 // It can be inspected from GDB (with 'print codalLogStore'), or accessed by the application.
 // Typical size range between 512 and 4096. Set to 0 to disable.
 #ifndef DEVICE_DMESG_BUFFER_SIZE
-  #if DMESG_ENABLE > 0
-    #define DEVICE_DMESG_BUFFER_SIZE          1024
-  #else
-    #define DEVICE_DMESG_BUFFER_SIZE          0
-  #endif
+#if DMESG_ENABLE > 0
+#define DEVICE_DMESG_BUFFER_SIZE 1024
+#else
+#define DEVICE_DMESG_BUFFER_SIZE 0
+#endif
 #endif
 
 #ifndef CODAL_DEBUG
-#define CODAL_DEBUG                           CODAL_DEBUG_DISABLED
+#define CODAL_DEBUG CODAL_DEBUG_DISABLED
 #endif
 
 // When set to '1', this option enables parameter validation checking into low level system modules
@@ -187,7 +184,7 @@ DEALINGS IN THE SOFTWARE.
 // lower code size and faster operation of low level component.
 //
 #ifndef CODAL_LOW_LEVEL_VALIDATION
-#define CODAL_LOW_LEVEL_VALIDATION            0
+#define CODAL_LOW_LEVEL_VALIDATION 0
 #endif
 
 // Versioning options.
@@ -195,24 +192,24 @@ DEALINGS IN THE SOFTWARE.
 // if this isn't available, it can be defined manually as a configuration option.
 //
 #ifndef DEVICE_DAL_VERSION
-  #ifdef CODAL_VERSION
-    #define DEVICE_DAL_VERSION                CODAL_VERSION
-  #else
-    #define DEVICE_DAL_VERSION                "unknown"
-  #endif
+#ifdef CODAL_VERSION
+#define DEVICE_DAL_VERSION CODAL_VERSION
+#else
+#define DEVICE_DAL_VERSION "unknown"
+#endif
 #endif
 
 #ifndef DEVICE_USB
-#define DEVICE_USB                            0
+#define DEVICE_USB 0
 #endif
 
 // If USB enabled, also enable WebUSB by default
 #ifndef DEVICE_WEBUSB
-#define DEVICE_WEBUSB                         1
+#define DEVICE_WEBUSB 1
 #endif
 
 #ifndef CODAL_PROVIDE_PRINTF
-#define CODAL_PROVIDE_PRINTF           1
+#define CODAL_PROVIDE_PRINTF 1
 #endif
 
 //
@@ -221,17 +218,17 @@ DEALINGS IN THE SOFTWARE.
 
 // Do not set this to less than 2, otherwise events will spuriously trigger
 #ifndef CODAL_DATASTREAM_HIGH_WATER_MARK
-    #define CODAL_DATASTREAM_HIGH_WATER_MARK    4
+#define CODAL_DATASTREAM_HIGH_WATER_MARK 4
 #endif
 
 #ifndef CODAL_STREAM_IDLE_TIMEOUT_MS
-  #define CODAL_STREAM_IDLE_TIMEOUT_MS   75
+#define CODAL_STREAM_IDLE_TIMEOUT_MS 75
 #endif
 
 //
 // Helper macro used by the codal device runtime to determine if a boolean configuration option is set.
 //
-#define CONFIG_ENABLED(X) (X == 1)
+#define CONFIG_ENABLED(X)  (X == 1)
 #define CONFIG_DISABLED(X) (X != 1)
 
 #if CONFIG_ENABLED(DEVICE_DBG)

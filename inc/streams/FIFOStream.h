@@ -1,52 +1,46 @@
 #ifndef FIFO_STREAM_H
 #define FIFO_STREAM_H
 
-#include "ManagedBuffer.h"
 #include "DataStream.h"
-
+#include "ManagedBuffer.h"
 
 #define FIFO_MAXIMUM_BUFFERS 256
 
 namespace codal {
 
-    class FIFOStream : public DataSource, public DataSink
-    {
-        private:
+class FIFOStream : public DataSource, public DataSink {
+  private:
+    ManagedBuffer buffer[FIFO_MAXIMUM_BUFFERS];
+    int bufferCount;
+    int bufferLength;
 
-        ManagedBuffer buffer[FIFO_MAXIMUM_BUFFERS];
-        int bufferCount;
-        int bufferLength;
+    bool allowInput;
+    bool allowOutput;
 
-        bool allowInput;
-        bool allowOutput;
+    DataSink* downStream;
+    DataSource& upStream;
 
-        DataSink *downStream;
-        DataSource &upStream;
+  public:
+    FIFOStream(DataSource& source);
+    ~FIFOStream();
 
-        public:
+    virtual ManagedBuffer pull();
+    virtual int pullRequest();
+    virtual void connect(DataSink& sink);
+    bool isConnected();
+    virtual void disconnect();
+    virtual int getFormat();
+    virtual int setFormat(int format);
+    int length();
+    void dumpState();
 
-        FIFOStream( DataSource &source );
-        ~FIFOStream();
+    bool canPull();
+    bool isFull();
 
-        virtual ManagedBuffer pull();
-        virtual int pullRequest();
-    	virtual void connect( DataSink &sink );
-        bool isConnected();
-        virtual void disconnect();
-        virtual int getFormat();
-        virtual int setFormat( int format );
-        int length();
-        void dumpState();
+    void setInputEnable(bool state);
+    void setOutputEnable(bool state);
+};
 
-        bool canPull();
-        bool isFull();
-
-        void setInputEnable( bool state );
-        void setOutputEnable( bool state );
-
-
-    };
-
-}
+}  // namespace codal
 
 #endif

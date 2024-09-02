@@ -29,29 +29,26 @@ DEALINGS IN THE SOFTWARE.
 #include "ErrorNo.h"
 #include "Pin.h"
 
-namespace codal
-{
+namespace codal {
 // TODO there should be some locking mechanism here
 
-typedef void (*PVoidCallback)(void *);
-
+typedef void (*PVoidCallback)(void*);
 
 /**
  * Class definition for an SPI interface.
  */
-class SPI : public PinPeripheral
-{
-public:
-
+class SPI : public PinPeripheral {
+  public:
     /**
-      * Change the pins used by this I2C peripheral to those provided.
-      *
-      * @param mosi the Pin to use for the SPI input line.
-      * @param miso the Pin to use for the SPI output line.
-      * @param sclk the Pin to use for the SPI clock line.
-      * @return DEVICE_OK on success, or DEVICE_NOT_IMPLEMENTED / DEVICE_NOT_SUPPORTED if the request cannot be performed.
-      */
-    virtual int redirect(Pin &mosi, Pin &miso, Pin &sclk);
+     * Change the pins used by this I2C peripheral to those provided.
+     *
+     * @param mosi the Pin to use for the SPI input line.
+     * @param miso the Pin to use for the SPI output line.
+     * @param sclk the Pin to use for the SPI clock line.
+     * @return DEVICE_OK on success, or DEVICE_NOT_IMPLEMENTED / DEVICE_NOT_SUPPORTED if the request cannot be
+     * performed.
+     */
+    virtual int redirect(Pin& mosi, Pin& miso, Pin& sclk);
 
     /** Set the frequency of the SPI interface
      *
@@ -90,19 +87,18 @@ public:
      *
      * Either buffer can be NULL.
      */
-    virtual int transfer(const uint8_t *txBuffer, uint32_t txSize, uint8_t *rxBuffer,
-                         uint32_t rxSize);
+    virtual int transfer(const uint8_t* txBuffer, uint32_t txSize, uint8_t* rxBuffer, uint32_t rxSize);
 
     /**
      * Writes and reads from the SPI bus concurrently. Finally, calls doneHandler (possibly in IRQ context).
      *
      * Either buffer can be NULL.
      */
-    virtual int startTransfer(const uint8_t *txBuffer, uint32_t txSize, uint8_t *rxBuffer,
-                         uint32_t rxSize, PVoidCallback doneHandler, void *arg);
-    
+    virtual int startTransfer(const uint8_t* txBuffer, uint32_t txSize, uint8_t* rxBuffer, uint32_t rxSize,
+                              PVoidCallback doneHandler, void* arg);
+
     virtual ~SPI() {}
 };
-}
+}  // namespace codal
 
 #endif

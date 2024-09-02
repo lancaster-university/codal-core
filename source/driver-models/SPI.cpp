@@ -23,11 +23,11 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "SPI.h"
-#include "ErrorNo.h"
-#include "CodalFiber.h"
 
-namespace codal
-{
+#include "CodalFiber.h"
+#include "ErrorNo.h"
+
+namespace codal {
 
 /**
  * Change the pins used by this I2C peripheral to those provided.
@@ -37,7 +37,7 @@ namespace codal
  * @param sclk the Pin to use for the SPI clock line.
  * @return DEVICE_OK on success, or DEVICE_NOT_IMPLEMENTED / DEVICE_NOT_SUPPORTED if the request cannot be performed.
  */
-int SPI::redirect(Pin &mosi, Pin &miso, Pin &sclk)
+int SPI::redirect(Pin& mosi, Pin& miso, Pin& sclk)
 {
     return DEVICE_NOT_IMPLEMENTED;
 }
@@ -48,18 +48,14 @@ int SPI::redirect(Pin &mosi, Pin &miso, Pin &sclk)
  *
  * Either buffer can be NULL.
  */
-int SPI::transfer(const uint8_t *txBuffer, uint32_t txSize, uint8_t *rxBuffer, uint32_t rxSize)
+int SPI::transfer(const uint8_t* txBuffer, uint32_t txSize, uint8_t* rxBuffer, uint32_t rxSize)
 {
     uint32_t len = txSize;
-    if (rxSize > len)
-        len = rxSize;
-    for (uint32_t i = 0; i < len; ++i)
-    {
+    if (rxSize > len) len = rxSize;
+    for (uint32_t i = 0; i < len; ++i) {
         int c = write(i < txSize ? txBuffer[i] : 0);
-        if (c < 0)
-            return DEVICE_SPI_ERROR;
-        if (i < rxSize)
-            rxBuffer[i] = c;
+        if (c < 0) return DEVICE_SPI_ERROR;
+        if (i < rxSize) rxBuffer[i] = c;
     }
     return DEVICE_OK;
 }
@@ -70,12 +66,12 @@ int SPI::transfer(const uint8_t *txBuffer, uint32_t txSize, uint8_t *rxBuffer, u
  *
  * Either buffer can be NULL.
  */
-int SPI::startTransfer(const uint8_t *txBuffer, uint32_t txSize, uint8_t *rxBuffer, uint32_t rxSize,
-                       PVoidCallback doneHandler, void *arg)
+int SPI::startTransfer(const uint8_t* txBuffer, uint32_t txSize, uint8_t* rxBuffer, uint32_t rxSize,
+                       PVoidCallback doneHandler, void* arg)
 {
     int r = transfer(txBuffer, txSize, rxBuffer, rxSize);
     // it's important this doesn't get invoked recursievely, since that leads to stack overflow
     create_fiber(doneHandler, arg);
     return r;
 }
-}
+}  // namespace codal

@@ -27,17 +27,14 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 
-namespace codal
-{
+namespace codal {
 
-class ScreenIO
-{
-public:
-    virtual void send(const void *txBuffer, uint32_t txSize) = 0;
-    virtual void startSend(const void *txBuffer, uint32_t txSize, PVoidCallback doneHandler,
-                           void *handlerArg) = 0;
+class ScreenIO {
+  public:
+    virtual void send(const void* txBuffer, uint32_t txSize)                                                   = 0;
+    virtual void startSend(const void* txBuffer, uint32_t txSize, PVoidCallback doneHandler, void* handlerArg) = 0;
 };
 
-} // namespace codal
+}  // namespace codal
 
 #endif

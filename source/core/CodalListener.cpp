@@ -23,101 +23,98 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
-  *	This structure defines a Listener used to invoke functions, or member
-  * functions if an instance of EventModel receives an event whose id and value
-  * match this Listener's id and value.
-  */
-#include "CodalConfig.h"
+ *	This structure defines a Listener used to invoke functions, or member
+ * functions if an instance of EventModel receives an event whose id and value
+ * match this Listener's id and value.
+ */
 #include "CodalListener.h"
+
+#include "CodalConfig.h"
 
 using namespace codal;
 
 /**
-  * Constructor.
-  *
-  * Create a new Message Bus Listener.
-  *
-  * @param id The ID of the component you want to listen to.
-  *
-  * @param value The event value you would like to listen to from that component
-  *
-  * @param handler A function pointer to call when the event is detected.
-  *
-  * @param flags User specified, implementation specific flags, that allow behaviour of this events listener
-  * to be tuned.
-  */
+ * Constructor.
+ *
+ * Create a new Message Bus Listener.
+ *
+ * @param id The ID of the component you want to listen to.
+ *
+ * @param value The event value you would like to listen to from that component
+ *
+ * @param handler A function pointer to call when the event is detected.
+ *
+ * @param flags User specified, implementation specific flags, that allow behaviour of this events listener
+ * to be tuned.
+ */
 Listener::Listener(uint16_t id, uint16_t value, void (*handler)(Event), uint16_t flags)
 {
-	this->id = id;
-	this->value = value;
-	this->cb = handler;
-	this->cb_arg = NULL;
-    this->flags = flags;
-	this->next = NULL;
+    this->id        = id;
+    this->value     = value;
+    this->cb        = handler;
+    this->cb_arg    = NULL;
+    this->flags     = flags;
+    this->next      = NULL;
     this->evt_queue = NULL;
 }
 
 /**
-  * Constructor.
-  *
-  * Create a new Message Bus Listener, this constructor accepts an additional
-  * parameter "arg", which is passed to the handler.
-  *
-  * @param id The ID of the component you want to listen to.
-  *
-  * @param value The event value you would like to listen to from that component
-  *
-  * @param handler A function pointer to call when the event is detected.
-  *
-  * @param arg A pointer to some data that will be given to the handler.
-  *
-  * @param flags User specified, implementation specific flags, that allow behaviour of this events listener
-  * to be tuned.
-  */
-Listener::Listener(uint16_t id, uint16_t value, void (*handler)(Event, void *), void* arg, uint16_t flags)
+ * Constructor.
+ *
+ * Create a new Message Bus Listener, this constructor accepts an additional
+ * parameter "arg", which is passed to the handler.
+ *
+ * @param id The ID of the component you want to listen to.
+ *
+ * @param value The event value you would like to listen to from that component
+ *
+ * @param handler A function pointer to call when the event is detected.
+ *
+ * @param arg A pointer to some data that will be given to the handler.
+ *
+ * @param flags User specified, implementation specific flags, that allow behaviour of this events listener
+ * to be tuned.
+ */
+Listener::Listener(uint16_t id, uint16_t value, void (*handler)(Event, void*), void* arg, uint16_t flags)
 {
-	this->id = id;
-	this->value = value;
-	this->cb_param = handler;
-	this->cb_arg = arg;
-    this->flags = flags | MESSAGE_BUS_LISTENER_PARAMETERISED;
-	this->next = NULL;
+    this->id        = id;
+    this->value     = value;
+    this->cb_param  = handler;
+    this->cb_arg    = arg;
+    this->flags     = flags | MESSAGE_BUS_LISTENER_PARAMETERISED;
+    this->next      = NULL;
     this->evt_queue = NULL;
 }
 
 /**
-  * Destructor. Ensures all resources used by this listener are freed.
-  */
+ * Destructor. Ensures all resources used by this listener are freed.
+ */
 Listener::~Listener()
 {
-    if(this->flags & MESSAGE_BUS_LISTENER_METHOD)
-        delete cb_method;
+    if (this->flags & MESSAGE_BUS_LISTENER_METHOD) delete cb_method;
 }
 
 /**
-  * Queues and event up to be processed.
-  *
-  * @param e The event to queue
-  */
+ * Queues and event up to be processed.
+ *
+ * @param e The event to queue
+ */
 void Listener::queue(Event e)
 {
     int queueDepth;
 
-    EventQueueItem *p = evt_queue;
+    EventQueueItem* p = evt_queue;
 
     if (evt_queue == NULL)
         evt_queue = new EventQueueItem(e);
-    else
-    {
+    else {
         queueDepth = 1;
 
-        while (p->next != NULL)
-        {
+        while (p->next != NULL) {
             p = p->next;
             queueDepth++;
         }
 
-        if (queueDepth < MESSAGE_BUS_LISTENER_MAX_QUEUE_DEPTH)
-            p->next = new EventQueueItem(e);
+        if (queueDepth < MESSAGE_BUS_LISTENER_MAX_QUEUE_DEPTH) p->next = new EventQueueItem(e);
     }
 }

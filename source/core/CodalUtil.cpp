@@ -23,45 +23,40 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
-  * This file contains functions used to maintain compatability and portability.
-  * It also contains constants that are used elsewhere in the DAL.
-  */
+ * This file contains functions used to maintain compatability and portability.
+ * It also contains constants that are used elsewhere in the DAL.
+ */
 #include "CodalUtil.h"
 
 using namespace codal;
 
 KeyValueTableEntry* KeyValueTable::find(const uint32_t key) const
 {
-	// Now find the nearest sample range to that specified.
-	KeyValueTableEntry *p = (KeyValueTableEntry *)data + (length - 1);
-	KeyValueTableEntry *result = p;
+    // Now find the nearest sample range to that specified.
+    KeyValueTableEntry* p      = (KeyValueTableEntry*)data + (length - 1);
+    KeyValueTableEntry* result = p;
 
-	while (p >= (KeyValueTableEntry *)data)
-	{
-		if (p->key < key)
-			break;
+    while (p >= (KeyValueTableEntry*)data) {
+        if (p->key < key) break;
 
-		result = p;
-		p--;
-	}
+        result = p;
+        p--;
+    }
 
-	return result;
+    return result;
 }
-
 
 uint32_t KeyValueTable::get(const uint32_t key) const
 {
-	return find(key)->value;
+    return find(key)->value;
 }
 
 uint32_t KeyValueTable::getKey(const uint32_t key) const
 {
-	return find(key)->key;
+    return find(key)->key;
 }
 
 bool KeyValueTable::hasKey(const uint32_t key) const
 {
-	return (find(key)->key == key);
+    return (find(key)->key == key);
 }
-
-

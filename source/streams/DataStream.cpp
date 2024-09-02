@@ -23,29 +23,26 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "DataStream.h"
+
 #include "CodalComponent.h"
-#include "ManagedBuffer.h"
-#include "Event.h"
 #include "CodalFiber.h"
 #include "ErrorNo.h"
+#include "Event.h"
+#include "ManagedBuffer.h"
 
 using namespace codal;
 
 /**
-* Default implementation of DataSource and DataSink classes.
-*/
+ * Default implementation of DataSource and DataSink classes.
+ */
 ManagedBuffer DataSource::pull()
 {
-	return ManagedBuffer();
+    return ManagedBuffer();
 }
 
-void DataSource::connect(DataSink& )
-{
-}
+void DataSource::connect(DataSink&) {}
 
-void DataSource::disconnect()
-{
-}
+void DataSource::disconnect() {}
 
 int DataSource::getFormat()
 {
@@ -57,41 +54,41 @@ int DataSource::setFormat(int format)
     return DEVICE_NOT_SUPPORTED;
 }
 
-float DataSource::getSampleRate() {
+float DataSource::getSampleRate()
+{
     return DATASTREAM_SAMPLE_RATE_UNKNOWN;
 }
 
-float DataSource::requestSampleRate(float sampleRate) {
+float DataSource::requestSampleRate(float sampleRate)
+{
     // Just consume this by default, we don't _have_ to honour requests for specific rates.
     return DATASTREAM_SAMPLE_RATE_UNKNOWN;
 }
 
 int DataSink::pullRequest()
 {
-	return DEVICE_NOT_SUPPORTED;
+    return DEVICE_NOT_SUPPORTED;
 }
 
-DataStream::DataStream(DataSource &upstream)
+DataStream::DataStream(DataSource& upstream)
 {
     this->pullRequestEventCode = 0;
-    this->isBlocking = true;
-    this->hasPending = false;
-    this->missedBuffers = CODAL_DATASTREAM_HIGH_WATER_MARK;
-    this->downstreamReturn = DEVICE_OK;
-    this->flowEventCode = 0;
+    this->isBlocking           = true;
+    this->hasPending           = false;
+    this->missedBuffers        = CODAL_DATASTREAM_HIGH_WATER_MARK;
+    this->downstreamReturn     = DEVICE_OK;
+    this->flowEventCode        = 0;
 
     this->downStream = NULL;
-    this->upStream = &upstream;
+    this->upStream   = &upstream;
 }
 
-DataStream::~DataStream()
-{
-}
+DataStream::~DataStream() {}
 
-uint16_t DataStream::emitFlowEvents( uint16_t id )
+uint16_t DataStream::emitFlowEvents(uint16_t id)
 {
-    if( this->flowEventCode == 0 ) {
-        if( id == 0 )
+    if (this->flowEventCode == 0) {
+        if (id == 0)
             this->flowEventCode = allocateNotifyEvent();
         else
             this->flowEventCode = id;
@@ -101,8 +98,7 @@ uint16_t DataStream::emitFlowEvents( uint16_t id )
 
 bool DataStream::isReadOnly()
 {
-    if( this->hasPending )
-        return this->nextBuffer.isReadOnly();
+    if (this->hasPending) return this->nextBuffer.isReadOnly();
     return true;
 }
 
@@ -111,9 +107,9 @@ bool DataStream::isFlowing()
     return this->missedBuffers < CODAL_DATASTREAM_HIGH_WATER_MARK;
 }
 
-void DataStream::connect(DataSink &sink)
+void DataStream::connect(DataSink& sink)
 {
-	this->downStream = &sink;
+    this->downStream = &sink;
     this->upStream->connect(*this);
 }
 
@@ -129,7 +125,7 @@ int DataStream::getFormat()
 
 void DataStream::disconnect()
 {
-	this->downStream = NULL;
+    this->downStream = NULL;
 }
 
 void DataStream::setBlocking(bool isBlocking)
@@ -137,36 +133,33 @@ void DataStream::setBlocking(bool isBlocking)
     this->isBlocking = isBlocking;
 
     // If this is the first time async mode has been used on this stream, allocate the necessary resources.
-    if (!this->isBlocking && this->pullRequestEventCode == 0)
-    {
+    if (!this->isBlocking && this->pullRequestEventCode == 0) {
         this->pullRequestEventCode = allocateNotifyEvent();
 
-        if(EventModel::defaultEventBus)
-            EventModel::defaultEventBus->listen(DEVICE_ID_NOTIFY, this->pullRequestEventCode, this, &DataStream::onDeferredPullRequest);
+        if (EventModel::defaultEventBus)
+            EventModel::defaultEventBus->listen(DEVICE_ID_NOTIFY, this->pullRequestEventCode, this,
+                                                &DataStream::onDeferredPullRequest);
     }
 }
 
 ManagedBuffer DataStream::pull()
 {
     // 1, as we will normally be at '1' waiting buffer here if we're in-sync with the source
-    if( this->missedBuffers > 1 )
-        Event evt( DEVICE_ID_NOTIFY, this->flowEventCode );
-    
+    if (this->missedBuffers > 1) Event evt(DEVICE_ID_NOTIFY, this->flowEventCode);
+
     this->missedBuffers = 0;
     // Are we running in sync (blocking) mode?
-    if( this->isBlocking )
-        return this->upStream->pull();
-    
+    if (this->isBlocking) return this->upStream->pull();
+
     this->hasPending = false;
-    return ManagedBuffer( this->nextBuffer ); // Deep copy!
+    return ManagedBuffer(this->nextBuffer);  // Deep copy!
 }
 
 void DataStream::onDeferredPullRequest(Event)
 {
-    this->downstreamReturn = DEVICE_OK; // The default state
+    this->downstreamReturn = DEVICE_OK;  // The default state
 
-    if (downStream != NULL)
-        this->downstreamReturn = downStream->pullRequest();
+    if (downStream != NULL) this->downstreamReturn = downStream->pullRequest();
 }
 
 bool DataStream::canPull(int size)
@@ -178,39 +171,37 @@ bool DataStream::canPull(int size)
 int DataStream::pullRequest()
 {
     // _Technically_ not a missed buffer... yet. But we can only check later.
-    if( this->missedBuffers < CODAL_DATASTREAM_HIGH_WATER_MARK )
-        if( ++this->missedBuffers == CODAL_DATASTREAM_HIGH_WATER_MARK )
-            if( this->flowEventCode != 0 )
-                Event evt( DEVICE_ID_NOTIFY, this->flowEventCode );
+    if (this->missedBuffers < CODAL_DATASTREAM_HIGH_WATER_MARK)
+        if (++this->missedBuffers == CODAL_DATASTREAM_HIGH_WATER_MARK)
+            if (this->flowEventCode != 0) Event evt(DEVICE_ID_NOTIFY, this->flowEventCode);
 
     // Are we running in async (non-blocking) mode?
-    if( !this->isBlocking ) {
-        if( this->hasPending && this->downstreamReturn != DEVICE_OK ) {
-            Event evt( DEVICE_ID_NOTIFY, this->pullRequestEventCode );
+    if (!this->isBlocking) {
+        if (this->hasPending && this->downstreamReturn != DEVICE_OK) {
+            Event evt(DEVICE_ID_NOTIFY, this->pullRequestEventCode);
             return this->downstreamReturn;
         }
 
         this->nextBuffer = this->upStream->pull();
         this->hasPending = true;
 
-        Event evt( DEVICE_ID_NOTIFY, this->pullRequestEventCode );
+        Event evt(DEVICE_ID_NOTIFY, this->pullRequestEventCode);
         return this->downstreamReturn;
     }
 
-    if( this->downStream != NULL )
-        return this->downStream->pullRequest();
+    if (this->downStream != NULL) return this->downStream->pullRequest();
 
     return DEVICE_BUSY;
 }
 
-float DataStream::getSampleRate() {
-    if( this->upStream != NULL )
-        return this->upStream->getSampleRate();
+float DataStream::getSampleRate()
+{
+    if (this->upStream != NULL) return this->upStream->getSampleRate();
     return DATASTREAM_SAMPLE_RATE_UNKNOWN;
 }
 
-float DataStream::requestSampleRate(float sampleRate) {
-    if( this->upStream != NULL )
-        return this->upStream->requestSampleRate( sampleRate );
+float DataStream::requestSampleRate(float sampleRate)
+{
+    if (this->upStream != NULL) return this->upStream->requestSampleRate(sampleRate);
     return DATASTREAM_SAMPLE_RATE_UNKNOWN;
 }

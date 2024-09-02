@@ -27,12 +27,10 @@ DEALINGS IN THE SOFTWARE.
 using namespace codal;
 
 //#define check(cond) if(!(cond)) return DEVICE_INVALID_PARAMETER
-#define check(cond)                                                                                \
-    if (!(cond))                                                                                   \
-    target_panic(909)
+#define check(cond) \
+    if (!(cond)) target_panic(909)
 
-StandardSPIFlash::StandardSPIFlash(SPI &spi, Pin &ssel, int numPages)
-    : _numPages(numPages), spi(spi), ssel(ssel)
+StandardSPIFlash::StandardSPIFlash(SPI& spi, Pin& ssel, int numPages) : _numPages(numPages), spi(spi), ssel(ssel)
 {
     ssel.setDigitalValue(1);
 }
@@ -45,14 +43,13 @@ void StandardSPIFlash::setCommand(uint8_t command, int addr)
     cmdBuf[3] = addr >> 0;
 }
 
-int StandardSPIFlash::sendCommand(uint8_t command, int addr, void *resp, int respSize)
+int StandardSPIFlash::sendCommand(uint8_t command, int addr, void* resp, int respSize)
 {
     setCommand(command, addr);
 
     ssel.setDigitalValue(0);
     int r = spi.transfer(cmdBuf, addr == -1 ? 1 : 4, NULL, 0);
-    if (r == DEVICE_OK)
-        r = spi.transfer(NULL, 0, (uint8_t *)resp, respSize);
+    if (r == DEVICE_OK) r = spi.transfer(NULL, 0, (uint8_t*)resp, respSize);
     ssel.setDigitalValue(1);
 
     return r;
@@ -65,13 +62,10 @@ void StandardSPIFlash::writeEnable()
 
 int StandardSPIFlash::waitBusy(int waitMS)
 {
-    do
-    {
+    do {
         int r = sendCommand(0x05, -1, &status, 1);
-        if (r < 0)
-            return r;
-        if (waitMS)
-            fiber_sleep(waitMS);
+        if (r < 0) return r;
+        if (waitMS) fiber_sleep(waitMS);
     } while (status & 0x01);
 
     return DEVICE_OK;
@@ -82,14 +76,14 @@ int StandardSPIFlash::numPages()
     return _numPages;
 }
 
-int StandardSPIFlash::readBytes(uint32_t addr, void *buffer, uint32_t len)
+int StandardSPIFlash::readBytes(uint32_t addr, void* buffer, uint32_t len)
 {
     check(addr + len <= _numPages * SPIFLASH_PAGE_SIZE);
     check(addr <= _numPages * SPIFLASH_PAGE_SIZE);
     return sendCommand(0x03, addr, buffer, len);
 }
 
-int StandardSPIFlash::writeBytes(uint32_t addr, const void *buffer, uint32_t len)
+int StandardSPIFlash::writeBytes(uint32_t addr, const void* buffer, uint32_t len)
 {
     check(len <= SPIFLASH_PAGE_SIZE);
     check(addr / SPIFLASH_PAGE_SIZE == (addr + len - 1) / SPIFLASH_PAGE_SIZE);
@@ -101,11 +95,9 @@ int StandardSPIFlash::writeBytes(uint32_t addr, const void *buffer, uint32_t len
 
     ssel.setDigitalValue(0);
     for (uint32_t i = 0; i < 4; ++i)
-        if (spi.write(cmdBuf[i]) < 0)
-            goto fail;
+        if (spi.write(cmdBuf[i]) < 0) goto fail;
     for (uint32_t i = 0; i < len; ++i)
-        if (spi.write(((const uint8_t *)buffer)[i]) < 0)
-            goto fail;
+        if (spi.write(((const uint8_t*)buffer)[i]) < 0) goto fail;
     ssel.setDigitalValue(1);
 
     // the typical write time is under 1ms, so we don't bother with fiber_sleep()
@@ -120,8 +112,7 @@ int StandardSPIFlash::eraseCore(uint8_t cmd, uint32_t addr)
 {
     writeEnable();
     int r = sendCommand(cmd, addr);
-    if (r < 0)
-        return r;
+    if (r < 0) return r;
     return waitBusy(10);
 }
 
@@ -141,5 +132,5 @@ int StandardSPIFlash::eraseBigRow(uint32_t addr)
 
 int StandardSPIFlash::eraseChip()
 {
-    return eraseCore(0xC7, -1); // or 0x60
+    return eraseCore(0xC7, -1);  // or 0x60
 }

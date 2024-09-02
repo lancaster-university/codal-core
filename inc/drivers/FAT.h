@@ -27,21 +27,18 @@ DEALINGS IN THE SOFTWARE.
 
 #include <stdint.h>
 
-namespace codal
-{
+namespace codal {
 
-#define FAT_RESERVED_SECTORS 1
-#define FAT_ROOT_DIR_SECTORS 4
+#define FAT_RESERVED_SECTORS       1
+#define FAT_ROOT_DIR_SECTORS       4
 #define FAT_SECTORS_PER_FAT(numBl) ((unsigned)(((numBl)*2 + 511) / 512))
 
-#define FAT_START_FAT0(numBl) FAT_RESERVED_SECTORS
-#define FAT_START_FAT1(numBl) (FAT_RESERVED_SECTORS + FAT_SECTORS_PER_FAT(numBl))
-#define FAT_START_ROOTDIR(numBl) (FAT_RESERVED_SECTORS + 2 * FAT_SECTORS_PER_FAT(numBl))
-#define FAT_START_CLUSTERS(numBl)                                                                  \
-    (FAT_RESERVED_SECTORS + 2 * FAT_SECTORS_PER_FAT(numBl) + FAT_ROOT_DIR_SECTORS)
+#define FAT_START_FAT0(numBl)     FAT_RESERVED_SECTORS
+#define FAT_START_FAT1(numBl)     (FAT_RESERVED_SECTORS + FAT_SECTORS_PER_FAT(numBl))
+#define FAT_START_ROOTDIR(numBl)  (FAT_RESERVED_SECTORS + 2 * FAT_SECTORS_PER_FAT(numBl))
+#define FAT_START_CLUSTERS(numBl) (FAT_RESERVED_SECTORS + 2 * FAT_SECTORS_PER_FAT(numBl) + FAT_ROOT_DIR_SECTORS)
 
-typedef struct
-{
+typedef struct {
     uint8_t JumpInstruction[3];
     uint8_t OEMInfo[8];
     uint16_t SectorSize;
@@ -64,8 +61,7 @@ typedef struct
     uint8_t FilesystemIdentifier[8];
 } __attribute__((packed)) FAT_BootBlock;
 
-typedef struct
-{
+typedef struct {
     char name[8];
     char ext[3];
     uint8_t attrs;
@@ -81,8 +77,7 @@ typedef struct
     uint32_t size;
 } __attribute__((packed)) DirEntry;
 
-typedef struct
-{
+typedef struct {
     uint8_t seqno;
     uint16_t name0[5];
     uint8_t attrs;
@@ -92,6 +87,6 @@ typedef struct
     uint16_t startCluster;
     uint16_t name2[2];
 } __attribute__((packed)) VFatEntry;
-}
+}  // namespace codal
 
 #endif

@@ -24,14 +24,16 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
- * Class definition for a generic analog sensor, that takes the general form of a logarithmic response to a sensed value, in a potential divider.
- * Implements a base class for such a sensor, using the Steinhart-Hart equation to delineate a result.
+ * Class definition for a generic analog sensor, that takes the general form of a logarithmic response to a sensed
+ * value, in a potential divider. Implements a base class for such a sensor, using the Steinhart-Hart equation to
+ * delineate a result.
  */
 
 #include "Sensor.h"
-#include "ErrorNo.h"
+
 #include "CodalCompat.h"
 #include "CodalFiber.h"
+#include "ErrorNo.h"
 #include "Timer.h"
 
 using namespace codal;
@@ -49,8 +51,9 @@ Sensor::Sensor(uint16_t id, uint16_t sensitivity, uint16_t samplePeriod)
     this->setSensitivity(sensitivity);
 
     // Configure for a 2 Hz update frequency by default.
-    if(EventModel::defaultEventBus)
-        EventModel::defaultEventBus->listen(this->id, SENSOR_UPDATE_NEEDED, this, &Sensor::onSampleEvent, MESSAGE_BUS_LISTENER_IMMEDIATE);
+    if (EventModel::defaultEventBus)
+        EventModel::defaultEventBus->listen(this->id, SENSOR_UPDATE_NEEDED, this, &Sensor::onSampleEvent,
+                                            MESSAGE_BUS_LISTENER_IMMEDIATE);
 
     this->setPeriod(samplePeriod);
 }
@@ -80,14 +83,13 @@ void Sensor::updateSample()
 {
     uint32_t value = readValue();
 
-    // If this is the first reading performed, take it a a baseline. Otherwise, perform a decay average to smooth out the data.
-    if (!(this->status & SENSOR_INITIALISED))
-    {
+    // If this is the first reading performed, take it a a baseline. Otherwise, perform a decay average to smooth out
+    // the data.
+    if (!(this->status & SENSOR_INITIALISED)) {
         sensorValue = (uint16_t)value;
-        this->status |=  SENSOR_INITIALISED;
+        this->status |= SENSOR_INITIALISED;
     }
-    else
-    {
+    else {
         sensorValue = ((sensorValue * (1023 - sensitivity)) + (value * sensitivity)) >> 10;
     }
 
@@ -99,26 +101,29 @@ void Sensor::updateSample()
  */
 void Sensor::checkThresholding()
 {
-    if ((this->status & SENSOR_HIGH_THRESHOLD_ENABLED) && (!(this->status & SENSOR_HIGH_THRESHOLD_PASSED)) && (sensorValue >= highThreshold))
-    {
+    if ((this->status & SENSOR_HIGH_THRESHOLD_ENABLED) && (!(this->status & SENSOR_HIGH_THRESHOLD_PASSED)) &&
+        (sensorValue >= highThreshold)) {
         Event(this->id, SENSOR_THRESHOLD_HIGH);
-        this->status |=  SENSOR_HIGH_THRESHOLD_PASSED;
+        this->status |= SENSOR_HIGH_THRESHOLD_PASSED;
         this->status &= ~SENSOR_LOW_THRESHOLD_PASSED;
     }
 
-    if ((this->status & SENSOR_LOW_THRESHOLD_ENABLED) && (!(this->status & SENSOR_LOW_THRESHOLD_PASSED)) && (sensorValue <= lowThreshold))
+    if ((this->status & SENSOR_LOW_THRESHOLD_ENABLED) && (!(this->status & SENSOR_LOW_THRESHOLD_PASSED)) &&
+        (sensorValue <= lowThreshold))
 
     {
         Event(this->id, SENSOR_THRESHOLD_LOW);
-        this->status |=  SENSOR_LOW_THRESHOLD_PASSED;
+        this->status |= SENSOR_LOW_THRESHOLD_PASSED;
         this->status &= ~SENSOR_HIGH_THRESHOLD_PASSED;
     }
 }
 
 /**
- * Set sensitivity value for the data. A decay average is taken of sampled data to smooth it into more accurate information.
+ * Set sensitivity value for the data. A decay average is taken of sampled data to smooth it into more accurate
+ * information.
  *
- * @param value A value between 0..1023 that detemrines the level of smoothing. Set to 1023 to disable smoothing. Default value is 868
+ * @param value A value between 0..1023 that detemrines the level of smoothing. Set to 1023 to disable smoothing.
+ * Default value is 868
  *
  * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
  */
@@ -164,19 +169,17 @@ int Sensor::getPeriod()
 int Sensor::setLowThreshold(uint16_t value)
 {
     // Protect against churn if the same threshold is set repeatedly.
-    if ((this->status & SENSOR_LOW_THRESHOLD_ENABLED) && lowThreshold == value)
-        return DEVICE_OK;
+    if ((this->status & SENSOR_LOW_THRESHOLD_ENABLED) && lowThreshold == value) return DEVICE_OK;
 
     // We need to update our threshold
     lowThreshold = value;
 
     // Reset any exisiting threshold state, and enable threshold detection.
     this->status &= ~SENSOR_LOW_THRESHOLD_PASSED;
-    this->status |=  SENSOR_LOW_THRESHOLD_ENABLED;
+    this->status |= SENSOR_LOW_THRESHOLD_ENABLED;
 
     // If a HIGH threshold has been set, ensure it's above the LOW threshold.
-    if(this->status & SENSOR_HIGH_THRESHOLD_ENABLED)
-        setHighThreshold(max(lowThreshold+1, highThreshold));
+    if (this->status & SENSOR_HIGH_THRESHOLD_ENABLED) setHighThreshold(max(lowThreshold + 1, highThreshold));
 
     return DEVICE_OK;
 }
@@ -191,19 +194,17 @@ int Sensor::setLowThreshold(uint16_t value)
 int Sensor::setHighThreshold(uint16_t value)
 {
     // Protect against churn if the same threshold is set repeatedly.
-    if ((this->status & SENSOR_HIGH_THRESHOLD_ENABLED) && highThreshold == value)
-        return DEVICE_OK;
+    if ((this->status & SENSOR_HIGH_THRESHOLD_ENABLED) && highThreshold == value) return DEVICE_OK;
 
     // We need to update our threshold
     highThreshold = value;
 
     // Reset any exisiting threshold state, and enable threshold detection.
     this->status &= ~SENSOR_HIGH_THRESHOLD_PASSED;
-    this->status |=  SENSOR_HIGH_THRESHOLD_ENABLED;
+    this->status |= SENSOR_HIGH_THRESHOLD_ENABLED;
 
     // If a HIGH threshold has been set, ensure it's above the LOW threshold.
-    if(this->status & SENSOR_LOW_THRESHOLD_ENABLED)
-        setLowThreshold(min(highThreshold - 1, lowThreshold));
+    if (this->status & SENSOR_LOW_THRESHOLD_ENABLED) setLowThreshold(min(highThreshold - 1, lowThreshold));
 
     return DEVICE_OK;
 }
@@ -215,8 +216,7 @@ int Sensor::setHighThreshold(uint16_t value)
  */
 int Sensor::getLowThreshold()
 {
-    if (!(this->status & SENSOR_LOW_THRESHOLD_ENABLED))
-        return DEVICE_INVALID_PARAMETER;
+    if (!(this->status & SENSOR_LOW_THRESHOLD_ENABLED)) return DEVICE_INVALID_PARAMETER;
 
     return lowThreshold;
 }
@@ -228,8 +228,7 @@ int Sensor::getLowThreshold()
  */
 int Sensor::getHighThreshold()
 {
-    if (!(this->status & SENSOR_HIGH_THRESHOLD_ENABLED))
-        return DEVICE_INVALID_PARAMETER;
+    if (!(this->status & SENSOR_HIGH_THRESHOLD_ENABLED)) return DEVICE_INVALID_PARAMETER;
 
     return highThreshold;
 }
@@ -237,6 +236,4 @@ int Sensor::getHighThreshold()
 /**
  * Destructor.
  */
-Sensor::~Sensor()
-{
-}
+Sensor::~Sensor() {}

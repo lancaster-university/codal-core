@@ -28,10 +28,10 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 
 /**
-  * Error codes used in the codal device runtime.
-  * These may be returned from functions implemented in the codal device runtime.
-  */
-enum ErrorCode{
+ * Error codes used in the codal device runtime.
+ * These may be returned from functions implemented in the codal device runtime.
+ */
+enum ErrorCode {
 
     // No error occurred.
     DEVICE_OK = 0,
@@ -44,9 +44,10 @@ enum ErrorCode{
 
     // Device calibration errors
     DEVICE_CALIBRATION_IN_PROGRESS = -1003,
-    DEVICE_CALIBRATION_REQUIRED = -1004,
+    DEVICE_CALIBRATION_REQUIRED    = -1004,
 
-    // The requested operation could not be performed as the device has run out of some essential resource (e.g. allocated memory)
+    // The requested operation could not be performed as the device has run out of some essential resource (e.g.
+    // allocated memory)
     DEVICE_NO_RESOURCES = -1005,
 
     // The requested operation could not be performed as some essential resource is busy (e.g. the display)
@@ -75,9 +76,9 @@ enum ErrorCode{
 };
 
 /**
-  * Error codes used in the codal device runtime.
-  */
-enum PanicCode{
+ * Error codes used in the codal device runtime.
+ */
+enum PanicCode {
     // PANIC Codes. These are not return codes, but are terminal conditions.
     // These induce a panic operation, where all code stops executing, and a panic state is
     // entered where the panic code is diplayed.

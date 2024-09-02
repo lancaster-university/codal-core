@@ -23,98 +23,103 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "StreamNormalizer.h"
-#include "ErrorNo.h"
+
 #include "CodalDmesg.h"
+#include "ErrorNo.h"
 
 using namespace codal;
 
-static int read_sample_1(uint8_t *ptr)
+static int read_sample_1(uint8_t* ptr)
 {
-    return (int) *ptr;
+    return (int)*ptr;
 }
 
-static int read_sample_2(uint8_t *ptr)
+static int read_sample_2(uint8_t* ptr)
 {
-    int8_t *p = (int8_t *) ptr;
-    return (int) *p;
+    int8_t* p = (int8_t*)ptr;
+    return (int)*p;
 }
 
-static int read_sample_3(uint8_t *ptr)
+static int read_sample_3(uint8_t* ptr)
 {
-    uint16_t *p = (uint16_t *) ptr;
-    return (int) *p;
+    uint16_t* p = (uint16_t*)ptr;
+    return (int)*p;
 }
 
-static int read_sample_4(uint8_t *ptr)
+static int read_sample_4(uint8_t* ptr)
 {
-    int16_t *p = (int16_t *) ptr;
-    return (int) *p;
+    int16_t* p = (int16_t*)ptr;
+    return (int)*p;
 }
 
-static int read_sample_5(uint8_t *ptr)
+static int read_sample_5(uint8_t* ptr)
 {
-    uint32_t *p = (uint32_t *) ptr;
-    return (int) (*p >> 8);
+    uint32_t* p = (uint32_t*)ptr;
+    return (int)(*p >> 8);
 }
 
-static int read_sample_6(uint8_t *ptr)
+static int read_sample_6(uint8_t* ptr)
 {
-    int32_t *p = (int32_t *) ptr;
-    return (int) (*p >> 8);
+    int32_t* p = (int32_t*)ptr;
+    return (int)(*p >> 8);
 }
 
-static int read_sample_7(uint8_t *ptr)
+static int read_sample_7(uint8_t* ptr)
 {
-    uint32_t *p = (uint32_t *) ptr;
-    return (int) *p;
+    uint32_t* p = (uint32_t*)ptr;
+    return (int)*p;
 }
 
-static int read_sample_8(uint8_t *ptr)
+static int read_sample_8(uint8_t* ptr)
 {
-    int32_t *p = (int32_t *) ptr;
-    return (int) *p;
+    int32_t* p = (int32_t*)ptr;
+    return (int)*p;
 }
 
-static void write_sample_1(uint8_t *ptr, int value)
+static void write_sample_1(uint8_t* ptr, int value)
 {
-    *ptr = (uint8_t) value;
+    *ptr = (uint8_t)value;
 }
 
-static void write_sample_2(uint8_t *ptr, int value)
+static void write_sample_2(uint8_t* ptr, int value)
 {
-    *ptr = (int8_t) value;
+    *ptr = (int8_t)value;
 }
 
-static void write_sample_3(uint8_t *ptr, int value)
+static void write_sample_3(uint8_t* ptr, int value)
 {
-    *(uint16_t *)ptr = (uint16_t) value;
+    *(uint16_t*)ptr = (uint16_t)value;
 }
 
-static void write_sample_4(uint8_t *ptr, int value)
+static void write_sample_4(uint8_t* ptr, int value)
 {
-    *(int16_t *)ptr = (int16_t) value;
+    *(int16_t*)ptr = (int16_t)value;
 }
 
-static void write_sample_5_6(uint8_t *ptr, int value)
+static void write_sample_5_6(uint8_t* ptr, int value)
 {
-    *ptr = value & 0xFF;
-    *(ptr+1) = (value>>8) & 0xFF;
-    *(ptr+2) = (value>>16) & 0xFF;
+    *ptr       = value & 0xFF;
+    *(ptr + 1) = (value >> 8) & 0xFF;
+    *(ptr + 2) = (value >> 16) & 0xFF;
 }
 
-static void write_sample_7(uint8_t *ptr, int value)
+static void write_sample_7(uint8_t* ptr, int value)
 {
-    *(uint32_t *)ptr = (uint32_t) value;
+    *(uint32_t*)ptr = (uint32_t)value;
 }
 
-static void write_sample_8(uint8_t *ptr, int value)
+static void write_sample_8(uint8_t* ptr, int value)
 {
-    *(int32_t *)ptr = (int32_t) value;
+    *(int32_t*)ptr = (int32_t)value;
 }
 
 // Lookup table to optimse parsing of input stream.
-SampleReadFn StreamNormalizer::readSample[] = {read_sample_1, read_sample_1, read_sample_2, read_sample_3, read_sample_4, read_sample_5, read_sample_6, read_sample_7, read_sample_8};
-SampleWriteFn StreamNormalizer::writeSample[] = {write_sample_1, write_sample_1, write_sample_2, write_sample_3, write_sample_4, write_sample_5_6, write_sample_5_6, write_sample_7, write_sample_8};
+SampleReadFn StreamNormalizer::readSample[]   = {read_sample_1, read_sample_1, read_sample_2,
+                                                 read_sample_3, read_sample_4, read_sample_5,
+                                                 read_sample_6, read_sample_7, read_sample_8};
+SampleWriteFn StreamNormalizer::writeSample[] = {write_sample_1,   write_sample_1, write_sample_2,
+                                                 write_sample_3,   write_sample_4, write_sample_5_6,
+                                                 write_sample_5_6, write_sample_7, write_sample_8};
 
 /**
  * Creates a component capable of translating one data representation format into another
@@ -123,18 +128,20 @@ SampleWriteFn StreamNormalizer::writeSample[] = {write_sample_1, write_sample_1,
  * @param gain The gain to apply to each sample (default: 1.0)
  * @param normalize Derive a zero offset for the input stream, and subtract from each sample (default: false)
  * @param format The format to convert the input stream into
- * @param stabilisation the maximum change of zero-offset permitted between subsequent buffers before output is initiated. Set to zero to disable (default)
+ * @param stabilisation the maximum change of zero-offset permitted between subsequent buffers before output is
+ * initiated. Set to zero to disable (default)
  */
-StreamNormalizer::StreamNormalizer(DataSource &source, float gain, bool normalize, int format, int stabilisation) : upstream(source), output(*this)
+StreamNormalizer::StreamNormalizer(DataSource& source, float gain, bool normalize, int format, int stabilisation)
+    : upstream(source), output(*this)
 {
     setFormat(format);
     setGain(gain);
     setNormalize(normalize);
     setOrMask(0);
     this->zeroOffsetValid = false;
-    this->zeroOffset = 0;
-    this->stabilisation = stabilisation;
-    this->outputEnabled = normalize && stabilisation ? false : true;
+    this->zeroOffset      = 0;
+    this->stabilisation   = stabilisation;
+    this->outputEnabled   = normalize && stabilisation ? false : true;
 
     // Register with our upstream component
     source.connect(*this);
@@ -145,58 +152,55 @@ StreamNormalizer::StreamNormalizer(DataSource &source, float gain, bool normaliz
  */
 ManagedBuffer StreamNormalizer::pull()
 {
-    int samples;                // Number of samples in the input buffer.
-    int s;                      // The sample being processed, encpasulated inside a 32 bit number.
-    uint8_t *data;              // Input buffer read pointer.
-    uint8_t *result;            // Output buffer write pointer.
-    int inputFormat;            // The format of the input buffer.
-    int bytesPerSampleIn;       // number of bit per sample of the input buffer.
-    int bytesPerSampleOut;      // number of bit per sample of the input buffer.
-    int z = 0;                  // normalized zero point calculated from this buffer.
-    int zo = (int) zeroOffset;  // Snapshot of our previously calculate zero point.
-    ManagedBuffer buffer;       // The buffer being processed.
-    
+    int samples;               // Number of samples in the input buffer.
+    int s;                     // The sample being processed, encpasulated inside a 32 bit number.
+    uint8_t* data;             // Input buffer read pointer.
+    uint8_t* result;           // Output buffer write pointer.
+    int inputFormat;           // The format of the input buffer.
+    int bytesPerSampleIn;      // number of bit per sample of the input buffer.
+    int bytesPerSampleOut;     // number of bit per sample of the input buffer.
+    int z  = 0;                // normalized zero point calculated from this buffer.
+    int zo = (int)zeroOffset;  // Snapshot of our previously calculate zero point.
+    ManagedBuffer buffer;      // The buffer being processed.
+
     // Determine the input format.
     inputFormat = upstream.getFormat();
 
     // If no output format has been selected, infer it from our upstream component.
-    if (outputFormat == DATASTREAM_FORMAT_UNKNOWN)
-        outputFormat = inputFormat;
+    if (outputFormat == DATASTREAM_FORMAT_UNKNOWN) outputFormat = inputFormat;
 
     // Deterine the sample size of out input and output formats.
-    bytesPerSampleIn = DATASTREAM_FORMAT_BYTES_PER_SAMPLE(inputFormat);
+    bytesPerSampleIn  = DATASTREAM_FORMAT_BYTES_PER_SAMPLE(inputFormat);
     bytesPerSampleOut = DATASTREAM_FORMAT_BYTES_PER_SAMPLE(outputFormat);
 
     // Acquire the buffer to be processed.
     ManagedBuffer inputBuffer = upstream.pull();
-    samples = inputBuffer.length() / bytesPerSampleIn;
+    samples                   = inputBuffer.length() / bytesPerSampleIn;
 
     // Use in place processing where possible, but allocate a new buffer when needed.
     if (DATASTREAM_FORMAT_BYTES_PER_SAMPLE(inputFormat) == DATASTREAM_FORMAT_BYTES_PER_SAMPLE(outputFormat))
         buffer = inputBuffer;
     else
         buffer = ManagedBuffer(samples * bytesPerSampleOut);
-    
+
     // Initialise input an doutput buffer pointers.
-    data = &inputBuffer[0];
+    data   = &inputBuffer[0];
     result = &buffer[0];
 
     // Iterate over the input samples and apply gain, normalization and output formatting.
-    for (int i=0; i < samples; i++)
-    {
+    for (int i = 0; i < samples; i++) {
         // read an input sample, account for the appropriate encoding.
         s = readSample[inputFormat](data);
         data += bytesPerSampleIn;
 
         // Calculate and apply normalization, if configured.
-        if (normalize)
-        {
+        if (normalize) {
             z += s;
             s = s - zo;
         }
 
         // Apply configured gain, and mask if any.
-        s = (int) ((float)s * gain);
+        s = (int)((float)s * gain);
         s |= orMask;
 
         // Write out the sample.
@@ -205,15 +209,13 @@ ManagedBuffer StreamNormalizer::pull()
     }
 
     // Store the average sample value as an inferred zero point for the next buffer.
-    if (normalize)
-    {
+    if (normalize) {
         float calculatedZeroOffset = (float)z / (float)samples;
 
-        zeroOffset = zeroOffsetValid ? zeroOffset*0.5 + calculatedZeroOffset*0.5 : calculatedZeroOffset;
+        zeroOffset      = zeroOffsetValid ? zeroOffset * 0.5 + calculatedZeroOffset * 0.5 : calculatedZeroOffset;
         zeroOffsetValid = true;
 
-        if (stabilisation == 0 || abs((int)zeroOffset - zo) < stabilisation)
-            outputEnabled = true;
+        if (stabilisation == 0 || abs((int)zeroOffset - zo) < stabilisation) outputEnabled = true;
     }
 
     // Ensure output buffer is the correct size;
@@ -256,8 +258,7 @@ bool StreamNormalizer::getNormalize()
  */
 int StreamNormalizer::getFormat()
 {
-    if (outputFormat == DATASTREAM_FORMAT_UNKNOWN)
-        outputFormat = upstream.getFormat();
+    if (outputFormat == DATASTREAM_FORMAT_UNKNOWN) outputFormat = upstream.getFormat();
 
     return outputFormat;
 }
@@ -268,8 +269,7 @@ int StreamNormalizer::getFormat()
  */
 int StreamNormalizer::setFormat(int format)
 {
-    if (format < DATASTREAM_FORMAT_UNKNOWN || format > DATASTREAM_FORMAT_32BIT_SIGNED)
-        return DEVICE_INVALID_PARAMETER;
+    if (format < DATASTREAM_FORMAT_UNKNOWN || format > DATASTREAM_FORMAT_32BIT_SIGNED) return DEVICE_INVALID_PARAMETER;
 
     outputFormat = format;
     return DEVICE_OK;
@@ -311,20 +311,20 @@ int StreamNormalizer::setOrMask(uint32_t mask)
 /**
  * Destructor.
  */
-StreamNormalizer::~StreamNormalizer()
-{
-}
+StreamNormalizer::~StreamNormalizer() {}
 
-float StreamNormalizer::getSampleRate() {
+float StreamNormalizer::getSampleRate()
+{
     return this->upstream.getSampleRate();
 }
 
-float StreamNormalizer::requestSampleRate(float sampleRate) {
-    return this->upstream.requestSampleRate( sampleRate );
+float StreamNormalizer::requestSampleRate(float sampleRate)
+{
+    return this->upstream.requestSampleRate(sampleRate);
 }
 
 bool StreamNormalizer::isConnected()
 {
-    //return this->output.isConnected();
+    // return this->output.isConnected();
     return false;
 }

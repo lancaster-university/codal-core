@@ -29,42 +29,38 @@ DEALINGS IN THE SOFTWARE.
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
-namespace codal
-{
-    typedef struct {
-        int8_t throttle0;
-        int8_t throttle1;
+namespace codal {
+typedef struct {
+    int8_t throttle0;
+    int8_t throttle1;
 
-        int8_t x0;
-        int8_t y0;
+    int8_t x0;
+    int8_t y0;
 
-        int8_t x1;
-        int8_t y1;
+    int8_t x1;
+    int8_t y1;
 
-        uint16_t buttons;
-    } __attribute__((packed)) HIDJoystickState;
+    uint16_t buttons;
+} __attribute__((packed)) HIDJoystickState;
 
-    class USBHIDJoystick : public USBHID
-    {
+class USBHIDJoystick : public USBHID {
+  public:
+    USBHIDJoystick();
 
-public:
-        USBHIDJoystick();
+    virtual int stdRequest(UsbEndpointIn& ctrl, USBSetup& setup);
+    virtual const InterfaceInfo* getInterfaceInfo();
 
-        virtual int stdRequest(UsbEndpointIn &ctrl, USBSetup& setup);
-        virtual const InterfaceInfo *getInterfaceInfo();
+    int buttonDown(uint8_t b);
+    int buttonUp(uint8_t b);
 
-        int buttonDown(uint8_t b);
-        int buttonUp(uint8_t b);
+    int move(int8_t num, int8_t x, int8_t y);
 
-        int move(int8_t num, int8_t x, int8_t y);
+    int setThrottle(uint8_t num, uint8_t val);
 
-        int setThrottle(uint8_t num, uint8_t val);
-
-private:
-        int sendReport();
-    };
-}
-
+  private:
+    int sendReport();
+};
+}  // namespace codal
 
 #endif
 

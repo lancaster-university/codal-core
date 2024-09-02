@@ -23,10 +23,11 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
-  * Class definition for an abstract display.
-  *
-  */
+ * Class definition for an abstract display.
+ *
+ */
 #include "Display.h"
+
 #include "ErrorNo.h"
 
 using namespace codal;
@@ -41,10 +42,10 @@ using namespace codal;
  */
 Display::Display(int width, int height, uint16_t id) : image(width, height)
 {
-    this->width = width;
-    this->height = height;
+    this->width      = width;
+    this->height     = height;
     this->brightness = 255;
-    this->id = id;
+    this->id         = id;
 }
 
 /**
@@ -78,55 +79,45 @@ int Display::getHeight()
  */
 int Display::setBrightness(int b)
 {
-    //sanitise the brightness level
-    if(b < 0 || b > 255)
-        return DEVICE_INVALID_PARAMETER;
+    // sanitise the brightness level
+    if (b < 0 || b > 255) return DEVICE_INVALID_PARAMETER;
 
     this->brightness = b;
 
     return DEVICE_OK;
 }
 
-
 /**
-  * Fetches the current brightness of this display.
-  *
-  * @return the brightness of this display, in the range 0..255.
-  */
+ * Fetches the current brightness of this display.
+ *
+ * @return the brightness of this display, in the range 0..255.
+ */
 int Display::getBrightness()
 {
     return this->brightness;
 }
 
+/**
+ * Enable the display.
+ */
+void Display::enable() {}
 
 /**
-  * Enable the display.
-  */
-void Display::enable()
-{
-}
+ * Disable the display.
+ */
+void Display::disable() {}
 
 /**
-  * Disable the display.
-  */
-void Display::disable()
-{
-}
-
-/**
-  * Captures the bitmap currently being rendered on the display.
-  *
-  * @return an Image containing the captured data.
-  */
+ * Captures the bitmap currently being rendered on the display.
+ *
+ * @return an Image containing the captured data.
+ */
 Image Display::screenShot()
 {
-    return image.crop(0,0, width, height);
+    return image.crop(0, 0, width, height);
 }
-
 
 /**
-  * Destructor.
-  */
-Display::~Display()
-{
-}
+ * Destructor.
+ */
+Display::~Display() {}

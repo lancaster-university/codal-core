@@ -28,85 +28,85 @@ DEALINGS IN THE SOFTWARE.
 #include "platform_includes.h"
 
 #ifdef __cplusplus
- extern "C" {
+extern "C" {
 #endif
-    void target_init();
+void target_init();
 
-    void target_enable_irq();
+void target_enable_irq();
 
-    void target_disable_irq();
+void target_disable_irq();
 
-    void target_reset();
+void target_reset();
 
-    void target_wait(uint32_t milliseconds);
+void target_wait(uint32_t milliseconds);
 
-    void target_wait_us(uint32_t us);
+void target_wait_us(uint32_t us);
 
-    int target_seed_random(uint32_t rand);
+int target_seed_random(uint32_t rand);
 
-    int target_random(int max);
+int target_random(int max);
 
-    uint64_t target_get_serial();
+uint64_t target_get_serial();
 
-    void target_scheduler_idle();
+void target_scheduler_idle();
 
-    void target_wait_for_event();
-  
-    void target_deepsleep();
+void target_wait_for_event();
 
-    void target_panic(int statusCode);
+void target_deepsleep();
 
-    PROCESSOR_WORD_TYPE fiber_initial_stack_base();
-    /**
-      * Configures the link register of the given tcb to have the value function.
-      *
-      * @param tcb The tcb to modify
-      * @param function the function the link register should point to.
-      */
-    void tcb_configure_lr(void* tcb, PROCESSOR_WORD_TYPE function);
+void target_panic(int statusCode);
 
-    void* tcb_allocate();
+PROCESSOR_WORD_TYPE fiber_initial_stack_base();
+/**
+ * Configures the link register of the given tcb to have the value function.
+ *
+ * @param tcb The tcb to modify
+ * @param function the function the link register should point to.
+ */
+void tcb_configure_lr(void* tcb, PROCESSOR_WORD_TYPE function);
 
-    /**
-      * Configures the link register of the given tcb to have the value function.
-      *
-      * @param tcb The tcb to modify
-      * @param function the function the link register should point to.
-      */
-    void tcb_configure_sp(void* tcb, PROCESSOR_WORD_TYPE sp);
+void* tcb_allocate();
 
-    void tcb_configure_stack_base(void* tcb, PROCESSOR_WORD_TYPE stack_base);
+/**
+ * Configures the link register of the given tcb to have the value function.
+ *
+ * @param tcb The tcb to modify
+ * @param function the function the link register should point to.
+ */
+void tcb_configure_sp(void* tcb, PROCESSOR_WORD_TYPE sp);
 
-    PROCESSOR_WORD_TYPE tcb_get_stack_base(void* tcb);
+void tcb_configure_stack_base(void* tcb, PROCESSOR_WORD_TYPE stack_base);
 
-    PROCESSOR_WORD_TYPE get_current_sp();
+PROCESSOR_WORD_TYPE tcb_get_stack_base(void* tcb);
 
-    PROCESSOR_WORD_TYPE tcb_get_sp(void* tcb);
+PROCESSOR_WORD_TYPE get_current_sp();
 
-    void tcb_configure_args(void* tcb, PROCESSOR_WORD_TYPE ep, PROCESSOR_WORD_TYPE cp, PROCESSOR_WORD_TYPE pm);
+PROCESSOR_WORD_TYPE tcb_get_sp(void* tcb);
 
-	// Preprocessor Directive to ignore redecleration when using clang
-    #ifndef __clang__
-		/**
-		 * Default implementation of atomic fetch and add opertaion.
-		 * GCC provides this where possible, but this is not supported on some CPU architectures...
-		 *
-		 * @param ptr pointer to the memory to access.
-		 * @param value the value to add to the memory location.
-		 * @return the value of th ememory location BEFORE the add operation took place.
-		 */
-		short unsigned int __sync_fetch_and_add_2 (volatile void *ptr, short unsigned int value);
-    
-    #endif
-    /**
-     * Default implementation of atomic fetch and add opertaion.
-     * GCC provides this where possible, but this is not supported on some CPU architectures...
-     *
-     * @param ptr pointer to the memory to access.
-     * @param value the value to add to the memory location.
-     * @return the value of th ememory location BEFORE the add operation took place.
-     */
-    short unsigned int __sync_fetch_and_add_2 (volatile void *ptr, short unsigned int value);
+void tcb_configure_args(void* tcb, PROCESSOR_WORD_TYPE ep, PROCESSOR_WORD_TYPE cp, PROCESSOR_WORD_TYPE pm);
+
+// Preprocessor Directive to ignore redecleration when using clang
+#ifndef __clang__
+/**
+ * Default implementation of atomic fetch and add opertaion.
+ * GCC provides this where possible, but this is not supported on some CPU architectures...
+ *
+ * @param ptr pointer to the memory to access.
+ * @param value the value to add to the memory location.
+ * @return the value of th ememory location BEFORE the add operation took place.
+ */
+short unsigned int __sync_fetch_and_add_2(volatile void* ptr, short unsigned int value);
+
+#endif
+/**
+ * Default implementation of atomic fetch and add opertaion.
+ * GCC provides this where possible, but this is not supported on some CPU architectures...
+ *
+ * @param ptr pointer to the memory to access.
+ * @param value the value to add to the memory location.
+ * @return the value of th ememory location BEFORE the add operation took place.
+ */
+short unsigned int __sync_fetch_and_add_2(volatile void* ptr, short unsigned int value);
 
 #ifdef __cplusplus
 }

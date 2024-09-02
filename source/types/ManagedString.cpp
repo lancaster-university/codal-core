@@ -23,59 +23,59 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
-  * Class definition for a ManagedString.
-  *
-  * Uses basic reference counting to implement a copy-assignable, immutable string.
-  *
-  * This maps closely to the constructs found in many high level application languages,
-  * such as Touch Develop.
-  *
-  * Written from first principles here, for several reasons:
-  * 1) std::shared_ptr is not yet available on the ARMCC compiler
-  *
-  * 2) to reduce memory footprint - we don't need many of the other features in the std library
-  *
-  * 3) it makes an interesting case study for anyone interested in seeing how it works!
-  *
-  * 4) we need explicit reference counting to inter-op with low-level application langauge runtimes.
-  *
-  * 5) the reference counting needs to also work for read-only, flash-resident strings
-  */
-#include <string.h>
-#include <stdlib.h>
-
-#include "CodalConfig.h"
+ * Class definition for a ManagedString.
+ *
+ * Uses basic reference counting to implement a copy-assignable, immutable string.
+ *
+ * This maps closely to the constructs found in many high level application languages,
+ * such as Touch Develop.
+ *
+ * Written from first principles here, for several reasons:
+ * 1) std::shared_ptr is not yet available on the ARMCC compiler
+ *
+ * 2) to reduce memory footprint - we don't need many of the other features in the std library
+ *
+ * 3) it makes an interesting case study for anyone interested in seeing how it works!
+ *
+ * 4) we need explicit reference counting to inter-op with low-level application langauge runtimes.
+ *
+ * 5) the reference counting needs to also work for read-only, flash-resident strings
+ */
 #include "ManagedString.h"
+
+#include <stdlib.h>
+#include <string.h>
+
 #include "CodalCompat.h"
+#include "CodalConfig.h"
 
 using namespace codal;
 
-#define REF_TAG REF_TAG_STRING
+#define REF_TAG    REF_TAG_STRING
 #define EMPTY_DATA ((StringData*)(void*)emptyData)
 
 REF_COUNTED_DEF_EMPTY(0, 0)
 
-
 /**
-  * Internal constructor helper.
-  *
-  * Configures this ManagedString to refer to the static EmptyString
-  */
+ * Internal constructor helper.
+ *
+ * Configures this ManagedString to refer to the static EmptyString
+ */
 void ManagedString::initEmpty()
 {
     ptr = EMPTY_DATA;
 }
 
 /**
-  * Internal constructor helper.
-  *
-  * Creates this ManagedString based on a given null terminated char array.
-  */
-void ManagedString::initString(const char *str, int len)
+ * Internal constructor helper.
+ *
+ * Creates this ManagedString based on a given null terminated char array.
+ */
+void ManagedString::initString(const char* str, int len)
 {
     // Initialise this ManagedString as a new string, using the data provided.
     // We assume the string is sane, and null terminated.
-    ptr = (StringData *) malloc(sizeof(StringData) + len + 1);
+    ptr = (StringData*)malloc(sizeof(StringData) + len + 1);
     REF_COUNTED_INIT(ptr);
     ptr->len = len;
     memcpy(ptr->data, str, len);
@@ -83,20 +83,20 @@ void ManagedString::initString(const char *str, int len)
 }
 
 /**
-  * Constructor.
-  * Create a managed string from a specially prepared string literal.
-  *
-  * @param ptr The literal - first two bytes should be 0xff, then the length in little endian, then the literal. The literal has to be 4-byte aligned.
-  *
-  * @code
-  * static const char hello[] __attribute__ ((aligned (4))) = "\xff\xff\x05\x00" "Hello";
-  * ManagedString s((StringData*)(void*)hello);
-  * @endcode
-  */
-ManagedString::ManagedString(StringData *p)
+ * Constructor.
+ * Create a managed string from a specially prepared string literal.
+ *
+ * @param ptr The literal - first two bytes should be 0xff, then the length in little endian, then the literal. The
+ * literal has to be 4-byte aligned.
+ *
+ * @code
+ * static const char hello[] __attribute__ ((aligned (4))) = "\xff\xff\x05\x00" "Hello";
+ * ManagedString s((StringData*)(void*)hello);
+ * @endcode
+ */
+ManagedString::ManagedString(StringData* p)
 {
-    if(p == NULL)
-    {
+    if (p == NULL) {
         initEmpty();
         return;
     }
@@ -106,28 +106,28 @@ ManagedString::ManagedString(StringData *p)
 }
 
 /**
-  * Get current ptr, do not decr() it, and set the current instance to empty string.
-  *
-  * This is to be used by specialized runtimes which pass StringData around.
-  */
+ * Get current ptr, do not decr() it, and set the current instance to empty string.
+ *
+ * This is to be used by specialized runtimes which pass StringData around.
+ */
 StringData* ManagedString::leakData()
 {
-    StringData *res = ptr;
+    StringData* res = ptr;
     initEmpty();
     return res;
 }
 
 /**
-  * Constructor.
-  *
-  * Create a managed string from a given integer.
-  *
-  * @param value The integer from which to create the ManagedString.
-  *
-  * @code
-  * ManagedString s(20);
-  * @endcode
-  */
+ * Constructor.
+ *
+ * Create a managed string from a given integer.
+ *
+ * @param value The integer from which to create the ManagedString.
+ *
+ * @code
+ * ManagedString s(20);
+ * @endcode
+ */
 ManagedString::ManagedString(const int value)
 {
     char str[12];
@@ -137,41 +137,39 @@ ManagedString::ManagedString(const int value)
 }
 
 /**
-  * Constructor.
-  * Create a managed string from a given char.
-  *
-  * @param value The character from which to create the ManagedString.
-  *
-  * @code
-  * ManagedString s('a');
-  * @endcode
-  */
+ * Constructor.
+ * Create a managed string from a given char.
+ *
+ * @param value The character from which to create the ManagedString.
+ *
+ * @code
+ * ManagedString s('a');
+ * @endcode
+ */
 ManagedString::ManagedString(const char value)
 {
     char str[2] = {value, 0};
     initString(str, 1);
 }
 
-
 /**
-  * Constructor.
-  *
-  * Create a managed string from a pointer to an 8-bit character buffer.
-  *
-  * The buffer is copied to ensure safe memory management (the supplied
-  * character buffer may be declared on the stack for instance).
-  *
-  * @param str The character array on which to base the new ManagedString.
-  *
-  * @code
-  * ManagedString s("abcdefg");
-  * @endcode
-  */
-ManagedString::ManagedString(const char *str)
+ * Constructor.
+ *
+ * Create a managed string from a pointer to an 8-bit character buffer.
+ *
+ * The buffer is copied to ensure safe memory management (the supplied
+ * character buffer may be declared on the stack for instance).
+ *
+ * @param str The character array on which to base the new ManagedString.
+ *
+ * @code
+ * ManagedString s("abcdefg");
+ * @endcode
+ */
+ManagedString::ManagedString(const char* str)
 {
     // Sanity check. Return EmptyString for anything distasteful
-    if (str == NULL || *str == 0)
-    {
+    if (str == NULL || *str == 0) {
         initEmpty();
         return;
     }
@@ -180,23 +178,23 @@ ManagedString::ManagedString(const char *str)
 }
 
 /**
-  * Private Constructor.
-  *
-  * Create a managed string based on a concat of two strings.
-  * The buffer is copied to ensure sane memory management (the supplied
-  * character buffer may be declared on the stack for instance).
-  *
-  * @param str1 The first string on which to base the new ManagedString.
-  *
-  * @param str2 The second string on which to base the new ManagedString.
-  */
-ManagedString::ManagedString(const ManagedString &s1, const ManagedString &s2)
+ * Private Constructor.
+ *
+ * Create a managed string based on a concat of two strings.
+ * The buffer is copied to ensure sane memory management (the supplied
+ * character buffer may be declared on the stack for instance).
+ *
+ * @param str1 The first string on which to base the new ManagedString.
+ *
+ * @param str2 The second string on which to base the new ManagedString.
+ */
+ManagedString::ManagedString(const ManagedString& s1, const ManagedString& s2)
 {
     // Calculate length of new string.
     int len = s1.length() + s2.length();
 
     // Create a new buffer for holding the new string data.
-    ptr = (StringData*) malloc(sizeof(StringData) + len + 1);
+    ptr = (StringData*)malloc(sizeof(StringData) + len + 1);
     REF_COUNTED_INIT(ptr);
     ptr->len = len;
 
@@ -206,42 +204,41 @@ ManagedString::ManagedString(const ManagedString &s1, const ManagedString &s2)
     ptr->data[len] = 0;
 }
 
-
 /**
-  * Constructor.
-  * Create a ManagedString from a ManagedBuffer. All bytes in the
-  * ManagedBuffer are added to the ManagedString.
-  *
-  * @param buffer The ManagedBuffer from which to create the ManagedString.
-  *
-  * @code
-  * ManagedString s = radio.datagram.recv();
-  * @endcode
-  */
+ * Constructor.
+ * Create a ManagedString from a ManagedBuffer. All bytes in the
+ * ManagedBuffer are added to the ManagedString.
+ *
+ * @param buffer The ManagedBuffer from which to create the ManagedString.
+ *
+ * @code
+ * ManagedString s = radio.datagram.recv();
+ * @endcode
+ */
 ManagedString::ManagedString(ManagedBuffer buffer)
 {
     initString((char*)buffer.getBytes(), buffer.length());
 }
 
 /**
-  * Constructor.
-  * Create a ManagedString from a pointer to an 8-bit character buffer of a given length.
-  *
-  * The buffer is copied to ensure sane memory management (the supplied
-  * character buffer may be declared on the stack for instance).
-  *
-  * @param str The character array on which to base the new ManagedString.
-  *
-  * @param length The length of the character array
-  *
-  * @code
-  * ManagedString s("abcdefg",7);
-  * @endcode
-  */
-ManagedString::ManagedString(const char *str, const int16_t length)
+ * Constructor.
+ * Create a ManagedString from a pointer to an 8-bit character buffer of a given length.
+ *
+ * The buffer is copied to ensure sane memory management (the supplied
+ * character buffer may be declared on the stack for instance).
+ *
+ * @param str The character array on which to base the new ManagedString.
+ *
+ * @param length The length of the character array
+ *
+ * @code
+ * ManagedString s("abcdefg",7);
+ * @endcode
+ */
+ManagedString::ManagedString(const char* str, const int16_t length)
 {
     // Sanity check. Return EmptyString for anything distasteful
-    if (str == NULL || *str == 0 || (uint16_t)length > strlen(str)) // XXX length should be unsigned on the interface
+    if (str == NULL || *str == 0 || (uint16_t)length > strlen(str))  // XXX length should be unsigned on the interface
     {
         initEmpty();
         return;
@@ -251,75 +248,73 @@ ManagedString::ManagedString(const char *str, const int16_t length)
 }
 
 /**
-  * Copy constructor.
-  * Makes a new ManagedString identical to the one supplied.
-  *
-  * Shares the character buffer and reference count with the supplied ManagedString.
-  *
-  * @param s The ManagedString to copy.
-  *
-  * @code
-  * ManagedString s("abcdefg");
-  * ManagedString p(s);
-  * @endcode
-  */
-ManagedString::ManagedString(const ManagedString &s)
+ * Copy constructor.
+ * Makes a new ManagedString identical to the one supplied.
+ *
+ * Shares the character buffer and reference count with the supplied ManagedString.
+ *
+ * @param s The ManagedString to copy.
+ *
+ * @code
+ * ManagedString s("abcdefg");
+ * ManagedString p(s);
+ * @endcode
+ */
+ManagedString::ManagedString(const ManagedString& s)
 {
     ptr = s.ptr;
     ptr->incr();
 }
 
-
 /**
-  * Default constructor.
-  *
-  * Create an empty ManagedString.
-  *
-  * @code
-  * ManagedString s();
-  * @endcode
-  */
+ * Default constructor.
+ *
+ * Create an empty ManagedString.
+ *
+ * @code
+ * ManagedString s();
+ * @endcode
+ */
 ManagedString::ManagedString()
 {
     initEmpty();
 }
 
 /**
-  * Destructor.
-  *
-  * Free this ManagedString, and decrement the reference count to the
-  * internal character buffer.
-  *
-  * If we're holding the last reference, also free the character buffer.
-  */
+ * Destructor.
+ *
+ * Free this ManagedString, and decrement the reference count to the
+ * internal character buffer.
+ *
+ * If we're holding the last reference, also free the character buffer.
+ */
 ManagedString::~ManagedString()
 {
     ptr->decr();
 }
 
 /**
-  * Copy assign operation.
-  *
-  * Called when one ManagedString is assigned the value of another.
-  *
-  * If the ManagedString being assigned is already referring to a character buffer,
-  * decrement the reference count and free up the buffer as necessary.
-  *
-  * Then, update our character buffer to refer to that of the supplied ManagedString,
-  * and increase its reference count.
-  *
-  * @param s The ManagedString to copy.
-  *
-  * @code
-  * ManagedString s("abcd");
-  * ManagedString p("efgh");
-  * p = s   // p now points to s, s' ref is incremented
-  * @endcode
-  */
-ManagedString& ManagedString::operator = (const ManagedString& s)
+ * Copy assign operation.
+ *
+ * Called when one ManagedString is assigned the value of another.
+ *
+ * If the ManagedString being assigned is already referring to a character buffer,
+ * decrement the reference count and free up the buffer as necessary.
+ *
+ * Then, update our character buffer to refer to that of the supplied ManagedString,
+ * and increase its reference count.
+ *
+ * @param s The ManagedString to copy.
+ *
+ * @code
+ * ManagedString s("abcd");
+ * ManagedString p("efgh");
+ * p = s   // p now points to s, s' ref is incremented
+ * @endcode
+ */
+ManagedString& ManagedString::operator=(const ManagedString& s)
 {
-    if (this->ptr == s.ptr)
-        return *this;
+    if (this->ptr == s.ptr) return *this;
 
     ptr->decr();
     ptr = s.ptr;
@@ -329,184 +324,179 @@ ManagedString& ManagedString::operator = (const ManagedString& s)
 }
 
 /**
-  * Equality operation.
-  *
-  * Called when one ManagedString is tested to be equal to another using the '==' operator.
-  *
-  * @param s The ManagedString to test ourselves against.
-  *
-  * @return true if this ManagedString is identical to the one supplied, false otherwise.
-  *
-  * @code
-  * DeviceDisplay display;
-  * ManagedString s("abcd");
-  * ManagedString p("efgh");
-  *
-  * if(p == s)
-  *     display.scroll("We are the same!");
-  * else
-  *     display.scroll("We are different!"); //p is not equal to s - this will be called
-  * @endcode
-  */
-bool ManagedString::operator== (const ManagedString& s)
+ * Equality operation.
+ *
+ * Called when one ManagedString is tested to be equal to another using the '==' operator.
+ *
+ * @param s The ManagedString to test ourselves against.
+ *
+ * @return true if this ManagedString is identical to the one supplied, false otherwise.
+ *
+ * @code
+ * DeviceDisplay display;
+ * ManagedString s("abcd");
+ * ManagedString p("efgh");
+ *
+ * if(p == s)
+ *     display.scroll("We are the same!");
+ * else
+ *     display.scroll("We are different!"); //p is not equal to s - this will be called
+ * @endcode
+ */
+bool ManagedString::operator==(const ManagedString& s)
 {
-    return ((length() == s.length()) && (strcmp(toCharArray(),s.toCharArray())==0));
+    return ((length() == s.length()) && (strcmp(toCharArray(), s.toCharArray()) == 0));
 }
 
 /**
-  * Inequality operation.
-  *
-  * Called when one ManagedString is tested to be not equal using the '!=' operator.
-  *
-  * @param s The ManagedString to test ourselves against.
-  *
-  * @return true if this ManagedString is identical to the one supplied, false otherwise.
-  *
-  * @code
-  * DeviceDisplay display;
-  * ManagedString s("abcd");
-  * ManagedString p("efgh");
-  *
-  * if(p != s)
-  *     display.scroll("We are different!");
-  * else
-  *     display.scroll("We are the same!");
-  * @endcode
-  */
-bool ManagedString::operator!= (const ManagedString& s)
+ * Inequality operation.
+ *
+ * Called when one ManagedString is tested to be not equal using the '!=' operator.
+ *
+ * @param s The ManagedString to test ourselves against.
+ *
+ * @return true if this ManagedString is identical to the one supplied, false otherwise.
+ *
+ * @code
+ * DeviceDisplay display;
+ * ManagedString s("abcd");
+ * ManagedString p("efgh");
+ *
+ * if(p != s)
+ *     display.scroll("We are different!");
+ * else
+ *     display.scroll("We are the same!");
+ * @endcode
+ */
+bool ManagedString::operator!=(const ManagedString& s)
 {
     return !(*this == s);
 }
 
 /**
-  * Inequality operation.
-  *
-  * Called when one ManagedString is tested to be less than another using the '<' operator.
-  *
-  * @param s The ManagedString to test ourselves against.
-  *
-  * @return true if this ManagedString is alphabetically less than to the one supplied, false otherwise.
-  *
-  * @code
-  * DeviceDisplay display;
-  * ManagedString s("a");
-  * ManagedString p("b");
-  *
-  * if(s < p)
-  *     display.scroll("a is before b!"); //a is before b
-  * else
-  *     display.scroll("b is before a!");
-  * @endcode
-  */
-bool ManagedString::operator< (const ManagedString& s)
+ * Inequality operation.
+ *
+ * Called when one ManagedString is tested to be less than another using the '<' operator.
+ *
+ * @param s The ManagedString to test ourselves against.
+ *
+ * @return true if this ManagedString is alphabetically less than to the one supplied, false otherwise.
+ *
+ * @code
+ * DeviceDisplay display;
+ * ManagedString s("a");
+ * ManagedString p("b");
+ *
+ * if(s < p)
+ *     display.scroll("a is before b!"); //a is before b
+ * else
+ *     display.scroll("b is before a!");
+ * @endcode
+ */
+bool ManagedString::operator<(const ManagedString& s)
 {
-    return (strcmp(toCharArray(), s.toCharArray())<0);
+    return (strcmp(toCharArray(), s.toCharArray()) < 0);
 }
 
 /**
-  * Inequality operation.
-  *
-  * Called when one ManagedString is tested to be greater than another using the '>' operator.
-  *
-  * @param s The ManagedString to test ourselves against.
-  *
-  * @return true if this ManagedString is alphabetically greater than to the one supplied, false otherwise.
-  *
-  * @code
-  * DeviceDisplay display;
-  * ManagedString s("a");
-  * ManagedString p("b");
-  *
-  * if(p>a)
-  *     display.scroll("b is after a!"); //b is after a
-  * else
-  *     display.scroll("a is after b!");
-  * @endcode
-  */
-bool ManagedString::operator> (const ManagedString& s)
+ * Inequality operation.
+ *
+ * Called when one ManagedString is tested to be greater than another using the '>' operator.
+ *
+ * @param s The ManagedString to test ourselves against.
+ *
+ * @return true if this ManagedString is alphabetically greater than to the one supplied, false otherwise.
+ *
+ * @code
+ * DeviceDisplay display;
+ * ManagedString s("a");
+ * ManagedString p("b");
+ *
+ * if(p>a)
+ *     display.scroll("b is after a!"); //b is after a
+ * else
+ *     display.scroll("a is after b!");
+ * @endcode
+ */
+bool ManagedString::operator>(const ManagedString& s)
 {
-    return (strcmp(toCharArray(), s.toCharArray())>0);
+    return (strcmp(toCharArray(), s.toCharArray()) > 0);
 }
 
 /**
-  * Extracts a ManagedString from this string, at the position provided.
-  *
-  * @param start The index of the first character to extract, indexed from zero.
-  *
-  * @param length The number of characters to extract from the start position
-  *
-  * @return a ManagedString representing the requested substring.
-  *
-  * @code
-  * DeviceDisplay display;
-  * ManagedString s("abcdefg");
-  *
-  * display.scroll(s.substring(0,2)) // displays "ab"
-  * @endcode
-  */
+ * Extracts a ManagedString from this string, at the position provided.
+ *
+ * @param start The index of the first character to extract, indexed from zero.
+ *
+ * @param length The number of characters to extract from the start position
+ *
+ * @return a ManagedString representing the requested substring.
+ *
+ * @code
+ * DeviceDisplay display;
+ * ManagedString s("abcdefg");
+ *
+ * display.scroll(s.substring(0,2)) // displays "ab"
+ * @endcode
+ */
 ManagedString ManagedString::substring(int16_t start, int16_t length)
 {
     // If the parameters are illegal, just return a reference to the empty string.
-    if (start >= this->length())
-        return ManagedString(EMPTY_DATA);
+    if (start >= this->length()) return ManagedString(EMPTY_DATA);
 
     // Compute a safe copy length;
-    length = min(this->length()-start, length);
+    length = min(this->length() - start, length);
 
     // Build a ManagedString from this.
-    return ManagedString(toCharArray()+start, length);
+    return ManagedString(toCharArray() + start, length);
 }
 
 /**
-  * Concatenates two strings.
-  *
-  * @param lhs The first ManagedString to concatenate.
-  * @param rhs The second ManagedString to concatenate.
-  *
-  * @return a new ManagedString representing the joined strings.
-  *
-  * @code
-  * DeviceDisplay display;
-  * ManagedString s("abcd");
-  * ManagedString p("efgh")
-  *
-  * display.scroll(s + p) // scrolls "abcdefgh"
-  * @endcode
-  */
-ManagedString (codal::operator+) (const ManagedString& lhs, const ManagedString& rhs)
+ * Concatenates two strings.
+ *
+ * @param lhs The first ManagedString to concatenate.
+ * @param rhs The second ManagedString to concatenate.
+ *
+ * @return a new ManagedString representing the joined strings.
+ *
+ * @code
+ * DeviceDisplay display;
+ * ManagedString s("abcd");
+ * ManagedString p("efgh")
+ *
+ * display.scroll(s + p) // scrolls "abcdefgh"
+ * @endcode
+ */
+ManagedString(codal::operator+)(const ManagedString& lhs, const ManagedString& rhs)
 {
-
     // If the either string is empty, nothing to do!
-    if (rhs.length() == 0)
-        return lhs;
+    if (rhs.length() == 0) return lhs;
 
-    if (lhs.length() == 0)
-        return rhs;
+    if (lhs.length() == 0) return rhs;
 
     return ManagedString(lhs, rhs);
 }
 
-
 /**
-  * Provides a character value at a given position in the string, indexed from zero.
-  *
-  * @param index The position of the character to return.
-  *
-  * @return the character at position index, zero if index is invalid.
-  *
-  * @code
-  * DeviceDisplay display;
-  * ManagedString s("abcd");
-  *
-  * display.scroll(s.charAt(1)) // scrolls "b"
-  * @endcode
-  */
+ * Provides a character value at a given position in the string, indexed from zero.
+ *
+ * @param index The position of the character to return.
+ *
+ * @return the character at position index, zero if index is invalid.
+ *
+ * @code
+ * DeviceDisplay display;
+ * ManagedString s("abcd");
+ *
+ * display.scroll(s.charAt(1)) // scrolls "b"
+ * @endcode
+ */
 char ManagedString::charAt(int16_t index)
 {
-    return (index >=0 && index < length()) ? ptr->data[index] : 0;
+    return (index >= 0 && index < length()) ? ptr->data[index] : 0;
 }
 
 /**
-  * Empty string constant literal
-  */
+ * Empty string constant literal
+ */
 ManagedString ManagedString::EmptyString(EMPTY_DATA);

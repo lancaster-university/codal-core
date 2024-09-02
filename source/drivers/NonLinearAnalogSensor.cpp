@@ -23,8 +23,9 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
- * Class definition for a normalised, non-linear analog sensor, that takes the general form of a logarithmic response to a sensed value, in a potential divider.
- * Implements a base class for such a sensor, using the Steinhart-Hart equation to delineate a result.
+ * Class definition for a normalised, non-linear analog sensor, that takes the general form of a logarithmic response to
+ * a sensed value, in a potential divider. Implements a base class for such a sensor, using the Steinhart-Hart equation
+ * to delineate a result.
  */
 
 #include "NonLinearAnalogSensor.h"
@@ -43,13 +44,15 @@ using namespace codal;
  * @param seriesResistor The value (in ohms) of the resistor in series with the sensor.
  * @param zeroOffset Optional zero offset applied to all SI units (e.g. 273.15 for temperature sensing in C vs Kelvin).
  */
-NonLinearAnalogSensor::NonLinearAnalogSensor(Pin &pin, uint16_t id, float nominalValue, float nominalReading, float beta, float seriesResistor, float zeroOffset) : AnalogSensor(pin, id)
+NonLinearAnalogSensor::NonLinearAnalogSensor(Pin& pin, uint16_t id, float nominalValue, float nominalReading,
+                                             float beta, float seriesResistor, float zeroOffset)
+    : AnalogSensor(pin, id)
 {
-    this->nominalValue = nominalValue;
+    this->nominalValue   = nominalValue;
     this->nominalReading = nominalReading;
-    this->beta = beta;
+    this->beta           = beta;
     this->seriesResistor = seriesResistor;
-    this->zeroOffset = zeroOffset;
+    this->zeroOffset     = zeroOffset;
 }
 
 /**
@@ -63,17 +66,19 @@ void NonLinearAnalogSensor::updateSample()
     float value;
 
     sensorReading = (((1023.0f) * this->seriesResistor) / this->readValue()) - this->seriesResistor;
-    value = (1.0f / ((log(sensorReading / this->nominalReading) / this->beta) + (1.0f / (this->nominalValue + this->zeroOffset)))) - this->zeroOffset;
+    value         = (1.0f / ((log(sensorReading / this->nominalReading) / this->beta) +
+                     (1.0f / (this->nominalValue + this->zeroOffset)))) -
+            this->zeroOffset;
 
-    // If this is the first reading performed, take it a a baseline. Otherwise, perform a decay average to smooth out the data.
-    if (!(status & ANALOG_SENSOR_INITIALISED))
-    {
+    // If this is the first reading performed, take it a a baseline. Otherwise, perform a decay average to smooth out
+    // the data.
+    if (!(status & ANALOG_SENSOR_INITIALISED)) {
         this->sensorValue = value;
-        this->status |=  ANALOG_SENSOR_INITIALISED;
+        this->status |= ANALOG_SENSOR_INITIALISED;
     }
-    else
-    {
-        this->sensorValue = ((this->sensorValue * (1023 - this->sensitivity)) + ((uint16_t)value * this->sensitivity)) >> 10;
+    else {
+        this->sensorValue =
+            ((this->sensorValue * (1023 - this->sensitivity)) + ((uint16_t)value * this->sensitivity)) >> 10;
     }
 
     checkThresholding();

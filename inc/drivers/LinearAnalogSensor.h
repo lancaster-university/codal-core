@@ -25,49 +25,45 @@ DEALINGS IN THE SOFTWARE.
 #ifndef LINEAR_ANALOG_SENSOR_H
 #define LINEAR_ANALOG_SENSOR_H
 
-#include "CodalConfig.h"
 #include "AnalogSensor.h"
+#include "CodalConfig.h"
 
+namespace codal {
+/**
+ * Class definition for a normalised, linear analog sensor, that takes the general form of a linear response between
+ * sensed value and result. Given an input range and an output range, automatically scales sampled data into the given
+ * output range.
+ */
+class LinearAnalogSensor : public AnalogSensor {
+  private:
+    uint16_t inputFloor;     // The minimum level in the input range.
+    float outputFloor;       // The minimum level in the output range.
+    float conversionFactor;  // no of output units per input unit.
 
-namespace codal
-{
+  public:
     /**
-     * Class definition for a normalised, linear analog sensor, that takes the general form of a linear response between sensed value and result.
-     * Given an input range and an output range, automatically scales sampled data into the given output range.
+     * Constructor.
+     *
+     * Creates a LinearAnalogSensor.
+     *
+     * @param pin The pin on which to sense
+     * @param id The ID of this compoenent e.g. DEVICE_ID_THERMOMETER
+     * @param inputFloor The minimum level in the input range.
+     * @param inputCeiling The maximum level in the input range.
+     * @param outputFloor The minimum level in the output range. Default: 0.
+     * @param outputCeiling The maximum level in the output range. Default: 1023.
+     *
      */
-    class LinearAnalogSensor : public AnalogSensor
-    {
-        private:
-        
-        uint16_t inputFloor;        // The minimum level in the input range.
-        float outputFloor;       // The minimum level in the output range.
-        float conversionFactor;  // no of output units per input unit.
+    LinearAnalogSensor(Pin& pin, uint16_t id, uint16_t sampleFloor, uint16_t sampleCeiling, float valueFloor = 0.0f,
+                       float valueCeiling = 1023.0f);
 
-        public:
-
-        /**
-         * Constructor.
-         *
-         * Creates a LinearAnalogSensor.
-         *
-         * @param pin The pin on which to sense
-         * @param id The ID of this compoenent e.g. DEVICE_ID_THERMOMETER
-         * @param inputFloor The minimum level in the input range.
-         * @param inputCeiling The maximum level in the input range.
-         * @param outputFloor The minimum level in the output range. Default: 0.
-         * @param outputCeiling The maximum level in the output range. Default: 1023.
-         *
-         */
-        LinearAnalogSensor(Pin &pin, uint16_t id, uint16_t sampleFloor, uint16_t sampleCeiling, float valueFloor = 0.0f, float valueCeiling = 1023.0f);
-
-        /**
-         * Updates the internal reading of the sensor. Typically called periodicaly.
-         *
-         * @return DEVICE_OK on success.
-         */
-        virtual void updateSample();
-
-    };
-}
+    /**
+     * Updates the internal reading of the sensor. Typically called periodicaly.
+     *
+     * @return DEVICE_OK on success.
+     */
+    virtual void updateSample();
+};
+}  // namespace codal
 
 #endif

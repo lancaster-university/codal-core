@@ -26,19 +26,19 @@ DEALINGS IN THE SOFTWARE.
 #ifndef CODAL_MAG3110_H
 #define CODAL_MAG3110_H
 
-#include "CodalConfig.h"
-#include "I2C.h"
-#include "Compass.h"
 #include "Accelerometer.h"
+#include "CodalConfig.h"
+#include "Compass.h"
+#include "I2C.h"
 
 /**
-  * I2C constants
-  */
-#define MAG3110_DEFAULT_ADDR    0x1D
+ * I2C constants
+ */
+#define MAG3110_DEFAULT_ADDR 0x1D
 
 /**
-  * MAG3110 Register map
-  */
+ * MAG3110 Register map
+ */
 #define MAG_DR_STATUS 0x00
 #define MAG_OUT_X_MSB 0x01
 #define MAG_OUT_X_LSB 0x02
@@ -59,62 +59,58 @@ DEALINGS IN THE SOFTWARE.
 #define MAG_CTRL_REG2 0x11
 
 /**
-  * Configuration options
-  */
-struct MAG3110SampleRateConfig
-{
-    uint32_t        sample_period;
-    uint8_t         ctrl_reg1;
+ * Configuration options
+ */
+struct MAG3110SampleRateConfig {
+    uint32_t sample_period;
+    uint8_t ctrl_reg1;
 };
 
 extern const MAG3110SampleRateConfig MAG3110SampleRate[];
 
-#define MAG3110_SAMPLE_RATES                    11
+#define MAG3110_SAMPLE_RATES 11
 
 /**
-  * Term to convert sample data into SI units
-  */
-#define MAG3110_NORMALIZE_SAMPLE(x) (100*x)
+ * Term to convert sample data into SI units
+ */
+#define MAG3110_NORMALIZE_SAMPLE(x) (100 * x)
 
 /**
-  * MAG3110 MAGIC ID value
-  * Returned from the MAG_WHO_AM_I register for ID purposes.
-  */
+ * MAG3110 MAGIC ID value
+ * Returned from the MAG_WHO_AM_I register for ID purposes.
+ */
 #define MAG3110_WHOAMI_VAL 0xC4
 
-namespace codal
-{
-      /**
-      * Class definition for a MAG3110 Compass.
-      *
-      * Represents an implementation of the Freescale MAG3110 I2C Magnetmometer.
-      */
-    class MAG3110 : public Compass
-    {
-        uint16_t                address;                  // I2C address of the magnetmometer.
-        Pin&                    int1;                     // Data ready interrupt.
-        I2C&		                i2c;                      // The I2C interface the sensor is connected to.
+namespace codal {
+/**
+ * Class definition for a MAG3110 Compass.
+ *
+ * Represents an implementation of the Freescale MAG3110 I2C Magnetmometer.
+ */
+class MAG3110 : public Compass {
+    uint16_t address;  // I2C address of the magnetmometer.
+    Pin& int1;         // Data ready interrupt.
+    I2C& i2c;          // The I2C interface the sensor is connected to.
 
-        public:
+  public:
+    MAG3110(I2C& _i2c, Pin& int1, Accelerometer& _accelerometer, CoordinateSpace& coordinateSpace,
+            uint16_t address = MAG3110_DEFAULT_ADDR, uint16_t id = DEVICE_ID_COMPASS);
 
-        MAG3110(I2C& _i2c, Pin& int1, Accelerometer& _accelerometer, CoordinateSpace &coordinateSpace, uint16_t address = MAG3110_DEFAULT_ADDR, uint16_t id = DEVICE_ID_COMPASS);
+    int whoAmI();
 
-        int whoAmI();
+    /**
+     * Configures the compass for the sample rate defined in this object.
+     * The nearest values are chosen to those defined that are supported by the hardware.
+     * The instance variables are then updated to reflect reality.
+     *
+     * @return DEVICE_OK or DEVICE_I2C_ERROR if the magnetometer could not be configured.
+     */
+    virtual int configure() override;
 
-        /**
-          * Configures the compass for the sample rate defined in this object.
-          * The nearest values are chosen to those defined that are supported by the hardware.
-          * The instance variables are then updated to reflect reality.
-          *
-          * @return DEVICE_OK or DEVICE_I2C_ERROR if the magnetometer could not be configured.
-          */
-        virtual int configure() override;
+    virtual int requestUpdate() override;
 
-        virtual int requestUpdate() override;
-
-        virtual void idleCallback() override;
-    };
-}
-
+    virtual void idleCallback() override;
+};
+}  // namespace codal
 
 #endif

@@ -23,13 +23,14 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
-  * Class definition for LEDMatrix.
-  *
-  * Represents an LED matrix array.
-  */
+ * Class definition for LEDMatrix.
+ *
+ * Represents an LED matrix array.
+ */
 #include "LEDMatrix.h"
-#include "CodalFiber.h"
+
 #include "CodalDmesg.h"
+#include "CodalFiber.h"
 #include "ErrorNo.h"
 
 using namespace codal;
@@ -37,54 +38,51 @@ using namespace codal;
 const int greyScaleTimings[LED_MATRIX_GREYSCALE_BIT_DEPTH] = {1, 23, 70, 163, 351, 726, 1476, 2976};
 
 /**
-  * Constructor.
-  *
-  * Create a software representation an LED matrix.
-  * The display is initially blank.
-  *
-  * @param map The mapping information that relates pin inputs/outputs to physical screen coordinates.
-  * @param id The id the display should use when sending events on the MessageBus. Defaults to DEVICE_ID_DISPLAY.
-  */
-LEDMatrix::LEDMatrix(const MatrixMap &map, uint16_t id) : Display(map.width, map.height, id), matrixMap(map)
+ * Constructor.
+ *
+ * Create a software representation an LED matrix.
+ * The display is initially blank.
+ *
+ * @param map The mapping information that relates pin inputs/outputs to physical screen coordinates.
+ * @param id The id the display should use when sending events on the MessageBus. Defaults to DEVICE_ID_DISPLAY.
+ */
+LEDMatrix::LEDMatrix(const MatrixMap& map, uint16_t id) : Display(map.width, map.height, id), matrixMap(map)
 {
-    this->rotation = MATRIX_DISPLAY_ROTATION_0;
+    this->rotation        = MATRIX_DISPLAY_ROTATION_0;
     this->greyscaleBitMsk = 0x01;
-    this->timingCount = 0;
+    this->timingCount     = 0;
     this->setBrightness(LED_MATRIX_DEFAULT_BRIGHTNESS);
-    this->mode = DISPLAY_MODE_BLACK_AND_WHITE;
+    this->mode      = DISPLAY_MODE_BLACK_AND_WHITE;
     this->strobeRow = 0;
 
-    if(EventModel::defaultEventBus)
-        EventModel::defaultEventBus->listen(id, LED_MATRIX_EVT_FRAME_TIMEOUT, this, &LEDMatrix::onTimeoutEvent, MESSAGE_BUS_LISTENER_IMMEDIATE);
+    if (EventModel::defaultEventBus)
+        EventModel::defaultEventBus->listen(id, LED_MATRIX_EVT_FRAME_TIMEOUT, this, &LEDMatrix::onTimeoutEvent,
+                                            MESSAGE_BUS_LISTENER_IMMEDIATE);
 
     this->status |= DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
     this->status |= DEVICE_COMPONENT_RUNNING;
 }
 
 /**
-  * Internal frame update method, used to strobe the display.
-  *
-  * TODO: Write a more efficient, complementary variation of this method for the case where
-  * we have more rows than columns.
-  */
+ * Internal frame update method, used to strobe the display.
+ *
+ * TODO: Write a more efficient, complementary variation of this method for the case where
+ * we have more rows than columns.
+ */
 void LEDMatrix::periodicCallback()
 {
-    if(!(status & DEVICE_COMPONENT_RUNNING))
-        return;
+    if (!(status & DEVICE_COMPONENT_RUNNING)) return;
 
-    if(mode == DISPLAY_MODE_BLACK_AND_WHITE_LIGHT_SENSE)
-    {
+    if (mode == DISPLAY_MODE_BLACK_AND_WHITE_LIGHT_SENSE) {
         renderWithLightSense();
         return;
     }
 
-    if(mode == DISPLAY_MODE_BLACK_AND_WHITE)
-        render();
+    if (mode == DISPLAY_MODE_BLACK_AND_WHITE) render();
 
-    if(mode == DISPLAY_MODE_GREYSCALE)
-    {
+    if (mode == DISPLAY_MODE_GREYSCALE) {
         greyscaleBitMsk = 0x01;
-        timingCount = 0;
+        timingCount     = 0;
         renderGreyscale();
     }
 }
@@ -103,8 +101,7 @@ void LEDMatrix::render()
 {
     // Simple optimisation.
     // If display is at zero brightness, there's nothing to do.
-    if(brightness == 0)
-        return;
+    if (brightness == 0) return;
 
     // Turn off the previous row
     matrixMap.rowPins[strobeRow]->setDigitalValue(0);
@@ -112,36 +109,31 @@ void LEDMatrix::render()
 
     // Move on to the next row.
     strobeRow++;
-    if(strobeRow == matrixMap.rows)
-        strobeRow = 0;
+    if (strobeRow == matrixMap.rows) strobeRow = 0;
 
     // Calculate the bitpattern to write.
-    for (int i = 0; i < matrixMap.columns; i++)
-    {
+    for (int i = 0; i < matrixMap.columns; i++) {
         int index = (i * matrixMap.rows) + strobeRow;
 
         int x = matrixMap.map[index].x;
         int y = matrixMap.map[index].y;
         int t = x;
 
-        if(rotation == MATRIX_DISPLAY_ROTATION_90)
-        {
-                x = width - 1 - y;
-                y = t;
+        if (rotation == MATRIX_DISPLAY_ROTATION_90) {
+            x = width - 1 - y;
+            y = t;
         }
 
-        if(rotation == MATRIX_DISPLAY_ROTATION_180)
-        {
-                x = width - 1 - x;
-                y = height - 1 - y;
+        if (rotation == MATRIX_DISPLAY_ROTATION_180) {
+            x = width - 1 - x;
+            y = height - 1 - y;
         }
 
-        if(rotation == MATRIX_DISPLAY_ROTATION_270)
-        {
-                x = y;
-                y = height - 1 - t;
+        if (rotation == MATRIX_DISPLAY_ROTATION_270) {
+            x = y;
+            y = height - 1 - t;
         }
-        if (image.getBitmap()[y*width + x])
+        if (image.getBitmap()[y * width + x])
             matrixMap.columnPins[i]->setDigitalValue(0);
         else
             matrixMap.columnPins[i]->setDigitalValue(1);
@@ -150,125 +142,121 @@ void LEDMatrix::render()
     // Turn off the previous row
     matrixMap.rowPins[strobeRow]->setDigitalValue(1);
 
-    //timer does not have enough resolution for brightness of 1. 23.53 us
-    #pragma GCC diagnostic push
-    #pragma GCC diagnostic ignored "-Wtype-limits"
-    if(brightness <= LED_MATRIX_MAXIMUM_BRIGHTNESS && brightness > LED_MATRIX_MINIMUM_BRIGHTNESS)
+// timer does not have enough resolution for brightness of 1. 23.53 us
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wtype-limits"
+    if (brightness <= LED_MATRIX_MAXIMUM_BRIGHTNESS && brightness > LED_MATRIX_MINIMUM_BRIGHTNESS)
         system_timer_event_after_us(frameTimeout, id, LED_MATRIX_EVT_FRAME_TIMEOUT);
-    #pragma GCC diagnostic pop
+#pragma GCC diagnostic pop
 
-    //this will take around 23us to execute
-    if(brightness <= LED_MATRIX_MINIMUM_BRIGHTNESS)
-        renderFinish();
+    // this will take around 23us to execute
+    if (brightness <= LED_MATRIX_MINIMUM_BRIGHTNESS) renderFinish();
 }
 
 void LEDMatrix::renderWithLightSense()
 {
-    //reset the row counts and bit mask when we have hit the max.
-    if(strobeRow == matrixMap.rows + 1)
-    {
+    // reset the row counts and bit mask when we have hit the max.
+    if (strobeRow == matrixMap.rows + 1) {
         Event(id, LED_MATRIX_EVT_LIGHT_SENSE);
         strobeRow = 0;
     }
-    else
-    {
+    else {
         render();
     }
-
 }
 
 void LEDMatrix::renderGreyscale()
 {
-/*
-    uint32_t row_data = 0x01 << (matrixMap.rowStart + strobeRow);
-    uint32_t col_data = 0;
+    /*
+        uint32_t row_data = 0x01 << (matrixMap.rowStart + strobeRow);
+        uint32_t col_data = 0;
 
-    // Calculate the bitpattern to write.
-    for (int i = 0; i < matrixMap.columns; i++)
-    {
-        int index = (i * matrixMap.rows) + strobeRow;
-
-        int x = matrixMap.map[index].x;
-        int y = matrixMap.map[index].y;
-        int t = x;
-
-        if(rotation == MATRIX_DISPLAY_ROTATION_90)
+        // Calculate the bitpattern to write.
+        for (int i = 0; i < matrixMap.columns; i++)
         {
-                x = width - 1 - y;
-                y = t;
+            int index = (i * matrixMap.rows) + strobeRow;
+
+            int x = matrixMap.map[index].x;
+            int y = matrixMap.map[index].y;
+            int t = x;
+
+            if(rotation == MATRIX_DISPLAY_ROTATION_90)
+            {
+                    x = width - 1 - y;
+                    y = t;
+            }
+
+            if(rotation == MATRIX_DISPLAY_ROTATION_180)
+            {
+                    x = width - 1 - x;
+                    y = height - 1 - y;
+            }
+
+            if(rotation == MATRIX_DISPLAY_ROTATION_270)
+            {
+                    x = y;
+                    y = height - 1 - t;
+            }
+
+            if(min(image.getBitmap()[y * width + x],brightness) & greyscaleBitMsk)
+                col_data |= (1 << i);
         }
 
-        if(rotation == MATRIX_DISPLAY_ROTATION_180)
+        // Invert column bits (as we're sinking not sourcing power), and mask off any unused bits.
+        col_data = ~col_data << matrixMap.columnStart & col_mask;
+
+        // Write the new bit pattern
+        *LEDMatrix = col_data | row_data;
+
+        if(timingCount > CODAL_DISPLAY_GREYSCALE_BIT_DEPTH-1)
+            return;
+
+        greyscaleBitMsk <<= 1;
+
+        if(timingCount < 3)
         {
-                x = width - 1 - x;
-                y = height - 1 - y;
+            wait_us(greyScaleTimings[timingCount++]);
+            renderGreyscale();
+            return;
         }
-
-        if(rotation == MATRIX_DISPLAY_ROTATION_270)
-        {
-                x = y;
-                y = height - 1 - t;
-        }
-
-        if(min(image.getBitmap()[y * width + x],brightness) & greyscaleBitMsk)
-            col_data |= (1 << i);
-    }
-
-    // Invert column bits (as we're sinking not sourcing power), and mask off any unused bits.
-    col_data = ~col_data << matrixMap.columnStart & col_mask;
-
-    // Write the new bit pattern
-    *LEDMatrix = col_data | row_data;
-
-    if(timingCount > CODAL_DISPLAY_GREYSCALE_BIT_DEPTH-1)
-        return;
-
-    greyscaleBitMsk <<= 1;
-
-    if(timingCount < 3)
-    {
-        wait_us(greyScaleTimings[timingCount++]);
-        renderGreyscale();
-        return;
-    }
-    renderTimer.attach_us(this,&LEDMatrix::renderGreyscale, greyScaleTimings[timingCount++]);
-*/
+        renderTimer.attach_us(this,&LEDMatrix::renderGreyscale, greyScaleTimings[timingCount++]);
+    */
 }
 
 /**
-  * Configures the mode of the display.
-  *
-  * @param mode The mode to swap the display into. One of: DISPLAY_MODE_GREYSCALE,
-  *             DISPLAY_MODE_BLACK_AND_WHITE, DISPLAY_MODE_BLACK_AND_WHITE_LIGHT_SENSE
-  *
-  * @code
-  * display.setDisplayMode(DISPLAY_MODE_GREYSCALE); //per pixel brightness
-  * @endcode
-  */
+ * Configures the mode of the display.
+ *
+ * @param mode The mode to swap the display into. One of: DISPLAY_MODE_GREYSCALE,
+ *             DISPLAY_MODE_BLACK_AND_WHITE, DISPLAY_MODE_BLACK_AND_WHITE_LIGHT_SENSE
+ *
+ * @code
+ * display.setDisplayMode(DISPLAY_MODE_GREYSCALE); //per pixel brightness
+ * @endcode
+ */
 void LEDMatrix::setDisplayMode(DisplayMode mode)
 {
     this->mode = mode;
 }
 
 /**
-  * Retrieves the mode of the display.
-  *
-  * @return the current mode of the display
-  */
+ * Retrieves the mode of the display.
+ *
+ * @return the current mode of the display
+ */
 int LEDMatrix::getDisplayMode()
 {
     return this->mode;
 }
 
 /**
-  * Rotates the display to the given position.
-  *
-  * Axis aligned values only.
-  *
-  * @code
-  * display.rotateTo(MATRIX_DISPLAY_ROTATION_180); //rotates 180 degrees from original orientation
-  * @endcode
-  */
+ * Rotates the display to the given position.
+ *
+ * Axis aligned values only.
+ *
+ * @code
+ * display.rotateTo(MATRIX_DISPLAY_ROTATION_180); //rotates 180 degrees from original orientation
+ * @endcode
+ */
 void LEDMatrix::rotateTo(DisplayRotation rotation)
 {
     this->rotation = rotation;
@@ -282,60 +270,59 @@ void LEDMatrix::rotateTo(DisplayRotation rotation)
 void LEDMatrix::setEnable(bool enableDisplay)
 {
     // If we're already in the correct state, then there's nothing to do.
-    if(((status & DEVICE_COMPONENT_RUNNING) && enableDisplay) || (!(status & DEVICE_COMPONENT_RUNNING) && !enableDisplay))
+    if (((status & DEVICE_COMPONENT_RUNNING) && enableDisplay) ||
+        (!(status & DEVICE_COMPONENT_RUNNING) && !enableDisplay))
         return;
 
     // Turn off the currently live row row
     matrixMap.rowPins[strobeRow]->getDigitalValue();
 
-    if (enableDisplay)
-    {
+    if (enableDisplay) {
         status |= DEVICE_COMPONENT_RUNNING;
     }
-    else
-    {
+    else {
         status &= ~DEVICE_COMPONENT_RUNNING;
     }
 }
 
 /**
-  * Enables the display, should only be called if the display is disabled.
-  *
-  * @code
-  * display.enable(); //Enables the display mechanics
-  * @endcode
-  *
-  * @note Only enables the display if the display is currently disabled.
-  */
+ * Enables the display, should only be called if the display is disabled.
+ *
+ * @code
+ * display.enable(); //Enables the display mechanics
+ * @endcode
+ *
+ * @note Only enables the display if the display is currently disabled.
+ */
 void LEDMatrix::enable()
 {
     setEnable(true);
 }
 
 /**
-  * Disables the display, which releases control of the GPIO pins used by the display,
-  * which are exposed on the edge connector.
-  *
-  * @code
-  * display.disable(); //disables the display
-  * @endcode
-  *
-  * @note Only disables the display if the display is currently enabled.
-  */
+ * Disables the display, which releases control of the GPIO pins used by the display,
+ * which are exposed on the edge connector.
+ *
+ * @code
+ * display.disable(); //disables the display
+ * @endcode
+ *
+ * @note Only disables the display if the display is currently enabled.
+ */
 void LEDMatrix::disable()
 {
     setEnable(false);
 }
 
 /**
-  * Clears the display of any remaining pixels.
-  *
-  * `display.image.clear()` can also be used!
-  *
-  * @code
-  * display.clear(); //clears the display
-  * @endcode
-  */
+ * Clears the display of any remaining pixels.
+ *
+ * `display.image.clear()` can also be used!
+ *
+ * @code
+ * display.clear(); //clears the display
+ * @endcode
+ */
 void LEDMatrix::clear()
 {
     image.clear();
@@ -352,8 +339,7 @@ int LEDMatrix::setBrightness(int b)
 {
     int result = Display::setBrightness(b);
 
-    if (result != DEVICE_OK)
-        return result;
+    if (result != DEVICE_OK) return result;
 
     // Precalculate the per frame "on" time for this brightness level.
     frameTimeout = (((int)brightness) * 1024 * SCHEDULER_TICK_PERIOD_US) / (255 * 1024);
@@ -362,8 +348,8 @@ int LEDMatrix::setBrightness(int b)
 }
 
 /**
-  * Destructor for LEDMatrix, where we deregister this instance from the array of system components.
-  */
+ * Destructor for LEDMatrix, where we deregister this instance from the array of system components.
+ */
 LEDMatrix::~LEDMatrix()
 {
     this->status &= ~DEVICE_COMPONENT_STATUS_SYSTEM_TICK;

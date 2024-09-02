@@ -31,130 +31,129 @@ DEALINGS IN THE SOFTWARE.
 /**
  * Sample read/write functions for 8, 16, 24, 32 bit signed/unsigned data.
  */
-typedef int (*SampleReadFn)(uint8_t *);
-typedef void (*SampleWriteFn)(uint8_t *, int);
-
+typedef int (*SampleReadFn)(uint8_t*);
+typedef void (*SampleWriteFn)(uint8_t*, int);
 
 /**
  * Default configuration values
  */
 
-namespace codal{
+namespace codal {
 
-    class StreamNormalizer : public DataSink, public DataSource
-    {
-    public:
-        int             outputFormat;           // The format to output in. By default, this is the sme as the input.
-        int             stabilisation;          // The % stability of the zero-offset calculation required to begin operation.
-        float           gain;                   // Gain to apply.
-        float           zeroOffset;             // Best estimate of the zero point of the data source.
-        uint32_t        orMask;                 // post processing step - or'd with each sample.
-        bool            normalize;              // If set, will recalculate a zero offset.
-        bool            zeroOffsetValid;        // Set to true after the first buffer has been processed.
-        bool            outputEnabled;          // When set any bxuffer processed will be forwarded downstream.
-        DataSource      &upstream;              // The upstream component of this StreamNormalizer.
-        DataStream      output;                 // The downstream output stream of this StreamNormalizer.
-        //ManagedBuffer   buffer;                 // The buffer being processed.
+class StreamNormalizer : public DataSink, public DataSource {
+  public:
+    int outputFormat;      // The format to output in. By default, this is the sme as the input.
+    int stabilisation;     // The % stability of the zero-offset calculation required to begin operation.
+    float gain;            // Gain to apply.
+    float zeroOffset;      // Best estimate of the zero point of the data source.
+    uint32_t orMask;       // post processing step - or'd with each sample.
+    bool normalize;        // If set, will recalculate a zero offset.
+    bool zeroOffsetValid;  // Set to true after the first buffer has been processed.
+    bool outputEnabled;    // When set any bxuffer processed will be forwarded downstream.
+    DataSource& upstream;  // The upstream component of this StreamNormalizer.
+    DataStream output;     // The downstream output stream of this StreamNormalizer.
+    // ManagedBuffer   buffer;                 // The buffer being processed.
 
-        static SampleReadFn readSample[9];
-        static SampleWriteFn writeSample[9];
+    static SampleReadFn readSample[9];
+    static SampleWriteFn writeSample[9];
 
-        /**
-          * Creates a component capable of translating one data representation format into another
-          *
-          * @param source a DataSource to receive data from
-          * @param gain The gain to apply to each sample (default: 1.0)
-          * @param normalize Derive a zero offset for the input stream, and subtract from each sample (default: false)
-          * @param format The format to convert the input stream into
-          * @param stabilisation the maximum change of zero-offset permitted between subsequent buffers before output is initiated. Set to zero to disable (default)
-          */
-        StreamNormalizer(DataSource &source, float gain = 1.0f, bool normalize = false, int format = DATASTREAM_FORMAT_UNKNOWN, int stabilisation = 0);
+    /**
+     * Creates a component capable of translating one data representation format into another
+     *
+     * @param source a DataSource to receive data from
+     * @param gain The gain to apply to each sample (default: 1.0)
+     * @param normalize Derive a zero offset for the input stream, and subtract from each sample (default: false)
+     * @param format The format to convert the input stream into
+     * @param stabilisation the maximum change of zero-offset permitted between subsequent buffers before output is
+     * initiated. Set to zero to disable (default)
+     */
+    StreamNormalizer(DataSource& source, float gain = 1.0f, bool normalize = false,
+                     int format = DATASTREAM_FORMAT_UNKNOWN, int stabilisation = 0);
 
-        /**
-         * Callback provided when data is ready.
-         */
-    	virtual int pullRequest();
+    /**
+     * Callback provided when data is ready.
+     */
+    virtual int pullRequest();
 
-        /**
-         * Provide the next available ManagedBuffer to our downstream caller, if available.
-         */
-        virtual ManagedBuffer pull();
+    /**
+     * Provide the next available ManagedBuffer to our downstream caller, if available.
+     */
+    virtual ManagedBuffer pull();
 
-        /**
-         * Defines whether this input stream will be normalized based on its mean average value.
-         *
-         * @param normalize The state to apply - set to true to apply normlization, false otherwise.
-         * @return DEVICE_OK on success.
-         */
-        int setNormalize(bool normalize);
+    /**
+     * Defines whether this input stream will be normalized based on its mean average value.
+     *
+     * @param normalize The state to apply - set to true to apply normlization, false otherwise.
+     * @return DEVICE_OK on success.
+     */
+    int setNormalize(bool normalize);
 
-        /**
-         * Determines whether normalization is being applied .
-         * @return true if normlization is being performed, false otherwise.
-         */
-        bool getNormalize();
+    /**
+     * Determines whether normalization is being applied .
+     * @return true if normlization is being performed, false otherwise.
+     */
+    bool getNormalize();
 
-        /**
-         *  Determine the data format of the buffers streamed out of this component.
-         */
-        virtual int getFormat();
+    /**
+     *  Determine the data format of the buffers streamed out of this component.
+     */
+    virtual int getFormat();
 
-        /**
-         * Defines the data format of the buffers streamed out of this component.
-         * @param format valid values include:
-         * 
-         * DATASTREAM_FORMAT_8BIT_UNSIGNED
-         * DATASTREAM_FORMAT_8BIT_SIGNED
-         * DATASTREAM_FORMAT_16BIT_UNSIGNED
-         * DATASTREAM_FORMAT_16BIT_SIGNED
-         * DATASTREAM_FORMAT_24BIT_UNSIGNED
-         * DATASTREAM_FORMAT_24BIT_SIGNED
-         * DATASTREAM_FORMAT_32BIT_UNSIGNED
-         * DATASTREAM_FORMAT_32BIT_SIGNED
-         */
-        virtual int setFormat(int format);
+    /**
+     * Defines the data format of the buffers streamed out of this component.
+     * @param format valid values include:
+     *
+     * DATASTREAM_FORMAT_8BIT_UNSIGNED
+     * DATASTREAM_FORMAT_8BIT_SIGNED
+     * DATASTREAM_FORMAT_16BIT_UNSIGNED
+     * DATASTREAM_FORMAT_16BIT_SIGNED
+     * DATASTREAM_FORMAT_24BIT_UNSIGNED
+     * DATASTREAM_FORMAT_24BIT_SIGNED
+     * DATASTREAM_FORMAT_32BIT_UNSIGNED
+     * DATASTREAM_FORMAT_32BIT_SIGNED
+     */
+    virtual int setFormat(int format);
 
-        /**
-         * Defines an optional gain to apply to the input, as a floating point multiple.
-         *
-         * @param gain The gain to apply to this input stream.
-         * @return DEVICE_OK on success.
-         */
-        int setGain(float gain);
+    /**
+     * Defines an optional gain to apply to the input, as a floating point multiple.
+     *
+     * @param gain The gain to apply to this input stream.
+     * @return DEVICE_OK on success.
+     */
+    int setGain(float gain);
 
-        /**
-         * Determines the  gain being applied to the input, as a floating point multiple.
-         * @return the gain applied.
-         */
-        float getGain();
+    /**
+     * Determines the  gain being applied to the input, as a floating point multiple.
+     * @return the gain applied.
+     */
+    float getGain();
 
-        /**
-         * Defines an optional bit mask to logical OR with each sample.
-         * Useful if the downstream component encodes control data within its samples.
-         *
-         * @param mask The bitmask to to apply to each sample.
-         * @return DEVICE_OK on success.
-         */
-        int setOrMask(uint32_t mask);
+    /**
+     * Defines an optional bit mask to logical OR with each sample.
+     * Useful if the downstream component encodes control data within its samples.
+     *
+     * @param mask The bitmask to to apply to each sample.
+     * @return DEVICE_OK on success.
+     */
+    int setOrMask(uint32_t mask);
 
-        float getSampleRate();
-        
-        float requestSampleRate(float sampleRate);
+    float getSampleRate();
 
-        /**
-         * Determines if this source is connected to a downstream component
-         * 
-         * @return true If a downstream is connected
-         * @return false If a downstream is not connected
-         */
-        bool isConnected();
+    float requestSampleRate(float sampleRate);
 
-        /**
-         * Destructor.
-         */
-        ~StreamNormalizer();
+    /**
+     * Determines if this source is connected to a downstream component
+     *
+     * @return true If a downstream is connected
+     * @return false If a downstream is not connected
+     */
+    bool isConnected();
 
-    };
-}
+    /**
+     * Destructor.
+     */
+    ~StreamNormalizer();
+};
+}  // namespace codal
 
 #endif

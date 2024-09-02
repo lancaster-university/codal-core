@@ -27,27 +27,24 @@ DEALINGS IN THE SOFTWARE.
 
 #include "DataStream.h"
 
-namespace codal
-{
+namespace codal {
 
-class MixerChannel
-{
-private:
-    MixerChannel *next;
-    DataStream *stream;
+class MixerChannel {
+  private:
+    MixerChannel* next;
+    DataStream* stream;
     friend class Mixer;
 
-public:
+  public:
     uint16_t volume;
     bool isSigned;
 };
 
-class Mixer : public DataSource, public DataSink
-{
-    MixerChannel *channels;
-    DataSink *downStream;
+class Mixer : public DataSource, public DataSink {
+    MixerChannel* channels;
+    DataSink* downStream;
 
-public:
+  public:
     /**
      * Default Constructor.
      * Creates an empty Mixer.
@@ -60,7 +57,7 @@ public:
      */
     ~Mixer();
 
-    MixerChannel *addChannel(DataStream &stream);
+    MixerChannel* addChannel(DataStream& stream);
 
     /**
      * Provide the next available ManagedBuffer to our downstream caller, if available.
@@ -77,17 +74,17 @@ public:
      *
      * @sink The component that data will be delivered to, when it is available
      */
-    virtual void connect(DataSink &sink);
+    virtual void connect(DataSink& sink);
 
     /**
      * Determines if this source is connected to a downstream component
-     * 
+     *
      * @return true If a downstream is connected
      * @return false If a downstream is not connected
      */
     bool isConnected();
 };
 
-} // namespace codal
+}  // namespace codal
 
 #endif

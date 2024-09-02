@@ -22,10 +22,11 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#include "CodalConfig.h"
 #include "AbstractButton.h"
-#include "Timer.h"
+
+#include "CodalConfig.h"
 #include "EventModel.h"
+#include "Timer.h"
 
 using namespace codal;
 
@@ -76,10 +77,7 @@ void AbstractButton::disable()
     status &= ~DEVICE_COMPONENT_RUNNING;
 }
 
-
 /**
  * Destructor
  */
-AbstractButton::~AbstractButton()
-{
-}
+AbstractButton::~AbstractButton() {}

@@ -28,87 +28,84 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "Image.h"
 
-namespace codal
-{
+namespace codal {
+/**
+ * Class definition for an abstract Display.
+ */
+class Display : public CodalComponent {
+  protected:
+    uint16_t width;
+    uint16_t height;
+    uint8_t brightness;
+
+  public:
+    // A mutable bitmap buffer being rendered to the display.
+    Image image;
+
     /**
-     * Class definition for an abstract Display.
+     * Constructor.
+     *
+     * Create a software representation an abstract display.
+     * The display is initially blank.
+     *
+     * @param id The id the display should use when sending events on the MessageBus. Defaults to DEVICE_ID_DISPLAY.
      */
-    class Display : public CodalComponent
-    {
-        protected:
-        uint16_t width;
-        uint16_t height;
-        uint8_t  brightness;
+    Display(int width, int height, uint16_t id = DEVICE_ID_DISPLAY);
 
-        public:
+    /**
+     * Returns the width of the display
+     *
+     * @return display width
+     *
+     */
+    virtual int getWidth();
 
-        // A mutable bitmap buffer being rendered to the display.
-        Image image;
+    /**
+     * Returns the height of the display
+     *
+     * @return display height
+     *
+     */
+    virtual int getHeight();
 
-        /**
-         * Constructor.
-         *
-         * Create a software representation an abstract display.
-         * The display is initially blank.
-         *
-         * @param id The id the display should use when sending events on the MessageBus. Defaults to DEVICE_ID_DISPLAY.
-         */
-        Display (int width, int height, uint16_t id = DEVICE_ID_DISPLAY);
+    /**
+     * Configures the brightness of the display.
+     *
+     * @param b The brightness to set the brightness to, in the range 0 - 255.
+     *
+     * @return DEVICE_OK, or DEVICE_INVALID_PARAMETER
+     */
+    virtual int setBrightness(int b);
 
-        /**
-         * Returns the width of the display
-         *
-         * @return display width
-         *
-         */
-        virtual int getWidth();
+    /**
+     * Fetches the current brightness of this display.
+     *
+     * @return the brightness of this display, in the range 0..255.
+     */
+    virtual int getBrightness();
 
-        /**
-         * Returns the height of the display
-         *
-         * @return display height
-         *
-         */
-        virtual int getHeight();
+    /**
+     * Enables the display, should only be called if the display is disabled.
+     */
+    virtual void enable();
 
-        /**
-         * Configures the brightness of the display.
-         *
-         * @param b The brightness to set the brightness to, in the range 0 - 255.
-         *
-         * @return DEVICE_OK, or DEVICE_INVALID_PARAMETER
-         */
-        virtual int setBrightness(int b);
+    /**
+     * Disables the display.
+     */
+    virtual void disable();
 
-        /**
-         * Fetches the current brightness of this display.
-         *
-         * @return the brightness of this display, in the range 0..255.
-         */
-        virtual int getBrightness();
+    /**
+     * Captures the bitmap currently being rendered on the display.
+     *
+     * @return a Image containing the captured data.
+     */
+    virtual Image screenShot();
 
-        /**
-         * Enables the display, should only be called if the display is disabled.
-         */
-        virtual void enable();
-
-        /**
-         * Disables the display.
-         */
-        virtual void disable();
-
-        /**
-         * Captures the bitmap currently being rendered on the display.
-         *
-         * @return a Image containing the captured data.
-         */
-        virtual Image screenShot();
-
-        /**
-         * Destructor for CodalDisplay, where we deregister this instance from the array of system components.
-         */
-        ~Display();
-    };
-}
+    /**
+     * Destructor for CodalDisplay, where we deregister this instance from the array of system components.
+     */
+    ~Display();
+};
+}  // namespace codal
 
 #endif

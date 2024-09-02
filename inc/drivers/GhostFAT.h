@@ -29,19 +29,17 @@ DEALINGS IN THE SOFTWARE.
 
 #if CONFIG_ENABLED(DEVICE_USB)
 
-namespace codal
-{
+namespace codal {
 
 struct GFATEntry;
 
-typedef void (*GFATReadCallback)(GFATEntry *ent, unsigned blockAddr, char *dst);
+typedef void (*GFATReadCallback)(GFATEntry* ent, unsigned blockAddr, char* dst);
 
-struct GFATEntry
-{
-    GFATEntry *next;
+struct GFATEntry {
+    GFATEntry* next;
     uint32_t size;
     GFATReadCallback read;
-    void *userdata;
+    void* userdata;
     uint16_t startCluster;
     uint8_t attrs;
     uint8_t flags;
@@ -51,34 +49,32 @@ struct GFATEntry
 
 // the name VirtualFAT would be more fitting, but it's unfortunately already taken.
 
-class GhostFAT : public USBMSC
-{
-    void buildBlock(uint32_t block_no, uint8_t *data);
-    void readDirData(uint8_t *dest, int blkno, uint8_t dirid);
+class GhostFAT : public USBMSC {
+    void buildBlock(uint32_t block_no, uint8_t* data);
+    void readDirData(uint8_t* dest, int blkno, uint8_t dirid);
 
-protected:
-    GFATEntry *files;
+  protected:
+    GFATEntry* files;
     void finalizeFiles();
 
-public:
+  public:
     GhostFAT();
 
     virtual uint32_t getCapacity();
     virtual void readBlocks(int blockAddr, int numBlocks);
     virtual void writeBlocks(int blockAddr, int numBlocks);
 
-    GFATEntry *addFile(GFATReadCallback read, void *userdata, const char *filename, uint32_t size,
-                       uint8_t dirid = 0);
-    GFATEntry *addStringFile(const char *data, const char *filename, uint8_t dirid = 0);
-    void addDirectory(uint8_t id, const char *dirname);
+    GFATEntry* addFile(GFATReadCallback read, void* userdata, const char* filename, uint32_t size, uint8_t dirid = 0);
+    GFATEntry* addStringFile(const char* data, const char* filename, uint8_t dirid = 0);
+    void addDirectory(uint8_t id, const char* dirname);
     bool filesFinalized();
 
     // these are typically overridden in a derived class
     virtual void addFiles();
-    virtual uint32_t internalFlashSize() { return 256 * 1024; } // for current.uf2
-    virtual const char *volumeLabel() { return "CODAL"; }
+    virtual uint32_t internalFlashSize() { return 256 * 1024; }  // for current.uf2
+    virtual const char* volumeLabel() { return "CODAL"; }
 };
-}
+}  // namespace codal
 
 #endif
 

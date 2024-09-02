@@ -47,29 +47,28 @@ __attribute__((weak)) void target_deepsleep()
 
 // Preprocessor Directive to ignore redecleration when using clang
 #ifndef __clang__
-	/**
-	 * Default implementation of atomic fetch and add opertaion.
-	 * GCC provides this where possible, but this is not supported on some CPU architectures...
-	 *
-	 * @param ptr pointer to the memory to access.
-	 * @param value the value to add to the memory location.
-	 * @return the value of th ememory location BEFORE the add operation took place.
-	 */
-	__attribute__((weak)) short unsigned int __sync_fetch_and_add_2 (volatile void *ptr, short unsigned int value)
-	{
+/**
+ * Default implementation of atomic fetch and add opertaion.
+ * GCC provides this where possible, but this is not supported on some CPU architectures...
+ *
+ * @param ptr pointer to the memory to access.
+ * @param value the value to add to the memory location.
+ * @return the value of th ememory location BEFORE the add operation took place.
+ */
+__attribute__((weak)) short unsigned int __sync_fetch_and_add_2(volatile void* ptr, short unsigned int value)
+{
+#if CONFIG_ENABLED(DISABLE_IRQ_FOR_SOFTWARE_ATOMICS)
+    target_disable_irq();
+#endif
 
-	#if CONFIG_ENABLED(DISABLE_IRQ_FOR_SOFTWARE_ATOMICS)
-		target_disable_irq();
-	#endif
+    uint16_t* p  = (uint16_t*)ptr;
+    uint16_t old = *p;
+    *p += value;
 
-		uint16_t *p = (uint16_t *)ptr;
-		uint16_t old = *p;
-		*p += value;
+#if CONFIG_ENABLED(DISABLE_IRQ_FOR_SOFTWARE_ATOMICS)
+    target_enable_irq();
+#endif
 
-	#if CONFIG_ENABLED(DISABLE_IRQ_FOR_SOFTWARE_ATOMICS)
-		target_enable_irq();
-	#endif
-
-		return old;
-	}
+    return old;
+}
 #endif

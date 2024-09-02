@@ -23,22 +23,23 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "ManagedBuffer.h"
+
 #include <limits.h>
+
 #include "CodalCompat.h"
 
-#define REF_TAG REF_TAG_BUFFER
+#define REF_TAG    REF_TAG_BUFFER
 #define EMPTY_DATA ((BufferData*)(void*)emptyData)
 
 REF_COUNTED_DEF_EMPTY(0, 0)
-
 
 using namespace std;
 using namespace codal;
 
 /**
-  * Internal constructor helper.
-  * Configures this ManagedBuffer to refer to the static empty buffer.
-  */
+ * Internal constructor helper.
+ * Configures this ManagedBuffer to refer to the static empty buffer.
+ */
 void ManagedBuffer::initEmpty()
 {
     ptr = EMPTY_DATA;
@@ -88,7 +89,7 @@ ManagedBuffer::ManagedBuffer(int length, BufferInitialize initialize)
  * ManagedBuffer p(buf, 3);         // Creates a ManagedBuffer 3 bytes long.
  * @endcode
  */
-ManagedBuffer::ManagedBuffer(uint8_t *data, int length)
+ManagedBuffer::ManagedBuffer(uint8_t* data, int length)
 {
     this->init(data, length, BufferInitialize::None);
 }
@@ -105,19 +106,19 @@ ManagedBuffer::ManagedBuffer(uint8_t *data, int length)
  * ManagedBuffer p2(i);        // Refers to the same buffer as p.
  * @endcode
  */
-ManagedBuffer::ManagedBuffer(const ManagedBuffer &buffer)
+ManagedBuffer::ManagedBuffer(const ManagedBuffer& buffer)
 {
     ptr = buffer.ptr;
     ptr->incr();
 }
 
 /**
-  * Constructor.
-  * Create a buffer from a raw BufferData pointer. It will ptr->incr(). This is to be used by specialized runtimes.
-  *
-  * @param p The pointer to use.
-  */
-ManagedBuffer::ManagedBuffer(BufferData *p)
+ * Constructor.
+ * Create a buffer from a raw BufferData pointer. It will ptr->incr(). This is to be used by specialized runtimes.
+ *
+ * @param p The pointer to use.
+ */
+ManagedBuffer::ManagedBuffer(BufferData* p)
 {
     ptr = p;
     ptr->incr();
@@ -131,24 +132,22 @@ ManagedBuffer::ManagedBuffer(BufferData *p)
  * @param initialize The initialization mode to use for the allocted memory in the buffer
  *
  */
-void ManagedBuffer::init(uint8_t *data, int length, BufferInitialize initialize)
+void ManagedBuffer::init(uint8_t* data, int length, BufferInitialize initialize)
 {
     if (length <= 0) {
         initEmpty();
         return;
     }
 
-    ptr = (BufferData *) malloc(sizeof(BufferData) + length);
+    ptr = (BufferData*)malloc(sizeof(BufferData) + length);
     REF_COUNTED_INIT(ptr);
 
     ptr->length = length;
 
     // Copy in the data buffer, if provided.
-    if (data)
-        memcpy(ptr->payload, data, length);
+    if (data) memcpy(ptr->payload, data, length);
 
-    if (initialize == BufferInitialize::Zero)
-        memset(ptr->payload, 0, length);
+    if (initialize == BufferInitialize::Zero) memset(ptr->payload, 0, length);
 }
 
 /**
@@ -179,10 +178,9 @@ ManagedBuffer::~ManagedBuffer()
  * p1 = p2;
  * @endcode
  */
-ManagedBuffer& ManagedBuffer::operator = (const ManagedBuffer &p)
+ManagedBuffer& ManagedBuffer::operator=(const ManagedBuffer& p)
 {
-    if(ptr == p.ptr)
-        return *this;
+    if (ptr == p.ptr) return *this;
 
     ptr->decr();
     ptr = p.ptr;
@@ -210,12 +208,12 @@ ManagedBuffer& ManagedBuffer::operator = (const ManagedBuffer &p)
  *     uBit.display.scroll("same!");
  * @endcode
  */
-bool ManagedBuffer::operator== (const ManagedBuffer& p)
+bool ManagedBuffer::operator==(const ManagedBuffer& p)
 {
     if (ptr == p.ptr)
         return true;
     else
-        return (ptr->length == p.ptr->length && (memcmp(ptr->payload, p.ptr->payload, ptr->length)==0));
+        return (ptr->length == p.ptr->length && (memcmp(ptr->payload, p.ptr->payload, ptr->length) == 0));
 }
 
 /**
@@ -232,13 +230,11 @@ bool ManagedBuffer::operator== (const ManagedBuffer& p)
  */
 int ManagedBuffer::setByte(int position, uint8_t value)
 {
-    if (0 <= position && (uint16_t)position < ptr->length)
-    {
+    if (0 <= position && (uint16_t)position < ptr->length) {
         ptr->payload[position] = value;
         return DEVICE_OK;
     }
-    else
-    {
+    else {
         return DEVICE_INVALID_PARAMETER;
     }
 }
@@ -265,23 +261,20 @@ int ManagedBuffer::getByte(int position)
 }
 
 /**
-  * Get current ptr, do not decr() it, and set the current instance to an empty buffer.
-  * This is to be used by specialized runtimes which pass BufferData around.
-  */
-BufferData *ManagedBuffer::leakData()
+ * Get current ptr, do not decr() it, and set the current instance to an empty buffer.
+ * This is to be used by specialized runtimes which pass BufferData around.
+ */
+BufferData* ManagedBuffer::leakData()
 {
     BufferData* res = ptr;
     initEmpty();
     return res;
 }
 
-
 int ManagedBuffer::fill(uint8_t value, int offset, int length)
 {
-    if (offset < 0 || (uint16_t)offset > ptr->length)
-        return DEVICE_INVALID_PARAMETER;
-    if (length < 0)
-        length = (int)ptr->length;
+    if (offset < 0 || (uint16_t)offset > ptr->length) return DEVICE_INVALID_PARAMETER;
+    if (length < 0) length = (int)ptr->length;
     length = min(length, (int)ptr->length - offset);
 
     memset(ptr->payload + offset, value, length);
@@ -292,8 +285,7 @@ int ManagedBuffer::fill(uint8_t value, int offset, int length)
 ManagedBuffer ManagedBuffer::slice(int offset, int length) const
 {
     offset = min((int)ptr->length, offset);
-    if (length < 0)
-        length = (int)ptr->length;
+    if (length < 0) length = (int)ptr->length;
     length = min(length, (int)ptr->length - offset);
     return ManagedBuffer(ptr->payload + offset, length);
 }
@@ -301,19 +293,21 @@ ManagedBuffer ManagedBuffer::slice(int offset, int length) const
 void ManagedBuffer::shift(int offset, int start, int len)
 {
     if (len < 0) len = (int)ptr->length - start;
-    if (start < 0 || start + len > (int)ptr->length || start + len < start
-        || len == 0 || offset == 0 || offset == INT_MIN) return;
+    if (start < 0 || start + len > (int)ptr->length || start + len < start || len == 0 || offset == 0 ||
+        offset == INT_MIN)
+        return;
     if (offset <= -len || offset >= len) {
         fill(0, start, len);
         return;
     }
 
-    uint8_t *data = ptr->payload + start;
+    uint8_t* data = ptr->payload + start;
     if (offset < 0) {
         offset = -offset;
         memmove(data + offset, data, len - offset);
         memset(data, 0, offset);
-    } else {
+    }
+    else {
         len = len - offset;
         memmove(data, data + offset, len);
         memset(data + len, 0, offset);
@@ -323,82 +317,78 @@ void ManagedBuffer::shift(int offset, int start, int len)
 void ManagedBuffer::rotate(int offset, int start, int len)
 {
     if (len < 0) len = (int)ptr->length - start;
-    if (start < 0 || start + len > (int)ptr-> length || start + len < start
-        || len == 0 || offset == 0 || offset == INT_MIN) return;
+    if (start < 0 || start + len > (int)ptr->length || start + len < start || len == 0 || offset == 0 ||
+        offset == INT_MIN)
+        return;
 
-    if (offset < 0)
-        offset += len << 8; // try to make it positive
+    if (offset < 0) offset += len << 8;  // try to make it positive
     offset %= len;
-    if (offset < 0)
-        offset += len;
+    if (offset < 0) offset += len;
 
-    uint8_t *data = ptr->payload + start;
+    uint8_t* data = ptr->payload + start;
 
-    uint8_t *n_first = data + offset;
-    uint8_t *first = data;
-    uint8_t *next = n_first;
-    uint8_t *last = data + len;
+    uint8_t* n_first = data + offset;
+    uint8_t* first   = data;
+    uint8_t* next    = n_first;
+    uint8_t* last    = data + len;
 
     while (first != next) {
         uint8_t tmp = *first;
-        *first++ = *next;
-        *next++ = tmp;
+        *first++    = *next;
+        *next++     = tmp;
         if (next == last) {
             next = n_first;
-        } else if (first == n_first) {
+        }
+        else if (first == n_first) {
             n_first = next;
         }
     }
 }
 
-int ManagedBuffer::writeBuffer(int dstOffset, const ManagedBuffer &src, int srcOffset, int length)
+int ManagedBuffer::writeBuffer(int dstOffset, const ManagedBuffer& src, int srcOffset, int length)
 {
-    if (length < 0)
-        length = src.length();
+    if (length < 0) length = src.length();
 
-    if (srcOffset < 0 || dstOffset < 0 || dstOffset > (int)ptr->length)
-        return DEVICE_INVALID_PARAMETER;
+    if (srcOffset < 0 || dstOffset < 0 || dstOffset > (int)ptr->length) return DEVICE_INVALID_PARAMETER;
 
     length = min(src.length() - srcOffset, (int)ptr->length - dstOffset);
 
-    if (length < 0)
-        return DEVICE_INVALID_PARAMETER;
+    if (length < 0) return DEVICE_INVALID_PARAMETER;
 
     if (ptr == src.ptr) {
         memmove(getBytes() + dstOffset, src.ptr->payload + srcOffset, length);
-    } else {
+    }
+    else {
         memcpy(getBytes() + dstOffset, src.ptr->payload + srcOffset, length);
     }
 
     return DEVICE_OK;
 }
 
-int ManagedBuffer::writeBytes(int offset, uint8_t *src, int length, bool swapBytes)
+int ManagedBuffer::writeBytes(int offset, uint8_t* src, int length, bool swapBytes)
 {
-    if (offset < 0 || length < 0 || offset + length > (int)ptr->length)
-        return DEVICE_INVALID_PARAMETER;
+    if (offset < 0 || length < 0 || offset + length > (int)ptr->length) return DEVICE_INVALID_PARAMETER;
 
     if (swapBytes) {
-        uint8_t *p = ptr->payload + offset + length;
-        for (int i = 0; i < length; ++i)
-            *--p = src[i];
-    } else {
+        uint8_t* p = ptr->payload + offset + length;
+        for (int i = 0; i < length; ++i) *--p = src[i];
+    }
+    else {
         memcpy(ptr->payload + offset, src, length);
     }
 
     return DEVICE_OK;
 }
 
-int ManagedBuffer::readBytes(uint8_t *dst, int offset, int length, bool swapBytes) const
+int ManagedBuffer::readBytes(uint8_t* dst, int offset, int length, bool swapBytes) const
 {
-    if (offset < 0 || length < 0 || offset + length > (int)ptr->length)
-        return DEVICE_INVALID_PARAMETER;
+    if (offset < 0 || length < 0 || offset + length > (int)ptr->length) return DEVICE_INVALID_PARAMETER;
 
     if (swapBytes) {
-        uint8_t *p = ptr->payload + offset + length;
-        for (int i = 0; i < length; ++i)
-            dst[i] = *--p;
-    } else {
+        uint8_t* p = ptr->payload + offset + length;
+        for (int i = 0; i < length; ++i) dst[i] = *--p;
+    }
+    else {
         memcpy(dst, ptr->payload + offset, length);
     }
 
@@ -407,8 +397,7 @@ int ManagedBuffer::readBytes(uint8_t *dst, int offset, int length, bool swapByte
 
 int ManagedBuffer::truncate(int length)
 {
-    if (length < 0 || length > (int)ptr->length)
-        return DEVICE_INVALID_PARAMETER;
+    if (length < 0 || length > (int)ptr->length) return DEVICE_INVALID_PARAMETER;
 
     ptr->length = length;
 

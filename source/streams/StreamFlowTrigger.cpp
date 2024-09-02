@@ -1,15 +1,16 @@
 #include "StreamFlowTrigger.h"
-#include "ManagedBuffer.h"
-#include "DataStream.h"
+
 #include "CodalDmesg.h"
+#include "DataStream.h"
+#include "ManagedBuffer.h"
 
 using namespace codal;
 
-StreamFlowTrigger::StreamFlowTrigger( DataSource &source ) : upStream( source )
+StreamFlowTrigger::StreamFlowTrigger(DataSource& source) : upStream(source)
 {
     this->eventHandler = NULL;
-    this->downStream = NULL;
-    source.connect( *this );
+    this->downStream   = NULL;
+    source.connect(*this);
 }
 
 StreamFlowTrigger::~StreamFlowTrigger()
@@ -17,27 +18,26 @@ StreamFlowTrigger::~StreamFlowTrigger()
     // NOP
 }
 
-void StreamFlowTrigger::setDataHandler( void (*handler)(int) )
+void StreamFlowTrigger::setDataHandler(void (*handler)(int))
 {
     this->eventHandler = handler;
 }
 
 ManagedBuffer StreamFlowTrigger::pull()
 {
-    (*this->eventHandler)( TRIGGER_PULL );
+    (*this->eventHandler)(TRIGGER_PULL);
     return this->upStream.pull();
 }
 
 int StreamFlowTrigger::pullRequest()
 {
-    (*this->eventHandler)( TRIGGER_REQUEST );
-    if( this->downStream != NULL )
-        return this->downStream->pullRequest();
-    
+    (*this->eventHandler)(TRIGGER_REQUEST);
+    if (this->downStream != NULL) return this->downStream->pullRequest();
+
     return DEVICE_BUSY;
 }
 
-void StreamFlowTrigger::connect( DataSink &sink )
+void StreamFlowTrigger::connect(DataSink& sink)
 {
     this->downStream = &sink;
 }
@@ -57,7 +57,7 @@ int StreamFlowTrigger::getFormat()
     return this->upStream.getFormat();
 }
 
-int StreamFlowTrigger::setFormat( int format )
+int StreamFlowTrigger::setFormat(int format)
 {
-    return this->upStream.setFormat( format );
+    return this->upStream.setFormat(format);
 }

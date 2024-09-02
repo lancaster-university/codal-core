@@ -38,98 +38,95 @@ DEALINGS IN THE SOFTWARE.
 #endif
 
 /**
-  * Splitter events
-  */
-#define SPLITTER_CHANNEL_CONNECT     1
-#define SPLITTER_CHANNEL_DISCONNECT  2
-#define SPLITTER_ACTIVATE            3
-#define SPLITTER_DEACTIVATE          4
-#define SPLITTER_TICK                10
-
+ * Splitter events
+ */
+#define SPLITTER_CHANNEL_CONNECT    1
+#define SPLITTER_CHANNEL_DISCONNECT 2
+#define SPLITTER_ACTIVATE           3
+#define SPLITTER_DEACTIVATE         4
+#define SPLITTER_TICK               10
 
 /**
  * Default configuration values
  */
 
-namespace codal{
+namespace codal {
 
-    class StreamSplitter;
+class StreamSplitter;
 
-    class SplitterChannel : public DataSource, public DataSink {
-        private:
-            StreamSplitter * parent;
-            float sampleRate;
-            unsigned int inUnderflow;
+class SplitterChannel : public DataSource, public DataSink {
+  private:
+    StreamSplitter* parent;
+    float sampleRate;
+    unsigned int inUnderflow;
 
-            ManagedBuffer resample( ManagedBuffer _in, uint8_t * buffer = NULL, int length = -1 );
-        
-        public:
-            int pullAttempts;       // Number of failed pull request attempts
-            uint32_t sentBuffers;
-            DataSink * output;
+    ManagedBuffer resample(ManagedBuffer _in, uint8_t* buffer = NULL, int length = -1);
 
-            /**
-             * @brief Construct a new Splitter Channel object.
-             * 
-             * This should not normally be done manually; StreamSplitter objects will create these
-             * on-demand via createChannel()
-             * 
-             * @param parent The StreamSplitter this channel is part of
-             * @param output An output DataSink to send data to. Can be NULL for a disconnected channel.
-             */
-            SplitterChannel( StreamSplitter *parent, DataSink *output );
-            virtual ~SplitterChannel();
+  public:
+    int pullAttempts;  // Number of failed pull request attempts
+    uint32_t sentBuffers;
+    DataSink* output;
 
-            virtual int pullRequest();
-            uint8_t * pullInto( uint8_t * rawBuffer, int length );
-            virtual ManagedBuffer pull();
-            virtual void connect(DataSink &sink);
-            bool isConnected();
-            virtual void disconnect();
-            virtual int getFormat();
-            virtual int setFormat(int format);
-            virtual float getSampleRate();
-            virtual float requestSampleRate(float sampleRate);
-    };
+    /**
+     * @brief Construct a new Splitter Channel object.
+     *
+     * This should not normally be done manually; StreamSplitter objects will create these
+     * on-demand via createChannel()
+     *
+     * @param parent The StreamSplitter this channel is part of
+     * @param output An output DataSink to send data to. Can be NULL for a disconnected channel.
+     */
+    SplitterChannel(StreamSplitter* parent, DataSink* output);
+    virtual ~SplitterChannel();
 
-    class StreamSplitter : public DataSink, public CodalComponent 
-    {
-    private:
-        ManagedBuffer       lastBuffer;                            // Buffer being processed
-        uint64_t            __cycle;
+    virtual int pullRequest();
+    uint8_t* pullInto(uint8_t* rawBuffer, int length);
+    virtual ManagedBuffer pull();
+    virtual void connect(DataSink& sink);
+    bool isConnected();
+    virtual void disconnect();
+    virtual int getFormat();
+    virtual int setFormat(int format);
+    virtual float getSampleRate();
+    virtual float requestSampleRate(float sampleRate);
+};
 
-    public:
-        bool                isActive;                              // Track if we need to emit activate/deactivate messages
-        int                 channels;                              // Current number of channels Splitter is serving
-        volatile int        activeChannels;                        // Current number of /active/ channels this Splitter is serving
-        DataSource          &upstream;                             // The upstream component of this Splitter
-        SplitterChannel   * outputChannels[CONFIG_MAX_CHANNELS];   // Array of SplitterChannels the Splitter is serving
+class StreamSplitter : public DataSink, public CodalComponent {
+  private:
+    ManagedBuffer lastBuffer;  // Buffer being processed
+    uint64_t __cycle;
 
-        /**
-          * Creates a component that distributes a single upstream datasource to many downstream datasinks
-          *
-          * @param source a DataSource to receive data from
-          */
-        StreamSplitter(DataSource &source, uint16_t id = CodalComponent::generateDynamicID());
+  public:
+    bool isActive;                // Track if we need to emit activate/deactivate messages
+    int channels;                 // Current number of channels Splitter is serving
+    volatile int activeChannels;  // Current number of /active/ channels this Splitter is serving
+    DataSource& upstream;         // The upstream component of this Splitter
+    SplitterChannel* outputChannels[CONFIG_MAX_CHANNELS];  // Array of SplitterChannels the Splitter is serving
 
-        /**
-         * Callback provided when data is ready.
-         */
-        virtual int pullRequest();
+    /**
+     * Creates a component that distributes a single upstream datasource to many downstream datasinks
+     *
+     * @param source a DataSource to receive data from
+     */
+    StreamSplitter(DataSource& source, uint16_t id = CodalComponent::generateDynamicID());
 
-        virtual ManagedBuffer getBuffer();
-        virtual SplitterChannel * createChannel();
-        virtual bool destroyChannel( SplitterChannel * channel );
-        virtual SplitterChannel * getChannel( DataSink * output );
+    /**
+     * Callback provided when data is ready.
+     */
+    virtual int pullRequest();
 
-        /**
-         * Destructor.
-         */
-        virtual ~StreamSplitter();
+    virtual ManagedBuffer getBuffer();
+    virtual SplitterChannel* createChannel();
+    virtual bool destroyChannel(SplitterChannel* channel);
+    virtual SplitterChannel* getChannel(DataSink* output);
 
-        friend SplitterChannel;
+    /**
+     * Destructor.
+     */
+    virtual ~StreamSplitter();
 
-    };
-}
+    friend SplitterChannel;
+};
+}  // namespace codal
 
 #endif

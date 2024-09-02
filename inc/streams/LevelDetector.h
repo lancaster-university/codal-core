@@ -28,129 +28,125 @@ DEALINGS IN THE SOFTWARE.
 #ifndef LEVEL_DETECTOR_H
 #define LEVEL_DETECTOR_H
 
-
 /**
-  * Sensor events
-  */
-#define LEVEL_THRESHOLD_LOW                           1
-#define LEVEL_THRESHOLD_HIGH                          2
+ * Sensor events
+ */
+#define LEVEL_THRESHOLD_LOW  1
+#define LEVEL_THRESHOLD_HIGH 2
 
 /**
  * Status values
  */
-#define LEVEL_DETECTOR_INITIALISED                       0x01
-#define LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED             0x02
-#define LEVEL_DETECTOR_LOW_THRESHOLD_PASSED              0x04
+#define LEVEL_DETECTOR_INITIALISED           0x01
+#define LEVEL_DETECTOR_HIGH_THRESHOLD_PASSED 0x02
+#define LEVEL_DETECTOR_LOW_THRESHOLD_PASSED  0x04
 
 /**
  * Default configuration values
  */
-#define LEVEL_DETECTOR_DEFAULT_WINDOW_SIZE              128
+#define LEVEL_DETECTOR_DEFAULT_WINDOW_SIZE 128
 
-namespace codal{
-    class LevelDetector : public CodalComponent, public DataSink
-    {
-    public:
+namespace codal {
+class LevelDetector : public CodalComponent, public DataSink {
+  public:
+    // The stream component that is serving our data
+    DataSource& upstream;  // The component producing data to process
+    int highThreshold;     // threshold at which a HIGH event is generated
+    int lowThreshold;      // threshold at which a LOW event is generated
+    int windowSize;        // The number of samples the make up a level detection window.
+    int windowPosition;    // The number of samples used so far in the calculation of a window.
+    int level;             // The current, instantaneous level.
+    int sigma;             // Running total of the samples in the current window.
+    bool activated;        // Has this component been connected yet.
+    uint64_t timeout;      // The timestamp at which this component will cease actively sampling the data stream
 
-        // The stream component that is serving our data
-        DataSource      &upstream;          // The component producing data to process
-        int             highThreshold;      // threshold at which a HIGH event is generated
-        int             lowThreshold;       // threshold at which a LOW event is generated
-        int             windowSize;         // The number of samples the make up a level detection window.
-        int             windowPosition;     // The number of samples used so far in the calculation of a window.
-        int             level;              // The current, instantaneous level.
-        int             sigma;              // Running total of the samples in the current window.
-        bool            activated;          // Has this component been connected yet.
-        uint64_t        timeout;            // The timestamp at which this component will cease actively sampling the data stream
+    /**
+     * Creates a component capable of measuring and thresholding stream data
+     *
+     * @param source a DataSource to measure the level of.
+     * @param highThreshold the HIGH threshold at which a LEVEL_THRESHOLD_HIGH event will be generated
+     * @param lowThreshold the HIGH threshold at which a LEVEL_THRESHOLD_LOW event will be generated
+     * @param id The id to use for the message bus when transmitting events.
+     * @param connectImmediately Should this component connect to upstream splitter when started
+     */
+    LevelDetector(DataSource& source, int highThreshold, int lowThreshold,
+                  uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR, bool connectImmediately = true);
 
+    /**
+     * Callback provided when data is ready.
+     */
+    virtual int pullRequest();
 
-        /**
-          * Creates a component capable of measuring and thresholding stream data
-          *
-          * @param source a DataSource to measure the level of.
-          * @param highThreshold the HIGH threshold at which a LEVEL_THRESHOLD_HIGH event will be generated
-          * @param lowThreshold the HIGH threshold at which a LEVEL_THRESHOLD_LOW event will be generated
-          * @param id The id to use for the message bus when transmitting events.
-          * @param connectImmediately Should this component connect to upstream splitter when started
-          */
-        LevelDetector(DataSource &source, int highThreshold, int lowThreshold, uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR, bool connectImmediately  = true);
+    /*
+     * Determines the instantaneous value of the sensor, in SI units, and returns it.
+     *
+     * @return The current value of the sensor.
+     */
+    int getValue();
 
-        /**
-         * Callback provided when data is ready.
-         */
-    	  virtual int pullRequest();
+    /**
+     * Enable (or disable) this component constantly listening for events.
+     *
+     * This will supporess the sampling timeout mechanisms.
+     *
+     * @param state If true, keep the component consuming buffers and emitting events.
+     */
+    void activateForEvents(bool state);
 
-        /*
-         * Determines the instantaneous value of the sensor, in SI units, and returns it.
-         *
-         * @return The current value of the sensor.
-         */
-        int getValue();
+    /**
+     * Set the LOW threshold to the given value. Events will be generated when these thresholds are crossed.
+     *
+     * If the provided value is higher than the HIGH threshold, the HIGH threshold will be
+     * increased to one unit above this value.
+     *
+     * @param value the LOW threshold at which a LEVEL_THRESHOLD_LOW will be generated.
+     *
+     * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
+     */
+    int setLowThreshold(int value);
 
-        /**
-         * Enable (or disable) this component constantly listening for events.
-         * 
-         * This will supporess the sampling timeout mechanisms.
-         * 
-         * @param state If true, keep the component consuming buffers and emitting events.
-         */
-        void activateForEvents( bool state );
+    /**
+     * Set the HIGH threshold to the given value. Events will be generated when these thresholds are crossed.
+     *
+     * If the provided value is lower than the LOW threshold, the LOW threshold will be
+     * reduced to one unit below this value.
+     *
+     * @param value the HIGH threshold at which a LEVEL_THRESHOLD_HIGH will be generated.
+     *
+     * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
+     */
+    int setHighThreshold(int value);
 
-        /**
-         * Set the LOW threshold to the given value. Events will be generated when these thresholds are crossed.
-         *
-         * If the provided value is higher than the HIGH threshold, the HIGH threshold will be
-         * increased to one unit above this value.
-         *
-         * @param value the LOW threshold at which a LEVEL_THRESHOLD_LOW will be generated.
-         *
-         * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
-         */
-        int setLowThreshold(int value);
+    /**
+     * Determines the currently defined low threshold.
+     *
+     * @return The current low threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
+     */
+    int getLowThreshold();
 
-        /**
-         * Set the HIGH threshold to the given value. Events will be generated when these thresholds are crossed.
-         *
-         * If the provided value is lower than the LOW threshold, the LOW threshold will be
-         * reduced to one unit below this value.
-         *
-         * @param value the HIGH threshold at which a LEVEL_THRESHOLD_HIGH will be generated.
-         *
-         * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
-         */
-        int setHighThreshold(int value);
+    /**
+     * Determines the currently defined high threshold.
+     *
+     * @return The current high threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
+     */
+    int getHighThreshold();
 
-        /**
-         * Determines the currently defined low threshold.
-         *
-         * @return The current low threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
-         */
-        int getLowThreshold();
+    /**
+     * Set the window size to the given value. The window size defines the number of samples used to determine a sound
+     * level. The higher the value, the more accurate the result will be. The lower the value, the more responsive the
+     * result will be. Adjust this value to suit the requirements of your applicaiton.
+     *
+     * @param size The size of the window to use (number of samples).
+     *
+     * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
+     */
+    int setWindowSize(int size);
 
-        /**
-         * Determines the currently defined high threshold.
-         *
-         * @return The current high threshold. DEVICE_INVALID_PARAMETER if no threshold has been defined.
-         */
-        int getHighThreshold();
-
-        /**
-         * Set the window size to the given value. The window size defines the number of samples used to determine a sound level.
-         * The higher the value, the more accurate the result will be. The lower the value, the more responsive the result will be.
-         * Adjust this value to suit the requirements of your applicaiton.
-         *
-         * @param size The size of the window to use (number of samples).
-         *
-         * @return DEVICE_OK on success, DEVICE_INVALID_PARAMETER if the request fails.
-         */
-        int setWindowSize(int size);
-
-        /**
-         * Destructor.
-         */
-        ~LevelDetector();
-
-    };
-}
+    /**
+     * Destructor.
+     */
+    ~LevelDetector();
+};
+}  // namespace codal
 
 #endif

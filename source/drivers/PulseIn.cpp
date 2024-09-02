@@ -23,8 +23,9 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "PulseIn.h"
-#include "Timer.h"
+
 #include "CodalDmesg.h"
+#include "Timer.h"
 
 using namespace codal;
 
@@ -32,38 +33,38 @@ bool PulseIn::timeoutGeneratorStarted = false;
 
 /**
  * Creates a new instance of a synchronous pulse detector ont he given pin.
- * 
+ *
  * @param pin The pin to observe for pulse events
  * @return the period of the next pulse in microseconds, or XXX if the given timeout expires.
  */
-PulseIn::PulseIn(Pin &p) : pin(p)
+PulseIn::PulseIn(Pin& p) : pin(p)
 {
     lastPeriod = 0;
-    lastEdge = 0;
-    enabled = false;
+    lastEdge   = 0;
+    enabled    = false;
 
     lock.wait();
 }
 
 /**
  * Synchronously await a pulse, and return the period of the pulse.
- * 
+ *
  * @param timeout The maximum amount of time to wait for a pulse, in microseconds. Set to zero to wait indefinitely.
  * @return The period of the next pulse, in microseconds, or DEVICE_CANCELLED if the timeout passes.
  */
-int 
-PulseIn::awaitPulse(int timeout)
+int PulseIn::awaitPulse(int timeout)
 {
     // perform lazy initialisation of our dependencies
-    if (!enabled)
-    {
+    if (!enabled) {
         // Configure the requested pin to supply pulse events.
         pin.eventOn(DEVICE_PIN_EVENT_ON_PULSE);
-        EventModel::defaultEventBus->listen(pin.id, pin.getPolarity() ? DEVICE_PIN_EVT_PULSE_HI : DEVICE_PIN_EVT_PULSE_LO, this, &PulseIn::onPulse, MESSAGE_BUS_LISTENER_IMMEDIATE);
-        EventModel::defaultEventBus->listen(DEVICE_ID_PULSE_IN, DEVICE_EVT_PULSE_IN_TIMEOUT, this, &PulseIn::onTimeout, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        EventModel::defaultEventBus->listen(pin.id,
+                                            pin.getPolarity() ? DEVICE_PIN_EVT_PULSE_HI : DEVICE_PIN_EVT_PULSE_LO, this,
+                                            &PulseIn::onPulse, MESSAGE_BUS_LISTENER_IMMEDIATE);
+        EventModel::defaultEventBus->listen(DEVICE_ID_PULSE_IN, DEVICE_EVT_PULSE_IN_TIMEOUT, this, &PulseIn::onTimeout,
+                                            MESSAGE_BUS_LISTENER_IMMEDIATE);
 
-        if (!timeoutGeneratorStarted)
-        {
+        if (!timeoutGeneratorStarted) {
             system_timer_event_every_us(10000, DEVICE_ID_PULSE_IN, DEVICE_EVT_PULSE_IN_TIMEOUT);
             timeoutGeneratorStarted = true;
         }
@@ -75,7 +76,7 @@ PulseIn::awaitPulse(int timeout)
         this->timeout = system_timer_current_time_us() + timeout;
     else
         this->timeout = 0;
-    
+
     lastPeriod = 0;
 
     lock.wait();
@@ -83,18 +84,17 @@ PulseIn::awaitPulse(int timeout)
     if (lastPeriod != 0)
         return lastPeriod;
     else
-        return DEVICE_CANCELLED;   
+        return DEVICE_CANCELLED;
 }
 
 /**
  * Event handler called when a pulse is detected.
  */
-void
-PulseIn::onPulse(Event e)
+void PulseIn::onPulse(Event e)
 {
-    timeout = 0;
-    lastPeriod = (uint32_t) e.timestamp;
-    
+    timeout    = 0;
+    lastPeriod = (uint32_t)e.timestamp;
+
     // Wake any blocked fibers and reset the lock.
     lock.notifyAll();
     lock.wait();
@@ -103,12 +103,10 @@ PulseIn::onPulse(Event e)
 /**
  * Event handler called when a timeout event is generated.
  */
-void
-PulseIn::onTimeout(Event e)
+void PulseIn::onTimeout(Event e)
 {
-    if (timeout && system_timer_current_time_us() > timeout)
-    {
-        timeout = 0;
+    if (timeout && system_timer_current_time_us() > timeout) {
+        timeout    = 0;
         lastPeriod = 0;
 
         // Wake any blocked fibers and reset the lock.
@@ -123,29 +121,29 @@ PulseIn::onTimeout(Event e)
  * to allow it to be used by a different peripheral.
  *
  * @param pin the Pin to be released.
- * @return DEVICE_OK on success, or DEVICE_NOT_IMPLEMENTED if unsupported, or DEVICE_INVALID_PARAMETER if the pin is not bound to this peripheral.
+ * @return DEVICE_OK on success, or DEVICE_NOT_IMPLEMENTED if unsupported, or DEVICE_INVALID_PARAMETER if the pin is not
+ * bound to this peripheral.
  */
-int PulseIn::releasePin(Pin &pin)
+int PulseIn::releasePin(Pin& pin)
 {
     // We've been asked to disconnect from the given pin.
     // As we do nothing else, simply disable ourselves.
     disable();
 
-    if (deleteOnRelease)
-        delete this;
+    if (deleteOnRelease) delete this;
 
     return DEVICE_OK;
 }
 
 void PulseIn::disable()
 {
-    if (enabled)
-    {
+    if (enabled) {
         enabled = false;
-        EventModel::defaultEventBus->ignore(pin.id, pin.getPolarity() ? DEVICE_PIN_EVT_PULSE_HI : DEVICE_PIN_EVT_PULSE_LO, this, &PulseIn::onPulse);
+        EventModel::defaultEventBus->ignore(
+            pin.id, pin.getPolarity() ? DEVICE_PIN_EVT_PULSE_HI : DEVICE_PIN_EVT_PULSE_LO, this, &PulseIn::onPulse);
         EventModel::defaultEventBus->ignore(DEVICE_ID_PULSE_IN, DEVICE_EVT_PULSE_IN_TIMEOUT, this, &PulseIn::onTimeout);
-        //pin.eventOn(DEVICE_PIN_EVENT_NONE);
-        timeout = 0;
+        // pin.eventOn(DEVICE_PIN_EVENT_NONE);
+        timeout    = 0;
         lastPeriod = 0;
         lock.notifyAll();
     }

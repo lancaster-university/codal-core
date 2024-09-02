@@ -25,129 +25,126 @@ DEALINGS IN THE SOFTWARE.
 #ifndef TOUCH_BUTTON_H
 #define TOUCH_BUTTON_H
 
-#include "CodalConfig.h"
 #include "Button.h"
 #include "CodalComponent.h"
+#include "CodalConfig.h"
 #include "Event.h"
 #include "Pin.h"
 #include "TouchSensor.h"
 
 // Constants associated with TouchButton
-#define TOUCH_BUTTON_CALIBRATION_LINEAR_OFFSET              2           // Constant value added to sensed baseline to determine threshold.
-#define TOUCH_BUTTON_CALIBRATION_PERCENTAGE_OFFSET          5           // Proportion (percentage) of baseline reading added to sensed baseline to determine threshold.
+#define TOUCH_BUTTON_CALIBRATION_LINEAR_OFFSET 2  // Constant value added to sensed baseline to determine threshold.
+#define TOUCH_BUTTON_CALIBRATION_PERCENTAGE_OFFSET \
+    5  // Proportion (percentage) of baseline reading added to sensed baseline to determine threshold.
 
 // Configure default TouchButton sensitivity. Defined as a percentage above the current threshold.
 // Samples above this value are classified as ACTIVE.
 #ifndef TOUCH_BUTTON_SENSITIVITY
-#define TOUCH_BUTTON_SENSITIVITY                            10
+#define TOUCH_BUTTON_SENSITIVITY 10
 #endif
 
-// Configure default TouchButton calibration period. 
-//Defined as number of samples to aggregate.
+// Configure default TouchButton calibration period.
+// Defined as number of samples to aggregate.
 #ifndef TOUCH_BUTTON_CALIBRATION_PERIOD
-#define TOUCH_BUTTON_CALIBRATION_PERIOD                     10
+#define TOUCH_BUTTON_CALIBRATION_PERIOD 10
 #endif
 
 // Status flags associated with a touch sensor
-#define TOUCH_BUTTON_CALIBRATING            0x10
-#define TOUCH_BUTTON_RUNNING                0x20
+#define TOUCH_BUTTON_CALIBRATING 0x10
+#define TOUCH_BUTTON_RUNNING     0x20
 
-namespace codal
-{
-    class TouchSensor;
+namespace codal {
+class TouchSensor;
+
+/**
+ * Class definition for a TouchButtonButton.
+ *
+ * Represents a single, software controlled capacitative touch button on the device.
+ */
+class TouchButton : public Button {
+  public:
+    TouchSensor& touchSensor;  // The TouchSensor driving this button
+    int threshold;             // The calibration threshold of this button
+    int reading;               // The last sample taken of this button.
+    bool active;               // true if this button is currnelty being sensed, false otherwise.
 
     /**
-      * Class definition for a TouchButtonButton.
-      *
-      * Represents a single, software controlled capacitative touch button on the device.
-      */
-    class TouchButton : public Button
-    {
-        public:
+     * Constructor.
+     *
+     * Enables software controlled capacitative touch sensing on the given pin.
+     *
+     * @param pin The physical pin on the device to sense.
+     * @param sensor The touch sensor driver for this touch sensitive pin.
+     * @param threshold The calibration threshold to use for this button. If undefined, auto calibration will be
+     * performed.
+     */
+    TouchButton(Pin& pin, TouchSensor& sensor, int threshold = -1);
 
-        TouchSensor     &touchSensor;           // The TouchSensor driving this button
-        int             threshold;              // The calibration threshold of this button
-        int             reading;                // The last sample taken of this button.
-        bool            active;                 // true if this button is currnelty being sensed, false otherwise.
+    /**
+     * Estimate and apply a threshold based on the current reading of the device.
+     */
+    void calibrate();
 
+    /**
+     * Manually define the threshold use to detect a touch event. Any sensed value equal to or greater than this value
+     * will be interpreted as a touch. See getValue().
+     *
+     * @param threshold The threshold value to use for this touchButton.
+     */
+    void setThreshold(int threshold);
 
-        /**
-          * Constructor.
-          *
-          * Enables software controlled capacitative touch sensing on the given pin.
-          *
-          * @param pin The physical pin on the device to sense.
-          * @param sensor The touch sensor driver for this touch sensitive pin.
-          * @param threshold The calibration threshold to use for this button. If undefined, auto calibration will be performed.
-          */
-        TouchButton(Pin &pin, TouchSensor &sensor, int threshold = -1);
+    /**
+     * Determine the threshold currently in use by the TouchButton
+     *
+     * @return the current threshold value
+     */
+    int getThreshold();
 
-        /**
-          * Estimate and apply a threshold based on the current reading of the device.
-          */
-        void calibrate();
+    /**
+     * Determine the last reading taken from this button.
+     *
+     * @return the last reading taken.
+     */
+    int getValue();
 
-        /**
-          * Manually define the threshold use to detect a touch event. Any sensed value equal to or greater than this value will
-          * be interpreted as a touch. See getValue().
-          *
-          * @param threshold The threshold value to use for this touchButton.
-          */
-        void setThreshold(int threshold);
+    /**
+     * Updates the record of the last reading from this button.
+     */
+    void setValue(int reading);
 
-        /**
-         * Determine the threshold currently in use by the TouchButton
-         * 
-         * @return the current threshold value
-         */
-        int getThreshold();
+    /**
+     * Determines if this button is instantenously active (i.e. pressed).
+     * Internal method, use before debouncing.
+     */
+    int buttonActive();
 
-        /**
-          * Determine the last reading taken from this button.
-          *
-          * @return the last reading taken.
-          */
-        int getValue();
+    /**
+     * Determines the instantneous digital value of the pin associated with this TouchButton
+     *
+     * @return true if a digital read of the attached pin is a logic 1, false otherwise.
+     */
+    int getPinValue();
 
-        /**
-         * Updates the record of the last reading from this button.
-         */
-        void setValue(int reading);
+    /**
+     * Drives a given digital value to the pin associated with this TouchButton
+     *
+     * @param v the digital value to write to the pin associated with this TouchButton.
+     */
+    void setPinValue(int v);
 
-        /**
-         * Determines if this button is instantenously active (i.e. pressed).
-         * Internal method, use before debouncing.
-         */
-        int buttonActive();
-
-        /**
-         * Determines the instantneous digital value of the pin associated with this TouchButton
-         *
-         * @return true if a digital read of the attached pin is a logic 1, false otherwise.
-         */
-         int getPinValue();
-
-        /**
-         * Drives a given digital value to the pin associated with this TouchButton
-         *
-         * @param v the digital value to write to the pin associated with this TouchButton.
-         */
-         void setPinValue(int v);
-
-        /**
-          * Method to release the given pin from a peripheral, if already bound.
-          * Device drivers should override this method to disconnect themselves from the give pin
-          * to allow it to be used by a different peripheral.
-          *
-          * @param pin the Pin to be released
-          */
-        virtual int releasePin(Pin &pin) override;
-        /**
-          * Destructor for Button, where we deregister this instance from the array of fiber components.
-          */
-        ~TouchButton();
-
-    };
-}
+    /**
+     * Method to release the given pin from a peripheral, if already bound.
+     * Device drivers should override this method to disconnect themselves from the give pin
+     * to allow it to be used by a different peripheral.
+     *
+     * @param pin the Pin to be released
+     */
+    virtual int releasePin(Pin& pin) override;
+    /**
+     * Destructor for Button, where we deregister this instance from the array of fiber components.
+     */
+    ~TouchButton();
+};
+}  // namespace codal
 
 #endif

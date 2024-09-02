@@ -23,43 +23,43 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "Accelerometer.h"
-#include "ErrorNo.h"
-#include "Event.h"
+
 #include "CodalCompat.h"
 #include "CodalFiber.h"
+#include "ErrorNo.h"
+#include "Event.h"
 
 using namespace codal;
 
-
 /**
-  * Constructor.
-  * Create a software abstraction of an FXSO8700 combined accelerometer/magnetometer
-  *
-  * @param _i2c an instance of I2C used to communicate with the device.
-  *
-  * @param address the default I2C address of the accelerometer. Defaults to: FXS8700_DEFAULT_ADDR.
-  *
+ * Constructor.
+ * Create a software abstraction of an FXSO8700 combined accelerometer/magnetometer
+ *
+ * @param _i2c an instance of I2C used to communicate with the device.
+ *
+ * @param address the default I2C address of the accelerometer. Defaults to: FXS8700_DEFAULT_ADDR.
+ *
  */
-Accelerometer::Accelerometer(CoordinateSpace &cspace, uint16_t id) : sample(), sampleENU(), coordinateSpace(cspace)
+Accelerometer::Accelerometer(CoordinateSpace& cspace, uint16_t id) : sample(), sampleENU(), coordinateSpace(cspace)
 {
     // Store our identifiers.
-    this->id = id;
+    this->id     = id;
     this->status = 0;
 
     // Set a default rate of 50Hz and a +/-2g range.
     this->samplePeriod = 20;
-    this->sampleRange = 2;
+    this->sampleRange  = 2;
 
     // Initialise gesture history
-    this->sigma = 0;
-    this->impulseSigma = 0;
-    this->lastGesture = ACCELEROMETER_EVT_NONE;
-    this->currentGesture = ACCELEROMETER_EVT_NONE;
-    this->shake.x = 0;
-    this->shake.y = 0;
-    this->shake.z = 0;
-    this->shake.count = 0;
-    this->shake.timer = 0;
+    this->sigma           = 0;
+    this->impulseSigma    = 0;
+    this->lastGesture     = ACCELEROMETER_EVT_NONE;
+    this->currentGesture  = ACCELEROMETER_EVT_NONE;
+    this->shake.x         = 0;
+    this->shake.y         = 0;
+    this->shake.z         = 0;
+    this->shake.count     = 0;
+    this->shake.timer     = 0;
     this->shake.impulse_2 = 1;
     this->shake.impulse_3 = 1;
     this->shake.impulse_6 = 1;
@@ -67,17 +67,17 @@ Accelerometer::Accelerometer(CoordinateSpace &cspace, uint16_t id) : sample(), s
 }
 
 /**
-  * Stores data from the accelerometer sensor in our buffer, and perform gesture tracking.
-  *
-  * On first use, this member function will attempt to add this component to the
-  * list of fiber components in order to constantly update the values stored
-  * by this object.
-  *
-  * This lazy instantiation means that we do not
-  * obtain the overhead from non-chalantly adding this component to fiber components.
-  *
-  * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
-  */
+ * Stores data from the accelerometer sensor in our buffer, and perform gesture tracking.
+ *
+ * On first use, this member function will attempt to add this component to the
+ * list of fiber components in order to constantly update the values stored
+ * by this object.
+ *
+ * This lazy instantiation means that we do not
+ * obtain the overhead from non-chalantly adding this component to fiber components.
+ *
+ * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
+ */
 int Accelerometer::update()
 {
     // Store the new data, after performing any necessary coordinate transformations.
@@ -96,18 +96,19 @@ int Accelerometer::update()
 };
 
 /**
-  * A service function.
-  * It calculates the current scalar acceleration of the device (x^2 + y^2 + z^2).
-  * It does not, however, square root the result, as this is a relatively high cost operation.
-  *
-  * This is left to application code should it be needed.
-  *
-  * @return the sum of the square of the acceleration of the device across all axes.
-  */
+ * A service function.
+ * It calculates the current scalar acceleration of the device (x^2 + y^2 + z^2).
+ * It does not, however, square root the result, as this is a relatively high cost operation.
+ *
+ * This is left to application code should it be needed.
+ *
+ * @return the sum of the square of the acceleration of the device across all axes.
+ */
 uint32_t Accelerometer::instantaneousAccelerationSquared()
 {
     // Use pythagoras theorem to determine the combined force acting on the device.
-    return (uint32_t)sample.x*(uint32_t)sample.x + (uint32_t)sample.y*(uint32_t)sample.y + (uint32_t)sample.z*(uint32_t)sample.z;
+    return (uint32_t)sample.x * (uint32_t)sample.x + (uint32_t)sample.y * (uint32_t)sample.y +
+           (uint32_t)sample.z * (uint32_t)sample.z;
 }
 
 /**
@@ -123,97 +124,85 @@ uint16_t Accelerometer::instantaneousPosture()
     bool shakeDetected = false;
 
     // Test for shake events.
-    // We detect a shake by measuring zero crossings in each axis. In other words, if we see a strong acceleration to the left followed by
-    // a strong acceleration to the right, then we can infer a shake. Similarly, we can do this for each axis (left/right, up/down, in/out).
+    // We detect a shake by measuring zero crossings in each axis. In other words, if we see a strong acceleration to
+    // the left followed by a strong acceleration to the right, then we can infer a shake. Similarly, we can do this for
+    // each axis (left/right, up/down, in/out).
     //
-    // If we see enough zero crossings in succession (ACCELEROMETER_SHAKE_COUNT_THRESHOLD), then we decide that the device
-    // has been shaken.
-    if ((sample.x < -ACCELEROMETER_SHAKE_TOLERANCE && shake.x) || (sample.x > ACCELEROMETER_SHAKE_TOLERANCE && !shake.x))
-    {
+    // If we see enough zero crossings in succession (ACCELEROMETER_SHAKE_COUNT_THRESHOLD), then we decide that the
+    // device has been shaken.
+    if ((sample.x < -ACCELEROMETER_SHAKE_TOLERANCE && shake.x) ||
+        (sample.x > ACCELEROMETER_SHAKE_TOLERANCE && !shake.x)) {
         shakeDetected = true;
-        shake.x = !shake.x;
+        shake.x       = !shake.x;
     }
 
-    if ((sample.y < -ACCELEROMETER_SHAKE_TOLERANCE && shake.y) || (sample.y > ACCELEROMETER_SHAKE_TOLERANCE && !shake.y))
-    {
+    if ((sample.y < -ACCELEROMETER_SHAKE_TOLERANCE && shake.y) ||
+        (sample.y > ACCELEROMETER_SHAKE_TOLERANCE && !shake.y)) {
         shakeDetected = true;
-        shake.y = !shake.y;
+        shake.y       = !shake.y;
     }
 
-    if ((sample.z < -ACCELEROMETER_SHAKE_TOLERANCE && shake.z) || (sample.z > ACCELEROMETER_SHAKE_TOLERANCE && !shake.z))
-    {
+    if ((sample.z < -ACCELEROMETER_SHAKE_TOLERANCE && shake.z) ||
+        (sample.z > ACCELEROMETER_SHAKE_TOLERANCE && !shake.z)) {
         shakeDetected = true;
-        shake.z = !shake.z;
+        shake.z       = !shake.z;
     }
 
     // If we detected a zero crossing in this sample period, count this.
-    if (shakeDetected && shake.count < ACCELEROMETER_SHAKE_COUNT_THRESHOLD)
-    {
+    if (shakeDetected && shake.count < ACCELEROMETER_SHAKE_COUNT_THRESHOLD) {
         shake.count++;
 
-        if (shake.count == 1)
-            shake.timer = 0;
+        if (shake.count == 1) shake.timer = 0;
 
-        if (shake.count == ACCELEROMETER_SHAKE_COUNT_THRESHOLD)
-        {
+        if (shake.count == ACCELEROMETER_SHAKE_COUNT_THRESHOLD) {
             shake.shaken = 1;
-            shake.timer = 0;
+            shake.timer  = 0;
             return ACCELEROMETER_EVT_SHAKE;
         }
     }
 
     // measure how long we have been detecting a SHAKE event.
-    if (shake.count > 0)
-    {
+    if (shake.count > 0) {
         shake.timer++;
 
         // If we've issued a SHAKE event already, and sufficient time has assed, allow another SHAKE event to be issued.
-        if (shake.shaken && shake.timer >= ACCELEROMETER_SHAKE_RTX)
-        {
+        if (shake.shaken && shake.timer >= ACCELEROMETER_SHAKE_RTX) {
             shake.shaken = 0;
-            shake.timer = 0;
-            shake.count = 0;
+            shake.timer  = 0;
+            shake.count  = 0;
         }
 
-        // Decay our count of zero crossings over time. We don't want them to accumulate if the user performs slow moving motions.
-        else if (!shake.shaken && shake.timer >= ACCELEROMETER_SHAKE_DAMPING)
-        {
+        // Decay our count of zero crossings over time. We don't want them to accumulate if the user performs slow
+        // moving motions.
+        else if (!shake.shaken && shake.timer >= ACCELEROMETER_SHAKE_DAMPING) {
             shake.timer = 0;
-            if (shake.count > 0)
-                shake.count--;
+            if (shake.count > 0) shake.count--;
         }
     }
 
     uint32_t force = instantaneousAccelerationSquared();
-    if (force < ACCELEROMETER_FREEFALL_THRESHOLD)
-        return ACCELEROMETER_EVT_FREEFALL;
+    if (force < ACCELEROMETER_FREEFALL_THRESHOLD) return ACCELEROMETER_EVT_FREEFALL;
 
     // Determine our posture.
-    if (sample.x < (-1000 + ACCELEROMETER_TILT_TOLERANCE))
-        return ACCELEROMETER_EVT_TILT_LEFT;
+    if (sample.x < (-1000 + ACCELEROMETER_TILT_TOLERANCE)) return ACCELEROMETER_EVT_TILT_LEFT;
 
-    if (sample.x > (1000 - ACCELEROMETER_TILT_TOLERANCE))
-        return ACCELEROMETER_EVT_TILT_RIGHT;
+    if (sample.x > (1000 - ACCELEROMETER_TILT_TOLERANCE)) return ACCELEROMETER_EVT_TILT_RIGHT;
 
-    if (sample.y < (-1000 + ACCELEROMETER_TILT_TOLERANCE))
-        return ACCELEROMETER_EVT_TILT_DOWN;
+    if (sample.y < (-1000 + ACCELEROMETER_TILT_TOLERANCE)) return ACCELEROMETER_EVT_TILT_DOWN;
 
-    if (sample.y > (1000 - ACCELEROMETER_TILT_TOLERANCE))
-        return ACCELEROMETER_EVT_TILT_UP;
+    if (sample.y > (1000 - ACCELEROMETER_TILT_TOLERANCE)) return ACCELEROMETER_EVT_TILT_UP;
 
-    if (sample.z < (-1000 + ACCELEROMETER_TILT_TOLERANCE))
-        return ACCELEROMETER_EVT_FACE_UP;
+    if (sample.z < (-1000 + ACCELEROMETER_TILT_TOLERANCE)) return ACCELEROMETER_EVT_FACE_UP;
 
-    if (sample.z > (1000 - ACCELEROMETER_TILT_TOLERANCE))
-        return ACCELEROMETER_EVT_FACE_DOWN;
+    if (sample.z > (1000 - ACCELEROMETER_TILT_TOLERANCE)) return ACCELEROMETER_EVT_FACE_DOWN;
 
     return ACCELEROMETER_EVT_NONE;
 }
 
 /**
-  * Updates the basic gesture recognizer. This performs instantaneous pose recognition, and also some low pass filtering to promote
-  * stability.
-  */
+ * Updates the basic gesture recognizer. This performs instantaneous pose recognition, and also some low pass filtering
+ * to promote stability.
+ */
 void Accelerometer::updateGesture()
 {
     // Check for High/Low G force events - typically impulses, impacts etc.
@@ -221,25 +210,20 @@ void Accelerometer::updateGesture()
     // For these events, we don't perform any low pass filtering.
     uint32_t force = instantaneousAccelerationSquared();
 
-    if (force > ACCELEROMETER_2G_THRESHOLD)
-    {
-        if (force > ACCELEROMETER_2G_THRESHOLD && !shake.impulse_2)
-        {
+    if (force > ACCELEROMETER_2G_THRESHOLD) {
+        if (force > ACCELEROMETER_2G_THRESHOLD && !shake.impulse_2) {
             Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_2G);
-            shake.impulse_2 = 1;            
+            shake.impulse_2 = 1;
         }
-        if (force > ACCELEROMETER_3G_THRESHOLD && !shake.impulse_3)
-        {
+        if (force > ACCELEROMETER_3G_THRESHOLD && !shake.impulse_3) {
             Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_3G);
             shake.impulse_3 = 1;
         }
-        if (force > ACCELEROMETER_6G_THRESHOLD && !shake.impulse_6)
-        {
+        if (force > ACCELEROMETER_6G_THRESHOLD && !shake.impulse_6) {
             Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_6G);
             shake.impulse_6 = 1;
         }
-        if (force > ACCELEROMETER_8G_THRESHOLD && !shake.impulse_8)
-        {
+        if (force > ACCELEROMETER_8G_THRESHOLD && !shake.impulse_8) {
             Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_8G);
             shake.impulse_8 = 1;
         }
@@ -253,105 +237,98 @@ void Accelerometer::updateGesture()
     else
         shake.impulse_2 = shake.impulse_3 = shake.impulse_6 = shake.impulse_8 = 0;
 
-
     // Determine what it looks like we're doing based on the latest sample...
     uint16_t g = instantaneousPosture();
 
-    if (g == ACCELEROMETER_EVT_SHAKE)
-    {
+    if (g == ACCELEROMETER_EVT_SHAKE) {
         lastGesture = ACCELEROMETER_EVT_SHAKE;
         Event e(DEVICE_ID_GESTURE, ACCELEROMETER_EVT_SHAKE);
         return;
     }
 
     // Perform some low pass filtering to reduce jitter from any detected effects
-    if (g == currentGesture)
-    {
-        if (sigma < ACCELEROMETER_GESTURE_DAMPING)
-            sigma++;
+    if (g == currentGesture) {
+        if (sigma < ACCELEROMETER_GESTURE_DAMPING) sigma++;
     }
-    else
-    {
+    else {
         currentGesture = g;
-        sigma = 0;
+        sigma          = 0;
     }
 
     // If we've reached threshold, update our record and raise the relevant event...
-    if (currentGesture != lastGesture && sigma >= ACCELEROMETER_GESTURE_DAMPING)
-    {
+    if (currentGesture != lastGesture && sigma >= ACCELEROMETER_GESTURE_DAMPING) {
         lastGesture = currentGesture;
         Event e(DEVICE_ID_GESTURE, lastGesture);
     }
 }
 
 /**
-  * Attempts to set the sample rate of the accelerometer to the specified value (in ms).
-  *
-  * @param period the requested time between samples, in milliseconds.
-  *
-  * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
-  *
-  * @code
-  * // sample rate is now 20 ms.
-  * accelerometer.setPeriod(20);
-  * @endcode
-  *
-  * @note The requested rate may not be possible on the hardware. In this case, the
-  * nearest lower rate is chosen.
-  */
+ * Attempts to set the sample rate of the accelerometer to the specified value (in ms).
+ *
+ * @param period the requested time between samples, in milliseconds.
+ *
+ * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
+ *
+ * @code
+ * // sample rate is now 20 ms.
+ * accelerometer.setPeriod(20);
+ * @endcode
+ *
+ * @note The requested rate may not be possible on the hardware. In this case, the
+ * nearest lower rate is chosen.
+ */
 int Accelerometer::setPeriod(int period)
 {
     int result;
 
     samplePeriod = period;
-    result = configure();
+    result       = configure();
 
     samplePeriod = getPeriod();
     return result;
-
 }
 
 /**
-  * Reads the currently configured sample rate of the accelerometer.
-  *
-  * @return The time between samples, in milliseconds.
-  */
+ * Reads the currently configured sample rate of the accelerometer.
+ *
+ * @return The time between samples, in milliseconds.
+ */
 int Accelerometer::getPeriod()
 {
     return (int)samplePeriod;
 }
 
 /**
-  * Attempts to set the sample range of the accelerometer to the specified value (in g).
-  *
-  * @param range The requested sample range of samples, in g.
-  *
-  * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
-  *
-  * @code
-  * // the sample range of the accelerometer is now 8G.
-  * accelerometer.setRange(8);
-  * @endcode
-  *
-  * @note The requested range may not be possible on the hardware. In this case, the
-  * nearest lower range is chosen.
-  */
+ * Attempts to set the sample range of the accelerometer to the specified value (in g).
+ *
+ * @param range The requested sample range of samples, in g.
+ *
+ * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
+ *
+ * @code
+ * // the sample range of the accelerometer is now 8G.
+ * accelerometer.setRange(8);
+ * @endcode
+ *
+ * @note The requested range may not be possible on the hardware. In this case, the
+ * nearest lower range is chosen.
+ */
 int Accelerometer::setRange(int range)
 {
     int result;
 
     sampleRange = range;
-    result = configure();
+    result      = configure();
 
     sampleRange = getRange();
     return result;
 }
 
 /**
-  * Reads the currently configured sample range of the accelerometer.
-  *
-  * @return The sample range, in g.
-  */
+ * Reads the currently configured sample range of the accelerometer.
+ *
+ * @return The sample range, in g.
+ */
 int Accelerometer::getRange()
 {
     return (int)sampleRange;
@@ -416,116 +393,110 @@ int Accelerometer::getZ()
 }
 
 /**
-  * Provides a rotation compensated pitch of the device, based on the latest update retrieved from the accelerometer.
-  *
-  * @return The pitch of the device, in degrees.
-  *
-  * @code
-  * accelerometer.getPitch();
-  * @endcode
-  */
+ * Provides a rotation compensated pitch of the device, based on the latest update retrieved from the accelerometer.
+ *
+ * @return The pitch of the device, in degrees.
+ *
+ * @code
+ * accelerometer.getPitch();
+ * @endcode
+ */
 int Accelerometer::getPitch()
 {
-    return (int) ((360*getPitchRadians()) / (2*PI));
+    return (int)((360 * getPitchRadians()) / (2 * PI));
 }
 
 /**
-  * Provides a rotation compensated pitch of the device, based on the latest update retrieved from the accelerometer.
-  *
-  * @return The pitch of the device, in radians.
-  *
-  * @code
-  * accelerometer.getPitchRadians();
-  * @endcode
-  */
+ * Provides a rotation compensated pitch of the device, based on the latest update retrieved from the accelerometer.
+ *
+ * @return The pitch of the device, in radians.
+ *
+ * @code
+ * accelerometer.getPitchRadians();
+ * @endcode
+ */
 float Accelerometer::getPitchRadians()
 {
     requestUpdate();
-    if (!(status & ACCELEROMETER_IMU_DATA_VALID))
-        recalculatePitchRoll();
+    if (!(status & ACCELEROMETER_IMU_DATA_VALID)) recalculatePitchRoll();
 
     return pitch;
 }
 
 /**
-  * Provides a rotation compensated roll of the device, based on the latest update retrieved from the accelerometer.
-  *
-  * @return The roll of the device, in degrees.
-  *
-  * @code
-  * accelerometer.getRoll();
-  * @endcode
-  */
+ * Provides a rotation compensated roll of the device, based on the latest update retrieved from the accelerometer.
+ *
+ * @return The roll of the device, in degrees.
+ *
+ * @code
+ * accelerometer.getRoll();
+ * @endcode
+ */
 int Accelerometer::getRoll()
 {
-    return (int) ((360*getRollRadians()) / (2*PI));
+    return (int)((360 * getRollRadians()) / (2 * PI));
 }
 
 /**
-  * Provides a rotation compensated roll of the device, based on the latest update retrieved from the accelerometer.
-  *
-  * @return The roll of the device, in radians.
-  *
-  * @code
-  * accelerometer.getRollRadians();
-  * @endcode
-  */
+ * Provides a rotation compensated roll of the device, based on the latest update retrieved from the accelerometer.
+ *
+ * @return The roll of the device, in radians.
+ *
+ * @code
+ * accelerometer.getRollRadians();
+ * @endcode
+ */
 float Accelerometer::getRollRadians()
 {
     requestUpdate();
-    if (!(status & ACCELEROMETER_IMU_DATA_VALID))
-        recalculatePitchRoll();
+    if (!(status & ACCELEROMETER_IMU_DATA_VALID)) recalculatePitchRoll();
 
     return roll;
 }
 
 /**
-  * Recalculate roll and pitch values for the current sample.
-  *
-  * @note We only do this at most once per sample, as the necessary trigonemteric functions are rather
-  *       heavyweight for a CPU without a floating point unit.
-  */
+ * Recalculate roll and pitch values for the current sample.
+ *
+ * @note We only do this at most once per sample, as the necessary trigonemteric functions are rather
+ *       heavyweight for a CPU without a floating point unit.
+ */
 void Accelerometer::recalculatePitchRoll()
 {
-    double x = (double) sample.x;
-    double y = (double) sample.y;
-    double z = (double) sample.z;
+    double x = (double)sample.x;
+    double y = (double)sample.y;
+    double z = (double)sample.z;
 
-    roll = atan2(x, -z);
-    pitch = atan2(y, (x*sin(roll) - z*cos(roll)));
+    roll  = atan2(x, -z);
+    pitch = atan2(y, (x * sin(roll) - z * cos(roll)));
 
     // Handle to the two "negative quadrants", such that we get an output in the +/- 18- degree range.
     // This ensures that the pitch values are consistent with the roll values.
-    if (z > 0.0)
-    {
+    if (z > 0.0) {
         double reference = pitch > 0.0 ? (PI / 2.0) : (-PI / 2.0);
-        pitch = reference + (reference - pitch);
+        pitch            = reference + (reference - pitch);
     }
 
     status |= ACCELEROMETER_IMU_DATA_VALID;
 }
 
 /**
-  * Retrieves the last recorded gesture.
-  *
-  * @return The last gesture that was detected.
-  *
-  * Example:
-  * @code
-  *
-  * if (accelerometer.getGesture() == SHAKE)
-  *     display.scroll("SHAKE!");
-  * @endcode
-  */
+ * Retrieves the last recorded gesture.
+ *
+ * @return The last gesture that was detected.
+ *
+ * Example:
+ * @code
+ *
+ * if (accelerometer.getGesture() == SHAKE)
+ *     display.scroll("SHAKE!");
+ * @endcode
+ */
 uint16_t Accelerometer::getGesture()
 {
     return lastGesture;
 }
 
 /**
-  * Destructor for FXS8700, where we deregister from the array of fiber components.
-  */
-Accelerometer::~Accelerometer()
-{
-}
-
+ * Destructor for FXS8700, where we deregister from the array of fiber components.
+ */
+Accelerometer::~Accelerometer() {}

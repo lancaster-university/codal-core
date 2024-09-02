@@ -23,13 +23,13 @@ DEALINGS IN THE SOFTWARE.
 */
 
 #include "TouchSensor.h"
-#include "Event.h"
+
 #include "CodalFiber.h"
+#include "Event.h"
 #include "Timer.h"
 #include "codal_target_hal.h"
 
 using namespace codal;
-
 
 /**
  * Default Constructor.
@@ -41,7 +41,7 @@ using namespace codal;
  */
 TouchSensor::TouchSensor(uint16_t id) : drivePin(*(Pin*)NULL)
 {
-    this->id = id;
+    this->id              = id;
     this->numberOfButtons = 0;
 }
 
@@ -53,21 +53,21 @@ TouchSensor::TouchSensor(uint16_t id) : drivePin(*(Pin*)NULL)
  * @param pin The physical pin on the device that drives the capacitative sensing.
  * @id The ID of this component, defaults to DEVICE_ID_TOUCH_SENSOR
  */
-TouchSensor::TouchSensor(Pin &pin, uint16_t id) : drivePin(pin)
+TouchSensor::TouchSensor(Pin& pin, uint16_t id) : drivePin(pin)
 {
-    this->id = id;
+    this->id              = id;
     this->numberOfButtons = 0;
 
     // Initialise output drive low (to drain any residual charge before sampling begins).
     drivePin.setDigitalValue(0);
 
     // Clear list off attached buttons.
-    for (int i=0; i<TOUCH_SENSOR_MAX_BUTTONS; i++)
-        buttons[i] = NULL;
+    for (int i = 0; i < TOUCH_SENSOR_MAX_BUTTONS; i++) buttons[i] = NULL;
 
     // Configure a periodic callback event.
-    if(EventModel::defaultEventBus)
-        EventModel::defaultEventBus->listen(id, TOUCH_SENSOR_UPDATE_NEEDED, this, &TouchSensor::onSampleEvent, MESSAGE_BUS_LISTENER_IMMEDIATE);
+    if (EventModel::defaultEventBus)
+        EventModel::defaultEventBus->listen(id, TOUCH_SENSOR_UPDATE_NEEDED, this, &TouchSensor::onSampleEvent,
+                                            MESSAGE_BUS_LISTENER_IMMEDIATE);
 
     // Generate an event every TOUCH_SENSOR_SAMPLE_PERIOD milliseconds.
     system_timer_event_every_us(TOUCH_SENSOR_SAMPLE_PERIOD * 1000, id, TOUCH_SENSOR_UPDATE_NEEDED);
@@ -76,16 +76,14 @@ TouchSensor::TouchSensor(Pin &pin, uint16_t id) : drivePin(pin)
 /**
  * Begin touch sensing on the given button
  */
-int TouchSensor::addTouchButton(TouchButton *button)
+int TouchSensor::addTouchButton(TouchButton* button)
 {
     // if our limit of buttons is reached, then there's nothing more to do.
-    if (numberOfButtons == TOUCH_SENSOR_MAX_BUTTONS)
-        return DEVICE_NO_RESOURCES;
+    if (numberOfButtons == TOUCH_SENSOR_MAX_BUTTONS) return DEVICE_NO_RESOURCES;
 
     // Protect against duplicate buttons from being added.
-    for (int i=0; i<numberOfButtons; i++)
-        if (buttons[i] == button)
-            return DEVICE_INVALID_PARAMETER;
+    for (int i = 0; i < numberOfButtons; i++)
+        if (buttons[i] == button) return DEVICE_INVALID_PARAMETER;
 
     // Otherwise, add this new button to the end of the list.
     buttons[numberOfButtons] = button;
@@ -100,13 +98,11 @@ int TouchSensor::addTouchButton(TouchButton *button)
 /**
  * Stop touch sensing on the given button
  */
-int TouchSensor::removeTouchButton(TouchButton *button)
+int TouchSensor::removeTouchButton(TouchButton* button)
 {
     // First, find the button, if we have it.
-    for (int i=0; i<numberOfButtons; i++)
-    {
-        if (buttons[i] == button)
-        {
+    for (int i = 0; i < numberOfButtons; i++) {
+        if (buttons[i] == button) {
             // replace this entry with the last in the list, to ensure the list remains contiguous.
             buttons[i] = buttons[numberOfButtons];
             numberOfButtons--;
@@ -119,17 +115,16 @@ int TouchSensor::removeTouchButton(TouchButton *button)
 }
 
 /**
-  * Initiate a scan of the sensors.
-  */
+ * Initiate a scan of the sensors.
+ */
 void TouchSensor::onSampleEvent(Event)
 {
-    int cycles = 0;
+    int cycles        = 0;
     int activeSensors = 0;
 
     // Drain any residual charge on the receiver pins.
     // TODO: Move this to a platform specific library function (DevicePin).
-    for (int i=0; i<numberOfButtons; i++)
-    {
+    for (int i = 0; i < numberOfButtons; i++) {
         buttons[i]->_pin.drainPin();
         buttons[i]->active = true;
     }
@@ -141,16 +136,12 @@ void TouchSensor::onSampleEvent(Event)
     // raise the drive pin, and start testing the receiver pins...
     drivePin.setDigitalValue(1);
 
-    while(1)
-    {
+    while (1) {
         activeSensors = 0;
 
-        for (int i=0; i<numberOfButtons; i++)
-        {
-            if (buttons[i]->active)
-            {
-                if(buttons[i]->getPinValue() == 1 || cycles >= (buttons[i]->threshold))
-                {
+        for (int i = 0; i < numberOfButtons; i++) {
+            if (buttons[i]->active) {
+                if (buttons[i]->getPinValue() == 1 || cycles >= (buttons[i]->threshold)) {
                     buttons[i]->active = false;
                     buttons[i]->setValue(cycles);
                 }
@@ -160,8 +151,7 @@ void TouchSensor::onSampleEvent(Event)
 
         cycles += numberOfButtons;
 
-        if (activeSensors == 0 || cycles > TOUCH_SENSE_SAMPLE_MAX)
-            break;
+        if (activeSensors == 0 || cycles > TOUCH_SENSE_SAMPLE_MAX) break;
     }
 
     drivePin.setDigitalValue(0);
@@ -172,6 +162,6 @@ void TouchSensor::onSampleEvent(Event)
  */
 TouchSensor::~TouchSensor()
 {
-    if(EventModel::defaultEventBus)
+    if (EventModel::defaultEventBus)
         EventModel::defaultEventBus->ignore(id, TOUCH_SENSOR_UPDATE_NEEDED, this, &TouchSensor::onSampleEvent);
 }

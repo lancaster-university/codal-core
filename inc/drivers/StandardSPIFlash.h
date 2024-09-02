@@ -25,35 +25,33 @@ DEALINGS IN THE SOFTWARE.
 #ifndef CODAL_STD_SPIFLASH_H
 #define CODAL_STD_SPIFLASH_H
 
-#include "SPIFlash.h"
 #include "SPI.h"
+#include "SPIFlash.h"
 
-namespace codal
-{
-class StandardSPIFlash : public SPIFlash
-{
-protected:
+namespace codal {
+class StandardSPIFlash : public SPIFlash {
+  protected:
     uint32_t _numPages;
-    SPI &spi;
-    Pin &ssel;
+    SPI& spi;
+    Pin& ssel;
     uint8_t cmdBuf[4];
     uint8_t status;
 
     void setCommand(uint8_t command, int addr);
-    int sendCommand(uint8_t command, int addr = -1, void *resp = 0, int respSize = 0);
+    int sendCommand(uint8_t command, int addr = -1, void* resp = 0, int respSize = 0);
     int eraseCore(uint8_t cmd, uint32_t addr);
     int waitBusy(int waitMS);
     void writeEnable();
 
-public:
-    StandardSPIFlash(SPI &spi, Pin &ssel, int numPages);
+  public:
+    StandardSPIFlash(SPI& spi, Pin& ssel, int numPages);
     virtual int numPages();
-    virtual int readBytes(uint32_t addr, void *buffer, uint32_t len);
-    virtual int writeBytes(uint32_t addr, const void *buffer, uint32_t len);
+    virtual int readBytes(uint32_t addr, void* buffer, uint32_t len);
+    virtual int writeBytes(uint32_t addr, const void* buffer, uint32_t len);
     virtual int eraseSmallRow(uint32_t addr);
     virtual int eraseBigRow(uint32_t addr);
     virtual int eraseChip();
 };
-}
+}  // namespace codal
 
 #endif

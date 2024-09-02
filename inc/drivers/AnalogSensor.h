@@ -26,60 +26,56 @@ DEALINGS IN THE SOFTWARE.
 #define ANALOG_SENSOR_H
 
 #include "CodalConfig.h"
-#include "Pin.h"
 #include "Event.h"
+#include "Pin.h"
 #include "Sensor.h"
 
 /**
-  * Sensor events deprecated, use SENSOR_* instead
-  */
-#define ANALOG_THRESHOLD_LOW SENSOR_THRESHOLD_LOW
-#define ANALOG_THRESHOLD_HIGH SENSOR_THRESHOLD_HIGH
+ * Sensor events deprecated, use SENSOR_* instead
+ */
+#define ANALOG_THRESHOLD_LOW        SENSOR_THRESHOLD_LOW
+#define ANALOG_THRESHOLD_HIGH       SENSOR_THRESHOLD_HIGH
 #define ANALOG_SENSOR_UPDATE_NEEDED SENSOR_UPDATE_NEEDED
 
 /**
  * Status values deprecated, use SENSOR_* instead
  */
-#define ANALOG_SENSOR_INITIALISED SENSOR_INITIALISED
-#define ANALOG_SENSOR_HIGH_THRESHOLD_PASSED SENSOR_HIGH_THRESHOLD_PASSED
-#define ANALOG_SENSOR_LOW_THRESHOLD_PASSED SENSOR_LOW_THRESHOLD_PASSED
-#define ANALOG_SENSOR_LOW_THRESHOLD_ENABLED SENSOR_LOW_THRESHOLD_ENABLED
+#define ANALOG_SENSOR_INITIALISED            SENSOR_INITIALISED
+#define ANALOG_SENSOR_HIGH_THRESHOLD_PASSED  SENSOR_HIGH_THRESHOLD_PASSED
+#define ANALOG_SENSOR_LOW_THRESHOLD_PASSED   SENSOR_LOW_THRESHOLD_PASSED
+#define ANALOG_SENSOR_LOW_THRESHOLD_ENABLED  SENSOR_LOW_THRESHOLD_ENABLED
 #define ANALOG_SENSOR_HIGH_THRESHOLD_ENABLED SENSOR_HIGH_THRESHOLD_ENABLED
 
-namespace codal
-{
+namespace codal {
+/**
+ * Class definition for a generic analog sensor, and performs periodic sampling, buffering and low pass filtering of the
+ * data.
+ */
+class AnalogSensor : public Sensor {
+  private:
+    Pin& pin;  // Pin where the sensor is connected.
+
+  public:
     /**
-     * Class definition for a generic analog sensor, and performs periodic sampling, buffering and low pass filtering of the data.
+     * Constructor.
+     *
+     * Creates a generic AnalogSensor.
+     *
+     * @param pin The pin on which to sense
+     * @param id The ID of this compoenent e.g. DEVICE_ID_THERMOMETER
      */
-    class AnalogSensor : public Sensor
-    {
-        private:
+    AnalogSensor(Pin& pin, uint16_t id);
 
-        Pin& pin;              // Pin where the sensor is connected.
+    /**
+     * Read the value from pin.
+     */
+    virtual int readValue();
 
-        public:
-
-        /**
-          * Constructor.
-          *
-          * Creates a generic AnalogSensor.
-          *
-          * @param pin The pin on which to sense
-          * @param id The ID of this compoenent e.g. DEVICE_ID_THERMOMETER
-         */
-        AnalogSensor(Pin &pin, uint16_t id);
-
-        /**
-         * Read the value from pin.
-         */
-        virtual int readValue();
-
-        /**
-          * Destructor.
-          */
-        ~AnalogSensor();
-
-   };
-}
+    /**
+     * Destructor.
+     */
+    ~AnalogSensor();
+};
+}  // namespace codal
 
 #endif

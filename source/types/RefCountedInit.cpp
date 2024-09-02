@@ -30,16 +30,16 @@ using namespace codal;
 // These two are placed in a separate file, so that they can be overriden by user code.
 
 /**
-  * Releases the current instance.
-  */
+ * Releases the current instance.
+ */
 void RefCounted::destroy()
 {
     free(this);
 }
 
 /**
-  * Initializes for one outstanding reference.
-  */
+ * Initializes for one outstanding reference.
+ */
 void RefCounted::init()
 {
     // Initialize to one reference (lowest bit set to 1)

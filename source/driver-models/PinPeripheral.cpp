@@ -22,8 +22,8 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.
 */
 
-#include "Pin.h"
 #include "CodalDmesg.h"
+#include "Pin.h"
 
 using namespace codal;
 
@@ -33,66 +33,62 @@ using namespace codal;
  * to allow it to be used by a different peripheral.
  *
  * @param pin the Pin to be released.
- * @return DEVICE_OK on success, or DEVICE_NOT_IMPLEMENTED if unsupported, or DEVICE_INVALID_PARAMETER if the pin is not bound to this peripheral.
+ * @return DEVICE_OK on success, or DEVICE_NOT_IMPLEMENTED if unsupported, or DEVICE_INVALID_PARAMETER if the pin is not
+ * bound to this peripheral.
  */
-int PinPeripheral::releasePin(Pin &pin)
+int PinPeripheral::releasePin(Pin& pin)
 {
     return DEVICE_NOT_IMPLEMENTED;
 }
 
 /**
-    * Determines if this peripheral has locked any attached pins to this peripheral.
-    * During a locked period, any attempts to release or reassign those pins to a differnet peripheral are ignored.
-    * This mechanism is primarily useful to use functions such as Pin::setDigitalValue() within a peripheral driver,
-    * but without releasing the pin's binding to that peripheral.
-    *
-    * @return true if this peripherals pin bindings are locked, false otherwise.
-    */
+ * Determines if this peripheral has locked any attached pins to this peripheral.
+ * During a locked period, any attempts to release or reassign those pins to a differnet peripheral are ignored.
+ * This mechanism is primarily useful to use functions such as Pin::setDigitalValue() within a peripheral driver,
+ * but without releasing the pin's binding to that peripheral.
+ *
+ * @return true if this peripherals pin bindings are locked, false otherwise.
+ */
 bool PinPeripheral::isPinLocked()
 {
     return pinLock;
 }
 
 /**
-    * Controls if this peripheral has locked any attached pins to this peripheral.
-    * During a locked period, any attempts to release or reassign those pins to a differnet peripheral are ignored.
-    * This mechanism is primarily useful to use functions such as Pin::setDigitalValue() within a peripheral driver,
-    * but without releasing the pin's binding to that peripheral.
-    *
-    * @param true if this peripherals pin bindings are to be locked, false otherwise.
-    */
+ * Controls if this peripheral has locked any attached pins to this peripheral.
+ * During a locked period, any attempts to release or reassign those pins to a differnet peripheral are ignored.
+ * This mechanism is primarily useful to use functions such as Pin::setDigitalValue() within a peripheral driver,
+ * but without releasing the pin's binding to that peripheral.
+ *
+ * @param true if this peripherals pin bindings are to be locked, false otherwise.
+ */
 void PinPeripheral::setPinLock(bool locked)
 {
     pinLock = locked;
 }
 
 /**
-    * Utility function, to assist in redirect() operations and consistent use of disconnect()/connect() by peripherals.
-    * Safely disconnects pin from any attached peripherals, upfates pin to the new pin, and attaches to the given peripheral.
-    * Also validates out NULL cases.
-    *
-    * @param p Typically a mutable instance variable, holding the current pin used by a given peripheral.
-    * @param newPin The pin which is replacing the value of pin.
-    */
-int PinPeripheral::reassignPin(void *p, Pin *newPin)
+ * Utility function, to assist in redirect() operations and consistent use of disconnect()/connect() by peripherals.
+ * Safely disconnects pin from any attached peripherals, upfates pin to the new pin, and attaches to the given
+ * peripheral. Also validates out NULL cases.
+ *
+ * @param p Typically a mutable instance variable, holding the current pin used by a given peripheral.
+ * @param newPin The pin which is replacing the value of pin.
+ */
+int PinPeripheral::reassignPin(void* p, Pin* newPin)
 {
-    Pin **pin = (Pin **)p;
+    Pin** pin = (Pin**)p;
 
-    if (pin == NULL)
-        return DEVICE_INVALID_PARAMETER;
+    if (pin == NULL) return DEVICE_INVALID_PARAMETER;
 
     // If the pin is changing state, reelase any old peripherals and attach the new one.
-    if (*pin != newPin)
-    {
-        if (*pin)
-            (*pin)->disconnect();
+    if (*pin != newPin) {
+        if (*pin) (*pin)->disconnect();
 
-        if (newPin)
-            newPin->connect(*this);
+        if (newPin) newPin->connect(*this);
 
         *pin = newPin;
     }
 
     return DEVICE_OK;
 }
-

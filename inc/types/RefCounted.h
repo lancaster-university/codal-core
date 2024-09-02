@@ -28,76 +28,71 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "CodalDevice.h"
 
-namespace codal
-{
+namespace codal {
+/**
+ * Base class for payload for ref-counted objects. Used by ManagedString and DeviceImage.
+ * There is no constructor, as this struct is typically malloc()ed.
+ */
+struct RefCounted {
+  public:
     /**
-      * Base class for payload for ref-counted objects. Used by ManagedString and DeviceImage.
-      * There is no constructor, as this struct is typically malloc()ed.
-      */
-    struct RefCounted
-    {
-    public:
-        /**
-          * The high 15 bits hold the number of outstanding references. The lowest bit is always 1
-          * to make sure it doesn't look like C++ vtable.
-          * Should never be even or one (object should be deleted then).
-          * When it's set to 0xffff, it means the object sits in flash and should not be counted.
-          */
-        volatile uint16_t refCount;
+     * The high 15 bits hold the number of outstanding references. The lowest bit is always 1
+     * to make sure it doesn't look like C++ vtable.
+     * Should never be even or one (object should be deleted then).
+     * When it's set to 0xffff, it means the object sits in flash and should not be counted.
+     */
+    volatile uint16_t refCount;
 
-    #if CONFIG_ENABLED(DEVICE_TAG)
-        uint16_t tag;
-    #endif
+#if CONFIG_ENABLED(DEVICE_TAG)
+    uint16_t tag;
+#endif
 
-        /**
-          * Increment reference count.
-          */
-        void incr();
+    /**
+     * Increment reference count.
+     */
+    void incr();
 
-        /**
-            * Decrement reference count.
-            */
-        void decr();
+    /**
+     * Decrement reference count.
+     */
+    void decr();
 
-        /**
-          * Initializes for one outstanding reference.
-          */
-        void init();
+    /**
+     * Initializes for one outstanding reference.
+     */
+    void init();
 
-        /**
-          * Releases the current instance.
-          */
-        void destroy();
+    /**
+     * Releases the current instance.
+     */
+    void destroy();
 
-        /**
-          * Checks if the object resides in flash memory.
-          *
-          * @return true if the object resides in flash memory, false otherwise.
-          */
-        bool isReadOnly();
-    };
+    /**
+     * Checks if the object resides in flash memory.
+     *
+     * @return true if the object resides in flash memory, false otherwise.
+     */
+    bool isReadOnly();
+};
 
+#if CONFIG_ENABLED(DEVICE_TAG)
+// Note that there might be binary dependencies on these values (and layout of
+// RefCounted and derived classes), so the existing ones are best left unchanged.
+#define REF_TAG_STRING 1
+#define REF_TAG_BUFFER 2
+#define REF_TAG_IMAGE  3
+#define REF_TAG_USER   32
 
-    #if CONFIG_ENABLED(DEVICE_TAG)
-    // Note that there might be binary dependencies on these values (and layout of
-    // RefCounted and derived classes), so the existing ones are best left unchanged.
-    #define REF_TAG_STRING 1
-    #define REF_TAG_BUFFER 2
-    #define REF_TAG_IMAGE 3
-    #define REF_TAG_USER 32
-
-    #define REF_COUNTED_DEF_EMPTY(...)                                                                 \
-        static const uint16_t emptyData[]                                                              \
-            __attribute__((aligned(4))) = {0xffff, REF_TAG, __VA_ARGS__};
-    #define REF_COUNTED_INIT(ptr)                                                                      \
-        ptr->init();                                                                                   \
-        ptr->tag = REF_TAG
-    #else
-    #define REF_COUNTED_DEF_EMPTY(className, ...)                                                      \
-        static const uint16_t emptyData[] __attribute__((aligned(4))) = {0xffff, __VA_ARGS__};
-    #define REF_COUNTED_INIT(ptr) ptr->init()
-    #endif
-}
-
+#define REF_COUNTED_DEF_EMPTY(...) \
+    static const uint16_t emptyData[] __attribute__((aligned(4))) = {0xffff, REF_TAG, __VA_ARGS__};
+#define REF_COUNTED_INIT(ptr) \
+    ptr->init();              \
+    ptr->tag = REF_TAG
+#else
+#define REF_COUNTED_DEF_EMPTY(className, ...) \
+    static const uint16_t emptyData[] __attribute__((aligned(4))) = {0xffff, __VA_ARGS__};
+#define REF_COUNTED_INIT(ptr) ptr->init()
+#endif
+}  // namespace codal
 
 #endif

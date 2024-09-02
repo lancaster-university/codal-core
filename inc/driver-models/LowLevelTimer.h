@@ -1,64 +1,52 @@
 #ifndef LOW_LEVEL_TIMER_H
 #define LOW_LEVEL_TIMER_H
 
-#include "CodalConfig.h"
 #include "CodalComponent.h"
+#include "CodalConfig.h"
 #include "codal_target_hal.h"
 
-#define CODAL_LOWLEVELTIMER_STATUS_SLEEP_IRQENABLE    0x01
+#define CODAL_LOWLEVELTIMER_STATUS_SLEEP_IRQENABLE 0x01
 
-namespace codal
-{
+namespace codal {
 
 /**
  * An enumeration that represents the current mode of the timer.
  **/
-enum TimerMode
-{
-    TimerModeTimer = 0,
-    TimerModeCounter,
-    TimerModeAlternateFunction
-};
+enum TimerMode { TimerModeTimer = 0, TimerModeCounter, TimerModeAlternateFunction };
 
 /**
  * An enumeration that represents the number of bits (i.e. the top) used to count.
  *
  * This enumeration is used to compute roll over calculations and must be accurate.
  **/
-enum TimerBitMode
-{
-    BitMode8 = 0,
-    BitMode16,
-    BitMode24,
-    BitMode32
-};
+enum TimerBitMode { BitMode8 = 0, BitMode16, BitMode24, BitMode32 };
 
 /**
- * This class represents a timer in its rawest form, it allows direct manipulation of timer registers through a common API.
+ * This class represents a timer in its rawest form, it allows direct manipulation of timer registers through a common
+ *API.
  *
  * Higher level drivers can then use / layer on top of the low level timer interface.
  **/
-class LowLevelTimer : public CodalComponent
-{
-    protected:
-    TimerBitMode bitMode; // the current bitMode of the timer.
-    uint8_t channel_count; // the number of channels this timer instance has.
+class LowLevelTimer : public CodalComponent {
+  protected:
+    TimerBitMode bitMode;   // the current bitMode of the timer.
+    uint8_t channel_count;  // the number of channels this timer instance has.
 
-    public:
-
+  public:
     /**
      * A function pointer that it is invoked from the Low Level Timer interrupt context.
      *
-     * @param channel_bitmsk A 16 bit number that represents the channels that have triggered a match. I.e. if CC register 0 is set, bit 0 will be set to one.
+     * @param channel_bitmsk A 16 bit number that represents the channels that have triggered a match. I.e. if CC
+     *register 0 is set, bit 0 will be set to one.
      **/
-    void (*timer_pointer) (uint16_t channel_bitmsk);
+    void (*timer_pointer)(uint16_t channel_bitmsk);
 
     /**
      * Sets the timer_pointer member variable.
      *
      * @returns DEVICE_OK on success.
      **/
-    virtual int setIRQ(void (*timer_pointer) (uint16_t channel_bitmsk))
+    virtual int setIRQ(void (*timer_pointer)(uint16_t channel_bitmsk))
     {
         this->timer_pointer = timer_pointer;
         return DEVICE_OK;
@@ -89,9 +77,7 @@ class LowLevelTimer : public CodalComponent
     /**
      * Destructor
      **/
-    virtual ~LowLevelTimer()
-    {
-    }
+    virtual ~LowLevelTimer() {}
 
     /**
      * Enables this timer instance and begins counting
@@ -132,7 +118,7 @@ class LowLevelTimer : public CodalComponent
      *
      * @param value the value to load into the capture compare register
      **/
-    virtual int setCompare(uint8_t channel, uint32_t value)= 0;
+    virtual int setCompare(uint8_t channel, uint32_t value) = 0;
 
     /**
      * Offsets the compare value of a capture compare register in the underlying hardware
@@ -172,20 +158,13 @@ class LowLevelTimer : public CodalComponent
     /**
      * Returns the current bit mode of the timer.
      **/
-    virtual TimerBitMode getBitMode()
-    {
-        return bitMode;
-    }
+    virtual TimerBitMode getBitMode() { return bitMode; }
 
     /**
      * Returns the number of channels this timer has for use.
      **/
-    int getChannelCount()
-    {
-        return channel_count;
-    }
+    int getChannelCount() { return channel_count; }
 };
-}
-
+}  // namespace codal
 
 #endif

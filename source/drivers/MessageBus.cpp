@@ -23,33 +23,34 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
-  * Class definition for the MessageBus.
-  *
-  * The MessageBus is the common mechanism to deliver asynchronous events on the
-  * Device platform. It serves a number of purposes:
-  *
-  * 1) It provides an eventing abstraction that is independent of the underlying substrate.
-  *
-  * 2) It provides a mechanism to decouple user code from trusted system code
-  *    i.e. the basis of a message passing nano kernel.
-  *
-  * 3) It allows a common high level eventing abstraction across a range of hardware types.e.g. buttons, BLE...
-  *
-  * 4) It provides a mechanim for extensibility - new devices added via I/O pins can have OO based
-  *    drivers and communicate via the message bus with minima impact on user level languages.
-  *
-  * 5) It allows for the possiblility of event / data aggregation, which in turn can save energy.
-  *
-  * It has the following design principles:
-  *
-  * 1) Maintain a low RAM footprint where possible
-  *
-  * 2) Make few assumptions about the underlying platform, but allow optimizations where possible.
-  */
-#include "CodalConfig.h"
+ * Class definition for the MessageBus.
+ *
+ * The MessageBus is the common mechanism to deliver asynchronous events on the
+ * Device platform. It serves a number of purposes:
+ *
+ * 1) It provides an eventing abstraction that is independent of the underlying substrate.
+ *
+ * 2) It provides a mechanism to decouple user code from trusted system code
+ *    i.e. the basis of a message passing nano kernel.
+ *
+ * 3) It allows a common high level eventing abstraction across a range of hardware types.e.g. buttons, BLE...
+ *
+ * 4) It provides a mechanim for extensibility - new devices added via I/O pins can have OO based
+ *    drivers and communicate via the message bus with minima impact on user level languages.
+ *
+ * 5) It allows for the possiblility of event / data aggregation, which in turn can save energy.
+ *
+ * It has the following design principles:
+ *
+ * 1) Maintain a low RAM footprint where possible
+ *
+ * 2) Make few assumptions about the underlying platform, but allow optimizations where possible.
+ */
 #include "MessageBus.h"
-#include "CodalFiber.h"
+
+#include "CodalConfig.h"
 #include "CodalDmesg.h"
+#include "CodalFiber.h"
 #include "ErrorNo.h"
 #include "NotifyEvents.h"
 #include "codal_target_hal.h"
@@ -59,50 +60,46 @@ using namespace codal;
 static uint16_t userNotifyId = DEVICE_NOTIFY_USER_EVENT_BASE;
 
 /**
-  * Default constructor.
-  *
-  * Adds itself as a fiber component, and also configures itself to be the
-  * default EventModel if defaultEventBus is NULL.
-  */
+ * Default constructor.
+ *
+ * Adds itself as a fiber component, and also configures itself to be the
+ * default EventModel if defaultEventBus is NULL.
+ */
 MessageBus::MessageBus()
 {
-    this->listeners = NULL;
+    this->listeners      = NULL;
     this->evt_queue_head = NULL;
     this->evt_queue_tail = NULL;
-    this->queueLength = 0;
+    this->queueLength    = 0;
 
     // ANY listeners for scheduler events MUST be immediate, or else they will not be registered.
     listen(DEVICE_ID_SCHEDULER, DEVICE_SCHEDULER_EVT_IDLE, this, &MessageBus::idle, MESSAGE_BUS_LISTENER_IMMEDIATE);
 
-    if(EventModel::defaultEventBus == NULL)
-        EventModel::defaultEventBus = this;
+    if (EventModel::defaultEventBus == NULL) EventModel::defaultEventBus = this;
 }
 
 /**
-  * Invokes a callback on a given Listener
-  *
-  * Internal wrapper function, used to enable
-  * parameterised callbacks through the fiber scheduler.
-  */
+ * Invokes a callback on a given Listener
+ *
+ * Internal wrapper function, used to enable
+ * parameterised callbacks through the fiber scheduler.
+ */
 REAL_TIME_FUNC
-void async_callback(void *param)
+void async_callback(void* param)
 {
-    Listener *listener = (Listener *)param;
+    Listener* listener = (Listener*)param;
 
     // OK, now we need to decide how to behave depending on our configuration.
     // If this a fiber f already active within this listener then check our
     // configuration to determine the correct course of action.
     //
 
-    if (listener->flags & MESSAGE_BUS_LISTENER_BUSY)
-    {
+    if (listener->flags & MESSAGE_BUS_LISTENER_BUSY) {
         // Drop this event, if that's how we've been configured.
-        if (listener->flags & MESSAGE_BUS_LISTENER_DROP_IF_BUSY)
-            return;
+        if (listener->flags & MESSAGE_BUS_LISTENER_DROP_IF_BUSY) return;
 
         // Queue this event up for later, if that's how we've been configured.
-        if (listener->flags & MESSAGE_BUS_LISTENER_QUEUE_IF_BUSY)
-        {
+        if (listener->flags & MESSAGE_BUS_LISTENER_QUEUE_IF_BUSY) {
             listener->queue(listener->evt);
             return;
         }
@@ -114,11 +111,9 @@ void async_callback(void *param)
     // Record that we have a fiber going into this listener...
     listener->flags |= MESSAGE_BUS_LISTENER_BUSY;
 
-    while (1)
-    {
+    while (1) {
         // Firstly, check for a method callback into an object.
-        if (listener->flags & MESSAGE_BUS_LISTENER_METHOD)
-            listener->cb_method->fire(listener->evt);
+        if (listener->flags & MESSAGE_BUS_LISTENER_METHOD) listener->cb_method->fire(listener->evt);
 
         // Now a parameterised C function
         else if (listener->flags & MESSAGE_BUS_LISTENER_PARAMETERISED)
@@ -128,17 +123,16 @@ void async_callback(void *param)
         else
             listener->cb(listener->evt);
 
-
         // If there are more events to process, dequeue the next one and process it.
-        if ((listener->flags & MESSAGE_BUS_LISTENER_QUEUE_IF_BUSY) && listener->evt_queue)
-        {
-            EventQueueItem *item = listener->evt_queue;
+        if ((listener->flags & MESSAGE_BUS_LISTENER_QUEUE_IF_BUSY) && listener->evt_queue) {
+            EventQueueItem* item = listener->evt_queue;
 
-            listener->evt = item->evt;
+            listener->evt       = item->evt;
             listener->evt_queue = listener->evt_queue->next;
             delete item;
 
-            // We spin the scheduler here, to preven any particular event handler from continuously holding onto resources.
+            // We spin the scheduler here, to preven any particular event handler from continuously holding onto
+            // resources.
             schedule();
         }
         else
@@ -150,17 +144,17 @@ void async_callback(void *param)
 }
 
 /**
-  * Queue the given event for processing at a later time.
-  * Add the given event at the tail of our queue.
-  *
-  * @param The event to queue.
-  */
+ * Queue the given event for processing at a later time.
+ * Add the given event at the tail of our queue.
+ *
+ * @param The event to queue.
+ */
 REAL_TIME_FUNC
-void MessageBus::queueEvent(Event &evt)
+void MessageBus::queueEvent(Event& evt)
 {
     int processingComplete;
 
-    EventQueueItem *prev = evt_queue_tail;
+    EventQueueItem* prev = evt_queue_tail;
 
     // Now process all handler regsitered as URGENT.
     // These pre-empt the queue, and are useful for fast, high priority services.
@@ -168,14 +162,12 @@ void MessageBus::queueEvent(Event &evt)
 
     // If we've already processed all event handlers, we're all done.
     // No need to queue the event.
-    if (processingComplete)
-        return;
+    if (processingComplete) return;
 
     // If we need to queue, but there is no space, then there's nothg we can do.
-    if (queueLength >= MESSAGE_BUS_LISTENER_MAX_QUEUE_DEPTH)
-    {
+    if (queueLength >= MESSAGE_BUS_LISTENER_MAX_QUEUE_DEPTH) {
         // Note that this can lead to strange lockups, where we await an event that never arrives.
-        //DMESG("evt %d/%d: overflow!", evt.source, evt.value);
+        // DMESG("evt %d/%d: overflow!", evt.source, evt.value);
         return;
     }
 
@@ -183,24 +175,21 @@ void MessageBus::queueEvent(Event &evt)
     // We queue this event at the tail of the queue at the point where we entered queueEvent()
     // This is important as the processing above *may* have generated further events, and
     // we want to maintain ordering of events.
-    EventQueueItem *item = new EventQueueItem(evt);
+    EventQueueItem* item = new EventQueueItem(evt);
 
     // The queue was empty when we entered this function, so queue our event at the start of the queue.
     target_disable_irq();
 
-    if (prev == NULL)
-    {
-        item->next = evt_queue_head;
+    if (prev == NULL) {
+        item->next     = evt_queue_head;
         evt_queue_head = item;
     }
-    else
-    {
+    else {
         item->next = prev->next;
         prev->next = item;
     }
 
-    if (item->next == NULL)
-        evt_queue_tail = item;
+    if (item->next == NULL) evt_queue_tail = item;
 
     queueLength++;
 
@@ -208,39 +197,36 @@ void MessageBus::queueEvent(Event &evt)
 }
 
 /**
-  * Extract the next event from the front of the event queue (if present).
-  *
-  * @return a pointer to the EventQueueItem that is at the head of the list.
-  */
+ * Extract the next event from the front of the event queue (if present).
+ *
+ * @return a pointer to the EventQueueItem that is at the head of the list.
+ */
 REAL_TIME_FUNC
 EventQueueItem* MessageBus::dequeueEvent()
 {
-    EventQueueItem *item = NULL;
+    EventQueueItem* item = NULL;
 
     target_disable_irq();
 
-    if (evt_queue_head != NULL)
-    {
-        item = evt_queue_head;
+    if (evt_queue_head != NULL) {
+        item           = evt_queue_head;
         evt_queue_head = item->next;
 
-        if (evt_queue_head == NULL)
-            evt_queue_tail = NULL;
+        if (evt_queue_head == NULL) evt_queue_tail = NULL;
 
         queueLength--;
     }
 
     target_enable_irq();
 
-
     return item;
 }
 
 /**
-  * Cleanup any Listeners marked for deletion from the list.
-  *
-  * @return The number of listeners removed from the list.
-  */
+ * Cleanup any Listeners marked for deletion from the list.
+ *
+ * @return The number of listeners removed from the list.
+ */
 int MessageBus::deleteMarkedListeners()
 {
     Listener *l, *p;
@@ -250,18 +236,16 @@ int MessageBus::deleteMarkedListeners()
     p = NULL;
 
     // Walk this list of event handlers. Delete any that match the given listener.
-    while (l != NULL)
-    {
-        if ((l->flags & MESSAGE_BUS_LISTENER_DELETING) && !(l->flags & MESSAGE_BUS_LISTENER_BUSY))
-        {
+    while (l != NULL) {
+        if ((l->flags & MESSAGE_BUS_LISTENER_DELETING) && !(l->flags & MESSAGE_BUS_LISTENER_BUSY)) {
             if (p == NULL)
                 listeners = l->next;
             else
                 p->next = l->next;
 
             // delete the listener.
-            Listener *t = l;
-            l = l->next;
+            Listener* t = l;
+            l           = l->next;
 
             delete t;
             removed++;
@@ -277,21 +261,21 @@ int MessageBus::deleteMarkedListeners()
 }
 
 /**
-  * Periodic callback from Device.
-  *
-  * Process at least one event from the event queue, if it is not empty.
-  * We then continue processing events until something appears on the runqueue.
-  */
+ * Periodic callback from Device.
+ *
+ * Process at least one event from the event queue, if it is not empty.
+ * We then continue processing events until something appears on the runqueue.
+ */
 void MessageBus::idle(Event)
 {
     // Clear out any listeners marked for deletion
     this->deleteMarkedListeners();
 
-    EventQueueItem *item = this->dequeueEvent();
+    EventQueueItem* item = this->dequeueEvent();
 
-    // Whilst there are events to process and we have no useful other work to do, pull them off the queue and process them.
-    while (item)
-    {
+    // Whilst there are events to process and we have no useful other work to do, pull them off the queue and process
+    // them.
+    while (item) {
         // send the event to all standard event listeners.
         this->process(item->evt);
 
@@ -301,8 +285,7 @@ void MessageBus::idle(Event)
         // If we have created some useful work to do, we stop processing.
         // This helps to minimise the number of blocked fibers we create at any point in time, therefore
         // also reducing the RAM footprint.
-        if(!scheduler_runqueue_empty())
-            break;
+        if (!scheduler_runqueue_empty()) break;
 
         // Pull the next event to process, if there is one.
         item = this->dequeueEvent();
@@ -310,25 +293,25 @@ void MessageBus::idle(Event)
 }
 
 /**
-  * Queues the given event to be sent to all registered recipients.
-  *
-  * @param evt The event to send.
-  *
-  * @code
-  * MessageBus bus;
-  *
-  * // Creates and sends the Event using bus.
-  * Event evt(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK);
-  *
-  * // Creates the Event, but delays the sending of that event.
-  * Event evt1(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK, CREATE_ONLY);
-  *
-  * bus.send(evt1);
-  *
-  * // This has the same effect!
-  * evt1.fire()
-  * @endcode
-  */
+ * Queues the given event to be sent to all registered recipients.
+ *
+ * @param evt The event to send.
+ *
+ * @code
+ * MessageBus bus;
+ *
+ * // Creates and sends the Event using bus.
+ * Event evt(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK);
+ *
+ * // Creates the Event, but delays the sending of that event.
+ * Event evt1(DEVICE_ID_BUTTON_A, DEVICE_BUTTON_EVT_CLICK, CREATE_ONLY);
+ *
+ * bus.send(evt1);
+ *
+ * // This has the same effect!
+ * evt1.fire()
+ * @endcode
+ */
 REAL_TIME_FUNC
 int MessageBus::send(Event evt)
 {
@@ -340,32 +323,30 @@ int MessageBus::send(Event evt)
 }
 
 /**
-  * Internal function, used to deliver the given event to all relevant recipients.
-  * Normally, this is called once an event has been removed from the event queue.
-  *
-  * @param evt The event to send.
-  *
-  * @param urgent The type of listeners to process (optional). If set to true, only listeners defined as urgent and non-blocking will be processed
-  *               otherwise, all other (standard) listeners will be processed. Defaults to false.
-  *
-  * @return 1 if all matching listeners were processed, 0 if further processing is required.
-  *
-  * @note It is recommended that all external code uses the send() function instead of this function,
-  *       or the constructors provided by Event.
-  */
+ * Internal function, used to deliver the given event to all relevant recipients.
+ * Normally, this is called once an event has been removed from the event queue.
+ *
+ * @param evt The event to send.
+ *
+ * @param urgent The type of listeners to process (optional). If set to true, only listeners defined as urgent and
+ * non-blocking will be processed otherwise, all other (standard) listeners will be processed. Defaults to false.
+ *
+ * @return 1 if all matching listeners were processed, 0 if further processing is required.
+ *
+ * @note It is recommended that all external code uses the send() function instead of this function,
+ *       or the constructors provided by Event.
+ */
 REAL_TIME_FUNC
-int MessageBus::process(Event &evt, bool urgent)
+int MessageBus::process(Event& evt, bool urgent)
 {
-    Listener *l;
+    Listener* l;
     int complete = 1;
     bool listenerUrgent;
 
     l = listeners;
 
-    while (l != NULL)
-    {
-        if((l->id == evt.source || l->id == DEVICE_ID_ANY) && (l->value == evt.value || l->value == DEVICE_EVT_ANY))
-        {
+    while (l != NULL) {
+        if ((l->id == evt.source || l->id == DEVICE_ID_ANY) && (l->value == evt.value || l->value == DEVICE_EVT_ANY)) {
             // If we're running under the fiber scheduler, then derive the THREADING_MODE for the callback based on the
             // metadata in the listener itself.
             if (fiber_scheduler_running())
@@ -374,8 +355,7 @@ int MessageBus::process(Event &evt, bool urgent)
                 listenerUrgent = true;
 
             // If we should process this event hander in this pass, then activate the listener.
-            if(listenerUrgent == urgent && !(l->flags & MESSAGE_BUS_LISTENER_DELETING))
-            {
+            if (listenerUrgent == urgent && !(l->flags & MESSAGE_BUS_LISTENER_DELETING)) {
                 l->evt = evt;
 
                 // OK, if this handler has regisitered itself as non-blocking, we just execute it directly...
@@ -395,27 +375,26 @@ int MessageBus::process(Event &evt, bool urgent)
         l = l->next;
     }
 
-    //Serial.println("EXIT");
-    //while (!(UCSR0A & _BV(TXC0)));
+    // Serial.println("EXIT");
+    // while (!(UCSR0A & _BV(TXC0)));
 
     return complete;
 }
 
 /**
-  * Add the given Listener to the list of event handlers, unconditionally.
-  *
-  * @param listener The Listener to add.
-  *
-  * @return DEVICE_OK if the listener is valid, DEVICE_INVALID_PARAMETER otherwise.
-  */
-int MessageBus::add(Listener *newListener)
+ * Add the given Listener to the list of event handlers, unconditionally.
+ *
+ * @param listener The Listener to add.
+ *
+ * @return DEVICE_OK if the listener is valid, DEVICE_INVALID_PARAMETER otherwise.
+ */
+int MessageBus::add(Listener* newListener)
 {
     Listener *l, *p;
     int methodCallback;
 
-    //handler can't be NULL!
-    if (newListener == NULL)
-        return DEVICE_INVALID_PARAMETER;
+    // handler can't be NULL!
+    if (newListener == NULL) return DEVICE_INVALID_PARAMETER;
 
     l = listeners;
 
@@ -424,17 +403,16 @@ int MessageBus::add(Listener *newListener)
 
     // We always check the ID, VALUE and CB_METHOD fields.
     // If we have a callback to a method, check the cb_method class. Otherwise, the cb function point is sufficient.
-    while (l != NULL)
-    {
+    while (l != NULL) {
         methodCallback = (newListener->flags & MESSAGE_BUS_LISTENER_METHOD) && (l->flags & MESSAGE_BUS_LISTENER_METHOD);
 
-        if (l->id == newListener->id && l->value == newListener->value && (methodCallback ? *l->cb_method == *newListener->cb_method : l->cb == newListener->cb) && newListener->cb_arg == l->cb_arg)
-        {
+        if (l->id == newListener->id && l->value == newListener->value &&
+            (methodCallback ? *l->cb_method == *newListener->cb_method : l->cb == newListener->cb) &&
+            newListener->cb_arg == l->cb_arg) {
             // We have a perfect match for this event listener already registered.
             // If it's marked for deletion, we simply resurrect the listener, and we're done.
             // Either way, we return an error code, as the *new* listener should be released...
-            if(l->flags & MESSAGE_BUS_LISTENER_DELETING)
-                l->flags &= ~MESSAGE_BUS_LISTENER_DELETING;
+            if (l->flags & MESSAGE_BUS_LISTENER_DELETING) l->flags &= ~MESSAGE_BUS_LISTENER_DELETING;
 
             return DEVICE_NOT_SUPPORTED;
         }
@@ -444,8 +422,7 @@ int MessageBus::add(Listener *newListener)
 
     // We have a valid, new event handler. Add it to the list.
     // if listeners is null - we can automatically add this listener to the list at the beginning...
-    if (listeners == NULL)
-    {
+    if (listeners == NULL) {
         listeners = newListener;
         Event(DEVICE_ID_MESSAGE_BUS_LISTENER, newListener->id);
 
@@ -460,32 +437,28 @@ int MessageBus::add(Listener *newListener)
     p = listeners;
     l = listeners;
 
-    while (l != NULL && l->id < newListener->id)
-    {
+    while (l != NULL && l->id < newListener->id) {
         p = l;
         l = l->next;
     }
 
-    while (l != NULL && l->id == newListener->id && l->value < newListener->value)
-    {
+    while (l != NULL && l->id == newListener->id && l->value < newListener->value) {
         p = l;
         l = l->next;
     }
 
-    //add at front of list
-    if (p == listeners && (newListener->id < p->id || (p->id == newListener->id && p->value > newListener->value)))
-    {
+    // add at front of list
+    if (p == listeners && (newListener->id < p->id || (p->id == newListener->id && p->value > newListener->value))) {
         newListener->next = p;
 
-        //this new listener is now the front!
+        // this new listener is now the front!
         listeners = newListener;
     }
 
-    //add after p
-    else
-    {
+    // add after p
+    else {
         newListener->next = p->next;
-        p->next = newListener;
+        p->next           = newListener;
     }
 
     Event(DEVICE_ID_MESSAGE_BUS_LISTENER, newListener->id);
@@ -493,36 +466,31 @@ int MessageBus::add(Listener *newListener)
 }
 
 /**
-  * Remove the given Listener from the list of event handlers.
-  *
-  * @param listener The Listener to remove.
-  *
-  * @return DEVICE_OK if the listener is valid, DEVICE_INVALID_PARAMETER otherwise.
-  */
-int MessageBus::remove(Listener *listener)
+ * Remove the given Listener from the list of event handlers.
+ *
+ * @param listener The Listener to remove.
+ *
+ * @return DEVICE_OK if the listener is valid, DEVICE_INVALID_PARAMETER otherwise.
+ */
+int MessageBus::remove(Listener* listener)
 {
-    Listener *l;
+    Listener* l;
     int removed = 0;
 
-    //handler can't be NULL!
-    if (listener == NULL)
-        return DEVICE_INVALID_PARAMETER;
+    // handler can't be NULL!
+    if (listener == NULL) return DEVICE_INVALID_PARAMETER;
 
     l = listeners;
 
     // Walk this list of event handlers. Delete any that match the given listener.
-    while (l != NULL)
-    {
-        if ((listener->flags & MESSAGE_BUS_LISTENER_METHOD) == (l->flags & MESSAGE_BUS_LISTENER_METHOD))
-        {
-            if(((listener->flags & MESSAGE_BUS_LISTENER_METHOD) && (*l->cb_method == *listener->cb_method)) ||
-              ((!(listener->flags & MESSAGE_BUS_LISTENER_METHOD) && l->cb == listener->cb)))
-            {
-                if ((listener->id == DEVICE_ID_ANY || listener->id == l->id) && (listener->value == DEVICE_EVT_ANY || listener->value == l->value))
-                {
+    while (l != NULL) {
+        if ((listener->flags & MESSAGE_BUS_LISTENER_METHOD) == (l->flags & MESSAGE_BUS_LISTENER_METHOD)) {
+            if (((listener->flags & MESSAGE_BUS_LISTENER_METHOD) && (*l->cb_method == *listener->cb_method)) ||
+                ((!(listener->flags & MESSAGE_BUS_LISTENER_METHOD) && l->cb == listener->cb))) {
+                if ((listener->id == DEVICE_ID_ANY || listener->id == l->id) &&
+                    (listener->value == DEVICE_EVT_ANY || listener->value == l->value)) {
                     // If notification of deletion has been requested, invoke the listener deletion callback.
-                    if (listener_deletion_callback)
-                        listener_deletion_callback(l);
+                    if (listener_deletion_callback) listener_deletion_callback(l);
 
                     // Found a match. mark this to be removed from the list.
                     l->flags |= MESSAGE_BUS_LISTENER_DELETING;
@@ -541,20 +509,18 @@ int MessageBus::remove(Listener *listener)
 }
 
 /**
-  * Returns the Listener with the given position in our list.
-  *
-  * @param n The position in the list to return.
-  *
-  * @return the Listener at postion n in the list, or NULL if the position is invalid.
-  */
+ * Returns the Listener with the given position in our list.
+ *
+ * @param n The position in the list to return.
+ *
+ * @return the Listener at postion n in the list, or NULL if the position is invalid.
+ */
 Listener* MessageBus::elementAt(int n)
 {
-    Listener *l = listeners;
+    Listener* l = listeners;
 
-    while (n > 0)
-    {
-        if (l == NULL)
-            return NULL;
+    while (n > 0) {
+        if (l == NULL) return NULL;
 
         n--;
         l = l->next;
@@ -573,11 +539,11 @@ uint16_t allocateNotifyEvent()
     return userNotifyId++;
 }
 
-}
+}  // namespace codal
 
 /**
-  * Destructor for MessageBus, where we deregister this instance from the array of fiber components.
-  */
+ * Destructor for MessageBus, where we deregister this instance from the array of fiber components.
+ */
 MessageBus::~MessageBus()
 {
     ignore(DEVICE_ID_SCHEDULER, DEVICE_EVT_ANY, this, &MessageBus::idle);
