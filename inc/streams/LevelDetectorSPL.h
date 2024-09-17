@@ -58,7 +58,7 @@ DEALINGS IN THE SOFTWARE.
 
 // The level (in dB) that corresponds to an 8bit value of 0.
 #ifndef LEVEL_DETECTOR_SPL_8BIT_000_POINT
-#define LEVEL_DETECTOR_SPL_8BIT_000_POINT                   35.0f
+#define LEVEL_DETECTOR_SPL_8BIT_000_POINT                   52.0f
 #endif
 
 // The level (in dB) that corresponds to an 8bit value of 255.
