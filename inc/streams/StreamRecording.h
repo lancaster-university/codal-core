@@ -37,11 +37,14 @@ namespace codal
         StreamRecording_Buffer * readHead;
         uint32_t maxBufferLenth;
         uint32_t totalBufferLength;
+        uint32_t totalMemoryUsage;
         int state;
         float lastUpstreamRate;
 
         DataSink *downStream;
         DataSource &upStream;
+
+        void initialise();
 
         public:
 

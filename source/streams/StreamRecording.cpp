@@ -7,15 +7,23 @@
 
 using namespace codal;
 
+// Minimum memory overhead of adding a buffer to the chain
+// StreamRecording_Buffer contains a ManagedBuffer which points to a BufferData
+// StreamRecording_Buffer and BufferData are heap blocks with a PROCESSOR_WORD_TYPE overhead
+#define CODAL_STREAM_RECORDING_BUFFER_OVERHEAD \
+  ( sizeof(StreamRecording_Buffer) + sizeof(BufferData) + 2 * sizeof(PROCESSOR_WORD_TYPE))
+
+
 StreamRecording::StreamRecording( DataSource &source, uint32_t maxLength ) : upStream( source )
 {   
     this->state = REC_STATE_STOPPED;
-    this->bufferChain = NULL;
-    this->lastBuffer = NULL;
-    this->readHead = NULL;
-    this->maxBufferLenth = maxLength;
-    this->totalBufferLength = 0;
-    this->lastUpstreamRate = DATASTREAM_SAMPLE_RATE_UNKNOWN;
+
+    // The test for "full" was totalBufferLength >= maxBufferLenth
+    // Adjust this number by the memory overhead
+    // of the old default case with buffers of 256 bytes.
+    this->maxBufferLenth = maxLength + ( maxLength / 256 + 1) * CODAL_STREAM_RECORDING_BUFFER_OVERHEAD;
+
+    initialise();
 
     this->downStream = NULL;
     upStream.connect( *this );
@@ -26,9 +34,19 @@ StreamRecording::~StreamRecording()
     //
 }
 
+void StreamRecording::initialise()
+{
+    this->totalBufferLength = 0;
+    this->totalMemoryUsage = 0;
+    this->lastBuffer = NULL;
+    this->readHead = NULL;
+    this->bufferChain = NULL;
+    this->lastUpstreamRate = DATASTREAM_SAMPLE_RATE_UNKNOWN;
+}
+
 bool StreamRecording::canPull()
 {
-    return this->totalBufferLength < this->maxBufferLenth;
+    return this->totalMemoryUsage < this->maxBufferLenth;
 }
 
 ManagedBuffer StreamRecording::pull()
@@ -66,7 +84,7 @@ float StreamRecording::duration( unsigned int sampleRate )
 }
 
 bool StreamRecording::isFull() {
-    return this->totalBufferLength >= this->maxBufferLenth;
+    return this->totalMemoryUsage >= this->maxBufferLenth;
 }
 
 void StreamRecording::printChain()
@@ -113,8 +131,9 @@ int StreamRecording::pullRequest()
         
         this->lastBuffer = block;
         
-        this->totalBufferLength += this->lastBuffer->buffer.length();
-        
+        uint32_t length = this->lastBuffer->buffer.length();
+        this->totalBufferLength += length;
+        this->totalMemoryUsage  += length + CODAL_STREAM_RECORDING_BUFFER_OVERHEAD;
         return DEVICE_OK;
     }
     
@@ -182,11 +201,7 @@ void StreamRecording::erase()
         delete node;
         node = next;
     }
-    this->totalBufferLength = 0;
-    this->lastBuffer = NULL;
-    this->readHead = NULL;
-    this->bufferChain = NULL;
-    this->lastUpstreamRate = DATASTREAM_SAMPLE_RATE_UNKNOWN;
+    initialise();
 }
 
 bool StreamRecording::playAsync()
