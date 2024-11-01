@@ -33,12 +33,8 @@ using namespace codal;
 
 SplitterChannel::SplitterChannel( StreamSplitter * parent, DataSink * output = NULL )
 {
-    this->sampleRate = DATASTREAM_SAMPLE_RATE_UNKNOWN;
     this->parent = parent;
     this->output = output;
-    this->pullAttempts = 0;
-    this->sentBuffers = 0;
-    this->inUnderflow = 0;
 }
 
 SplitterChannel::~SplitterChannel()
@@ -47,98 +43,66 @@ SplitterChannel::~SplitterChannel()
 }
 
 int SplitterChannel::pullRequest() {
-    this->pullAttempts++;
     if( output != NULL )
         return output->pullRequest();
+
     return DEVICE_BUSY;
 }
 
-ManagedBuffer SplitterChannel::resample( ManagedBuffer _in, uint8_t * buffer, int length ) {
+ManagedBuffer SplitterChannel::resample( ManagedBuffer _in, uint8_t *buffer, int length ) {
     
-    // Going the long way around - drop any extra samples...
-    float inRate = parent->upstream.getSampleRate();
-    float outRate = sampleRate;
-
+    // Fast path. Perform a shallow copy of the input buffer where possible.
+    // TODO: verify this is still a safe operation.
+    if (this->sampleDropRate == 1)
+        return _in;
+    
+    // Going the long way around - drop any excess samples...
     int inFmt = parent->upstream.getFormat();
     int bytesPerSample = DATASTREAM_FORMAT_BYTES_PER_SAMPLE( inFmt );
     int totalSamples = _in.length() / bytesPerSample;
+    int numOutputSamples = (totalSamples / sampleDropRate) + 1;
+    uint8_t *outPtr = NULL;
 
-    // Integer estimate the number of sample drops required
-    int byteDeficit = (int)inRate - (int)outRate;
-    int packetsPerSec = (int)inRate / totalSamples;
-    int dropPerPacket = byteDeficit / packetsPerSec;
-    int samplesPerOut = totalSamples - dropPerPacket;
+    ManagedBuffer output = ManagedBuffer(numOutputSamples * bytesPerSample);
+    outPtr = output.getBytes();
 
-    // If we're not supplied an external buffer, make our own...
-    uint8_t * output = buffer;
-    if( output == NULL ) {
-        output = (uint8_t *)malloc( samplesPerOut * bytesPerSample );
-        length = samplesPerOut * bytesPerSample;
-    } else {
-        if (length > samplesPerOut * bytesPerSample) {
-            length = samplesPerOut * bytesPerSample;
-        }
-     }
-
-    int oversample_offset = 0;
-    int oversample_step = (totalSamples * CONFIG_SPLITTER_OVERSAMPLE_STEP) / samplesPerOut;
-
-    uint8_t *inPtr = &_in[0];
-    uint8_t *outPtr = output;
-    while( outPtr - output < length )
+    for (int i = 0; i < totalSamples * bytesPerSample; i++)
     {
-        int a = StreamNormalizer::readSample[inFmt]( inPtr + ((int)(oversample_offset / CONFIG_SPLITTER_OVERSAMPLE_STEP) * bytesPerSample) );
-        int b = StreamNormalizer::readSample[inFmt]( inPtr + (((int)(oversample_offset / CONFIG_SPLITTER_OVERSAMPLE_STEP) + 1) * bytesPerSample) );
-        int s = a + ((int)((b - a)/CONFIG_SPLITTER_OVERSAMPLE_STEP) * (oversample_offset % CONFIG_SPLITTER_OVERSAMPLE_STEP));
+        sampleSigma += StreamNormalizer::readSample[inFmt]( &_in[i]);
+        sampleDropPosition++;
 
-        oversample_offset += oversample_step;
+        if (sampleDropPosition >= sampleDropRate)
+        {
+            StreamNormalizer::writeSample[inFmt](outPtr, sampleSigma / sampleDropRate);
+            outPtr += bytesPerSample;
 
-        StreamNormalizer::writeSample[inFmt](outPtr, s);
-        outPtr += bytesPerSample;
+            sampleDropPosition = 0;
+            sampleSigma = 0;
+        }
     }
 
-    ManagedBuffer result = ManagedBuffer( output, length );
+    output.truncate(outPtr - output.getBytes());
 
-    // Did we create this memory? If so, free it again.
-    if( buffer == NULL )
-        free( output );
-
-    return result;
+    return output;
 }
 
 uint8_t * SplitterChannel::pullInto( uint8_t * rawBuffer, int length )
 {
-    this->pullAttempts = 0;
-    this->sentBuffers++;
     ManagedBuffer inData = parent->getBuffer();
-
-    // Shortcuts - we can't fabricate samples, so just pass on what we can if we don't know or can't keep up.
-    if( this->sampleRate == DATASTREAM_SAMPLE_RATE_UNKNOWN || this->sampleRate >= this->parent->upstream.getSampleRate() ) {
-        inData.readBytes( rawBuffer, 0, min(inData.length(), length) );
-        return rawBuffer + min(inData.length(), length);
-    }
-
     ManagedBuffer result = this->resample( inData, rawBuffer, length );
+
     return rawBuffer + result.length();
 }
 
 ManagedBuffer SplitterChannel::pull()
 {
-    this->pullAttempts = 0;
-    this->sentBuffers++;
     ManagedBuffer inData = parent->getBuffer();
-
-    // Shortcuts - we can't fabricate samples, so just pass on what we can if we don't know or can't keep up.
-    if( this->sampleRate == DATASTREAM_SAMPLE_RATE_UNKNOWN || this->sampleRate >= this->parent->upstream.getSampleRate() )
-        return inData;
-    
     return this->resample( inData ); // Autocreate the output buffer
 }
 
 void SplitterChannel::connect(DataSink &sink)
 {
     output = &sink;
-    Event e( parent->id, SPLITTER_CHANNEL_CONNECT );
 }
 
 bool SplitterChannel::isConnected()
@@ -149,7 +113,6 @@ bool SplitterChannel::isConnected()
 void SplitterChannel::disconnect()
 {
     output = NULL;
-    Event e( parent->id, SPLITTER_CHANNEL_DISCONNECT );
 }
 
 int SplitterChannel::getFormat()
@@ -162,32 +125,15 @@ int SplitterChannel::setFormat(int format)
     return parent->upstream.setFormat( format );
 }
 
-float SplitterChannel::getSampleRate()
+int SplitterChannel::requestSampleDropRate( int sampleDropRate )
 {
-    if( sampleRate != DATASTREAM_SAMPLE_RATE_UNKNOWN )
-        return sampleRate;
-    return parent->upstream.getSampleRate();
+    // TODO: Any validaiton to do here? Or do we permit any integer multiple?
+    this->sampleDropRate = sampleDropRate;
+    this->sampleDropPosition = 0;
+    this->sampleSigma = 0;
+
+    return this->sampleDropRate;
 }
-
-float SplitterChannel::requestSampleRate( float sampleRate )
-{
-    this->sampleRate = sampleRate;
-
-    // Do we need to request a higher rate upstream?
-    if( parent->upstream.getSampleRate() < sampleRate ) {
-
-        // Request it, and if we got less that we expected, report that rate
-        if( parent->upstream.requestSampleRate( sampleRate ) < sampleRate )
-            return parent->upstream.getSampleRate();
-    }
-
-    // Otherwise, report our own rate (we're matching or altering it ourselves)
-    return sampleRate;
-}
-
-
-
-
 
 /**
  * Creates a component that distributes a single upstream datasource to many downstream datasinks
@@ -206,9 +152,6 @@ StreamSplitter::StreamSplitter(DataSource &source, uint16_t id) : upstream(sourc
         outputChannels[i] = NULL;
     
     upstream.connect(*this);
-
-    this->__cycle = 0;
-    //this->status |= DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
 }
 
 StreamSplitter::~StreamSplitter()
@@ -237,22 +180,16 @@ int StreamSplitter::pullRequest()
         if (outputChannels[i] != NULL) {
             if( outputChannels[i]->pullRequest() == DEVICE_OK ) {
                 activeChannels++;
-
-                if( !isActive )
-                    Event e( id, SPLITTER_ACTIVATE );
-                isActive = true;
             }
         }
     }
     
     if( activeChannels == 0 && isActive ) {
-        Event e( id, SPLITTER_DEACTIVATE );
         isActive = false;
     }
 
     lastBuffer = ManagedBuffer();
 
-    Event e( id, SPLITTER_TICK );
     return DEVICE_BUSY;
 }
 
@@ -269,6 +206,7 @@ SplitterChannel * StreamSplitter::createChannel()
             break;
         }
     }
+    
     if(placed != -1) {
         channels++;
         return outputChannels[placed];
@@ -302,4 +240,14 @@ SplitterChannel * StreamSplitter::getChannel( DataSink * output ) {
     }
 
     return NULL;
+}
+
+float SplitterChannel::getSampleRate() {
+    int v = parent->upstream.getSampleRate() / sampleDropRate;
+    return v;
+}
+
+float StreamSplitter::getSampleRate() {
+    int v = upstream.getSampleRate();
+    return v;
 }

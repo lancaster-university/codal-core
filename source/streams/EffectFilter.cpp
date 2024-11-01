@@ -63,11 +63,6 @@ float EffectFilter::getSampleRate()
     return this->upStream.getSampleRate();
 }
 
-float EffectFilter::requestSampleRate(float sampleRate)
-{
-    return this->upStream.requestSampleRate( sampleRate );
-}
-
 /**
  * Defines if this filter should perform a deep copy of incoming data, or update data in place.
  *

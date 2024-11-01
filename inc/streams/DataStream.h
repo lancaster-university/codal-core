@@ -55,7 +55,6 @@ namespace codal
     class DataSink
     {
     	public:
-
             virtual int pullRequest();
     };
 
@@ -72,7 +71,6 @@ namespace codal
             virtual int getFormat();
             virtual int setFormat(int format);
             virtual float getSampleRate();
-            virtual float requestSampleRate(float sampleRate);
     };
 
     /**
@@ -197,19 +195,6 @@ namespace codal
              * @return float The current sample rate for this stream, or `DATASTREAM_SAMPLE_RATE_UNKNOWN` if none is found.
              */
             virtual float getSampleRate() override;
-
-            /**
-             * Request a new sample rate on this stream.
-             * 
-             * Most components will simply forward this call upstream, and upon reaching a data source, if possible the source should change
-             * the sample rate to accomodate the request.
-             * 
-             * @warning Not all sample rates will be possible for all devices, so if the caller needs to know the _actual_ rate, they should check the returned value here
-             * 
-             * @param sampleRate The requested sample rate, to be handled by the nearest component capable of doing so.
-             * @return float The actual sample rate this stream will now run at, may differ from the requested sample rate.
-             */
-            virtual float requestSampleRate(float sampleRate) override;
 
         private:
             /**

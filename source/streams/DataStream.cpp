@@ -61,11 +61,6 @@ float DataSource::getSampleRate() {
     return DATASTREAM_SAMPLE_RATE_UNKNOWN;
 }
 
-float DataSource::requestSampleRate(float sampleRate) {
-    // Just consume this by default, we don't _have_ to honour requests for specific rates.
-    return DATASTREAM_SAMPLE_RATE_UNKNOWN;
-}
-
 int DataSink::pullRequest()
 {
 	return DEVICE_NOT_SUPPORTED;
@@ -206,11 +201,5 @@ int DataStream::pullRequest()
 float DataStream::getSampleRate() {
     if( this->upStream != NULL )
         return this->upStream->getSampleRate();
-    return DATASTREAM_SAMPLE_RATE_UNKNOWN;
-}
-
-float DataStream::requestSampleRate(float sampleRate) {
-    if( this->upStream != NULL )
-        return this->upStream->requestSampleRate( sampleRate );
     return DATASTREAM_SAMPLE_RATE_UNKNOWN;
 }

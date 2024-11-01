@@ -177,7 +177,7 @@ ManagedBuffer StreamNormalizer::pull()
     else
         buffer = ManagedBuffer(samples * bytesPerSampleOut);
     
-    // Initialise input an doutput buffer pointers.
+    // Initialise input and output buffer pointers.
     data = &inputBuffer[0];
     result = &buffer[0];
 
@@ -316,11 +316,8 @@ StreamNormalizer::~StreamNormalizer()
 }
 
 float StreamNormalizer::getSampleRate() {
-    return this->upstream.getSampleRate();
-}
-
-float StreamNormalizer::requestSampleRate(float sampleRate) {
-    return this->upstream.requestSampleRate( sampleRate );
+    int v = this->upstream.getSampleRate();
+    return v;
 }
 
 bool StreamNormalizer::isConnected()

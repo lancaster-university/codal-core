@@ -138,8 +138,6 @@ namespace codal{
         int setOrMask(uint32_t mask);
 
         float getSampleRate();
-        
-        float requestSampleRate(float sampleRate);
 
         /**
          * Determines if this source is connected to a downstream component

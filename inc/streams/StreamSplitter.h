@@ -58,14 +58,14 @@ namespace codal{
     class SplitterChannel : public DataSource, public DataSink {
         private:
             StreamSplitter * parent;
-            float sampleRate;
-            unsigned int inUnderflow;
+            int sampleDropRate = 1;
+            int sampleDropPosition = 0;
+            int sampleSigma = 0;
 
             ManagedBuffer resample( ManagedBuffer _in, uint8_t * buffer = NULL, int length = -1 );
         
         public:
-            int pullAttempts;       // Number of failed pull request attempts
-            uint32_t sentBuffers;
+
             DataSink * output;
 
             /**
@@ -88,22 +88,21 @@ namespace codal{
             virtual void disconnect();
             virtual int getFormat();
             virtual int setFormat(int format);
+            virtual int requestSampleDropRate(int sampleDropRate);
             virtual float getSampleRate();
-            virtual float requestSampleRate(float sampleRate);
     };
 
     class StreamSplitter : public DataSink, public CodalComponent 
     {
     private:
         ManagedBuffer       lastBuffer;                            // Buffer being processed
-        uint64_t            __cycle;
 
     public:
         bool                isActive;                              // Track if we need to emit activate/deactivate messages
         int                 channels;                              // Current number of channels Splitter is serving
         volatile int        activeChannels;                        // Current number of /active/ channels this Splitter is serving
         DataSource          &upstream;                             // The upstream component of this Splitter
-        SplitterChannel   * outputChannels[CONFIG_MAX_CHANNELS];   // Array of SplitterChannels the Splitter is serving
+        SplitterChannel     *outputChannels[CONFIG_MAX_CHANNELS];  // Array of SplitterChannels the Splitter is serving
 
         /**
           * Creates a component that distributes a single upstream datasource to many downstream datasinks
@@ -121,6 +120,7 @@ namespace codal{
         virtual SplitterChannel * createChannel();
         virtual bool destroyChannel( SplitterChannel * channel );
         virtual SplitterChannel * getChannel( DataSink * output );
+        virtual float getSampleRate();
 
         /**
          * Destructor.
