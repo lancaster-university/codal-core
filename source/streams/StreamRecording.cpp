@@ -80,7 +80,7 @@ int StreamRecording::length()
 
 float StreamRecording::duration( unsigned int sampleRate )
 {
-    return ((float)this->length() / DATASTREAM_FORMAT_BYTES_PER_SAMPLE((float)this->getFormat()) ) / (float)sampleRate;
+    return ((float)this->length() / (float)DATASTREAM_FORMAT_BYTES_PER_SAMPLE(this->getFormat()) ) / (float)sampleRate;
 }
 
 bool StreamRecording::isFull() {
