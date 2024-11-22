@@ -108,16 +108,6 @@ namespace codal
             ~DataStream();
 
             /**
-             * Controls if this component should emit flow state events.
-             * 
-             * @warning Should not be called mutliple times with `id == 0`, as it will spuriously reallocate event IDs
-             * 
-             * @param id If zero, this will auto-allocate a new event ID
-             * @return uint16_t The new event ID for this DataStream
-             */
-            uint16_t emitFlowEvents( uint16_t id = 0 );
-
-            /**
              * Determines if any of the data currently flowing through this stream is held in non-volatile (FLASH) memory.
              * @return true if one or more of the ManagedBuffers in this stream reside in FLASH memory, false otherwise.
              */

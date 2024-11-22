@@ -83,17 +83,6 @@ DataStream::~DataStream()
 {
 }
 
-uint16_t DataStream::emitFlowEvents( uint16_t id )
-{
-    if( this->flowEventCode == 0 ) {
-        if( id == 0 )
-            this->flowEventCode = allocateNotifyEvent();
-        else
-            this->flowEventCode = id;
-    }
-    return this->flowEventCode;
-}
-
 bool DataStream::isReadOnly()
 {
     if( this->hasPending )
