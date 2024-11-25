@@ -209,7 +209,7 @@ ManagedBuffer StreamNormalizer::pull()
     {
         float calculatedZeroOffset = (float)z / (float)samples;
 
-        zeroOffset = zeroOffsetValid ? zeroOffset*0.5 + calculatedZeroOffset*0.5 : calculatedZeroOffset;
+        zeroOffset = zeroOffsetValid ? zeroOffset*0.5f + calculatedZeroOffset*0.5f : calculatedZeroOffset;
         zeroOffsetValid = true;
 
         if (stabilisation == 0 || abs((int)zeroOffset - zo) < stabilisation)

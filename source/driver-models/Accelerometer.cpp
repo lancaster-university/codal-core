@@ -426,7 +426,7 @@ int Accelerometer::getZ()
   */
 int Accelerometer::getPitch()
 {
-    return (int) ((360*getPitchRadians()) / (2*PI));
+    return (int) ((360.0f*getPitchRadians()) / (2.0f*(float)PI));
 }
 
 /**
@@ -458,7 +458,7 @@ float Accelerometer::getPitchRadians()
   */
 int Accelerometer::getRoll()
 {
-    return (int) ((360*getRollRadians()) / (2*PI));
+    return (int) ((360.0f*getRollRadians()) / (2.0f*(float)PI));
 }
 
 /**

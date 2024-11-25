@@ -371,16 +371,16 @@ int Compass::tiltCompensatedBearing()
     float z = (float) s.z;
 
     // Precompute cos and sin of pitch and roll angles to make the calculation a little more efficient.
-    float sinPhi = sin(phi);
-    float cosPhi = cos(phi);
-    float sinTheta = sin(theta);
-    float cosTheta = cos(theta);
+    float sinPhi = sinf(phi);
+    float cosPhi = cosf(phi);
+    float sinTheta = sinf(theta);
+    float cosTheta = cosf(theta);
 
      // Calculate the tilt compensated bearing, and convert to degrees.
-    float bearing = (360*atan2(x*cosTheta + y*sinTheta*sinPhi + z*sinTheta*cosPhi, z*sinPhi - y*cosPhi)) / (2*PI);
+    float bearing = (360.0f*atan2f(x*cosTheta + y*sinTheta*sinPhi + z*sinTheta*cosPhi, z*sinPhi - y*cosPhi)) / (2.0f*(float)PI);
 
     // Handle the 90 degree offset caused by the NORTH_EAST_DOWN based calculation.
-    bearing = 90 - bearing;
+    bearing = 90.0f - bearing;
 
     // Ensure the calculated bearing is in the 0..359 degree range.
     if (bearing < 0)
@@ -399,10 +399,10 @@ int Compass::basicBearing()
     float x = (float) cs.x;
     float y = (float) cs.y;
 
-    float bearing = (atan2(x,y))*180/PI;
+    float bearing = (atan2f(x,y))*180.0f/(float)PI;
 
     if (bearing < 0)
-        bearing += 360.0;
+        bearing += 360.0f;
 
     return (int)bearing;
 }
