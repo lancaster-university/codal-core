@@ -112,6 +112,13 @@ int SplitterChannel::requestSampleDropRate( int sampleDropRate )
     return this->sampleDropRate;
 }
 
+void SplitterChannel::dataWanted(bool wanted)
+{
+    DataSource::dataWanted(wanted);
+    return parent->dataWanted(wanted);
+}
+
+
 /**
  * Creates a component that distributes a single upstream datasource to many downstream datasinks
  *
@@ -121,8 +128,6 @@ StreamSplitter::StreamSplitter(DataSource &source, uint16_t id) : upstream(sourc
 {
     this->id = id;
     this->channels = 0;
-    this->activeChannels = 0;
-    this->isActive = false;
 
     // init array to NULL.
     for (int i = 0; i < CONFIG_MAX_CHANNELS; i++)
@@ -136,9 +141,26 @@ StreamSplitter::~StreamSplitter()
     // Nop.
 }
 
+void StreamSplitter::dataWanted(bool wanted)
+{
+    // Determine if any of our active splitter channels require data.
+    bool streamWanted = 0;
+
+    for(int i=0; i<CONFIG_MAX_CHANNELS; i++)
+    {
+        if(outputChannels[i]->isWanted())
+        {
+            streamWanted = 1;
+            break;
+        }
+    }
+
+    return upstream.dataWanted(streamWanted);
+}
+
 ManagedBuffer StreamSplitter::getBuffer()
 {
-    if( lastBuffer == ManagedBuffer() )
+    if(lastBuffer == ManagedBuffer())
         lastBuffer = upstream.pull();
     
     return lastBuffer;
@@ -149,22 +171,13 @@ ManagedBuffer StreamSplitter::getBuffer()
  */
 int StreamSplitter::pullRequest()
 {
-    activeChannels = 0;
-
     // For each downstream channel that exists in array outputChannels - make a pullRequest
     for (int i = 0; i < CONFIG_MAX_CHANNELS; i++)
     {
-        if (outputChannels[i] != NULL) {
-            if( outputChannels[i]->pullRequest() == DEVICE_OK ) {
-                activeChannels++;
-            }
-        }
+        if (outputChannels[i] != NULL)
+            outputChannels[i]->pullRequest();
     }
     
-    if( activeChannels == 0 && isActive ) {
-        isActive = false;
-    }
-
     lastBuffer = ManagedBuffer();
 
     return DEVICE_BUSY;

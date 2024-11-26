@@ -84,6 +84,7 @@ namespace codal{
             virtual int setFormat(int format);
             virtual int requestSampleDropRate(int sampleDropRate);
             virtual float getSampleRate();
+            virtual void dataWanted(bool wanted);
     };
 
     class StreamSplitter : public DataSink, public CodalComponent 
@@ -92,9 +93,7 @@ namespace codal{
         ManagedBuffer       lastBuffer;                            // Buffer being processed
 
     public:
-        bool                isActive;                              // Track if we need to emit activate/deactivate messages
         int                 channels;                              // Current number of channels Splitter is serving
-        volatile int        activeChannels;                        // Current number of /active/ channels this Splitter is serving
         DataSource          &upstream;                             // The upstream component of this Splitter
         SplitterChannel     *outputChannels[CONFIG_MAX_CHANNELS];  // Array of SplitterChannels the Splitter is serving
 
@@ -110,6 +109,7 @@ namespace codal{
          * Callback provided when data is ready.
          */
         virtual int pullRequest();
+        virtual void dataWanted(bool wanted);
 
         virtual ManagedBuffer getBuffer();
         virtual SplitterChannel * createChannel();
@@ -117,7 +117,6 @@ namespace codal{
         virtual SplitterChannel * getChannel( DataSink * output );
 
         friend SplitterChannel;
-
     };
 }
 

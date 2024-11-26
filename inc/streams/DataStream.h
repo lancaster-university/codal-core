@@ -73,7 +73,7 @@ namespace codal
             virtual int getFormat();
             virtual int setFormat(int format);
             virtual float getSampleRate();
-            virtual int dataWanted(bool wanted);
+            virtual void dataWanted(bool wanted);
             virtual bool isWanted();
     };
 
@@ -104,7 +104,7 @@ namespace codal
             virtual int getFormat();
             virtual int setFormat(int format);
             virtual float getSampleRate();
-            virtual int dataWanted(bool wanted);
+            virtual void dataWanted(bool wanted);
             virtual int pullRequest();
     };
 

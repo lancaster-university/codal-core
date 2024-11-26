@@ -61,10 +61,9 @@ float DataSource::getSampleRate() {
     return DATASTREAM_SAMPLE_RATE_UNKNOWN;
 }
 
-int DataSource::dataWanted(bool wanted)
+void DataSource::dataWanted(bool wanted)
 {
     dataIsWanted = wanted;
-    return DEVICE_OK;
 }
 
 bool DataSource::isWanted()
@@ -119,7 +118,7 @@ float DataSourceSink::getSampleRate()
     return upStream.getSampleRate();
 }
 
-int DataSourceSink::dataWanted(bool wanted)
+void DataSourceSink::dataWanted(bool wanted)
 {
     DataSource::dataWanted(wanted);
     return upStream.dataWanted(wanted);
