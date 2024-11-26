@@ -55,7 +55,7 @@ namespace codal{
 
     class StreamSplitter;
 
-    class SplitterChannel : public DataSource, public DataSink {
+    class SplitterChannel : public DataSourceSink {
         private:
             StreamSplitter * parent;
             int sampleDropRate = 1;
@@ -65,8 +65,6 @@ namespace codal{
             ManagedBuffer resample( ManagedBuffer _in, uint8_t * buffer = NULL, int length = -1 );
         
         public:
-
-            DataSink * output;
 
             /**
              * @brief Construct a new Splitter Channel object.
@@ -80,12 +78,8 @@ namespace codal{
             SplitterChannel( StreamSplitter *parent, DataSink *output );
             virtual ~SplitterChannel();
 
-            virtual int pullRequest();
             uint8_t * pullInto( uint8_t * rawBuffer, int length );
             virtual ManagedBuffer pull();
-            virtual void connect(DataSink &sink);
-            bool isConnected();
-            virtual void disconnect();
             virtual int getFormat();
             virtual int setFormat(int format);
             virtual int requestSampleDropRate(int sampleDropRate);
@@ -110,6 +104,7 @@ namespace codal{
           * @param source a DataSource to receive data from
           */
         StreamSplitter(DataSource &source, uint16_t id = CodalComponent::generateDynamicID());
+        virtual ~StreamSplitter();
 
         /**
          * Callback provided when data is ready.
@@ -120,12 +115,6 @@ namespace codal{
         virtual SplitterChannel * createChannel();
         virtual bool destroyChannel( SplitterChannel * channel );
         virtual SplitterChannel * getChannel( DataSink * output );
-        virtual float getSampleRate();
-
-        /**
-         * Destructor.
-         */
-        virtual ~StreamSplitter();
 
         friend SplitterChannel;
 

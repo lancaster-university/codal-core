@@ -6,11 +6,9 @@
 
 using namespace codal;
 
-EffectFilter::EffectFilter(DataSource &source, bool deepCopy) : upStream( source )
+EffectFilter::EffectFilter(DataSource &source, bool deepCopy) : DataSourceSink( source )
 {
-    this->downStream = NULL;
     this->deepCopy = deepCopy;
-    source.connect( *this );
 }
 
 EffectFilter::~EffectFilter()
@@ -24,43 +22,6 @@ ManagedBuffer EffectFilter::pull()
 
     applyEffect(input, output, this->upStream.getFormat());
     return output;
-}
-
-int EffectFilter::pullRequest()
-{
-    if( this->downStream != NULL )
-        return this->downStream->pullRequest();
-    return DEVICE_BUSY;
-}
-
-void EffectFilter::connect(DataSink &sink)
-{
-    this->downStream = &sink;
-}
-
-bool EffectFilter::isConnected()
-{
-    return this->downStream != NULL;
-}
-
-void EffectFilter::disconnect()
-{
-    this->downStream = NULL;
-}
-
-int EffectFilter::getFormat()
-{
-    return this->upStream.getFormat();
-}
-
-int EffectFilter::setFormat( int format )
-{
-    return this->upStream.setFormat( format );
-}
-
-float EffectFilter::getSampleRate()
-{
-    return this->upStream.getSampleRate();
 }
 
 /**

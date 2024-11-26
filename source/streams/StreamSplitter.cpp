@@ -31,22 +31,14 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
-SplitterChannel::SplitterChannel( StreamSplitter * parent, DataSink * output = NULL )
+SplitterChannel::SplitterChannel( StreamSplitter * parent, DataSink * output = NULL ) : DataSourceSink(*(new DataSource()))
 {
     this->parent = parent;
-    this->output = output;
+    this->downStream = output;
 }
 
 SplitterChannel::~SplitterChannel()
 {
-    //
-}
-
-int SplitterChannel::pullRequest() {
-    if( output != NULL )
-        return output->pullRequest();
-
-    return DEVICE_BUSY;
 }
 
 ManagedBuffer SplitterChannel::resample( ManagedBuffer _in, uint8_t *buffer, int length ) {
@@ -98,21 +90,6 @@ ManagedBuffer SplitterChannel::pull()
 {
     ManagedBuffer inData = parent->getBuffer();
     return this->resample( inData ); // Autocreate the output buffer
-}
-
-void SplitterChannel::connect(DataSink &sink)
-{
-    output = &sink;
-}
-
-bool SplitterChannel::isConnected()
-{
-    return this->output != NULL;
-}
-
-void SplitterChannel::disconnect()
-{
-    output = NULL;
 }
 
 int SplitterChannel::getFormat()
@@ -233,7 +210,7 @@ SplitterChannel * StreamSplitter::getChannel( DataSink * output ) {
     {
         if( outputChannels[i] != NULL )
         {
-            if( outputChannels[i]->output == output ) {
+            if( outputChannels[i]->downStream == output ) {
                 return outputChannels[i];
             }
         }
@@ -243,11 +220,5 @@ SplitterChannel * StreamSplitter::getChannel( DataSink * output ) {
 }
 
 float SplitterChannel::getSampleRate() {
-    int v = parent->upstream.getSampleRate() / sampleDropRate;
-    return v;
-}
-
-float StreamSplitter::getSampleRate() {
-    int v = upstream.getSampleRate();
-    return v;
+    return parent->upstream.getSampleRate() / sampleDropRate;
 }

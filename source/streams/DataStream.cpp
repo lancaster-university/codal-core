@@ -61,22 +61,87 @@ float DataSource::getSampleRate() {
     return DATASTREAM_SAMPLE_RATE_UNKNOWN;
 }
 
+int DataSource::dataWanted(bool wanted)
+{
+    dataIsWanted = wanted;
+    return DEVICE_OK;
+}
+
+bool DataSource::isWanted()
+{
+    return dataIsWanted;
+}
+
+//DataSink methods.
 int DataSink::pullRequest()
 {
 	return DEVICE_NOT_SUPPORTED;
 }
 
-DataStream::DataStream(DataSource &upstream)
+// DataSourceSink methods.
+DataSourceSink::DataSourceSink(DataSource &source) : upStream( source )
+{
+    downStream = NULL;
+    source.connect( *this );
+}
+
+DataSourceSink::~DataSourceSink()
+{
+}
+
+void DataSourceSink::connect(DataSink &sink)
+{
+    downStream = &sink;
+}
+
+bool DataSourceSink::isConnected()
+{ 
+    return downStream != NULL;
+}
+
+void DataSourceSink::disconnect()
+{
+    downStream = NULL;
+}
+
+int DataSourceSink::getFormat()
+{
+    return upStream.getFormat();
+}
+
+int DataSourceSink::setFormat(int format)
+{
+    return upStream.setFormat( format );
+}
+
+float DataSourceSink::getSampleRate()
+{
+    return upStream.getSampleRate();
+}
+
+int DataSourceSink::dataWanted(bool wanted)
+{
+    DataSource::dataWanted(wanted);
+    return upStream.dataWanted(wanted);
+}
+
+int DataSourceSink::pullRequest()
+{
+    if( this->downStream != NULL )
+        return this->downStream->pullRequest();
+    return DEVICE_BUSY;
+}
+
+/**
+ * Definition for a DataStream class. This doresn't *really* belong in here, as its key role is to
+ * decouple a pipeline the straddles an interrupt context boundary...
+ */
+DataStream::DataStream(DataSource &upstream) : DataSourceSink(upstream)
 {
     this->pullRequestEventCode = 0;
     this->isBlocking = true;
     this->hasPending = false;
-    this->missedBuffers = CODAL_DATASTREAM_HIGH_WATER_MARK;
     this->downstreamReturn = DEVICE_OK;
-    this->flowEventCode = 0;
-
-    this->downStream = NULL;
-    this->upStream = &upstream;
 }
 
 DataStream::~DataStream()
@@ -88,32 +153,6 @@ bool DataStream::isReadOnly()
     if( this->hasPending )
         return this->nextBuffer.isReadOnly();
     return true;
-}
-
-bool DataStream::isFlowing()
-{
-    return this->missedBuffers < CODAL_DATASTREAM_HIGH_WATER_MARK;
-}
-
-void DataStream::connect(DataSink &sink)
-{
-	this->downStream = &sink;
-    this->upStream->connect(*this);
-}
-
-bool DataStream::isConnected()
-{
-    return this->downStream != NULL;
-}
-
-int DataStream::getFormat()
-{
-    return upStream->getFormat();
-}
-
-void DataStream::disconnect()
-{
-	this->downStream = NULL;
 }
 
 void DataStream::setBlocking(bool isBlocking)
@@ -132,14 +171,9 @@ void DataStream::setBlocking(bool isBlocking)
 
 ManagedBuffer DataStream::pull()
 {
-    // 1, as we will normally be at '1' waiting buffer here if we're in-sync with the source
-    if( this->missedBuffers > 1 )
-        Event evt( DEVICE_ID_NOTIFY, this->flowEventCode );
-    
-    this->missedBuffers = 0;
     // Are we running in sync (blocking) mode?
     if( this->isBlocking )
-        return this->upStream->pull();
+        return this->upStream.pull();
     
     this->hasPending = false;
     return ManagedBuffer( this->nextBuffer ); // Deep copy!
@@ -161,12 +195,6 @@ bool DataStream::canPull(int size)
 
 int DataStream::pullRequest()
 {
-    // _Technically_ not a missed buffer... yet. But we can only check later.
-    if( this->missedBuffers < CODAL_DATASTREAM_HIGH_WATER_MARK )
-        if( ++this->missedBuffers == CODAL_DATASTREAM_HIGH_WATER_MARK )
-            if( this->flowEventCode != 0 )
-                Event evt( DEVICE_ID_NOTIFY, this->flowEventCode );
-
     // Are we running in async (non-blocking) mode?
     if( !this->isBlocking ) {
         if( this->hasPending && this->downstreamReturn != DEVICE_OK ) {
@@ -174,7 +202,7 @@ int DataStream::pullRequest()
             return this->downstreamReturn;
         }
 
-        this->nextBuffer = this->upStream->pull();
+        this->nextBuffer = this->upStream.pull();
         this->hasPending = true;
 
         Event evt( DEVICE_ID_NOTIFY, this->pullRequestEventCode );
@@ -185,10 +213,4 @@ int DataStream::pullRequest()
         return this->downStream->pullRequest();
 
     return DEVICE_BUSY;
-}
-
-float DataStream::getSampleRate() {
-    if( this->upStream != NULL )
-        return this->upStream->getSampleRate();
-    return DATASTREAM_SAMPLE_RATE_UNKNOWN;
 }

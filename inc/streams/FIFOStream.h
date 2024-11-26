@@ -9,7 +9,7 @@
 
 namespace codal {
 
-    class FIFOStream : public DataSource, public DataSink
+    class FIFOStream : public DataSourceSink
     {
         private:
 
@@ -20,9 +20,6 @@ namespace codal {
         bool allowInput;
         bool allowOutput;
 
-        DataSink *downStream;
-        DataSource &upStream;
-
         public:
 
         FIFOStream( DataSource &source );
@@ -30,11 +27,6 @@ namespace codal {
 
         virtual ManagedBuffer pull();
         virtual int pullRequest();
-    	virtual void connect( DataSink &sink );
-        bool isConnected();
-        virtual void disconnect();
-        virtual int getFormat();
-        virtual int setFormat( int format );
         int length();
         void dumpState();
 
