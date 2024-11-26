@@ -125,11 +125,11 @@ int Compass::getFieldStrength()
 {
     Sample3D s = getSample();
 
-    double x = s.x;
-    double y = s.y;
-    double z = s.z;
+    float x = s.x;
+    float y = s.y;
+    float z = s.z;
 
-    return (int) sqrt(x*x + y*y + z*z);
+    return (int) sqrtf(x*x + y*y + z*z);
 }
 
 /**
