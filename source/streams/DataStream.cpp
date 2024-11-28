@@ -28,6 +28,7 @@ DEALINGS IN THE SOFTWARE.
 #include "Event.h"
 #include "CodalFiber.h"
 #include "ErrorNo.h"
+#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -212,4 +213,10 @@ int DataStream::pullRequest()
         return this->downStream->pullRequest();
 
     return DEVICE_BUSY;
+}
+
+void DataStream::connect(DataSink &sink)
+{
+    DMESG("CONNECT REQUEST: this: %p, sink: %p", this, &sink);
+    this->downStream = &sink;
 }

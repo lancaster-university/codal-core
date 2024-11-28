@@ -248,6 +248,10 @@ bool StreamNormalizer::getNormalize()
     return normalize;
 }
 
+int StreamNormalizer::getFormat()
+{
+    return outputFormat;
+}
 
 /**
  * Defines the data format of the buffers streamed out of this component.

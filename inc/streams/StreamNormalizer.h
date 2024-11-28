@@ -106,7 +106,7 @@ namespace codal{
          * DATASTREAM_FORMAT_32BIT_SIGNED
          */
         virtual int setFormat(int format);
-
+        virtual int getFormat();
         /**
          * Defines an optional gain to apply to the input, as a floating point multiple.
          *
