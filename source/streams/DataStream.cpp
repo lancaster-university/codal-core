@@ -62,12 +62,12 @@ float DataSource::getSampleRate() {
     return DATASTREAM_SAMPLE_RATE_UNKNOWN;
 }
 
-void DataSource::dataWanted(bool wanted)
+void DataSource::dataWanted(int wanted)
 {
     dataIsWanted = wanted;
 }
 
-bool DataSource::isWanted()
+int DataSource::isWanted()
 {
     return dataIsWanted;
 }
@@ -83,6 +83,7 @@ DataSourceSink::DataSourceSink(DataSource &source) : upStream( source )
 {
     downStream = NULL;
     source.connect( *this );
+    dataWanted(DATASTREAM_DONT_CARE);
 }
 
 DataSourceSink::~DataSourceSink()
@@ -119,7 +120,7 @@ float DataSourceSink::getSampleRate()
     return upStream.getSampleRate();
 }
 
-void DataSourceSink::dataWanted(bool wanted)
+void DataSourceSink::dataWanted(int wanted)
 {
     DataSource::dataWanted(wanted);
     return upStream.dataWanted(wanted);
@@ -133,7 +134,7 @@ int DataSourceSink::pullRequest()
 }
 
 /**
- * Definition for a DataStream class. This doresn't *really* belong in here, as its key role is to
+ * Definition for a DataStream class. This doesn't *really* belong in here, as its key role is to
  * decouple a pipeline the straddles an interrupt context boundary...
  */
 DataStream::DataStream(DataSource &upstream) : DataSourceSink(upstream)

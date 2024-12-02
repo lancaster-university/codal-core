@@ -47,6 +47,11 @@ DEALINGS IN THE SOFTWARE.
 
 #define DATASTREAM_SAMPLE_RATE_UNKNOWN      0.0f
 
+#define DATASTREAM_DONT_CARE                0
+#define DATASTREAM_NOT_WANTED               1
+#define DATASTREAM_WANTED                   2
+
+
 namespace codal
 {
     /**
@@ -63,7 +68,7 @@ namespace codal
     */
     class DataSource
     {
-        bool    dataIsWanted;
+        int    dataIsWanted;
 
     	public:
             virtual ManagedBuffer pull();
@@ -73,8 +78,8 @@ namespace codal
             virtual int getFormat();
             virtual int setFormat(int format);
             virtual float getSampleRate();
-            virtual void dataWanted(bool wanted);
-            virtual bool isWanted();
+            virtual void dataWanted(int wanted);
+            virtual int isWanted();
     };
 
     /**
@@ -104,7 +109,7 @@ namespace codal
             virtual int getFormat();
             virtual int setFormat(int format);
             virtual float getSampleRate();
-            virtual void dataWanted(bool wanted);
+            virtual void dataWanted(int wanted);
             virtual int pullRequest();
     };
 

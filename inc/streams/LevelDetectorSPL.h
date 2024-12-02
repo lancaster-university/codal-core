@@ -36,6 +36,7 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED             0x02
 #define LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED              0x04
 #define LEVEL_DETECTOR_SPL_CLAP                              0x08
+#define LEVEL_DETECTOR_SPL_DATA_REQUESTED                    0x10
 
 
 /**
@@ -82,6 +83,7 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_SPL_CLAP_MIN_LOUD_BLOCKS             2        // ensure noise not too short to be a clap
 #define LEVEL_DETECTOR_SPL_CLAP_MIN_QUIET_BLOCKS            20       // prevent very fast taps being registered as clap
 
+#define LEVEL_DETECTOR_SPL_TIMEOUT                          50      // Time in ms at which we request no further data.
 
 namespace codal{
     class LevelDetectorSPL : public CodalComponent, public DataSink
@@ -97,18 +99,18 @@ namespace codal{
         int             sigma;              // Running total of the samples in the current window.
         float           gain;
         float           minValue;
-        bool            activated;          // Has this component been connected yet
-        bool            enabled;            // Is the component currently running
-        int             unit;               // The units to be returned from this level detector (e.g. dB or linear 8bit)
-        int             quietBlockCount;    // number of quiet blocks consecutively - used for clap detection
-        int             noisyBlockCount;    // number of noisy blocks consecutively - used for clap detection
-        bool            inNoisyBlock;       // if had noisy and waiting to lower beyond lower threshold
-        float           maxRms;             // maximum rms within a noisy block
+        bool            enabled;            // Is the component currently running.
+        int             unit;               // The units to be returned from this level detector (e.g. dB or linear 8bit).
+        int             quietBlockCount;    // number of quiet blocks consecutively - used for clap detection.
+        int             noisyBlockCount;    // number of noisy blocks consecutively - used for clap detection.
+        bool            inNoisyBlock;       // if had noisy and waiting to lower beyond lower threshold.
+        float           maxRms;             // maximum rms within a noisy block.
 
         private:
-        uint64_t        timeout;            // The timestamp at which this component will cease actively sampling the data stream
-        uint8_t         bufferCount;        // Used to track that enough buffers have been seen since activation to output a valid value/event
-        FiberLock       resourceLock;
+        uint8_t         bufferCount;        // Used to track that enough buffers have been seen since activation to output a valid value/event.
+        uint8_t         listenerCount;      // The total number of active listeners to this component.
+        FiberLock       resourceLock;       // Fiberlock - used purely hold fibers requesting data before it is available.
+        uint64_t        timestamp;          // Timestamp of the last time someone requesed data from this component.
         public:
 
         /**
@@ -122,9 +124,13 @@ namespace codal{
           */
         LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain,
             float minValue = 52,
-            uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL,
-            bool activateImmediately  = true);
+            uint16_t id = DEVICE_ID_SYSTEM_LEVEL_DETECTOR_SPL);
 
+        /**
+         * Periodic callback, every 6ms or so.
+         */
+        void periodicCallback();
+        
         /**
          * Callback provided when data is ready.
          */
@@ -139,11 +145,10 @@ namespace codal{
         float getValue( int scale = -1 );
 
         /**
-         * Keep this component active and processing buffers so that events can be produced
-         * 
-         * @param state If set to true, this component will connect (if required) and start consuming buffers
+         * Callback when a listener to this component is added.
+         * n.b. we currently don't support removing listners (future work if necessary)
          */
-        void activateForEvents( bool state );
+        void listenerAdded();
 
         /**
          * Disable component

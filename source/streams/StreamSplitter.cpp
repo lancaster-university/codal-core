@@ -112,12 +112,16 @@ int SplitterChannel::requestSampleDropRate( int sampleDropRate )
     return this->sampleDropRate;
 }
 
-void SplitterChannel::dataWanted(bool wanted)
+void SplitterChannel::dataWanted(int wanted)
 {
-    DataSource::dataWanted(wanted);
-    return parent->dataWanted(wanted);
+    // Only pass along the requets if our status has changed.
+    if (wanted != DataSource::isWanted())
+    {
+        //DMESG("SplitterChannel[%p]: dataWanted: %d", this, wanted);
+        DataSource::dataWanted(wanted);
+        parent->dataWanted(wanted);
+    }
 }
-
 
 /**
  * Creates a component that distributes a single upstream datasource to many downstream datasinks
@@ -138,21 +142,17 @@ StreamSplitter::StreamSplitter(DataSource &source, uint16_t id) : upstream(sourc
 
 StreamSplitter::~StreamSplitter()
 {
-    // Nop.
 }
 
-void StreamSplitter::dataWanted(bool wanted)
+void StreamSplitter::dataWanted(int wanted)
 {
     // Determine if any of our active splitter channels require data.
-    bool streamWanted = 0;
+    int streamWanted = DATASTREAM_DONT_CARE;
 
     for(int i=0; i<CONFIG_MAX_CHANNELS; i++)
     {
-        if(outputChannels[i]->isWanted())
-        {
-            streamWanted = 1;
-            break;
-        }
+        if(outputChannels[i] && outputChannels[i]->isWanted() > streamWanted)
+            streamWanted = outputChannels[i]->isWanted();
     }
 
     return upstream.dataWanted(streamWanted);

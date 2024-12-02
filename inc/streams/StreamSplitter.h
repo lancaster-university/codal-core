@@ -84,7 +84,7 @@ namespace codal{
             virtual int setFormat(int format);
             virtual int requestSampleDropRate(int sampleDropRate);
             virtual float getSampleRate();
-            virtual void dataWanted(bool wanted);
+            virtual void dataWanted(int wanted);
     };
 
     class StreamSplitter : public DataSink, public CodalComponent 
@@ -109,7 +109,7 @@ namespace codal{
          * Callback provided when data is ready.
          */
         virtual int pullRequest();
-        virtual void dataWanted(bool wanted);
+        virtual void dataWanted(int wanted);
 
         virtual ManagedBuffer getBuffer();
         virtual SplitterChannel * createChannel();
