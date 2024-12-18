@@ -131,13 +131,13 @@ int LevelDetectorSPL::pullRequest()
             sumSquares += v * v;
             ptr += skip;
         }
-        float rms = sqrt(sumSquares / count);
+        float rms = sqrtf(sumSquares / count);
 
         /*******************************
         *   CALCULATE SPL
         ******************************/
         float conv = ((float) maxVal * multiplier) / ((1 << 15) - 1) * gain;
-        conv = 20 * log10(conv / pref);
+        conv = 20.0f * log10f(conv / pref);
 
         if (conv < minValue)
             level = minValue;
