@@ -7,12 +7,8 @@
 
 namespace codal
 {
-    class EffectFilter : public DataSource, public DataSink
+    class EffectFilter : public DataSourceSink
     {
-        protected:
-
-        DataSink *downStream;
-        DataSource &upStream;
         bool deepCopy;
 
         public:
@@ -21,15 +17,6 @@ namespace codal
         ~EffectFilter();
 
         virtual ManagedBuffer pull();
-        virtual int pullRequest();
-    	virtual void connect( DataSink &sink );
-        bool isConnected();
-        virtual void disconnect();
-        virtual int getFormat();
-        virtual int setFormat( int format );
-
-        virtual float getSampleRate();
-        virtual float requestSampleRate(float sampleRate);
         
         /**
         * Defines if this filter should perform a deep copy of incoming data, or update data in place.

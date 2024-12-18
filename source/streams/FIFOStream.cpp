@@ -7,7 +7,7 @@
 
 using namespace codal;
 
-FIFOStream::FIFOStream( DataSource &source ) : upStream( source )
+FIFOStream::FIFOStream( DataSource &source ) : DataSourceSink( source )
 {
     this->bufferCount = 0;
     this->bufferLength = 0;
@@ -22,7 +22,6 @@ FIFOStream::FIFOStream( DataSource &source ) : upStream( source )
 
 FIFOStream::~FIFOStream()
 {
-    //
 }
 
 bool FIFOStream::canPull()
@@ -90,31 +89,6 @@ int FIFOStream::pullRequest()
     if( this->bufferCount >= FIFO_MAXIMUM_BUFFERS )
         return DEVICE_BUSY;
     return DEVICE_OK;
-}
-
-void FIFOStream::connect( DataSink &sink )
-{
-    this->downStream = &sink;
-}
-
-bool FIFOStream::isConnected()
-{
-    return this->downStream != NULL;
-}
-
-void FIFOStream::disconnect()
-{
-    this->downStream = NULL;
-}
-
-int FIFOStream::getFormat()
-{
-    return this->upStream.getFormat();
-}
-
-int FIFOStream::setFormat( int format )
-{
-    return this->upStream.setFormat( format );
 }
 
 void FIFOStream::setInputEnable( bool state )

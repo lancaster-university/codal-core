@@ -14,7 +14,7 @@ using namespace codal;
   ( sizeof(StreamRecording_Buffer) + sizeof(BufferData) + 2 * sizeof(PROCESSOR_WORD_TYPE))
 
 
-StreamRecording::StreamRecording( DataSource &source, uint32_t maxLength ) : upStream( source )
+StreamRecording::StreamRecording( DataSource &source, uint32_t maxLength ) : DataSourceSink( source ) 
 {   
     this->state = REC_STATE_STOPPED;
 
@@ -24,14 +24,10 @@ StreamRecording::StreamRecording( DataSource &source, uint32_t maxLength ) : upS
     this->maxBufferLenth = maxLength + ( maxLength / 256 + 1) * CODAL_STREAM_RECORDING_BUFFER_OVERHEAD;
 
     initialise();
-
-    this->downStream = NULL;
-    upStream.connect( *this );
 }
 
 StreamRecording::~StreamRecording()
 {
-    //
 }
 
 void StreamRecording::initialise()
@@ -141,31 +137,6 @@ int StreamRecording::pullRequest()
     return DEVICE_NO_RESOURCES;
 }
 
-void StreamRecording::connect( DataSink &sink )
-{
-    this->downStream = &sink;
-}
-
-bool StreamRecording::isConnected()
-{
-    return this->downStream != NULL;
-}
-
-void StreamRecording::disconnect()
-{
-    this->downStream = NULL;
-}
-
-int StreamRecording::getFormat()
-{
-    return this->upStream.getFormat();
-}
-
-int StreamRecording::setFormat( int format )
-{
-    return this->upStream.setFormat( format );
-}
-
 bool StreamRecording::recordAsync()
 {
     // Duplicate check from within erase(), but here for safety in case of later code edits...
@@ -250,12 +221,4 @@ bool StreamRecording::isStopped()
 {
     fiber_sleep(0);
     return this->state == REC_STATE_STOPPED;
-}
-
-float StreamRecording::getSampleRate()
-{
-    if( this->lastUpstreamRate == DATASTREAM_SAMPLE_RATE_UNKNOWN )
-        return this->upStream.getSampleRate();
-    
-    return this->lastUpstreamRate;
 }

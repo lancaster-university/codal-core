@@ -27,12 +27,10 @@ namespace codal
         }
     };
 
-    class StreamRecording : public DataSource, public DataSink
+    class StreamRecording : public DataSourceSink
     {
         private:
 
-        //ManagedBuffer buffer[REC_MAX_BUFFERS];
-        //StreamRecording_Buffer_t * bufferChain;
         StreamRecording_Buffer * lastBuffer;
         StreamRecording_Buffer * readHead;
         uint32_t maxBufferLenth;
@@ -40,9 +38,6 @@ namespace codal
         uint32_t totalMemoryUsage;
         int state;
         float lastUpstreamRate;
-
-        DataSink *downStream;
-        DataSource &upStream;
 
         void initialise();
 
@@ -65,11 +60,6 @@ namespace codal
 
         virtual ManagedBuffer pull();
         virtual int pullRequest();
-    	virtual void connect( DataSink &sink );
-        bool isConnected();
-        virtual void disconnect();
-        virtual int getFormat();
-        virtual int setFormat( int format );
 
         void printChain();
 
