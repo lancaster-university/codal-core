@@ -157,7 +157,7 @@ void MemorySource::playAsync(const void *data, int length, int count)
  */
 void MemorySource::playAsync(ManagedBuffer b, int count)
 {
-    this->play(&b[0], b.length(), count);
+    this->playAsync(&b[0], b.length(), count);
 }
 
 /**
