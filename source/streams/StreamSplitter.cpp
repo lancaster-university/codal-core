@@ -44,7 +44,7 @@ SplitterChannel::~SplitterChannel()
 ManagedBuffer SplitterChannel::resample( ManagedBuffer _in, uint8_t *buffer, int length ) {
     
     // Fast path. Perform a shallow copy of the input buffer where possible.
-    // TODO: verify this is still a safe operation.
+    // TODO: verify this is still a safe operation under all conditions.
     if (this->sampleDropRate == 1)
         return _in;
     

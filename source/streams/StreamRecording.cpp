@@ -7,63 +7,33 @@
 
 using namespace codal;
 
-// Minimum memory overhead of adding a buffer to the chain
-// StreamRecording_Buffer contains a ManagedBuffer which points to a BufferData
-// StreamRecording_Buffer and BufferData are heap blocks with a PROCESSOR_WORD_TYPE overhead
-#define CODAL_STREAM_RECORDING_BUFFER_OVERHEAD \
-  ( sizeof(StreamRecording_Buffer) + sizeof(BufferData) + 2 * sizeof(PROCESSOR_WORD_TYPE))
-
-
-StreamRecording::StreamRecording( DataSource &source, uint32_t maxLength ) : DataSourceSink( source ) 
+StreamRecording::StreamRecording(DataSource &source) : DataSourceSink( source ), recordLock(0, FiberLockMode::MUTEX), playLock(0, FiberLockMode::MUTEX)
 {   
     this->state = REC_STATE_STOPPED;
-
-    // The test for "full" was totalBufferLength >= maxBufferLenth
-    // Adjust this number by the memory overhead
-    // of the old default case with buffers of 256 bytes.
-    this->maxBufferLenth = maxLength + ( maxLength / 256 + 1) * CODAL_STREAM_RECORDING_BUFFER_OVERHEAD;
-
-    initialise();
-}
-
-StreamRecording::~StreamRecording()
-{
-}
-
-void StreamRecording::initialise()
-{
     this->totalBufferLength = 0;
-    this->totalMemoryUsage = 0;
-    this->lastBuffer = NULL;
-    this->readHead = NULL;
-    this->bufferChain = NULL;
-    this->lastUpstreamRate = DATASTREAM_SAMPLE_RATE_UNKNOWN;
-}
-
-bool StreamRecording::canPull()
-{
-    return this->totalMemoryUsage < this->maxBufferLenth;
+    this->readOffset = 0;
+    this->writeOffset = 0;
 }
 
 ManagedBuffer StreamRecording::pull()
 {
-    // Are we playing back?
-    if( this->state != REC_STATE_PLAYING )
-        return ManagedBuffer();
-    
-    // Do we have data to send?
-    if( this->readHead == NULL ) {
-        stop();
-        return ManagedBuffer();
-    }
-    
-    // Grab the next block and move the r/w head
-    ManagedBuffer out = this->readHead->buffer;
-    this->readHead = this->readHead->next;
+    ManagedBuffer out;
 
-    // Prod the downstream that we're good to go
-    if( downStream != NULL )
-        downStream->pullRequest();
+    DMESG("PULL");
+
+    if( state == REC_STATE_PLAYING && readOffset < CODAL_STREAM_RECORDING_SIZE)
+        out = data[readOffset++];
+
+    // Wake any blocked threads once we reach the end of the playback
+    if (out.length() == 0)
+    {
+        state = REC_STATE_STOPPED;
+        playLock.notifyAll();
+    }
+    else
+        // Indicate to the downstream that another buffer is available.
+        if( downStream != NULL )
+            downStream->pullRequest();
 
     // Return the block
     return out;
@@ -79,85 +49,105 @@ float StreamRecording::duration( unsigned int sampleRate )
     return ((float)this->length() / (float)DATASTREAM_FORMAT_BYTES_PER_SAMPLE(this->getFormat()) ) / (float)sampleRate;
 }
 
-bool StreamRecording::isFull() {
-    return this->totalMemoryUsage >= this->maxBufferLenth;
-}
-
-void StreamRecording::printChain()
-{
-    #if CONFIG_ENABLED(DMESG_SERIAL_DEBUG) && CONFIG_ENABLED(DMESG_AUDIO_DEBUG)
-        DMESGN( "START -> " );
-        StreamRecording_Buffer * node = this->bufferChain;
-        while( node != NULL ) {
-            DMESGN( "%x -> ", (int)(node->buffer.getBytes()) );
-            codal_dmesg_flush();
-            node = node->next;
-        }
-        DMESG( "END (%d hz)", (int)this->lastUpstreamRate );
-    #endif
-}
-
 int StreamRecording::pullRequest()
 {
-    // Are we recording?
+    //DMESG("PR... [FORMAT: %d] [BITRATE: %d]", upStream.getFormat(), upStream.getSampleRate());
+
+    // Ignore incoming buffers if we aren't actively recording
     if( this->state != REC_STATE_RECORDING )
-        return DEVICE_BUSY;
-
-    ManagedBuffer data = this->upStream.pull();
-    this->lastUpstreamRate = this->upStream.getSampleRate();
-
-    // Are we getting empty buffers (probably because we're out of RAM!)
-    if( data == ManagedBuffer() || data.length() <= 1 ) {
         return DEVICE_OK;
-    }
 
-    // Can we record any more?
-    if( !isFull() )
+    ManagedBuffer buffer = upStream.pull();
+
+    // Ignore any empty buffers (possibly because we're out of RAM!)
+    if(buffer.length() == 0)
+        return DEVICE_OK;
+
+    // Store the data in our buffer, if we have space
+    if (writeOffset < CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH)
     {
-        StreamRecording_Buffer * block = new StreamRecording_Buffer( data );
-        if( block == NULL )
-            return DEVICE_NO_RESOURCES;
-        block->next = NULL;
+        // There is space. Determine if we want to store the buffer or copy it.
+        if (buffer.length() < CODAL_STREAM_RECORDING_BUFFER_SIZE)
+        {
+            // Buffer is below our threshold. Copy the data.
+            int length = buffer.length();
+            int input_offset = 0;
+            while (length > 0)
+            {
+                int b = writeOffset / CODAL_STREAM_RECORDING_BUFFER_SIZE;
+                int o = writeOffset % CODAL_STREAM_RECORDING_BUFFER_SIZE;
+                int l = CODAL_STREAM_RECORDING_BUFFER_SIZE - o;
 
-        // Are we initialising stuff? If so, hook the front of the chain up too...
-        if( this->lastBuffer == NULL ) {
-            this->bufferChain = block;
-        } else
-            this->lastBuffer->next = block;
-        
-        this->lastBuffer = block;
-        
-        uint32_t length = this->lastBuffer->buffer.length();
-        this->totalBufferLength += length;
-        this->totalMemoryUsage  += length + CODAL_STREAM_RECORDING_BUFFER_OVERHEAD;
-        return DEVICE_OK;
+                DMESG("Buffer length is under threshold: [buffer.length(): %d]", buffer.length());
+                DMESG("[writeOffset: %d][b: %d] [o:%d] [l:%d]", writeOffset, b, o, l);
+
+                if (b < CODAL_STREAM_RECORDING_SIZE)
+                {
+                    // Allocate memory for the buffer if needed.
+                    if (data[b].length() != CODAL_STREAM_RECORDING_BUFFER_SIZE)
+                        data[b] = ManagedBuffer(CODAL_STREAM_RECORDING_BUFFER_SIZE);
+
+                    // Copy in the data from the input buffer.
+                    if (data[b].length() == CODAL_STREAM_RECORDING_BUFFER_SIZE)
+                    {
+                        memcpy(data[b].getBytes() + o, buffer.getBytes()+input_offset, l);
+                        length -= l;
+                        input_offset += l;
+                        writeOffset += l;
+                        totalBufferLength += l;
+                    }else{
+                        // We couldn't allocate the necessary buffer resources. Terminate early.
+                        length = 0;
+                        stop();
+                    }
+                }
+            }
+        }else{
+            // The incoming buffer is sufficiently large. Just store it.
+            int b = writeOffset / CODAL_STREAM_RECORDING_BUFFER_SIZE;
+            DMESG("Buffer length is over threshold: [buffer.length(): %d] [b:%d]", buffer.length(), b);
+            if (b < CODAL_STREAM_RECORDING_SIZE)
+            {
+                data[b] = buffer;
+                writeOffset += buffer.length();
+                totalBufferLength += buffer.length();
+            }
+        }
     }
-    
-    this->stop();
-    return DEVICE_NO_RESOURCES;
+    else
+    {
+        stop();
+        DMESG("STOPPING....");
+    }
+
+    return DEVICE_OK;
 }
 
-bool StreamRecording::recordAsync()
+int StreamRecording::recordAsync()
 {
-    // Duplicate check from within erase(), but here for safety in case of later code edits...
-    if( this->state != REC_STATE_STOPPED )
-        this->stop();
-    
-    erase();
+    DMESG("RECORDING...");
+    // If we're already recording, then treat as a NOP.
+    if(state != REC_STATE_RECORDING)
+    {
+        // We could be playing back. If so, stop first and erase our buffer.
+        DMESG("STOPPING...");
+        stop();
+        DMESG("ERASING...");
+        erase();
 
-    bool changed = this->state != REC_STATE_RECORDING;
+        state = REC_STATE_RECORDING;
+        dataWanted(DATASTREAM_WANTED);
 
-    this->state = REC_STATE_RECORDING;
+        DMESG("DONE...");
+    }
 
-    return changed;
+    return DEVICE_OK;
 }
 
 void StreamRecording::record()
 {
     recordAsync();
-    while( isRecording() )
-        fiber_sleep(5);
-    printChain();
+    recordLock.wait();
 }
 
 void StreamRecording::erase()
@@ -165,60 +155,64 @@ void StreamRecording::erase()
     if( this->state != REC_STATE_STOPPED )
         this->stop();
     
-    // Run down the chain, freeing as we go
-    StreamRecording_Buffer * node = this->bufferChain;
-    while( node != NULL ) {
-        StreamRecording_Buffer * next = node->next;
-        delete node;
-        node = next;
-    }
-    initialise();
+    // Erase current buffer
+    for (int i = 0; i < CODAL_STREAM_RECORDING_SIZE; i++)
+        data[i] = ManagedBuffer();
+
+    // Set length
+    totalBufferLength = 0;
+    readOffset = 0;
+    writeOffset = 0;
 }
 
-bool StreamRecording::playAsync()
+int StreamRecording::playAsync()
 {
-    if( this->state != REC_STATE_STOPPED )
-        this->stop();
-    bool changed = this->state != REC_STATE_PLAYING;
-    
-    this->state = REC_STATE_PLAYING;
-    if( this->downStream != NULL )
-        this->downStream->pullRequest();
+    DMESG("PLAY_ASYNC");
+    if( this->state != REC_STATE_PLAYING )
+    {
+        this->state = REC_STATE_PLAYING;
+        readOffset = 0;
 
-    return changed;
+        if( this->downStream != NULL )
+            this->downStream->pullRequest();
+    }
+
+    return DEVICE_OK;
 }
 
 void StreamRecording::play()
 {
     playAsync();
-    while( isPlaying() )
-        fiber_sleep(5);
+    playLock.wait();
 }
 
-bool StreamRecording::stop()
+int StreamRecording::stop()
 {
-    bool changed = this->state != REC_STATE_STOPPED;
+    if (this->state != REC_STATE_STOPPED)
+    {
+        DMESG("STOPPING RECORDING");
 
-    this->state = REC_STATE_STOPPED;
-    this->readHead = this->bufferChain; // Snap to the start
+        this->state = REC_STATE_STOPPED;
+        dataWanted(DATASTREAM_DONT_CARE);
+        recordLock.notifyAll();
+    }
 
-    return changed;
+    this->readOffset = 0;
+
+    return DEVICE_OK;
 }
 
 bool StreamRecording::isPlaying()
 {
-    fiber_sleep(0);
     return this->state == REC_STATE_PLAYING;
 }
 
 bool StreamRecording::isRecording()
 {
-    fiber_sleep(0);
     return this->state == REC_STATE_RECORDING;
 }
 
 bool StreamRecording::isStopped()
 {
-    fiber_sleep(0);
     return this->state == REC_STATE_STOPPED;
 }
