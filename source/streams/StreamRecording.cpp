@@ -19,8 +19,6 @@ ManagedBuffer StreamRecording::pull()
 {
     ManagedBuffer out;
 
-    DMESG("PULL");
-
     if( state == REC_STATE_PLAYING && readOffset < CODAL_STREAM_RECORDING_SIZE)
         out = data[readOffset++];
 
@@ -51,8 +49,6 @@ float StreamRecording::duration( unsigned int sampleRate )
 
 int StreamRecording::pullRequest()
 {
-    //DMESG("PR... [FORMAT: %d] [BITRATE: %d]", upStream.getFormat(), upStream.getSampleRate());
-
     // Ignore incoming buffers if we aren't actively recording
     if( this->state != REC_STATE_RECORDING )
         return DEVICE_OK;
@@ -66,31 +62,42 @@ int StreamRecording::pullRequest()
     // Store the data in our buffer, if we have space
     if (writeOffset < CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH)
     {
-        // There is space. Determine if we want to store the buffer or copy it.
-        if (buffer.length() < CODAL_STREAM_RECORDING_BUFFER_SIZE)
+        if (buffer.length() == CODAL_STREAM_RECORDING_BUFFER_SIZE)
         {
-            // Buffer is below our threshold. Copy the data.
+            // The incoming buffer is sufficiently large. Just store it.
+            int b = writeOffset / CODAL_STREAM_RECORDING_BUFFER_SIZE;
+            if (b < CODAL_STREAM_RECORDING_SIZE)
+            {
+                data[b] = buffer;
+                writeOffset += buffer.length();
+                totalBufferLength += buffer.length();
+            }
+
+        }else{
+
+            // Buffer is larger or smaller than our our threshold. Copy the data.
             int length = buffer.length();
             int input_offset = 0;
             while (length > 0)
             {
                 int b = writeOffset / CODAL_STREAM_RECORDING_BUFFER_SIZE;
                 int o = writeOffset % CODAL_STREAM_RECORDING_BUFFER_SIZE;
-                int l = CODAL_STREAM_RECORDING_BUFFER_SIZE - o;
-
-                DMESG("Buffer length is under threshold: [buffer.length(): %d]", buffer.length());
-                DMESG("[writeOffset: %d][b: %d] [o:%d] [l:%d]", writeOffset, b, o, l);
+                int l = min(length, CODAL_STREAM_RECORDING_BUFFER_SIZE - o);
 
                 if (b < CODAL_STREAM_RECORDING_SIZE)
                 {
                     // Allocate memory for the buffer if needed.
-                    if (data[b].length() != CODAL_STREAM_RECORDING_BUFFER_SIZE)
+                    if (data[b].length() != CODAL_STREAM_RECORDING_BUFFER_SIZE){
                         data[b] = ManagedBuffer(CODAL_STREAM_RECORDING_BUFFER_SIZE);
+                    }
 
                     // Copy in the data from the input buffer.
                     if (data[b].length() == CODAL_STREAM_RECORDING_BUFFER_SIZE)
                     {
-                        memcpy(data[b].getBytes() + o, buffer.getBytes()+input_offset, l);
+                        uint8_t *dst = data[b].getBytes() + o;
+                        uint8_t *src = buffer.getBytes() + input_offset;
+                        memcpy(dst, src, l);
+
                         length -= l;
                         input_offset += l;
                         writeOffset += l;
@@ -102,22 +109,11 @@ int StreamRecording::pullRequest()
                     }
                 }
             }
-        }else{
-            // The incoming buffer is sufficiently large. Just store it.
-            int b = writeOffset / CODAL_STREAM_RECORDING_BUFFER_SIZE;
-            DMESG("Buffer length is over threshold: [buffer.length(): %d] [b:%d]", buffer.length(), b);
-            if (b < CODAL_STREAM_RECORDING_SIZE)
-            {
-                data[b] = buffer;
-                writeOffset += buffer.length();
-                totalBufferLength += buffer.length();
-            }
         }
     }
     else
     {
         stop();
-        DMESG("STOPPING....");
     }
 
     return DEVICE_OK;
@@ -125,20 +121,15 @@ int StreamRecording::pullRequest()
 
 int StreamRecording::recordAsync()
 {
-    DMESG("RECORDING...");
     // If we're already recording, then treat as a NOP.
     if(state != REC_STATE_RECORDING)
     {
         // We could be playing back. If so, stop first and erase our buffer.
-        DMESG("STOPPING...");
         stop();
-        DMESG("ERASING...");
         erase();
 
         state = REC_STATE_RECORDING;
         dataWanted(DATASTREAM_WANTED);
-
-        DMESG("DONE...");
     }
 
     return DEVICE_OK;
@@ -167,7 +158,6 @@ void StreamRecording::erase()
 
 int StreamRecording::playAsync()
 {
-    DMESG("PLAY_ASYNC");
     if( this->state != REC_STATE_PLAYING )
     {
         this->state = REC_STATE_PLAYING;
@@ -190,8 +180,6 @@ int StreamRecording::stop()
 {
     if (this->state != REC_STATE_STOPPED)
     {
-        DMESG("STOPPING RECORDING");
-
         this->state = REC_STATE_STOPPED;
         dataWanted(DATASTREAM_DONT_CARE);
         recordLock.notifyAll();
