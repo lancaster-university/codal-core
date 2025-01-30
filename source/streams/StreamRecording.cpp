@@ -160,7 +160,7 @@ int StreamRecording::playAsync()
 {
     if( this->state != REC_STATE_PLAYING )
     {
-        if (this->state = REC_STATE_RECORDING)
+        if (this->state == REC_STATE_RECORDING)
             stop();
 
         this->state = REC_STATE_PLAYING;
