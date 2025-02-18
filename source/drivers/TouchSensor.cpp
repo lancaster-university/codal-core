@@ -108,9 +108,7 @@ int TouchSensor::removeTouchButton(TouchButton *button)
         if (buttons[i] == button)
         {
             // replace this entry with the last in the list, to ensure the list remains contiguous.
-            buttons[i] = buttons[numberOfButtons];
-            numberOfButtons--;
-
+            buttons[i] = buttons[--numberOfButtons];
             return DEVICE_OK;
         }
     }
