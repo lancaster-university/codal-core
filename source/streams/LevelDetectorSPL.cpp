@@ -77,7 +77,7 @@ void LevelDetectorSPL::periodicCallback()
 
     // Calculate the time since the last request for data.
     // If this is above the given threshold and our channel is active, request that the upstream generation of data be stopped.
-    if (status & LEVEL_DETECTOR_SPL_DATA_REQUESTED && !listenerCount && (system_timer->getTime() - this->timestamp >= LEVEL_DETECTOR_SPL_TIMEOUT))
+    if (status & LEVEL_DETECTOR_SPL_DATA_REQUESTED && !listenerCount && resourceLock.getWaitCount() == 0 && (system_timer->getTime() - this->timestamp >= LEVEL_DETECTOR_SPL_TIMEOUT))
     {
         //DMESG("LevelDetectorSPL: CALLBACK: DATA NO LONGER REQUIRED...");
         this->status &= ~LEVEL_DETECTOR_SPL_DATA_REQUESTED;
@@ -89,15 +89,17 @@ int LevelDetectorSPL::pullRequest()
 {
     //DMESG("LevelDetectorSPL: PR");
 
-    // If we haven't requested data and there are no active listeners, there's nothing to do.
+    // Ignore the first LEVEL_DETECTOR_SPL_MIN_BUFFERS buffers, as we wait for the microphone to level out
     if( this->bufferCount < LEVEL_DETECTOR_SPL_MIN_BUFFERS ) {
-        this->bufferCount++; // Here to prevent this endlessly increasing
+        this->bufferCount++;
         return DEVICE_OK;
     }
 
+    // Wake any sleeping fibers waiting for this component to start
     if( this->resourceLock.getWaitCount() > 0 )
         this->resourceLock.notifyAll();
- 
+
+    // If we haven't requested data and there are no active listeners, there's nothing to do.
     if (!(status & LEVEL_DETECTOR_SPL_DATA_REQUESTED || listenerCount))
     {
         //DMESG("LevelDetectorSPL: PR: ignoring data");
