@@ -43,7 +43,7 @@ using namespace codal;
 Compass::Compass(CoordinateSpace &cspace, uint16_t id) : sample(), sampleENU(), coordinateSpace(cspace)
 {
     accelerometer = NULL;
-    init(id);
+    _init(id);
 }
 
 /**
@@ -58,7 +58,7 @@ Compass::Compass(CoordinateSpace &cspace, uint16_t id) : sample(), sampleENU(), 
 Compass::Compass(Accelerometer &accel, CoordinateSpace &cspace, uint16_t id) :  sample(), sampleENU(), coordinateSpace(cspace)
 {
     accelerometer = &accel;
-    init(id);
+    _init(id);
 }
 
 /**
@@ -66,7 +66,7 @@ Compass::Compass(Accelerometer &accel, CoordinateSpace &cspace, uint16_t id) :  
  * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_COMPASS
  *
  */
-void Compass::init(uint16_t id)
+void Compass::_init(uint16_t id)
 {
     // Store our identifiers.
     this->id = id;

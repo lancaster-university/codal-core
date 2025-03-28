@@ -297,7 +297,7 @@ namespace codal
           * Internal helper used to de-duplicate code in the constructors
           *
          */
-        void init(uint16_t id);
+        void _init(uint16_t id);
 
         /**
          * Calculates a tilt compensated bearing of the device, using the accelerometer.
