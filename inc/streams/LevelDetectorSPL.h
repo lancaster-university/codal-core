@@ -146,9 +146,13 @@ namespace codal{
 
         /**
          * Callback when a listener to this component is added.
-         * n.b. we currently don't support removing listners (future work if necessary)
          */
         void listenerAdded();
+
+        /**
+         * Callback when a listener to this component is added.
+         */
+        void listenerRemoved();
 
         /**
          * Disable component

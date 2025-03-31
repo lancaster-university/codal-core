@@ -86,6 +86,7 @@ DEALINGS IN THE SOFTWARE.
 
 #define DEVICE_ID_IO_P0               100                       // IDs 100-227 are reserved for I/O Pin IDs.
 
+#define DEVICE_ID_MESSAGE_BUS_IGNORED             1020          // Message bus indication that the last handler for a given ID has been removed.
 #define DEVICE_ID_MESSAGE_BUS_LISTENER            1021          // Message bus indication that a handler for a given ID has been registered.
 #define DEVICE_ID_NOTIFY_ONE                      1022          // Notfication channel, for general purpose synchronisation
 #define DEVICE_ID_NOTIFY                          1023          // Notfication channel, for general purpose synchronisation

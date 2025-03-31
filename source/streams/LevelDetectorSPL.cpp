@@ -395,6 +395,12 @@ void LevelDetectorSPL::listenerAdded()
     this->getValue();
 }
 
+void LevelDetectorSPL::listenerRemoved()
+{
+    this->listenerCount--;
+}
+
+
 LevelDetectorSPL::~LevelDetectorSPL()
 {
 }
