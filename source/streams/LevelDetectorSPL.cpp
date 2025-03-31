@@ -82,6 +82,10 @@ void LevelDetectorSPL::periodicCallback()
         //DMESG("LevelDetectorSPL: CALLBACK: DATA NO LONGER REQUIRED...");
         this->status &= ~LEVEL_DETECTOR_SPL_DATA_REQUESTED;
         upstream.dataWanted(DATASTREAM_NOT_WANTED);
+
+        // Set the buffercount to just below the threshold,such that any calling fibers will block
+        // until data is available, but we won't wait too long...
+        this->bufferCount = LEVEL_DETECTOR_SPL_MIN_BUFFERS - 1;
     }
 }
 
