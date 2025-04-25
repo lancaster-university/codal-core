@@ -34,7 +34,7 @@ DEALINGS IN THE SOFTWARE.
 
 using namespace codal;
 
-LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id, bool activateImmediately) : upstream(source), resourceLock(0)
+LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, float lowThreshold, float gain, float minValue, uint16_t id) : upstream(source), resourceLock(0)
 {
     this->id = id;
     this->level = 0;
@@ -43,16 +43,9 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     this->highThreshold = highThreshold;
     this->minValue = minValue;
     this->gain = gain;
-    this->status |= LEVEL_DETECTOR_SPL_INITIALISED;
+    this->status |= LEVEL_DETECTOR_SPL_INITIALISED | LEVEL_DETECTOR_SPL_DATA_REQUESTED;
     this->unit = LEVEL_DETECTOR_SPL_DB;
-    enabled = true;
-    if(activateImmediately){
-        upstream.connect(*this);
-        this->activated = true;
-    }
-    else{
-        this->activated = false;
-    }
+    this->enabled = true;
 
     this->quietBlockCount = 0;
     this->noisyBlockCount = 0;
@@ -60,15 +53,61 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     this->maxRms = 0;
 
     this->bufferCount = 0;
-    this->timeout = 0;
+    this->listenerCount = 0;
+
+    // Request a periodic callback
+    status |= DEVICE_COMPONENT_STATUS_SYSTEM_TICK;
+
+    source.connect(*this);
+}
+
+
+/**
+  * Periodic callback from Device system timer.
+  * Change the upstream active status accordingly.
+  */
+void LevelDetectorSPL::periodicCallback()
+{
+    // Ensure we don't timeout whilst waiting for data to stabilise.
+    if (this->bufferCount < LEVEL_DETECTOR_SPL_MIN_BUFFERS)
+    {
+        //DMESG("ALLOWING BUFFERS TO FILL...");
+        return;
+    }
+
+    // Calculate the time since the last request for data.
+    // If this is above the given threshold and our channel is active, request that the upstream generation of data be stopped.
+    if (status & LEVEL_DETECTOR_SPL_DATA_REQUESTED && !listenerCount && resourceLock.getWaitCount() == 0 && (system_timer->getTime() - this->timestamp >= LEVEL_DETECTOR_SPL_TIMEOUT))
+    {
+        //DMESG("LevelDetectorSPL: CALLBACK: DATA NO LONGER REQUIRED...");
+        this->status &= ~LEVEL_DETECTOR_SPL_DATA_REQUESTED;
+        upstream.dataWanted(DATASTREAM_NOT_WANTED);
+
+        // Set the buffercount to just below the threshold,such that any calling fibers will block
+        // until data is available, but we won't wait too long...
+        this->bufferCount = LEVEL_DETECTOR_SPL_MIN_BUFFERS - 1;
+    }
 }
 
 int LevelDetectorSPL::pullRequest()
 {
-    // If we're not manually activated, not held active by a timeout, and we have no-one waiting on our data, bail.
-    if( !activated && !(system_timer_current_time() - this->timeout < CODAL_STREAM_IDLE_TIMEOUT_MS) && resourceLock.getWaitCount() == 0 ) {
-        this->bufferCount = 0;
-        return DEVICE_BUSY;
+    //DMESG("LevelDetectorSPL: PR");
+
+    // Ignore the first LEVEL_DETECTOR_SPL_MIN_BUFFERS buffers, as we wait for the microphone to level out
+    if( this->bufferCount < LEVEL_DETECTOR_SPL_MIN_BUFFERS ) {
+        this->bufferCount++;
+        return DEVICE_OK;
+    }
+
+    // Wake any sleeping fibers waiting for this component to start
+    if( this->resourceLock.getWaitCount() > 0 )
+        this->resourceLock.notifyAll();
+
+    // If we haven't requested data and there are no active listeners, there's nothing to do.
+    if (!(status & LEVEL_DETECTOR_SPL_DATA_REQUESTED || listenerCount))
+    {
+        //DMESG("LevelDetectorSPL: PR: ignoring data");
+        return DEVICE_OK;
     }
 
     ManagedBuffer b = upstream.pull();
@@ -153,13 +192,6 @@ int LevelDetectorSPL::pullRequest()
         *   EMIT EVENTS
         ******************************/
 
-        if( this->bufferCount < LEVEL_DETECTOR_SPL_MIN_BUFFERS ) {
-            this->bufferCount++; // Here to prevent this endlessly increasing
-            return DEVICE_OK;
-        }
-        if( this->resourceLock.getWaitCount() > 0 )
-            this->resourceLock.notifyAll();
-
         // HIGH THRESHOLD
         if ((!(status & LEVEL_DETECTOR_SPL_HIGH_THRESHOLD_PASSED)) && level > highThreshold)
         {
@@ -217,30 +249,34 @@ int LevelDetectorSPL::pullRequest()
 
 float LevelDetectorSPL::getValue( int scale )
 {
-    if( !this->upstream.isConnected() )
-        this->upstream.connect( *this );
+    // Update out timestamp.
+    this->timestamp = system_timer->getTime();
+
+    if (!(status & LEVEL_DETECTOR_SPL_DATA_REQUESTED))
+    {
+        // We've just been asked for data after a (potentially) long wait.
+        // Let our upstream components know that we're interested in data again.
+        //DMESG("LevelDetectorSPL: getValue: dataWanted(1)");
+        status |= LEVEL_DETECTOR_SPL_DATA_REQUESTED;
+        upstream.dataWanted(DATASTREAM_WANTED);
+    }
 
     // Lock the resource, THEN bump the timout, so we get consistent on-time
-    if( this->bufferCount < LEVEL_DETECTOR_SPL_MIN_BUFFERS )
+    if(this->bufferCount < LEVEL_DETECTOR_SPL_MIN_BUFFERS)
+    {
+        //DMESG("WAITING ON LevelDetectorSPL::resourceLock...");
+        //codal_dmesg_flush();
         resourceLock.wait();
-
-    this->timeout = system_timer_current_time();
+        //DMESG("Escaped!");
+        //codal_dmesg_flush();
+    }
 
     return splToUnit( this->level, scale );
-}
-
-void LevelDetectorSPL::activateForEvents( bool state )
-{
-    this->activated = state;
-    if( this->activated && !this->upstream.isConnected() ) {
-        this->upstream.connect( *this );
-    }
 }
 
 void LevelDetectorSPL::disable(){
     enabled = false;
 }
-
 
 int LevelDetectorSPL::setLowThreshold(float value)
 {
@@ -352,6 +388,18 @@ float LevelDetectorSPL::unitToSpl(float level, int queryUnit)
 
     return level;
 }
+
+void LevelDetectorSPL::listenerAdded()
+{
+    this->listenerCount++;
+    this->getValue();
+}
+
+void LevelDetectorSPL::listenerRemoved()
+{
+    this->listenerCount--;
+}
+
 
 LevelDetectorSPL::~LevelDetectorSPL()
 {

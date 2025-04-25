@@ -527,6 +527,9 @@ int MessageBus::remove(Listener *listener)
                     // Found a match. mark this to be removed from the list.
                     l->flags |= MESSAGE_BUS_LISTENER_DELETING;
                     removed++;
+
+                    // Raise an event to indicate the removal
+                    Event(DEVICE_ID_MESSAGE_BUS_IGNORED, l->id);
                 }
             }
         }

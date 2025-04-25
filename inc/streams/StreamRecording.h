@@ -6,8 +6,14 @@
 
 // Pretty much the largest sensible number we can have on a Micro:bit v2
 #ifndef CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH
-    #define CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH      50000 // 50k, in bytes
+    #define CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH      51200
 #endif
+
+#ifndef CODAL_STREAM_RECORDING_BUFFER_SIZE
+    #define CODAL_STREAM_RECORDING_BUFFER_SIZE             256
+#endif
+
+#define CODAL_STREAM_RECORDING_SIZE                        (CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH / CODAL_STREAM_RECORDING_BUFFER_SIZE)
 
 #define REC_STATE_STOPPED   0
 #define REC_STATE_PLAYING   1
@@ -15,67 +21,30 @@
 
 namespace codal
 {
-
-    class StreamRecording_Buffer {
-        public:
-        ManagedBuffer buffer;
-        StreamRecording_Buffer * next;
-
-        StreamRecording_Buffer( ManagedBuffer data ) {
-            this->buffer = data;
-            this->next = NULL;
-        }
-    };
-
-    class StreamRecording : public DataSource, public DataSink
+    class StreamRecording : public DataSourceSink
     {
         private:
-
-        //ManagedBuffer buffer[REC_MAX_BUFFERS];
-        //StreamRecording_Buffer_t * bufferChain;
-        StreamRecording_Buffer * lastBuffer;
-        StreamRecording_Buffer * readHead;
-        uint32_t maxBufferLenth;
-        uint32_t totalBufferLength;
-        uint32_t totalMemoryUsage;
-        int state;
-        float lastUpstreamRate;
-
-        DataSink *downStream;
-        DataSource &upStream;
-
-        void initialise();
+        uint32_t totalBufferLength;                         // Amount of data currently stored in this object.
+        int state;                                          // STOPPED/PLAYING/RECORDING.
+        ManagedBuffer data[CODAL_STREAM_RECORDING_SIZE];    // Buffers of data, each CODAL_STREAM_RECORDING_BUFFER_SIZE in length.
+        int readOffset;                                     // Index into the buffer, indicating the current point for playback.
+        int writeOffset;                                    // Index into the buffer, indicating the current point for recording.
+        FiberLock recordLock, playLock;                     // Indicates to synchronous recording threads when recording/playback is complete.
 
         public:
-
-        StreamRecording_Buffer * bufferChain;
-
         /**
          * @brief Construct a new Stream Recording object
          * 
          * @param source An upstream DataSource to connect to
          * @param length The maximum amount of memory (RAM) in bytes to allow this recording object to use. Defaults to CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH.
          */
-        StreamRecording( DataSource &source, uint32_t length = CODAL_DEFAULT_STREAM_RECORDING_MAX_LENGTH );
-
-        /**
-         * @brief Destroy the Stream Recording object
-         */
-        ~StreamRecording();
+        StreamRecording( DataSource &source);
 
         virtual ManagedBuffer pull();
         virtual int pullRequest();
-    	virtual void connect( DataSink &sink );
-        bool isConnected();
-        virtual void disconnect();
-        virtual int getFormat();
-        virtual int setFormat( int format );
-
-        void printChain();
 
         /**
          * @brief Calculate and return the length <b>in bytes</b> that this StreamRecording represents
-         * 
          * @return int The length, in bytes.
          */
         int length();
@@ -86,45 +55,27 @@ namespace codal
          * As this cannot be known by this class (as the sample rate may change during playback <i>or</i> recording) the expected rate must be supplied.
          * 
          * @param sampleRate The sample rate to calculate the duration for, in samples per second.
-         * @return long The total duration of this StreamRecording, based on the supplied sample rate, in seconds.
+         * @return The total duration of this StreamRecording, based on the supplied sample rate, in seconds.
          */
         float duration( unsigned int sampleRate );
 
         /**
-         * @brief Downstream classes should use this to determing if there is data to pull from this StreamRecording object.
-         * 
-         * @return true If data is available
-         * @return false If the object is completely empty
-         */
-        bool canPull();
-
-        /**
-         * @brief Checks if this object can store any further ManagedBuffers from the upstream components.
-         * 
-         * @note This does <b>not</b> mean that RAM is completely full, but simply that there is now more internal storage for ManagedBuffer references.
-         * 
-         * @return true If there are no more slots available to track more ManagedBuffers.
-         * @return false If there is remaining internal storage capacity for more data
-         */
-        bool isFull();
-
-        /**
          * @brief Begin recording data from the connected upstream
          * 
-         * The StreamRecording object will, if already playing; stop playback, erase its buffer, and start recording.
+         * The StreamRecording object is not already recording, it will stop any existing playback, erase its buffer, and start recording.
          * 
          * Non-blocking, will return immediately.
          * 
-         * @return Returns true if the object state actually changed (ie. we weren't already recording)
+         * @return Returns DEVICE_OK on completion.
          */
-        bool recordAsync();
+        int recordAsync();
 
         /**
          * @brief Begin recording data from the connected upstream
          * 
-         * The StreamRecording object will, if already playing; stop playback, erase its buffer, and start recording.
+         * The StreamRecording object is not already recording, it will stop any existing playback, erase its buffer, and start recording.
          * 
-         * Blocking call, will repeatedly deschedule the current fiber until the recording completes.
+         * Blocking call, will deschedule the current fiber until the recording completes.
          */
         void record();
 
@@ -135,16 +86,16 @@ namespace codal
          * 
          * Non-blocking, will return immediately.
          * 
-         * @return Returns true if the object state actually changed (ie. we weren't already recording)
+         * @return Returns DEVICE_OK on completion.
          */
-        bool playAsync();
+        int playAsync();
 
         /**
          * @brief Begin playing data from the connected upstream
          * 
          * The StreamRecording object will, if already recording; stop recording, rewind to the start of its buffer, and start playing.
          * 
-         * Blocking call, will repeatedly deschedule the current fiber until the playback completes.
+         * Blocking call, will deschedule the current fiber until the playback completes.
          */
         void play();
 
@@ -155,7 +106,7 @@ namespace codal
          * 
          * @return Do not use this value, return semantics are changing.
          */
-        bool stop();
+        int stop();
 
         /**
          * @brief Erase the internal buffer.
@@ -184,8 +135,6 @@ namespace codal
          * @return True if stopped, else false if recording or playing back. 
          */
         bool isStopped();
-
-        virtual float getSampleRate();
 
     };
 
