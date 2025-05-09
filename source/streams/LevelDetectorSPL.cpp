@@ -329,7 +329,7 @@ float LevelDetectorSPL::splToUnit(float level, int queryUnit)
 
     if (queryUnit == LEVEL_DETECTOR_SPL_8BIT)
     {
-        level = (level - LEVEL_DETECTOR_SPL_8BIT_000_POINT) * LEVEL_DETECTOR_SPL_8BIT_CONVERSION;
+        level = (level - (float)(LEVEL_DETECTOR_SPL_8BIT_000_POINT)) * LEVEL_DETECTOR_SPL_8BIT_CONVERSION;
 
         // Ensure the result is clamped into the expected range.
         if (level < 0.0f)
@@ -348,7 +348,7 @@ float LevelDetectorSPL::unitToSpl(float level, int queryUnit)
     queryUnit = queryUnit == -1 ? unit : queryUnit;
 
     if (unit == LEVEL_DETECTOR_SPL_8BIT)
-        level = LEVEL_DETECTOR_SPL_8BIT_000_POINT + level / LEVEL_DETECTOR_SPL_8BIT_CONVERSION;
+        level = (float)(LEVEL_DETECTOR_SPL_8BIT_000_POINT) + level / LEVEL_DETECTOR_SPL_8BIT_CONVERSION;
 
     return level;
 }
