@@ -25,7 +25,7 @@ DEALINGS IN THE SOFTWARE.
 /**
  * Class definition for an LIS3DH 3 axis accelerometer.
  *
- * Represents an implementation of the Freescale LIS3DH 3 axis accelerometer
+ * Represents an implementation of the ST LIS3DH 3 axis accelerometer
  * Also includes basic data caching and on demand activation.
  */
 #include "CodalConfig.h"
@@ -33,6 +33,9 @@ DEALINGS IN THE SOFTWARE.
 #include "ErrorNo.h"
 #include "CodalCompat.h"
 #include "CodalFiber.h"
+#include "Timer.h"
+
+#define UPDATE_DONE 0x0040
 
 using namespace codal;
 
@@ -177,11 +180,14 @@ int LIS3DH::requestUpdate()
     status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 
     // Poll interrupt line from accelerometer.
-    if(int1.getDigitalValue() == 1)
+    if((&int1 && int1.getDigitalValue() == 1) ||
+        !(status & UPDATE_DONE))
     {
         int8_t data[6];
         uint8_t src;
         int result;
+
+        status |= UPDATE_DONE;
 
         // read the XYZ data (16 bit)
         // n.b. we need to set the MSB bit to enable multibyte transfers from this device (WHY? Who Knows!)
@@ -232,6 +238,15 @@ int LIS3DH::requestUpdate()
   */
 void LIS3DH::idleCallback()
 {
+    if (!&int1)
+    {
+        uint32_t now = codal::system_timer_current_time();
+        if (!lastUpdate || now - lastUpdate > this->samplePeriod)
+        {
+            status &= ~UPDATE_DONE;
+            lastUpdate = now;
+        }
+    }
     requestUpdate();
 }
 
