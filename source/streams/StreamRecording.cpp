@@ -44,7 +44,7 @@ int StreamRecording::length()
 
 float StreamRecording::duration( unsigned int sampleRate )
 {
-    return ((float)this->length() / (float)DATASTREAM_FORMAT_BYTES_PER_SAMPLE(this->getFormat()) ) / (float)sampleRate;
+    return ((float)this->length() / (float) DATASTREAM_FORMAT_BYTES_PER_SAMPLE(this->getFormat()) ) / (float)sampleRate;
 }
 
 int StreamRecording::pullRequest()
@@ -176,7 +176,9 @@ int StreamRecording::playAsync()
 void StreamRecording::play()
 {
     playAsync();
-    playLock.wait();
+
+    if (isPlaying())
+        playLock.wait();
 }
 
 int StreamRecording::stop()
