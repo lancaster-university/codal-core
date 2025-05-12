@@ -67,6 +67,9 @@ namespace codal
       */
     class Serial : public PinPeripheral, public CodalComponent
     {
+        public:
+        static Serial *defaultSerial;
+
         protected:
 
         Pin* tx;
