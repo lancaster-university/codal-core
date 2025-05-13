@@ -39,6 +39,7 @@ SerialStreamer::SerialStreamer(DataSource &source, int mode, Serial *output) : u
 
     // Register with our upstream component
     source.connect(*this);
+    source.dataWanted(DATASTREAM_WANTED);
 }
 
 /**
