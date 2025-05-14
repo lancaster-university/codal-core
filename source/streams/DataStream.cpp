@@ -142,7 +142,6 @@ DataStream::DataStream(DataSource &upstream) : DataSourceSink(upstream)
     this->pullRequestEventCode = 0;
     this->isBlocking = true;
     this->hasPending = false;
-    this->downstreamReturn = DEVICE_OK;
 }
 
 DataStream::~DataStream()
@@ -182,10 +181,8 @@ ManagedBuffer DataStream::pull()
 
 void DataStream::onDeferredPullRequest(Event)
 {
-    this->downstreamReturn = DEVICE_OK; // The default state
-
     if (downStream != NULL)
-        this->downstreamReturn = downStream->pullRequest();
+        downStream->pullRequest();
 }
 
 bool DataStream::canPull(int size)
@@ -198,16 +195,12 @@ int DataStream::pullRequest()
 {
     // Are we running in async (non-blocking) mode?
     if( !this->isBlocking ) {
-        if( this->hasPending && this->downstreamReturn != DEVICE_OK ) {
-            Event evt( DEVICE_ID_NOTIFY, this->pullRequestEventCode );
-            return this->downstreamReturn;
-        }
 
         this->nextBuffer = this->upStream.pull();
         this->hasPending = true;
 
         Event evt( DEVICE_ID_NOTIFY, this->pullRequestEventCode );
-        return this->downstreamReturn;
+        return DEVICE_OK;
     }
 
     if( this->downStream != NULL )

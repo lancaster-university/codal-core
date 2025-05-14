@@ -124,7 +124,6 @@ namespace codal
         ManagedBuffer nextBuffer;
         bool hasPending;
         bool isBlocking;
-        int downstreamReturn;
 
         public:
 
