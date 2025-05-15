@@ -84,6 +84,9 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_SPL_CLAP_MIN_QUIET_BLOCKS            20       // prevent very fast taps being registered as clap
 
 #define LEVEL_DETECTOR_SPL_TIMEOUT                          50      // Time in ms at which we request no further data.
+#define LEVEL_DETECTOR_SPL_OUTLIER_REJECTION                2       // Most extreme samples to reject in each packet.
+#define LEVEL_DETECTOR_SPL_NOISE_FLOOR                      40      // Noise level to reject in the microphone.
+
 
 namespace codal{
     class LevelDetectorSPL : public CodalComponent, public DataSink

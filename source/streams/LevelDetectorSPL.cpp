@@ -112,7 +112,7 @@ int LevelDetectorSPL::pullRequest()
 
     ManagedBuffer b = upstream.pull();
     uint8_t *data = &b[0];
-    
+
     int format = upstream.getFormat();
     int skip = 1;
     float multiplier = 256;
@@ -149,13 +149,64 @@ int LevelDetectorSPL::pullRequest()
         int16_t maxVal = 0;
         int16_t minVal = 32766;
         int32_t v;
+        bool ignore;
+
+        struct Outlier
+        {
+            int32_t value;
+            bool    used;
+        };
+
+        Outlier outliers[LEVEL_DETECTOR_SPL_OUTLIER_REJECTION] = {0, false};
+
         ptr = data;
         while (ptr < end) {
             v = (int32_t) StreamNormalizer::readSample[format](ptr);
-            if (v > maxVal) maxVal = v;
-            if (v < minVal) minVal = v;
+            for (int i=0; i<LEVEL_DETECTOR_SPL_OUTLIER_REJECTION; i++)
+                if(!outliers[i].used || (outliers[i].used && v < outliers[i].value))
+                {
+                    for (int j=i+1; j<LEVEL_DETECTOR_SPL_OUTLIER_REJECTION; j++)
+                    {
+                        outliers[j].value = outliers[j-1].value;
+                        outliers[i+1].used = true;
+                    }
+
+                    outliers[i].value = v;
+                    outliers[i].used = true;
+                    break;
+                }
+
             ptr += skip;
         }
+
+        ptr = data;
+
+        while (ptr < end) {
+            v = (int32_t) StreamNormalizer::readSample[format](ptr);
+            ignore = false;
+
+            for (int i=0; i<LEVEL_DETECTOR_SPL_OUTLIER_REJECTION; i++)
+            {
+                if (v == outliers[i].value && outliers[i].used)
+                {
+                    outliers[i].used = false;
+                    ignore = true;
+                    break;
+                }
+            }
+
+            if (!ignore)
+            {
+                if (v > maxVal) maxVal = v;
+                if (v < minVal) minVal = v;
+            }
+
+            ptr += skip;
+        }
+
+        if (maxVal < minVal + LEVEL_DETECTOR_SPL_NOISE_FLOOR)
+            maxVal = minVal + 1;
+
         maxVal = (maxVal - minVal) / 2;
 
         /*******************************
@@ -167,9 +218,12 @@ int LevelDetectorSPL::pullRequest()
         while (ptr < end) {
             count++;
             v = (int32_t) StreamNormalizer::readSample[format](ptr) - minVal;   // need to sub minVal to avoid overflow
+            v = max(v - LEVEL_DETECTOR_SPL_NOISE_FLOOR, 0);
+
             sumSquares += v * v;
             ptr += skip;
         }
+
         float rms = sqrtf(sumSquares / count);
 
         /*******************************
