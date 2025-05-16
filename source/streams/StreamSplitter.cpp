@@ -132,6 +132,7 @@ StreamSplitter::StreamSplitter(DataSource &source, uint16_t id) : upstream(sourc
 {
     this->id = id;
     this->channels = 0;
+    this->filterFlag = NULL;
 
     // init array to NULL.
     for (int i = 0; i < CONFIG_MAX_CHANNELS; i++)
@@ -162,7 +163,7 @@ ManagedBuffer StreamSplitter::getBuffer()
 {
     if(lastBuffer == ManagedBuffer())
         lastBuffer = upstream.pull();
-    
+
     return lastBuffer;
 }
 
@@ -171,6 +172,10 @@ ManagedBuffer StreamSplitter::getBuffer()
  */
 int StreamSplitter::pullRequest()
 {
+    // Ingress filter if we've been asked to do so.
+    if (filterFlag != NULL && *filterFlag == false)
+        return DEVICE_OK;
+
     // For each downstream channel that exists in array outputChannels - make a pullRequest
     for (int i = 0; i < CONFIG_MAX_CHANNELS; i++)
     {
@@ -234,4 +239,9 @@ SplitterChannel * StreamSplitter::getChannel( DataSink * output ) {
 
 float SplitterChannel::getSampleRate() {
     return parent->upstream.getSampleRate() / sampleDropRate;
+}
+
+void StreamSplitter::filterOn(volatile bool *filterFlag)
+{
+    this->filterFlag = filterFlag;
 }

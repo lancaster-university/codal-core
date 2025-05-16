@@ -24,6 +24,7 @@ DEALINGS IN THE SOFTWARE.
 
 #include "CodalConfig.h"
 #include "DataStream.h"
+#include "Pin.h"
 
 #ifndef STREAM_SPLITTER_H
 #define STREAM_SPLITTER_H
@@ -96,6 +97,7 @@ namespace codal{
         int                 channels;                              // Current number of channels Splitter is serving
         DataSource          &upstream;                             // The upstream component of this Splitter
         SplitterChannel     *outputChannels[CONFIG_MAX_CHANNELS];  // Array of SplitterChannels the Splitter is serving
+        volatile bool       *filterFlag;                           // Only forward frames when flag is active.
 
         /**
           * Creates a component that distributes a single upstream datasource to many downstream datasinks
@@ -115,6 +117,7 @@ namespace codal{
         virtual SplitterChannel * createChannel();
         virtual bool destroyChannel( SplitterChannel * channel );
         virtual SplitterChannel * getChannel( DataSink * output );
+        virtual void filterOn(volatile bool *filterFlag);
 
         friend SplitterChannel;
     };
