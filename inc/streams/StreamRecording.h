@@ -136,6 +136,8 @@ namespace codal
          */
         bool isStopped();
 
+        virtual void dataWanted(int wanted) override;
+
     };
 
 }

@@ -129,7 +129,7 @@ int StreamRecording::recordAsync()
         erase();
 
         state = REC_STATE_RECORDING;
-        dataWanted(DATASTREAM_WANTED);
+        upStream.dataWanted(DATASTREAM_WANTED);
     }
 
     return DEVICE_OK;
@@ -186,7 +186,7 @@ int StreamRecording::stop()
     if (this->state != REC_STATE_STOPPED)
     {
         this->state = REC_STATE_STOPPED;
-        dataWanted(DATASTREAM_DONT_CARE);
+        upStream.dataWanted(DATASTREAM_DONT_CARE);
         recordLock.notifyAll();
     }
 
@@ -208,4 +208,9 @@ bool StreamRecording::isRecording()
 bool StreamRecording::isStopped()
 {
     return this->state == REC_STATE_STOPPED;
+}
+
+void StreamRecording::dataWanted(int wanted)
+{
+    DataSource::dataWanted(wanted);
 }

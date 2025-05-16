@@ -123,7 +123,7 @@ float DataSourceSink::getSampleRate()
 void DataSourceSink::dataWanted(int wanted)
 {
     DataSource::dataWanted(wanted);
-    return upStream.dataWanted(wanted);
+    upStream.dataWanted(wanted);
 }
 
 int DataSourceSink::pullRequest()
