@@ -122,7 +122,7 @@ Synthesizer::Synthesizer(int sampleRate, bool isSigned) : output(*this)
  */
 void Synthesizer::idleCallback()
 {
-    if (bytesWritten && !synchronous && !active && output.canPull(bytesWritten))
+    if (bytesWritten && !synchronous && !active)
     {
         buffer.truncate(bytesWritten);
         output.pullRequest();

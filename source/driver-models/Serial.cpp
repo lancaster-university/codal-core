@@ -4,6 +4,8 @@
 
 using namespace codal;
 
+Serial* Serial::defaultSerial = NULL;
+
 /**
  *
  * Remove all rxInUse/txInUse calls, and replace with an event mutex (which will be pretty sexy)
@@ -277,6 +279,9 @@ Serial::Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize, uint8_t txBufferSize, uin
 
     reassignPin(&this->tx, &tx);
     reassignPin(&this->rx, &rx);
+
+    if (!defaultSerial)
+        defaultSerial = this;
 
     this->status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
 }

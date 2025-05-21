@@ -41,7 +41,7 @@ typedef void (*SampleWriteFn)(uint8_t *, int);
 
 namespace codal{
 
-    class StreamNormalizer : public DataSink, public DataSource
+    class StreamNormalizer : public DataSourceSink
     {
     public:
         int             outputFormat;           // The format to output in. By default, this is the sme as the input.
@@ -52,9 +52,7 @@ namespace codal{
         bool            normalize;              // If set, will recalculate a zero offset.
         bool            zeroOffsetValid;        // Set to true after the first buffer has been processed.
         bool            outputEnabled;          // When set any bxuffer processed will be forwarded downstream.
-        DataSource      &upstream;              // The upstream component of this StreamNormalizer.
         DataStream      output;                 // The downstream output stream of this StreamNormalizer.
-        //ManagedBuffer   buffer;                 // The buffer being processed.
 
         static SampleReadFn readSample[9];
         static SampleWriteFn writeSample[9];
@@ -95,11 +93,6 @@ namespace codal{
         bool getNormalize();
 
         /**
-         *  Determine the data format of the buffers streamed out of this component.
-         */
-        virtual int getFormat();
-
-        /**
          * Defines the data format of the buffers streamed out of this component.
          * @param format valid values include:
          * 
@@ -113,7 +106,7 @@ namespace codal{
          * DATASTREAM_FORMAT_32BIT_SIGNED
          */
         virtual int setFormat(int format);
-
+        virtual int getFormat();
         /**
          * Defines an optional gain to apply to the input, as a floating point multiple.
          *
@@ -136,18 +129,6 @@ namespace codal{
          * @return DEVICE_OK on success.
          */
         int setOrMask(uint32_t mask);
-
-        float getSampleRate();
-        
-        float requestSampleRate(float sampleRate);
-
-        /**
-         * Determines if this source is connected to a downstream component
-         * 
-         * @return true If a downstream is connected
-         * @return false If a downstream is not connected
-         */
-        bool isConnected();
 
         /**
          * Destructor.

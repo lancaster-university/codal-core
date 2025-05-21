@@ -125,7 +125,7 @@ SampleWriteFn StreamNormalizer::writeSample[] = {write_sample_1, write_sample_1,
  * @param format The format to convert the input stream into
  * @param stabilisation the maximum change of zero-offset permitted between subsequent buffers before output is initiated. Set to zero to disable (default)
  */
-StreamNormalizer::StreamNormalizer(DataSource &source, float gain, bool normalize, int format, int stabilisation) : upstream(source), output(*this)
+StreamNormalizer::StreamNormalizer(DataSource &source, float gain, bool normalize, int format, int stabilisation) : DataSourceSink(source), output(*this)
 {
     setFormat(format);
     setGain(gain);
@@ -135,9 +135,6 @@ StreamNormalizer::StreamNormalizer(DataSource &source, float gain, bool normaliz
     this->zeroOffset = 0;
     this->stabilisation = stabilisation;
     this->outputEnabled = normalize && stabilisation ? false : true;
-
-    // Register with our upstream component
-    source.connect(*this);
 }
 
 /**
@@ -157,9 +154,9 @@ ManagedBuffer StreamNormalizer::pull()
     ManagedBuffer buffer;       // The buffer being processed.
     
     // Determine the input format.
-    inputFormat = upstream.getFormat();
+    inputFormat = upStream.getFormat();
 
-    // If no output format has been selected, infer it from our upstream component.
+    // If no output format has been selected, infer it from our upStream component.
     if (outputFormat == DATASTREAM_FORMAT_UNKNOWN)
         outputFormat = inputFormat;
 
@@ -168,7 +165,7 @@ ManagedBuffer StreamNormalizer::pull()
     bytesPerSampleOut = DATASTREAM_FORMAT_BYTES_PER_SAMPLE(outputFormat);
 
     // Acquire the buffer to be processed.
-    ManagedBuffer inputBuffer = upstream.pull();
+    ManagedBuffer inputBuffer = upStream.pull();
     samples = inputBuffer.length() / bytesPerSampleIn;
 
     // Use in place processing where possible, but allocate a new buffer when needed.
@@ -177,7 +174,7 @@ ManagedBuffer StreamNormalizer::pull()
     else
         buffer = ManagedBuffer(samples * bytesPerSampleOut);
     
-    // Initialise input an doutput buffer pointers.
+    // Initialise input and output buffer pointers.
     data = &inputBuffer[0];
     result = &buffer[0];
 
@@ -251,14 +248,8 @@ bool StreamNormalizer::getNormalize()
     return normalize;
 }
 
-/**
- *  Determine the data format of the buffers streamed out of this component.
- */
 int StreamNormalizer::getFormat()
 {
-    if (outputFormat == DATASTREAM_FORMAT_UNKNOWN)
-        outputFormat = upstream.getFormat();
-
     return outputFormat;
 }
 
@@ -313,18 +304,4 @@ int StreamNormalizer::setOrMask(uint32_t mask)
  */
 StreamNormalizer::~StreamNormalizer()
 {
-}
-
-float StreamNormalizer::getSampleRate() {
-    return this->upstream.getSampleRate();
-}
-
-float StreamNormalizer::requestSampleRate(float sampleRate) {
-    return this->upstream.requestSampleRate( sampleRate );
-}
-
-bool StreamNormalizer::isConnected()
-{
-    //return this->output.isConnected();
-    return false;
 }
