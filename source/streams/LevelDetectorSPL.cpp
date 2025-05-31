@@ -99,10 +99,6 @@ int LevelDetectorSPL::pullRequest()
         return DEVICE_OK;
     }
 
-    // Wake any sleeping fibers waiting for this component to start
-    if( this->resourceLock.getWaitCount() > 0 )
-        this->resourceLock.notifyAll();
-
     // If we haven't requested data and there are no active listeners, there's nothing to do.
     if (!(status & LEVEL_DETECTOR_SPL_DATA_REQUESTED || listenerCount))
     {
@@ -298,6 +294,10 @@ int LevelDetectorSPL::pullRequest()
         }
     }
 
+    // Wake any sleeping fibers waiting for data.
+    if(this->resourceLock.getWaitCount() > 0 && this->splToUnit(this->level, LEVEL_DETECTOR_SPL_8BIT))
+        this->resourceLock.notifyAll();
+
     return DEVICE_OK;
 }
 
@@ -315,15 +315,9 @@ float LevelDetectorSPL::getValue( int scale )
         upstream.dataWanted(DATASTREAM_WANTED);
     }
 
-    // Lock the resource, THEN bump the timout, so we get consistent on-time
-    if(this->bufferCount < LEVEL_DETECTOR_SPL_MIN_BUFFERS)
-    {
-        //DMESG("WAITING ON LevelDetectorSPL::resourceLock...");
-        //codal_dmesg_flush();
+    // Wait for valid data to arrive before continuing.
+    if(this->bufferCount < LEVEL_DETECTOR_SPL_MIN_BUFFERS || splToUnit(this->level, scale) == 0)
         resourceLock.wait();
-        //DMESG("Escaped!");
-        //codal_dmesg_flush();
-    }
 
     return splToUnit( this->level, scale );
 }
