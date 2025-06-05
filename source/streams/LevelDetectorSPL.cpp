@@ -85,7 +85,8 @@ void LevelDetectorSPL::periodicCallback()
 
         // Set the buffercount to just below the threshold,such that any calling fibers will block
         // until data is available, but we won't wait too long...
-        this->bufferCount = LEVEL_DETECTOR_SPL_MIN_BUFFERS - 1;
+        this->bufferCount = LEVEL_DETECTOR_SPL_MIN_BUFFERS;
+        this->status &= ~LEVEL_DETECTOR_SPL_DATA_VALID;
     }
 }
 
@@ -241,6 +242,9 @@ int LevelDetectorSPL::pullRequest()
         samples -= windowSize;
         data += windowSize;
 
+        // Indicate that we have valid data.
+        this->status |= LEVEL_DETECTOR_SPL_DATA_VALID;
+
         /*******************************
         *   EMIT EVENTS
         ******************************/
@@ -319,8 +323,10 @@ float LevelDetectorSPL::getValue( int scale )
     }
 
     // Wait for valid data to arrive before continuing.
-    if(this->bufferCount < LEVEL_DETECTOR_SPL_MIN_BUFFERS || splToUnit(this->level, scale) == 0)
+    if(((this->status & LEVEL_DETECTOR_SPL_DATA_VALID) == 0) || splToUnit(this->level, scale) == 0)
         resourceLock.wait();
+
+    this->timestamp = system_timer->getTime();
 
     return splToUnit( this->level, scale );
 }

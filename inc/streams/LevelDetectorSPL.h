@@ -37,6 +37,7 @@ DEALINGS IN THE SOFTWARE.
 #define LEVEL_DETECTOR_SPL_LOW_THRESHOLD_PASSED              0x04
 #define LEVEL_DETECTOR_SPL_CLAP                              0x08
 #define LEVEL_DETECTOR_SPL_DATA_REQUESTED                    0x10
+#define LEVEL_DETECTOR_SPL_DATA_VALID                        0x20
 
 
 /**
