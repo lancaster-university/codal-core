@@ -43,7 +43,7 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     this->highThreshold = highThreshold;
     this->minValue = minValue;
     this->gain = gain;
-    this->status |= LEVEL_DETECTOR_SPL_INITIALISED | LEVEL_DETECTOR_SPL_DATA_REQUESTED;
+    this->status |= LEVEL_DETECTOR_SPL_INITIALISED;
     this->unit = LEVEL_DETECTOR_SPL_DB;
     this->enabled = true;
 
@@ -112,6 +112,7 @@ int LevelDetectorSPL::pullRequest()
     int format = upstream.getFormat();
     int skip = 1;
     float multiplier = 256;
+    bool nonzero = false;
     windowSize = 256;
 
     if (format == DATASTREAM_FORMAT_16BIT_SIGNED || format == DATASTREAM_FORMAT_UNKNOWN){
@@ -158,6 +159,8 @@ int LevelDetectorSPL::pullRequest()
         ptr = data;
         while (ptr < end) {
             v = (int32_t) StreamNormalizer::readSample[format](ptr);
+            if (v != 0) nonzero = true;
+
             for (int i=0; i<LEVEL_DETECTOR_SPL_OUTLIER_REJECTION; i++)
                 if(!outliers[i].used || (outliers[i].used && v < outliers[i].value))
                 {
@@ -295,7 +298,7 @@ int LevelDetectorSPL::pullRequest()
     }
 
     // Wake any sleeping fibers waiting for data.
-    if(this->resourceLock.getWaitCount() > 0 && this->splToUnit(this->level, LEVEL_DETECTOR_SPL_8BIT))
+    if(this->resourceLock.getWaitCount() > 0 && nonzero)
         this->resourceLock.notifyAll();
 
     return DEVICE_OK;
