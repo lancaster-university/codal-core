@@ -43,7 +43,7 @@ LevelDetectorSPL::LevelDetectorSPL(DataSource &source, float highThreshold, floa
     this->highThreshold = highThreshold;
     this->minValue = minValue;
     this->gain = gain;
-    this->status |= LEVEL_DETECTOR_SPL_INITIALISED;
+    this->status |= (LEVEL_DETECTOR_SPL_INITIALISED | LEVEL_DETECTOR_SPL_DATA_REQUESTED);
     this->unit = LEVEL_DETECTOR_SPL_DB;
     this->enabled = true;
 
@@ -304,6 +304,10 @@ int LevelDetectorSPL::pullRequest()
     // Wake any sleeping fibers waiting for data.
     if(this->resourceLock.getWaitCount() > 0 && nonzero)
         this->resourceLock.notifyAll();
+
+    // If we're waiting for valid data, esure we don't timeout early.
+    if(!nonzero && (status & LEVEL_DETECTOR_SPL_DATA_REQUESTED))
+        this->timestamp = system_timer->getTime();
 
     return DEVICE_OK;
 }
