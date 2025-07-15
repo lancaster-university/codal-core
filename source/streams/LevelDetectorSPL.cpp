@@ -424,17 +424,22 @@ float LevelDetectorSPL::splToUnit(float level, int queryUnit)
 {
     queryUnit = queryUnit == -1 ? unit : queryUnit;
 
+    float level8Bit = (level - (float)(LEVEL_DETECTOR_SPL_8BIT_000_POINT)) * LEVEL_DETECTOR_SPL_8BIT_CONVERSION;
+
+    // Ensure the result is clamped into the expected range.
+    if (level8Bit < 0.0f)
+        level8Bit = 0.0f;
+
+    if (level8Bit > 255.0f)
+        level8Bit = 255.0f;
+
     if (queryUnit == LEVEL_DETECTOR_SPL_8BIT)
-    {
-        level = (level - (float)(LEVEL_DETECTOR_SPL_8BIT_000_POINT)) * LEVEL_DETECTOR_SPL_8BIT_CONVERSION;
+        return level8Bit;
 
-        // Ensure the result is clamped into the expected range.
-        if (level < 0.0f)
-            level = 0.0f;
-
-        if (level > 255.0f)
-            level = 255.0f;
-    }
+    // We have been asked to provide dB. Smooth out the values in the 9..21 range.
+    // We do this to balance the noise gate previously applied to eleminate noisy outlier samples.
+    if (level8Bit >= 9 && level8Bit <= 21)
+        level = 38 + ((level8Bit - 9.0f) * 1.5f);
 
     return level;
 }
