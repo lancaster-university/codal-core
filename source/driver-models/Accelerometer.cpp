@@ -487,18 +487,18 @@ float Accelerometer::getRollRadians()
   */
 void Accelerometer::recalculatePitchRoll()
 {
-    double x = (double) sample.x;
-    double y = (double) sample.y;
-    double z = (double) sample.z;
+    float x = sample.x;
+    float y = sample.y;
+    float z = sample.z;
 
-    roll = atan2(x, -z);
-    pitch = atan2(y, (x*sin(roll) - z*cos(roll)));
+    roll = atan2f(x, -z);
+    pitch = atan2f(y, (x*sinf(roll) - z*cosf(roll)));
 
     // Handle to the two "negative quadrants", such that we get an output in the +/- 18- degree range.
     // This ensures that the pitch values are consistent with the roll values.
-    if (z > 0.0)
+    if (z > 0.0f)
     {
-        double reference = pitch > 0.0 ? (PI / 2.0) : (-PI / 2.0);
+        float reference = pitch > 0.0f ? ((float)PI / 2.0f) : ((float)(-PI) / 2.0f);
         pitch = reference + (reference - pitch);
     }
 
