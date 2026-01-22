@@ -521,7 +521,8 @@ int MessageBus::remove(Listener *listener)
         if ((listener->flags & MESSAGE_BUS_LISTENER_METHOD) == (l->flags & MESSAGE_BUS_LISTENER_METHOD))
         {
             if(((listener->flags & MESSAGE_BUS_LISTENER_METHOD) && (*l->cb_method == *listener->cb_method)) ||
-              ((!(listener->flags & MESSAGE_BUS_LISTENER_METHOD) && l->cb == listener->cb)))
+              ((!(listener->flags & MESSAGE_BUS_LISTENER_METHOD) && l->cb == listener->cb) &&
+               (!(listener->flags & MESSAGE_BUS_LISTENER_MATCH_CB_ARG) || l->cb_arg == listener->cb_arg)))
             {
                 if ((listener->id == DEVICE_ID_ANY || listener->id == l->id) && (listener->value == DEVICE_EVT_ANY || listener->value == l->value))
                 {
