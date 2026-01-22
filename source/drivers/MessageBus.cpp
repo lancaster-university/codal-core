@@ -263,6 +263,11 @@ int MessageBus::deleteMarkedListeners()
             Listener *t = l;
             l = l->next;
 
+            // If notification of deletion has been requested, invoke the listener deletion callback.
+            if (listener_deletion_callback) {
+                listener_deletion_callback(t);
+            }
+            
             delete t;
             removed++;
 
@@ -521,10 +526,6 @@ int MessageBus::remove(Listener *listener)
             {
                 if ((listener->id == DEVICE_ID_ANY || listener->id == l->id) && (listener->value == DEVICE_EVT_ANY || listener->value == l->value))
                 {
-                    // If notification of deletion has been requested, invoke the listener deletion callback.
-                    if (listener_deletion_callback)
-                        listener_deletion_callback(l);
-
                     // Found a match. mark this to be removed from the list.
                     l->flags |= MESSAGE_BUS_LISTENER_DELETING;
                     removed++;
