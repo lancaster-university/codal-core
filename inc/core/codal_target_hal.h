@@ -33,6 +33,10 @@ extern "C"
 
     void target_disable_irq();
 
+    void target_enable_irqn(int32_t irqn);
+
+    void target_disable_irqn(int32_t irqn);
+
     void target_reset();
 
     void target_wait(uint32_t milliseconds);

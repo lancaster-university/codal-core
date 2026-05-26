@@ -3,6 +3,16 @@
 #include "CodalCompat.h"
 #include "Timer.h"
 
+__attribute__((weak)) void target_enable_irqn(int32_t irqn)
+{
+	DMESG("target_enable_irqn NOT implemented on this platform");
+}
+
+__attribute__((weak)) void target_disable_irqn(int32_t irqn)
+{
+	DMESG("target_disable_irqn NOT implemented on this platform");
+}
+
 __attribute__((weak)) void target_wait(uint32_t milliseconds)
 {
     codal::system_timer_wait_ms(milliseconds);
