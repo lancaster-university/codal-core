@@ -72,6 +72,7 @@ namespace codal
 
     	public:
             virtual ManagedBuffer pull();
+            virtual void pull(ManagedBuffer &buffer);
             virtual void connect(DataSink &sink);
             virtual bool isConnected() { return false; }
             virtual void disconnect();
