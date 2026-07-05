@@ -67,7 +67,7 @@ protected:
       * The CPU will busy wait until the transmission is complete.
       *
       * @param data The byte to write.
-      * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the the write request failed.
+      * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the write request failed.
       */
     virtual int write(uint8_t data);
 
@@ -75,7 +75,7 @@ protected:
     * Reads a single byte from the I2C bus.
     * The CPU will busy wait until the transmission is complete.
     *
-    * @return the byte read from the I2C bus, or DEVICE_I2C_ERROR if the the write request failed.
+    * @return the byte read from the I2C bus, or DEVICE_I2C_ERROR if the write request failed.
     */
     virtual int read(AcknowledgeType ack = ACK);
 
@@ -102,7 +102,7 @@ public:
       * @param address The 8bit I2C address of the device to write to
       * @param data the byte command to write
       *
-      * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the the write request failed.
+      * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the write request failed.
       */
     virtual int write(uint16_t address, uint8_t data);
 
@@ -121,7 +121,7 @@ public:
     * @param len the number of bytes to write
     * @param repeated Suppresses the generation of a STOP condition if set. Default: false;
     *
-    * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the the write request failed.
+    * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the write request failed.
     */
     virtual int write(uint16_t address, uint8_t *data, int len, bool repeated = false);
     int write(int address, char *data, int len, bool repeated = false);
@@ -135,13 +135,13 @@ public:
       *  - Writing the 8 bit value provided
       *  - Asserting a Stop condition on the bus
       *
-      * The CPU will busy wait until the transmission is complete..
+      * The CPU will busy wait until the transmission is complete.
       *
       * @param address 8bit address of the device to write to
       * @param reg The 8bit address of the register to write to.
       * @param value The value to write.
       *
-      * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the the write request failed.
+      * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the write request failed.
       */
     virtual int writeRegister(uint16_t address, uint8_t reg, uint8_t value);
 
@@ -156,11 +156,11 @@ public:
       * The CPU will busy wait until the transmission is complete.
       *
       * @param address The 8bit I2C address of the device to read from
-      * @param data pointer to store the the bytes read
+      * @param data pointer to store the bytes read
       * @param len the number of bytes to read into the buffer
       * @param repeated Suppresses the generation of a STOP condition if set. Default: false;
       *
-      * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the the read request failed.
+      * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request failed.
       */
     virtual int read(uint16_t address, uint8_t *data, int len, bool repeated = false);
     int read(int address, char *data, int len, bool repeated = false);
@@ -177,15 +177,15 @@ public:
       *  - Performing an 8 bit read operation (of the requested register)
       *  - Asserting a Stop condition on the bus
       *
-      * The CPU will busy wait until the transmission is complete..
+      * The CPU will busy wait until the transmission is complete.
       *
       * @param address 8bit I2C address of the device to read from
-      * @param reg The 8bit register address of the to read.
+      * @param reg The 8bit register address of the register to read.
       * @param data A pointer to a memory location to store the result of the read operation
-      * @param length The number of mytes to read
-      * @param repeated Use a repeated START/START/STOP transaction if true, or independent START/STOP/START/STOP transactions if fasle. Default: true
+      * @param length The number of bytes to read
+      * @param repeated Use a repeated START/START/STOP transaction if true, or independent START/STOP/START/STOP transactions if false. Default: true
       *
-      * @return DEVICE_OK or DEVICE_I2C_ERROR if the the read request failed.
+      * @return DEVICE_OK or DEVICE_I2C_ERROR if the read request failed.
       */
     virtual int readRegister(uint16_t address, uint8_t reg, uint8_t *data, int length, bool repeated = true);
 
@@ -197,7 +197,7 @@ public:
      * @param address The address of the I2C device to write to.
      * @param reg The address of the register to access.
      *
-     * @return the byte read on success, DEVICE_INVALID_PARAMETER or DEVICE_I2C_ERROR if the the read request failed.
+     * @return the byte read on success, DEVICE_INVALID_PARAMETER or DEVICE_I2C_ERROR if the read request failed.
      */
     virtual int readRegister(uint8_t address, uint8_t reg);
 };

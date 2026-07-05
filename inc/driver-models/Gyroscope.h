@@ -62,7 +62,7 @@ namespace codal
 
         /**
           * Constructor.
-          * Create a software abstraction of an gyroscope.
+          * Create a software abstraction of a gyroscope.
           *
           * @param coordinateSpace the orientation of the sensor. Defaults to: SIMPLE_CARTESIAN
           * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_GYROSCOPE
@@ -74,7 +74,7 @@ namespace codal
           * Attempts to set the sample rate of the gyroscope to the specified value (in ms).
           *
           * @param period the requested time between samples, in milliseconds.
-          * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
+          * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the request fails.
           *
           * @note The requested rate may not be possible on the hardware. In this case, the
           * nearest lower rate is chosen.
@@ -95,7 +95,7 @@ namespace codal
           *
           * @param range The requested sample range of samples, in dps.
           *
-          * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
+          * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the request fails.
           *
           * @note The requested range may not be possible on the hardware. In this case, the
           * nearest lower range is chosen.

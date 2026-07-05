@@ -33,7 +33,7 @@ DEALINGS IN THE SOFTWARE.
 //
 // 0: Debug message disabled
 // 1: Diagnostics logging
-// 2: Heap allocaion diagnostics
+// 2: Heap allocation diagnostics
 //
 #ifndef CODAL_DEBUG_DISABLED
 #define CODAL_DEBUG_DISABLED                  0
@@ -51,7 +51,7 @@ DEALINGS IN THE SOFTWARE.
 #include "platform_includes.h"
 #include "codal_version.h"
 
-// Enables or disables the DeviceHeapllocator. Note that if disabled, no reuse of the SRAM normally
+// Enables or disables the DeviceHeapAllocator. Note that if disabled, no reuse of the SRAM normally
 // reserved for SoftDevice is possible, and out of memory condition will no longer be trapped...
 // i.e. panic() will no longer be triggered on memory full conditions.
 #ifndef DEVICE_HEAP_ALLOCATOR
@@ -183,7 +183,7 @@ DEALINGS IN THE SOFTWARE.
 #endif
 
 // When set to '1', this option enables parameter validation checking into low level system modules
-// such as the heap alloctor and scheduler. When set to '0', these checks will not take place resulting in
+// such as the heap allocator and scheduler. When set to '0', these checks will not take place resulting in
 // lower code size and faster operation of low level component.
 //
 #ifndef CODAL_LOW_LEVEL_VALIDATION

@@ -79,7 +79,7 @@ int MMA8653::configure()
     if (result != DEVICE_OK)
         return DEVICE_I2C_ERROR;
 
-    // Enable high precisiosn mode. This consumes a bit more power, but still only 184 uA!
+    // Enable high precision mode. This consumes a bit more power, but still only 184 uA!
     result = i2c.writeRegister(this->address, MMA8653_CTRL_REG2, 0x10);
     if (result != DEVICE_OK)
         return DEVICE_I2C_ERROR;
