@@ -63,6 +63,23 @@ static EventModel *messageBus = NULL;
 
 using namespace codal;
 
+// Scheduler critical section: mask app IRQs (1-7) with BASEPRI, leaving the
+// SoftDevice's priority-0 IRQs (RTC0/TIMER0/RADIO) live, so fiber creation
+// (which allocates from the heap) can never delay the BLE radio arming
+// deadline. Nothing below priority 0 touches the fiber queues or heap.
+static uint32_t fiber_lock_irq()
+{
+    uint32_t basepri;
+    __asm volatile ("MRS %0, basepri" : "=r" (basepri));
+    __asm volatile ("MSR basepri, %0" : : "r" (1));
+    return basepri;
+}
+
+static void fiber_unlock_irq(uint32_t basepri)
+{
+    __asm volatile ("MSR basepri, %0" : : "r" (basepri));
+}
+
 REAL_TIME_FUNC
 void codal::queue_fiber(Fiber *f, Fiber **queue)
 {
@@ -131,7 +148,7 @@ Fiber *getFiberContext()
 {
     Fiber *f;
 
-    target_disable_irq();
+    uint32_t basepri = fiber_lock_irq();
 
     if (fiberPool != NULL)
     {
@@ -143,7 +160,7 @@ Fiber *getFiberContext()
         f = new Fiber();
 
         if (f == NULL) {
-            target_enable_irq();
+            fiber_unlock_irq(basepri);
             return NULL;
         }
 
@@ -153,7 +170,7 @@ Fiber *getFiberContext()
         f->stack_top = 0;
     }
 
-    target_enable_irq();
+    fiber_unlock_irq(basepri);
 
     // Ensure this fiber is in suitable state for reuse.
     f->flags = 0;
@@ -165,10 +182,10 @@ Fiber *getFiberContext()
     tcb_configure_stack_base(f->tcb, fiber_initial_stack_base());
 
     // Add the new Fiber to the list of all fibers
-    target_disable_irq();
+    basepri = fiber_lock_irq();
     f->next = fiberList;
     fiberList = f;
-    target_enable_irq();
+    fiber_unlock_irq(basepri);
 
     return f;
 }
