@@ -58,6 +58,8 @@ extern "C"
     void target_panic(int statusCode);
 
     PROCESSOR_WORD_TYPE fiber_initial_stack_base();
+
+    PROCESSOR_WORD_TYPE stack_limit();
     /**
       * Configures the link register of the given tcb to have the value function.
       *
