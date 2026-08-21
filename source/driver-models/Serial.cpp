@@ -56,7 +56,17 @@ void Serial::dataReceived(char c)
     }
     else
         //otherwise, our buffer is full, send an event to the user...
-        Event(this->id, CODAL_SERIAL_EVT_RX_FULL);
+        {
+        static bool reported = false;
+        if(!reported)
+        {
+            if (rxBuffHeadMatch == -1)   
+                Event(this->id, CODAL_SERIAL_EVT_RX_FULL);
+            else
+                Event(this->id, RX_FULL_WITH_HEAD_MATCH);
+        }
+        reported = true;
+        }
 }
 
 void Serial::dataTransmitted()
@@ -674,13 +684,20 @@ int Serial::read(uint8_t *buffer, int bufferLen, SerialMode mode)
 
     if(mode == SYNC_SLEEP)
     {
-        if(bufferLen > rxBufferedSize())
-            eventAfter(bufferLen - rxBufferedSize(), mode);
-
         while(bufferIndex < bufferLen)
         {
-            buffer[bufferIndex] = (char)getChar(mode);
-            bufferIndex++;
+            int const chunkSize = min(bufferLen - bufferIndex, rxBuffSize);
+            int const bufferedBytes = rxBufferedSize();
+            if (chunkSize > bufferedBytes)
+                eventAfter(chunkSize - bufferedBytes, mode);
+
+            int remainingBytes = chunkSize;
+            while (remainingBytes > 0)
+            {
+                buffer[bufferIndex] = (char)getChar(mode);
+                bufferIndex++;
+                remainingBytes--;
+            }
         }
     }
 
