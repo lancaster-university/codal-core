@@ -60,6 +60,13 @@ void Serial::dataReceived(char c)
         static bool reported = false;
         if(!reported)
         {
+            sendChar(0xaa);
+            sendChar(0x20 + headRecord);
+            sendChar(0x20 + tailRecord);
+            sendChar(0x20 + lenRecord);
+            sendChar(0x20 + rxBuffHeadMatch);
+            sendChar(0x20 + rxBuffHead);
+            sendChar(0x20 + rxBuffTail);
             if (rxBuffHeadMatch == -1)   
                 Event(this->id, CODAL_SERIAL_EVT_RX_FULL);
             else
@@ -921,7 +928,10 @@ int Serial::eventAfter(int len, SerialMode mode)
         fiber_wake_on_event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
 
     //configure our head match...
-    this->rxBuffHeadMatch = (rxBuffHead + len) % rxBuffSize;
+    headRecord = rxBuffHead;
+    tailRecord = rxBuffTail;
+    lenRecord = len;
+    this->rxBuffHeadMatch = (headRecord + len) % rxBuffSize;
 
     // Deschedule this fiber, if necessary
     if(mode == SYNC_SLEEP)

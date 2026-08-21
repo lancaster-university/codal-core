@@ -95,6 +95,10 @@ namespace codal
 
         uint32_t baudrate;
 
+        uint16_t headRecord;
+        uint16_t tailRecord;
+        uint16_t lenRecord;
+
         /**
          * SUB CLASSES / IMPLEMENTATIONS DEFINE THE FOLLOWING METHODS:
          **/
