@@ -46,7 +46,7 @@ void Serial::dataReceived(char c)
 
         //if we have any fibers waiting for a specific number of characters, unblock them
         if(rxBuffHeadMatch >= 0)
-            if(rxBuffHead == rxBuffHeadMatch)
+            if((rxBuffHead >= rxBuffHeadMatch) && ((rxBuffTail < rxBuffHeadMatch) || (rxBuffTail > rxBuffHead)))
             {
                 rxBuffHeadMatch = -1;
                 Event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
@@ -686,7 +686,7 @@ int Serial::read(uint8_t *buffer, int bufferLen, SerialMode mode)
     {
         while(bufferIndex < bufferLen)
         {
-            int const chunkSize = min(bufferLen - bufferIndex, rxBuffSize);
+            int const chunkSize = min(bufferLen - bufferIndex, rxBuffSize - 1);
             int const bufferedBytes = rxBufferedSize();
             if (chunkSize > bufferedBytes)
                 eventAfter(chunkSize - bufferedBytes, mode);
