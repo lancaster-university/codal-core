@@ -44,9 +44,12 @@ void Serial::dataReceived(char c)
         this->rxBuff[rxBuffHead] = c;
         rxBuffHead = newHead;
 
-        //if we have any fibers waiting for a specific number of characters, unblock them
-        if(rxBuffHeadMatch >= 0)
-            if((rxBuffHead >= rxBuffHeadMatch) && ((rxBuffTail < rxBuffHeadMatch) || (rxBuffTail > rxBuffHead)))
+        // if we have any fibers waiting for a specific number of characters, unblock them
+        if (rxBuffHeadMatch >= 0)
+            if (((rxBuffHead >= rxBuffHeadMatch) &&
+                 ((rxBuffTail < rxBuffHeadMatch) || (rxBuffTail > rxBuffHead))) ||
+                ((rxBuffHead < rxBuffHeadMatch) &&
+                 ((rxBuffTail < rxBuffHeadMatch) && (rxBuffTail > rxBuffHead))))
             {
                 rxBuffHeadMatch = -1;
                 Event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
