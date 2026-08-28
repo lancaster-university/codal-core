@@ -81,7 +81,7 @@ namespace codal
         ManagedString delimeters;
 
         //a variable used when a user calls the eventAfter() method.
-        int rxBuffHeadMatch;
+        uint8_t waitForBufferedBytes;
 
         uint8_t *rxBuff;
         uint8_t rxBuffSize;
