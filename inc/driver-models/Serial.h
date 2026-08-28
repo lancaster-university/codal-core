@@ -36,8 +36,6 @@ DEALINGS IN THE SOFTWARE.
 #define CODAL_SERIAL_EVT_HEAD_MATCH       2
 #define CODAL_SERIAL_EVT_RX_FULL          3
 #define CODAL_SERIAL_EVT_DATA_RECEIVED    4
-#define OVERSHOOT 5
-#define RX_FULL_WITH_HEAD_MATCH 6
 
 #define CODAL_SERIAL_STATUS_RX_IN_USE            0x01
 #define CODAL_SERIAL_STATUS_TX_IN_USE            0x02
@@ -94,10 +92,6 @@ namespace codal
         volatile uint16_t txBuffTail;
 
         uint32_t baudrate;
-
-        uint16_t headRecord;
-        uint16_t tailRecord;
-        uint16_t lenRecord;
 
         /**
          * SUB CLASSES / IMPLEMENTATIONS DEFINE THE FOLLOWING METHODS:

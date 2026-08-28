@@ -1,5 +1,4 @@
 #include "Serial.h"
-#include "ErrorNo.h"
 #include "NotifyEvents.h"
 #include "CodalDmesg.h"
 
@@ -59,24 +58,7 @@ void Serial::dataReceived(char c)
     }
     else
         //otherwise, our buffer is full, send an event to the user...
-        {
-        static bool reported = false;
-        if(!reported)
-        {
-            sendChar(0xaa);
-            sendChar(0x20 + headRecord);
-            sendChar(0x20 + tailRecord);
-            sendChar(0x20 + lenRecord);
-            sendChar(0x20 + waitForBufferedBytes);
-            sendChar(0x20 + rxBuffHead);
-            sendChar(0x20 + rxBuffTail);
-            if (waitForBufferedBytes == 0)   
-                Event(this->id, CODAL_SERIAL_EVT_RX_FULL);
-            else
-                Event(this->id, RX_FULL_WITH_HEAD_MATCH);
-        }
-        reported = true;
-        }
+        Event(this->id, CODAL_SERIAL_EVT_RX_FULL);
 }
 
 void Serial::dataTransmitted()
@@ -923,10 +905,7 @@ int Serial::redirect(Pin& tx, Pin& rx)
 int Serial::eventAfter(int len, SerialMode mode)
 {
     if (len == 0)
-    {
-        sendChar(0xee);
         return DEVICE_INVALID_PARAMETER;
-    }
 
     if(mode == SYNC_SPINWAIT)
         return DEVICE_INVALID_PARAMETER;
@@ -936,9 +915,6 @@ int Serial::eventAfter(int len, SerialMode mode)
         fiber_wake_on_event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
 
     //configure our head match...
-    headRecord = rxBuffHead;
-    tailRecord = rxBuffTail;
-    lenRecord = len;
 
     waitForBufferedBytes = len;
 
