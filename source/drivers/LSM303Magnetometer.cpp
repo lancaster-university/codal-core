@@ -96,11 +96,11 @@ int LSM303Magnetometer::configure()
 
 /**
   * Constructor.
-  * Create a software abstraction of an FXSO8700 combined magnetometer/magnetometer
+  * Create a software abstraction of an LSM303 combined accelerometer/magnetometer
   *
   * @param _i2c an instance of I2C used to communicate with the device.
   *
-  * @param address the default I2C address of the magnetometer. Defaults to: FXS8700_DEFAULT_ADDR.
+  * @param address the default I2C address of the magnetometer. Defaults to: LSM303_M_DEFAULT_ADDR.
   *
  */
 LSM303Magnetometer::LSM303Magnetometer(I2C &_i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address, uint16_t id) : Compass(coordinateSpace, id), i2c(_i2c), int1(_int1)
@@ -115,13 +115,13 @@ LSM303Magnetometer::LSM303Magnetometer(I2C &_i2c, Pin &_int1, CoordinateSpace &c
 
 /**
  * Poll to see if new data is available from the hardware. If so, update it.
- * n.b. it is not necessary to explicitly call this funciton to update data
+ * n.b. it is not necessary to explicitly call this function to update data
  * (it normally happens in the background when the scheduler is idle), but a check is performed
  * if the user explicitly requests up to date data.
  *
  * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the update fails.
  *
- * @note This method should be overidden by the hardware driver to implement the requested
+ * @note This method should be overridden by the hardware driver to implement the requested
  * changes in hardware.
  */
 int LSM303Magnetometer::requestUpdate()
@@ -130,8 +130,8 @@ int LSM303Magnetometer::requestUpdate()
 
     if ((status & LSM303_M_STATUS_ENABLED) == 0x00)
     {
-        // If we get here without being enabled, applicaiton code has requested
-        // functionlity from this component. Perform on demand activation.
+        // If we get here without being enabled, application code has requested
+        // functionality from this component. Perform on demand activation.
         status |= LSM303_M_STATUS_ENABLED;
         status |= DEVICE_COMPONENT_STATUS_IDLE_TICK;
         configure();
@@ -223,7 +223,7 @@ int LSM303Magnetometer::setSleep(bool doSleep)
 /**
  * Attempts to read the 8 bit WHO_AM_I value from the accelerometer
  *
- * @return true if the WHO_AM_I value is succesfully read. false otherwise.
+ * @return true if the WHO_AM_I value is successfully read. false otherwise.
  */
 int LSM303Magnetometer::isDetected(I2C &i2c, uint16_t address)
 {
@@ -231,7 +231,7 @@ int LSM303Magnetometer::isDetected(I2C &i2c, uint16_t address)
 }
 
 /**
-  * Destructor for FXS8700, where we deregister from the array of fiber components.
+  * Destructor for LSM303Magnetometer, where we deregister from the array of fiber components.
   */
 LSM303Magnetometer::~LSM303Magnetometer()
 {

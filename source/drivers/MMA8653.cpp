@@ -162,7 +162,7 @@ int MMA8653::whoAmI()
   * by this object.
   *
   * This technique is called lazy instantiation, and it means that we do not
-  * obtain the overhead from non-chalantly adding this component to fiber components.
+  * obtain the overhead from nonchalantly adding this component to fiber components.
   *
   * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
   */

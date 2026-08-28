@@ -51,7 +51,7 @@ DEALINGS IN THE SOFTWARE.
 #include "platform_includes.h"
 #include "codal_version.h"
 
-// Enables or disables the DeviceHeapAllocator. Note that if disabled, no reuse of the SRAM normally
+// Enables or disables the CodalHeapAllocator. Note that if disabled, no reuse of the SRAM normally
 // reserved for SoftDevice is possible, and out of memory condition will no longer be trapped...
 // i.e. panic() will no longer be triggered on memory full conditions.
 #ifndef DEVICE_HEAP_ALLOCATOR

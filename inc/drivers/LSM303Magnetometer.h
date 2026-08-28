@@ -104,10 +104,10 @@ namespace codal
 
       /**
        * Constructor.
-       * Create a software abstraction of an compass.
+       * Create a software abstraction of a compass.
        *
        * @param coordinateSpace The orientation of the sensor. Defaults to: SIMPLE_CARTESIAN
-       * @param id The unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
+       * @param id The unique EventModel id of this component. Defaults to: DEVICE_ID_COMPASS
        *
        */
       LSM303Magnetometer(I2C& _i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address = LSM303_M_DEFAULT_ADDR, uint16_t id = DEVICE_ID_COMPASS);
@@ -120,7 +120,7 @@ namespace codal
        *
        * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the magnetometer could not be configured.
        *
-       * @note This method should be overidden by the hardware driver to implement the requested
+       * @note This method should be overridden by the hardware driver to implement the requested
        * changes in hardware.
        */
       virtual int configure() override;
@@ -133,7 +133,7 @@ namespace codal
        *
        * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the update fails.
        *
-       * @note This method should be overidden by the hardware driver to implement the requested
+       * @note This method should be overridden by the hardware driver to implement the requested
        * changes in hardware.
        */
       virtual int requestUpdate() override;
@@ -153,7 +153,7 @@ namespace codal
       /**
        * Attempts to read the 8 bit WHO_AM_I value from the accelerometer
        *
-       * @return true if the WHO_AM_I value is succesfully read. false otherwise.
+       * @return true if the WHO_AM_I value is successfully read. false otherwise.
        */
       static int isDetected(I2C &i2c, uint16_t address = LSM303_M_DEFAULT_ADDR);
 

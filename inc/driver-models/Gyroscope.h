@@ -79,7 +79,7 @@ namespace codal
           * @note The requested rate may not be possible on the hardware. In this case, the
           * nearest lower rate is chosen.
           *
-          * @note This method should be overriden (if supported) by specific gyroscope device drivers.
+          * @note This method should be overridden (if supported) by specific gyroscope device drivers.
           */
         virtual int setPeriod(int period);
 
@@ -100,7 +100,7 @@ namespace codal
           * @note The requested range may not be possible on the hardware. In this case, the
           * nearest lower range is chosen.
           *
-          * @note This method should be overriden (if supported) by specific gyroscope device drivers.
+          * @note This method should be overridden (if supported) by specific gyroscope device drivers.
           */
         virtual int setRange(int range);
 

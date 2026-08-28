@@ -33,11 +33,11 @@ using namespace codal;
 
 /**
   * Constructor.
-  * Create a software abstraction of an FXSO8700 combined accelerometer/magnetometer
+  * Create a software abstraction of an accelerometer sensor
   *
   * @param _i2c an instance of I2C used to communicate with the device.
   *
-  * @param address the default I2C address of the accelerometer. Defaults to: FXS8700_DEFAULT_ADDR.
+  * @param address the default I2C address of the accelerometer. Defaults to: DEVICE_ID_ACCELEROMETER.
   *
  */
 Accelerometer::Accelerometer(CoordinateSpace &cspace, uint16_t id) : sample(), sampleENU(), coordinateSpace(cspace)
@@ -74,7 +74,7 @@ Accelerometer::Accelerometer(CoordinateSpace &cspace, uint16_t id) : sample(), s
   * by this object.
   *
   * This lazy instantiation means that we do not
-  * obtain the overhead from non-chalantly adding this component to fiber components.
+  * obtain the overhead from nonchalantly adding this component to fiber components.
   *
   * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the read request fails.
   */
@@ -116,7 +116,7 @@ uint32_t Accelerometer::instantaneousAccelerationSquared()
  *
  * This makes no use of historic data, and forms the input to the filter implemented in updateGesture().
  *
- * @return A 'best guess' of the current posture of the device, based on instanataneous data.
+ * @return A 'best guess' of the current posture of the device, based on instantaneous data.
  */
 uint16_t Accelerometer::instantaneousPosture()
 {
@@ -167,7 +167,7 @@ uint16_t Accelerometer::instantaneousPosture()
     {
         shake.timer++;
 
-        // If we've issued a SHAKE event already, and sufficient time has assed, allow another SHAKE event to be issued.
+        // If we've issued a SHAKE event already, and sufficient time has passed, allow another SHAKE event to be issued.
         if (shake.shaken && shake.timer >= ACCELEROMETER_SHAKE_RTX)
         {
             shake.shaken = 0;
@@ -247,7 +247,7 @@ void Accelerometer::updateGesture()
         impulseSigma = 0;
     }
 
-    // Reset the impulse event onve the acceleration has subsided.
+    // Reset the impulse event once the acceleration has subsided.
     if (impulseSigma < ACCELEROMETER_GESTURE_DAMPING)
         impulseSigma++;
     else
@@ -289,7 +289,7 @@ void Accelerometer::updateGesture()
   *
   * @param period the requested time between samples, in milliseconds.
   *
-  * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
+  * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the request fails.
   *
   * @code
   * // sample rate is now 20 ms.
@@ -326,7 +326,7 @@ int Accelerometer::getPeriod()
   *
   * @param range The requested sample range of samples, in g.
   *
-  * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
+  * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the request fails.
   *
   * @code
   * // the sample range of the accelerometer is now 8G.
@@ -381,7 +381,7 @@ Sample3D Accelerometer::getSample()
 
 /**
  * reads the value of the x axis from the latest update retrieved from the accelerometer,
- * usingthe default coordinate system as specified in the constructor.
+ * using the default coordinate system as specified in the constructor.
  *
  * @return the force measured in the x axis, in milli-g.
  */
@@ -393,7 +393,7 @@ int Accelerometer::getX()
 
 /**
  * reads the value of the y axis from the latest update retrieved from the accelerometer,
- * usingthe default coordinate system as specified in the constructor.
+ * using the default coordinate system as specified in the constructor.
  *
  * @return the force measured in the y axis, in milli-g.
  */
@@ -405,7 +405,7 @@ int Accelerometer::getY()
 
 /**
  * reads the value of the z axis from the latest update retrieved from the accelerometer,
- * usingthe default coordinate system as specified in the constructor.
+ * using the default coordinate system as specified in the constructor.
  *
  * @return the force measured in the z axis, in milli-g.
  */
@@ -482,7 +482,7 @@ float Accelerometer::getRollRadians()
 /**
   * Recalculate roll and pitch values for the current sample.
   *
-  * @note We only do this at most once per sample, as the necessary trigonemteric functions are rather
+  * @note We only do this at most once per sample, as the necessary trigonometric functions are rather
   *       heavyweight for a CPU without a floating point unit.
   */
 void Accelerometer::recalculatePitchRoll()
@@ -523,7 +523,7 @@ uint16_t Accelerometer::getGesture()
 }
 
 /**
-  * Destructor for FXS8700, where we deregister from the array of fiber components.
+  * Destructor for Accelerometer, where we deregister from the array of fiber components.
   */
 Accelerometer::~Accelerometer()
 {
