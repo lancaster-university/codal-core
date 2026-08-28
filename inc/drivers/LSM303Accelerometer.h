@@ -98,7 +98,7 @@ namespace codal
 {
   /**
    * Class definition for LSM303Accelerometer.
-   * This class provides a simple wrapper between the hybrid FXOS8700 accelerometer and higher level accelerometer funcitonality.
+   * This class provides a simple wrapper between the hybrid LSM303 accelerometer and higher level accelerometer functionality.
    */
   class LSM303Accelerometer : public Accelerometer
   {
@@ -126,7 +126,7 @@ namespace codal
      *
      * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the accelerometer could not be configured.
      *
-     * @note This method should be overidden by the hardware driver to implement the requested
+     * @note This method should be overridden by the hardware driver to implement the requested
      * changes in hardware.
      */
     virtual int configure() override;
@@ -139,7 +139,7 @@ namespace codal
      *
      * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the update fails.
      *
-     * @note This method should be overidden by the hardware driver to implement the requested
+     * @note This method should be overridden by the hardware driver to implement the requested
      * changes in hardware.
      */
     virtual int requestUpdate() override;
@@ -160,7 +160,7 @@ namespace codal
     /**
      * Attempts to read the 8 bit WHO_AM_I value from the accelerometer
      *
-     * @return true if the WHO_AM_I value is succesfully read. false otherwise.
+     * @return true if the WHO_AM_I value is successfully read. false otherwise.
      */
     static int isDetected(I2C &i2c, uint16_t address = LSM303_A_DEFAULT_ADDR);
 

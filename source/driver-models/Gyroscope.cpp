@@ -34,11 +34,11 @@ using namespace codal;
 
 /**
   * Constructor.
-  * Create a software abstraction of an FXSO8700 combined accelerometer/magnetometer
+  * Create a software abstraction of a gyroscope sensor
   *
   * @param _i2c an instance of I2C used to communicate with the device.
   *
-  * @param address the default I2C address of the accelerometer. Defaults to: FXS8700_DEFAULT_ADDR.
+  * @param address the default I2C address of the accelerometer. Defaults to: DEVICE_ID_GYROSCOPE.
   *
  */
 Gyroscope::Gyroscope(CoordinateSpace &cspace, uint16_t id) : sample(), sampleENU(), coordinateSpace(cspace)
@@ -53,7 +53,7 @@ Gyroscope::Gyroscope(CoordinateSpace &cspace, uint16_t id) : sample(), sampleENU
 }
 
 /**
-  * Stores data from the accelerometer sensor in our buffer, and perform gesture tracking.
+  * Stores data from the gyroscope sensor in our buffer, and perform gesture tracking.
   *
   * On first use, this member function will attempt to add this component to the
   * list of fiber components in order to constantly update the values stored
@@ -97,15 +97,15 @@ uint32_t Gyroscope::instantaneousAccelerationSquared()
 }
 
 /**
-  * Attempts to set the sample rate of the accelerometer to the specified value (in ms).
+  * Attempts to set the sample rate of the gyroscope to the specified value (in ms).
   *
   * @param period the requested time between samples, in milliseconds.
   *
-  * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
+  * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the request fails.
   *
   * @code
   * // sample rate is now 20 ms.
-  * accelerometer.setPeriod(20);
+  * gyroscope.setPeriod(20);
   * @endcode
   *
   * @note The requested rate may not be possible on the hardware. In this case, the
@@ -124,7 +124,7 @@ int Gyroscope::setPeriod(int period)
 }
 
 /**
-  * Reads the currently configured sample rate of the accelerometer.
+  * Reads the currently configured sample rate of the gyroscope.
   *
   * @return The time between samples, in milliseconds.
   */
@@ -134,15 +134,15 @@ int Gyroscope::getPeriod()
 }
 
 /**
-  * Attempts to set the sample range of the accelerometer to the specified value (in g).
+  * Attempts to set the sample range of the gyroscope to the specified value (in dps).
   *
-  * @param range The requested sample range of samples, in g.
+  * @param range The requested sample range of samples, in dps.
   *
-  * @return DEVICE_OK on success, DEVICE_I2C_ERROR is the request fails.
+  * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the request fails.
   *
   * @code
-  * // the sample range of the accelerometer is now 8G.
-  * accelerometer.setRange(8);
+  * // the sample range of the gyroscope is now 8 dps.
+  * gyroscope.setRange(8);
   * @endcode
   *
   * @note The requested range may not be possible on the hardware. In this case, the
@@ -160,7 +160,7 @@ int Gyroscope::setRange(int range)
 }
 
 /**
-  * Reads the currently configured sample range of the accelerometer.
+  * Reads the currently configured sample range of the gyroscope.
   *
   * @return The sample range, in g.
   */
@@ -170,10 +170,10 @@ int Gyroscope::getRange()
 }
 
 /**
- * Reads the last accelerometer value stored, and provides it in the coordinate system requested.
+ * Reads the last gyroscope value stored, and provides it in the coordinate system requested.
  *
  * @param coordinateSpace The coordinate system to use.
- * @return The force measured in each axis, in milli-g.
+ * @return The force measured in each axis, in dps.
  */
 Sample3D Gyroscope::getSample(CoordinateSystem coordinateSystem)
 {
@@ -182,8 +182,8 @@ Sample3D Gyroscope::getSample(CoordinateSystem coordinateSystem)
 }
 
 /**
- * Reads the last accelerometer value stored, and in the coordinate system defined in the constructor.
- * @return The force measured in each axis, in milli-g.
+ * Reads the last gyroscope value stored, and in the coordinate system defined in the constructor.
+ * @return The force measured in each axis, in dps.
  */
 Sample3D Gyroscope::getSample()
 {
@@ -192,10 +192,10 @@ Sample3D Gyroscope::getSample()
 }
 
 /**
- * reads the value of the x axis from the latest update retrieved from the accelerometer,
- * usingthe default coordinate system as specified in the constructor.
+ * reads the value of the x axis from the latest update retrieved from the gyroscope,
+ * using the default coordinate system as specified in the constructor.
  *
- * @return the force measured in the x axis, in milli-g.
+ * @return the force measured in the x axis, in dps.
  */
 int Gyroscope::getX()
 {
@@ -204,10 +204,10 @@ int Gyroscope::getX()
 }
 
 /**
- * reads the value of the y axis from the latest update retrieved from the accelerometer,
- * usingthe default coordinate system as specified in the constructor.
+ * reads the value of the y axis from the latest update retrieved from the gyroscope,
+ * using the default coordinate system as specified in the constructor.
  *
- * @return the force measured in the y axis, in milli-g.
+ * @return the force measured in the y axis, in dps.
  */
 int Gyroscope::getY()
 {
@@ -216,10 +216,10 @@ int Gyroscope::getY()
 }
 
 /**
- * reads the value of the z axis from the latest update retrieved from the accelerometer,
- * usingthe default coordinate system as specified in the constructor.
+ * reads the value of the z axis from the latest update retrieved from the gyroscope,
+ * using the default coordinate system as specified in the constructor.
  *
- * @return the force measured in the z axis, in milli-g.
+ * @return the force measured in the z axis, in dps.
  */
 int Gyroscope::getZ()
 {
@@ -228,7 +228,7 @@ int Gyroscope::getZ()
 }
 
 /**
-  * Destructor for FXS8700, where we deregister from the array of fiber components.
+  * Destructor for Gyroscope, where we deregister from the array of fiber components.
   */
 Gyroscope::~Gyroscope()
 {

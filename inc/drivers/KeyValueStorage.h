@@ -143,7 +143,7 @@ namespace codal
       int put(ManagedString key, uint8_t* data, int dataSize);
 
       /**
-        * Retreives a KeyValuePair identified by a given key.
+        * Retrieves a KeyValuePair identified by a given key.
         *
         * @param key the unique name used to identify a KeyValuePair in flash.
         *
@@ -155,7 +155,7 @@ namespace codal
       KeyValuePair* get(const char* key);
 
       /**
-        * Retreives a KeyValuePair identified by a given key.
+        * Retrieves a KeyValuePair identified by a given key.
         *
         * @param key the unique name used to identify a KeyValuePair in flash.
         *
@@ -201,7 +201,7 @@ namespace codal
       private:
 
       /**
-       * Function to lazily instatiate a scratch buffer
+       * Function to lazily instantiate a scratch buffer
        */
       void scratchReset();
 

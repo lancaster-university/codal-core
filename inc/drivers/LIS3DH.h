@@ -75,16 +75,16 @@ DEALINGS IN THE SOFTWARE.
 #define LIS3DH_INT2_DURATION   0x37
 
 /**
-  * MMA8653 constants
+  * LIS3DH constants
   */
 #define LIS3DH_WHOAMI_VAL      0x33
 
 namespace codal
 {
     /**
-     * Class definition for Accelerometer.
+     * Class definition for LIS3DH Accelerometer.
      *
-     * Represents an implementation of the Freescale MMA8653 3 axis accelerometer
+     * Represents an implementation of the STMicroelectronics LIS3DH 3 axis accelerometer
      * Also includes basic data caching and on demand activation.
      */
     class LIS3DH : public Accelerometer
@@ -101,7 +101,7 @@ namespace codal
           *
           * @param _i2c an instance of I2C used to communicate with the onboard accelerometer.
           *
-          * @param address the default I2C address of the accelerometer. Defaults to: MMA8653_DEFAULT_ADDR.
+          * @param address the default I2C address of the accelerometer. Defaults to: LIS3DH_DEFAULT_ADDR.
           *
           * @param id the unique EventModel id of this component. Defaults to: DEVICE_ID_ACCELEROMETER
           *
@@ -152,7 +152,7 @@ namespace codal
          *
          * @return DEVICE_OK on success, DEVICE_I2C_ERROR if the update fails.
          *
-         * @note This method should be overidden by the hardware driver to implement the requested
+         * @note This method should be overridden by the hardware driver to implement the requested
          * changes in hardware.
          */
         virtual int requestUpdate() override;

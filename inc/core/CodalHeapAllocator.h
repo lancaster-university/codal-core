@@ -27,9 +27,9 @@ DEALINGS IN THE SOFTWARE.
   * be designated as heap storage, and is designed to run in a static memory area or inside the standard C
   * heap for use by the codal device runtime. This is required for several reasons:
   *
-  * 1) It reduces memory fragmentation due to the high churn sometime placed on the heap
-  * by ManagedTypes, fibers and user code. Underlying heap implentations are often have very simplistic
-  * allocation pilicies and suffer from fragmentation in prolonged use - which can cause programs to
+  * 1) It reduces memory fragmentation due to the high churn sometimes placed on the heap
+  * by ManagedTypes, fibers and user code. Underlying heap implementations often have very simplistic
+  * allocation policies and suffer from fragmentation in prolonged use - which can cause programs to
   * stop working after a period of time. The algorithm implemented here is simple, but highly tolerant to
   * large amounts of churn.
   *
@@ -75,8 +75,8 @@ extern PROCESSOR_WORD_TYPE codal_heap_start;
   *
   * @return DEVICE_OK on success, or DEVICE_NO_RESOURCES if the heap could not be allocated.
   *
-  * @note Only code that #includes DeviceHeapAllocator.h will use this heap. This includes all codal device runtime
-  * code, and user code targetting the runtime. External code can choose to include this file, or
+  * @note Only code that #includes CodalHeapAllocator.h will use this heap. This includes all codal device runtime
+  * code, and user code targeting the runtime. External code can choose to include this file, or
   * simply use the standard heap.
   */
 int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end);

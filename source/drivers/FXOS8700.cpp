@@ -23,9 +23,9 @@ DEALINGS IN THE SOFTWARE.
 */
 
 /**
- * Class definition for an FXS8700 3 axis accelerometer.
+ * Class definition for an FXOS8700 3 axis accelerometer.
  *
- * Represents an implementation of the Freescale FXS8700 3 axis accelerometer
+ * Represents an implementation of the Freescale FXOS8700 3 axis accelerometer
  * Also includes basic data caching and on demand activation.
  */
 #include "FXOS8700.h"
@@ -106,8 +106,8 @@ int FXOS8700::configure()
         return DEVICE_I2C_ERROR;
     }
 
-    // Select the auto incremement mode, which allows a contiguous I2C block
-    // read of both acceleromter and magnetometer data despite them being non-contguous
+    // Select the auto increment mode, which allows a contiguous I2C block
+    // read of both accelerometer and magnetometer data despite them being non-contiguous
     // in memory... funky!
     value = 0x20;
     result = i2c.writeRegister(address, FXOS8700_M_CTRL_REG2, value);
@@ -118,7 +118,7 @@ int FXOS8700::configure()
     }
 
     // Configure Active LOW interrupt mode.
-    // Use OpenDrain configuation if we're on a shared IRQ line, PUSHPULL configuration otherwise. 
+    // Use OpenDrain configuration if we're on a shared IRQ line, PUSHPULL configuration otherwise.
 #if CONFIG_ENABLED(DEVICE_I2C_IRQ_SHARED)
     value = 0x01;
 #else
@@ -149,7 +149,7 @@ int FXOS8700::configure()
         return DEVICE_I2C_ERROR;
     }
 
-    // Configure acceleromter g range.
+    // Configure accelerometer g range.
     value = accelerometerRange.get(Accelerometer::sampleRange);
     result = i2c.writeRegister(address, FXOS8700_XYZ_DATA_CFG, value);
     if (result != 0)
@@ -172,11 +172,11 @@ int FXOS8700::configure()
 
 /**
   * Constructor.
-  * Create a software abstraction of an FXSO8700 combined accelerometer/magnetometer
+  * Create a software abstraction of an FXOS8700 combined accelerometer/magnetometer
   *
   * @param _i2c an instance of I2C used to communicate with the device.
   *
-  * @param address the default I2C address of the accelerometer. Defaults to: FXS8700_DEFAULT_ADDR.
+  * @param address the default I2C address of the accelerometer. Defaults to: FXOS8700_DEFAULT_ADDR.
   *
  */
 FXOS8700::FXOS8700(I2C &_i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint16_t address, uint16_t aid, uint16_t cid) : Accelerometer(coordinateSpace, aid), Compass(coordinateSpace, cid), i2c(_i2c), int1(_int1)
@@ -191,7 +191,7 @@ FXOS8700::FXOS8700(I2C &_i2c, Pin &_int1, CoordinateSpace &coordinateSpace, uint
 /**
  * Attempts to read the 8 bit WHO_AM_I value from the accelerometer
  *
- * @return true if the WHO_AM_I value is succesfully read. false otherwise.
+ * @return true if the WHO_AM_I value is successfully read. false otherwise.
  */
 int FXOS8700::isDetected(I2C &i2c, uint16_t address)
 {
@@ -199,7 +199,7 @@ int FXOS8700::isDetected(I2C &i2c, uint16_t address)
 }
 
 /**
-  * Reads the sensor ata from the FXSO8700, and stores it in our buffer.
+  * Reads the sensor data from the FXOS8700, and stores it in our buffer.
   * This only happens if the device indicates that it has new data via int1.
   *
   * On first use, this member function will attempt to add this component to the
@@ -275,7 +275,7 @@ void FXOS8700::idleCallback()
 }
 
 /**
-  * Destructor for FXS8700, where we deregister from the array of fiber components.
+  * Destructor for FXOS8700, where we deregister from the array of fiber components.
   */
 FXOS8700::~FXOS8700()
 {
