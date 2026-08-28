@@ -91,6 +91,9 @@ enum PanicCode{
     // Corruption detected in the codal device heap space
     DEVICE_HEAP_ERROR = 30,
 
+    // A fiber's stack exceeded the shared stack region and overflowed
+    DEVICE_STACK_OVERFLOW = 45,
+
     // Dereference of a NULL pointer through the ManagedType class,
     DEVICE_NULL_DEREFERENCE = 40,
 

@@ -30,6 +30,15 @@ DEALINGS IN THE SOFTWARE.
 
 #define INITIAL_STACK_DEPTH (fiber_initial_stack_base() - 0x04)
 
+#ifndef DEVICE_NO_STACK_GUARD
+#define STACK_GUARD_MAGIC 0x5AFEC001
+
+__attribute__((weak)) PROCESSOR_WORD_TYPE stack_limit()
+{
+    return fiber_initial_stack_base() - DEVICE_STACK_SIZE;
+}
+#endif
+
 
 /*
  * Statically allocated values used to create and destroy Fibers.
@@ -182,6 +191,10 @@ void codal::scheduler_init(EventModel &_messageBus)
         // Store a reference to the messageBus provided.
     // This parameter will be NULL if we're being run without a message bus.
     messageBus = &_messageBus;
+
+#ifndef DEVICE_NO_STACK_GUARD
+    *((volatile uint32_t *)stack_limit()) = STACK_GUARD_MAGIC;
+#endif
 
     // Create a new fiber context
     currentFiber = getFiberContext();
@@ -624,6 +637,11 @@ void codal::verify_stack_size(Fiber *f)
     // Calculate the stack depth.
     stackDepth = tcb_get_stack_base(f->tcb) - (PROCESSOR_WORD_TYPE)get_current_sp();
 
+#ifndef DEVICE_NO_STACK_GUARD
+    if ((PROCESSOR_WORD_TYPE)get_current_sp() < stack_limit())
+        target_panic(DEVICE_STACK_OVERFLOW);
+#endif
+
     // Calculate the size of our allocated stack buffer
     bufferSize = f->stack_top - f->stack_bottom;
 
@@ -742,6 +760,11 @@ void codal::schedule()
         // If this fiber is the same as the old one then there'll be no switching at all.
         currentFiber = runQueue;
     }
+
+#ifndef DEVICE_NO_STACK_GUARD
+    if (*((volatile uint32_t *)stack_limit()) != STACK_GUARD_MAGIC)
+        target_panic(DEVICE_STACK_OVERFLOW);
+#endif
 
     // Swap to the context of the chosen fiber, and we're done.
     // Don't bother with the overhead of switching if there's only one fiber on the runqueue!
