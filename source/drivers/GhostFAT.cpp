@@ -396,7 +396,7 @@ GFATEntry *GhostFAT::addFile(GFATReadCallback read, void *userdata, const char *
                              uint32_t size, uint8_t dirid)
 {
     if (filesFinalized())
-        target_panic(DEVICE_USB_ERROR);
+        target_panic(DEVICE_PERIPHERAL_ERROR);
 
     GFATEntry *f = (GFATEntry *)malloc(sizeof(GFATEntry) + strlen(filename) + 1);
     memset(f, 0, sizeof(GFATEntry));
