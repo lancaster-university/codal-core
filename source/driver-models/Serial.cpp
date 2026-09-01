@@ -904,7 +904,7 @@ int Serial::redirect(Pin& tx, Pin& rx)
  */
 int Serial::eventAfter(uint8_t len, SerialMode mode)
 {
-    if (len == 0)
+    if (len == 0 || len > rxBuffSize - 1)
         return DEVICE_INVALID_PARAMETER;
 
     if(mode == SYNC_SPINWAIT)
