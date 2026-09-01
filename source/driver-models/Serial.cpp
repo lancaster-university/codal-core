@@ -902,7 +902,7 @@ int Serial::redirect(Pin& tx, Pin& rx)
  *
  * @return DEVICE_INVALID_PARAMETER if the mode given is SYNC_SPINWAIT, otherwise DEVICE_OK.
  */
-int Serial::eventAfter(int len, SerialMode mode)
+int Serial::eventAfter(uint8_t len, SerialMode mode)
 {
     if (len == 0)
         return DEVICE_INVALID_PARAMETER;
@@ -915,7 +915,6 @@ int Serial::eventAfter(int len, SerialMode mode)
         fiber_wake_on_event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
 
     //configure our head match...
-
     waitForBufferedBytes = len;
 
     // Deschedule this fiber, if necessary

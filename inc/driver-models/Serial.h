@@ -401,7 +401,7 @@ namespace codal
           *
           * @return DEVICE_INVALID_PARAMETER if the mode given is SYNC_SPINWAIT, otherwise DEVICE_OK.
           */
-        int eventAfter(int len, SerialMode mode = ASYNC);
+        int eventAfter(uint8_t len, SerialMode mode = ASYNC);
 
         /**
           * Configures an event to be fired on a match with one of the delimeters.
