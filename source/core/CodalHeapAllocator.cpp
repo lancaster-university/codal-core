@@ -63,6 +63,23 @@ using namespace codal;
 HeapDefinition heap[DEVICE_MAXIMUM_HEAPS] = { };
 uint8_t heap_count = 0;
 
+// Heap critical section: mask app IRQs (1-7) with BASEPRI, leaving the
+// SoftDevice's priority-0 IRQs (RTC0/TIMER0/RADIO) live, so a long heap
+// search can never delay the BLE radio arming deadline. Nothing below
+// priority 0 touches the heap, so integrity is unaffected.
+static uint32_t heap_lock_irq()
+{
+    uint32_t basepri;
+    __asm volatile ("MRS %0, basepri" : "=r" (basepri));
+    __asm volatile ("MSR basepri, %0" : : "r" (1));
+    return basepri;
+}
+
+static void heap_unlock_irq(uint32_t basepri)
+{
+    __asm volatile ("MSR basepri, %0" : : "r" (basepri));
+}
+
 #if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
 // Displays a usage summary about a given heap...
 void device_heap_print(HeapDefinition &heap)
@@ -152,8 +169,8 @@ int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end)
         return DEVICE_INVALID_PARAMETER;
 #endif
 
-    // Disable IRQ temporarily to ensure no race conditions!
-    target_disable_irq();
+    // Block app IRQs temporarily to ensure no race conditions!
+    uint32_t basepri = heap_lock_irq();
 
     // Record the dimensions of this new heap
     h->heap_start = (PROCESSOR_WORD_TYPE *)start;
@@ -164,8 +181,8 @@ int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end)
 
     heap_count++;
 
-    // Enable Interrupts
-    target_enable_irq();
+    // Re-enable Interrupts
+    heap_unlock_irq(basepri);
 
 #if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
     device_heap_print();
@@ -204,8 +221,8 @@ void *device_malloc_in(size_t size, HeapDefinition &heap)
     // Account for the index block;
     blocksNeeded++;
 
-    // Disable IRQ temporarily to ensure no race conditions!
-    target_disable_irq();
+    // Block app IRQs temporarily to ensure no race conditions!
+    uint32_t basepri = heap_lock_irq();
 
     // We implement a first fit algorithm with cache to handle rapid churn...
     // We also defragment free blocks as we search, to optimise this and future searches.
@@ -248,7 +265,7 @@ void *device_malloc_in(size_t size, HeapDefinition &heap)
     // We're full!
     if (block >= heap.heap_end)
     {
-        target_enable_irq();
+        heap_unlock_irq(basepri);
         return NULL;
     }
 
@@ -268,8 +285,8 @@ void *device_malloc_in(size_t size, HeapDefinition &heap)
         *block = blocksNeeded;
     }
 
-    // Enable Interrupts
-    target_enable_irq();
+    // Re-enable Interrupts
+    heap_unlock_irq(basepri);
 
     return block+1;
 }
