@@ -383,27 +383,6 @@ namespace codal
         int redirect(Pin& tx, Pin& rx);
 
         /**
-          * Configures an event to be fired after "len" characters.
-          *
-          * Will generate an event with the ID: DEVICE_ID_SERIAL and the value CODAL_SERIAL_EVT_HEAD_MATCH.
-          *
-          * @param len the number of characters to wait before triggering the event.
-          *
-          * @param mode the selected mode, one of: ASYNC, SYNC_SPINWAIT, SYNC_SLEEP. Each mode
-          *        gives a different behaviour:
-          *
-          *            ASYNC - Will configure the event and return immediately.
-          *
-          *            SYNC_SPINWAIT - will return DEVICE_INVALID_PARAMETER
-          *
-          *            SYNC_SLEEP - Will configure the event and block the current fiber until the
-          *                         event is received.
-          *
-          * @return DEVICE_INVALID_PARAMETER if the mode given is SYNC_SPINWAIT, otherwise DEVICE_OK.
-          */
-        int eventAfter(uint8_t len, SerialMode mode = ASYNC);
-
-        /**
           * Configures an event to be fired on a match with one of the delimeters.
           *
           * Will generate an event with the ID: DEVICE_ID_SERIAL and the value CODAL_SERIAL_EVT_DELIM_MATCH.
@@ -544,6 +523,8 @@ namespace codal
         
       private:
         void writeNum(uint32_t n, bool full);
+
+        int eventAfter(uint8_t len, SerialMode mode = ASYNC);
     };
 }
 
