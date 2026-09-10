@@ -44,13 +44,15 @@ void Serial::dataReceived(char c)
         this->rxBuff[rxBuffHead] = c;
         rxBuffHead = newHead;
 
-        //if we have any fibers waiting for a specific number of characters, unblock them
-        if(rxBuffHeadMatch >= 0)
-            if(rxBuffHead == rxBuffHeadMatch)
+        // if we have any fibers waiting for a specific number of characters, unblock them
+        if (waitForBufferedBytes > 0)
+        {
+            if (rxBufferedSize() >= waitForBufferedBytes)
             {
-                rxBuffHeadMatch = -1;
+                waitForBufferedBytes = 0;
                 Event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
             }
+        }
 
         status |= CODAL_SERIAL_STATUS_RXD;
     }
@@ -275,7 +277,7 @@ Serial::Serial(Pin& tx, Pin& rx, uint8_t rxBufferSize, uint8_t txBufferSize, uin
     this->txBuffHead = 0;
     this->txBuffTail = 0;
 
-    this->rxBuffHeadMatch = -1;
+    waitForBufferedBytes = 0;
 
     reassignPin(&this->tx, &tx);
     reassignPin(&this->rx, &rx);
@@ -674,13 +676,19 @@ int Serial::read(uint8_t *buffer, int bufferLen, SerialMode mode)
 
     if(mode == SYNC_SLEEP)
     {
-        if(bufferLen > rxBufferedSize())
-            eventAfter(bufferLen - rxBufferedSize(), mode);
-
         while(bufferIndex < bufferLen)
         {
-            buffer[bufferIndex] = (char)getChar(mode);
-            bufferIndex++;
+            int const chunkSize = min(bufferLen - bufferIndex, rxBuffSize - 1);
+            if (chunkSize > rxBufferedSize())
+                eventAfter(chunkSize, mode);
+
+            int remainingBytes = chunkSize;
+            while (remainingBytes > 0)
+            {
+                buffer[bufferIndex] = (char)getChar(mode);
+                bufferIndex++;
+                remainingBytes--;
+            }
         }
     }
 
@@ -880,7 +888,7 @@ int Serial::redirect(Pin& tx, Pin& rx)
  *
  * Will generate an event with the ID: this->id and the value CODAL_SERIAL_EVT_HEAD_MATCH.
  *
- * @param len the number of characters to wait before triggering the event.
+ * @param len the number of characters to wait to be buffered before triggering the event.
  *
  * @param mode the selected mode, one of: ASYNC, SYNC_SPINWAIT, SYNC_SLEEP. Each mode
  *        gives a different behaviour:
@@ -894,8 +902,11 @@ int Serial::redirect(Pin& tx, Pin& rx)
  *
  * @return DEVICE_INVALID_PARAMETER if the mode given is SYNC_SPINWAIT, otherwise DEVICE_OK.
  */
-int Serial::eventAfter(int len, SerialMode mode)
+int Serial::eventAfter(uint8_t len, SerialMode mode)
 {
+    if (len == 0 || len >= rxBuffSize)
+        return DEVICE_INVALID_PARAMETER;
+
     if(mode == SYNC_SPINWAIT)
         return DEVICE_INVALID_PARAMETER;
 
@@ -904,7 +915,7 @@ int Serial::eventAfter(int len, SerialMode mode)
         fiber_wake_on_event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
 
     //configure our head match...
-    this->rxBuffHeadMatch = (rxBuffHead + len) % rxBuffSize;
+    waitForBufferedBytes = len;
 
     // Deschedule this fiber, if necessary
     if(mode == SYNC_SLEEP)
