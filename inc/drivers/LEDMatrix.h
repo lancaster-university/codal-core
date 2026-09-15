@@ -112,6 +112,7 @@ namespace codal
 
         Pin         **rowPins;                  // Array of pointers containing an ordered list of pins to drive.
         Pin         **columnPins;               // Array of pointers containing an ordered list of pins to sink.
+        Pin         *accessibility;             // Pointer to a pin instance to use for a default WS2812B accesibility interface.
 
         const       MatrixPoint *map;           // Table mapping logical LED positions to physical positions.
     };
