@@ -82,8 +82,16 @@ TimerEvent *Timer::getTimerEvent()
             return &timerEventList[i];
     }
 
-    // TODO: should try to realloc the list here.
-    return NULL;
+    // Try to realloc the list.
+    int extra   = CODAL_TIMER_DEFAULT_EVENT_LIST_SIZE;
+    int newSize = eventListSize + extra;
+    TimerEvent *newList = (TimerEvent *) realloc( timerEventList, sizeof(TimerEvent) * newSize);
+    if ( newList == NULL)
+       return NULL;
+    timerEventList = newList;
+    memclr(timerEventList + eventListSize, sizeof(TimerEvent) * extra);
+    eventListSize = newSize;
+    return &timerEventList[ eventListSize - extra];
 }
 
 void Timer::releaseTimerEvent(TimerEvent *event)
