@@ -1,6 +1,5 @@
 #include "Serial.h"
 #include "NotifyEvents.h"
-#include "CodalDmesg.h"
 
 using namespace codal;
 
@@ -910,12 +909,16 @@ int Serial::eventAfter(uint8_t len, SerialMode mode)
     if(mode == SYNC_SPINWAIT)
         return DEVICE_INVALID_PARAMETER;
 
+    disableInterrupt(RxInterrupt);
+
     // Schedule this fiber to wake on an event from the serial port, if necessary
     if(mode == SYNC_SLEEP)
         fiber_wake_on_event(this->id, CODAL_SERIAL_EVT_HEAD_MATCH);
 
     //configure our head match...
     waitForBufferedBytes = len;
+
+    enableInterrupt(RxInterrupt);
 
     // Deschedule this fiber, if necessary
     if(mode == SYNC_SLEEP)
