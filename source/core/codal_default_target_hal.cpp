@@ -3,6 +3,21 @@
 #include "CodalCompat.h"
 #include "Timer.h"
 
+// Ports that reserve priority 0 (e.g. for a protocol stack) should override
+// these to mask only the application priorities. The default is a full IRQ
+// lock, which is safe but delays priority-0 interrupts as well.
+__attribute__((weak)) uint32_t target_lock_app_irqs()
+{
+    target_disable_irq();
+    return 0;
+}
+
+__attribute__((weak)) void target_unlock_app_irqs(uint32_t state)
+{
+    (void)state;
+    target_enable_irq();
+}
+
 __attribute__((weak)) void target_enable_irqn(int32_t irqn)
 {
 	DMESG("target_enable_irqn NOT implemented on this platform");
