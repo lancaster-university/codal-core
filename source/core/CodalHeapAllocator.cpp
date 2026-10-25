@@ -50,6 +50,7 @@ DEALINGS IN THE SOFTWARE.
 #include "CodalConfig.h"
 #include "CodalHeapAllocator.h"
 #include "platform_includes.h"
+#include "codal_target_hal.h"
 #include "CodalDevice.h"
 #include "CodalCompat.h"
 #include "CodalDmesg.h"
@@ -152,8 +153,8 @@ int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end)
         return DEVICE_INVALID_PARAMETER;
 #endif
 
-    // Disable IRQ temporarily to ensure no race conditions!
-    target_disable_irq();
+    // Block app IRQs temporarily to ensure no race conditions!
+    uint32_t basepri = target_lock_app_irqs();
 
     // Record the dimensions of this new heap
     h->heap_start = (PROCESSOR_WORD_TYPE *)start;
@@ -164,8 +165,8 @@ int device_create_heap(PROCESSOR_WORD_TYPE start, PROCESSOR_WORD_TYPE end)
 
     heap_count++;
 
-    // Enable Interrupts
-    target_enable_irq();
+    // Re-enable Interrupts
+    target_unlock_app_irqs(basepri);
 
 #if (CODAL_DEBUG >= CODAL_DEBUG_HEAP)
     device_heap_print();
@@ -204,8 +205,8 @@ void *device_malloc_in(size_t size, HeapDefinition &heap)
     // Account for the index block;
     blocksNeeded++;
 
-    // Disable IRQ temporarily to ensure no race conditions!
-    target_disable_irq();
+    // Block app IRQs temporarily to ensure no race conditions!
+    uint32_t basepri = target_lock_app_irqs();
 
     // We implement a first fit algorithm with cache to handle rapid churn...
     // We also defragment free blocks as we search, to optimise this and future searches.
@@ -248,7 +249,7 @@ void *device_malloc_in(size_t size, HeapDefinition &heap)
     // We're full!
     if (block >= heap.heap_end)
     {
-        target_enable_irq();
+        target_unlock_app_irqs(basepri);
         return NULL;
     }
 
@@ -268,8 +269,8 @@ void *device_malloc_in(size_t size, HeapDefinition &heap)
         *block = blocksNeeded;
     }
 
-    // Enable Interrupts
-    target_enable_irq();
+    // Re-enable Interrupts
+    target_unlock_app_irqs(basepri);
 
     return block+1;
 }

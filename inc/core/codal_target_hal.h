@@ -33,6 +33,28 @@ extern "C"
 
     void target_disable_irq();
 
+    /**
+     * Mask application interrupts (NVIC priorities 1 and above) and return the
+     * previous mask state, to be passed back to target_unlock_app_irqs().
+     *
+     * Unlike target_disable_irq(), which masks all interrupts, this leaves
+     * interrupts at priority 0 running (on micro:bit v2 that is the
+     * SoftDevice's radio/timer IRQs). It must therefore only be used where
+     * priority 0 is known not to touch the protected state. It is used by the
+     * heap allocator and the fiber scheduler, so that a long heap search can
+     * never delay the SoftDevice's radio arming deadline, while still keeping
+     * application IRQs out of their critical sections.
+     *
+     * Motivating example: walking a fragmented heap can take tens of
+     * microseconds. With interrupts fully masked that is long enough for the
+     * SoftDevice's priority-0 radio-arming IRQs to miss their deadline on
+     * micro:bit v2, and the SD asserts (panic 070). This lock keeps those IRQs
+     * live while still excluding the application IRQs that allocate.
+     */
+    uint32_t target_lock_app_irqs();
+
+    void target_unlock_app_irqs(uint32_t state);
+
     void target_enable_irqn(int32_t irqn);
 
     void target_disable_irqn(int32_t irqn);

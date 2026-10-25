@@ -131,7 +131,7 @@ Fiber *getFiberContext()
 {
     Fiber *f;
 
-    target_disable_irq();
+    uint32_t basepri = target_lock_app_irqs();
 
     if (fiberPool != NULL)
     {
@@ -143,7 +143,7 @@ Fiber *getFiberContext()
         f = new Fiber();
 
         if (f == NULL) {
-            target_enable_irq();
+            target_unlock_app_irqs(basepri);
             return NULL;
         }
 
@@ -153,7 +153,7 @@ Fiber *getFiberContext()
         f->stack_top = 0;
     }
 
-    target_enable_irq();
+    target_unlock_app_irqs(basepri);
 
     // Ensure this fiber is in suitable state for reuse.
     f->flags = 0;
@@ -165,10 +165,10 @@ Fiber *getFiberContext()
     tcb_configure_stack_base(f->tcb, fiber_initial_stack_base());
 
     // Add the new Fiber to the list of all fibers
-    target_disable_irq();
+    basepri = target_lock_app_irqs();
     f->next = fiberList;
     fiberList = f;
-    target_enable_irq();
+    target_unlock_app_irqs(basepri);
 
     return f;
 }
